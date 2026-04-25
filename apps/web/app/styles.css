@@ -461,7 +461,6 @@ dd {
 }
 
 .section-heading p,
-.pricing-note,
 .final-cta p {
   color: var(--muted);
   line-height: 1.55;
@@ -489,8 +488,6 @@ dd {
 
 .step p,
 .benefit p,
-.plan p,
-.plan li,
 .install-section li {
   color: var(--muted);
   line-height: 1.55;
@@ -517,8 +514,7 @@ dd {
   grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
 }
 
-.check-list,
-.plan ul {
+.check-list {
   list-style: none;
   margin: 22px 0 0;
   padding: 0;
@@ -529,14 +525,12 @@ dd {
   gap: 9px;
 }
 
-.check-list li,
-.plan li {
+.check-list li {
   padding-left: 22px;
   position: relative;
 }
 
-.check-list li::before,
-.plan li::before {
+.check-list li::before {
   background: var(--accent);
   border-radius: 50%;
   content: "";
@@ -558,27 +552,98 @@ dd {
   padding: 24px;
 }
 
-.plans {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 34px;
+.demo-shell {
+  background: #f7f8f5;
 }
 
-.plan {
+.demo-page {
+  padding: clamp(42px, 7vw, 76px) clamp(18px, 4vw, 56px);
+}
+
+.demo-copy {
+  max-width: 860px;
+}
+
+.demo-layout {
+  align-items: start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.55fr);
+  margin-top: 42px;
+}
+
+.demo-content,
+.demo-sidebar {
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.demo-content {
+  min-height: 420px;
+  padding: clamp(24px, 4vw, 46px);
+}
+
+.demo-content h2 {
+  max-width: 680px;
+}
+
+.demo-content p {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.55;
+  max-width: 640px;
+}
+
+.demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.demo-actions button {
+  background: var(--accent);
+  border: 0;
+  border-radius: 7px;
+  color: white;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 11px 16px;
+}
+
+.demo-actions .quiet {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.demo-sidebar {
+  display: grid;
+  gap: 18px;
   padding: 20px;
 }
 
-.plan h3 {
-  font-size: 24px;
+.demo-sidebar label {
+  color: var(--muted);
+  display: grid;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 7px;
 }
 
-.pricing-note {
-  font-weight: 800;
-  margin: 18px 0 0;
+.demo-sidebar input,
+.demo-sidebar textarea {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  min-height: 40px;
+  padding: 10px;
+}
+
+.demo-sidebar textarea {
+  min-height: 92px;
+  resize: vertical;
 }
 
 .final-cta {
@@ -609,7 +674,8 @@ code {
 
 @media (max-width: 980px) {
   .hero,
-  .install-section {
+  .install-section,
+  .demo-layout {
     grid-template-columns: 1fr;
   }
 
@@ -618,8 +684,7 @@ code {
   }
 
   .benefit-grid,
-  .steps,
-  .plans {
+  .steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -662,8 +727,7 @@ code {
 
   .site-hero,
   .benefit-grid,
-  .steps,
-  .plans {
+  .steps {
     grid-template-columns: 1fr;
   }
 

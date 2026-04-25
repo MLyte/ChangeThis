@@ -37,24 +37,6 @@ const workflow = [
   }
 ];
 
-const plans = [
-  {
-    name: "Free",
-    audience: "Pour tester sur un projet",
-    items: ["1 projet actif", "30 feedbacks par mois", "GitHub Issues"]
-  },
-  {
-    name: "Solo",
-    audience: "Pour freelances",
-    items: ["Projets multiples", "Captures et pins", "Branding optionnel"]
-  },
-  {
-    name: "Studio",
-    audience: "Pour petites agences",
-    items: ["Equipes et clients", "Regles GitHub", "Triage IA"]
-  }
-];
-
 export default function HomePage() {
   return (
     <main className="shell">
@@ -65,7 +47,7 @@ export default function HomePage() {
         </Link>
         <nav className="nav" aria-label="Main navigation">
           <a className="link" href="#workflow">Workflow</a>
-          <a className="link" href="#pricing">Pricing</a>
+          <a className="link" href="/demo">Demo</a>
           <a className="link hide-mobile" href="https://github.com/MLyte/ChangeThis">GitHub</a>
           <a className="button" href="mailto:hello@changethis.dev?subject=ChangeThis%20beta">Join waitlist</a>
         </nav>
@@ -142,31 +124,6 @@ export default function HomePage() {
   src="https://app.changethis.dev/widget.js"
   data-project="project_public_key">
 </script>`}</code></pre>
-      </section>
-
-      <section className="section pricing" id="pricing">
-        <div className="section-heading compact">
-          <p className="eyebrow">Open-core</p>
-          <h2>Sans pub, pense pour durer</h2>
-          <p>
-            Le widget ChangeThis sera open source. Le SaaS heberge ajoutera la gestion des projets, GitHub App managee,
-            stockage des captures, historique, equipes et triage IA.
-          </p>
-        </div>
-        <div className="plans">
-          {plans.map((plan) => (
-            <article className="plan" key={plan.name}>
-              <h3>{plan.name}</h3>
-              <p>{plan.audience}</p>
-              <ul>
-                {plan.items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </article>
-          ))}
-        </div>
-        <p className="pricing-note">Les prix arrivent avec la beta.</p>
       </section>
 
       <section className="final-cta">

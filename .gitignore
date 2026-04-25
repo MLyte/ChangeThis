@@ -8,4 +8,5 @@ out
 .env.*.local
 *.tsbuildinfo
 coverage
+dev-server.log
 .DS_Store
