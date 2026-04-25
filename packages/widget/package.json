@@ -1,0 +1,22 @@
+{
+  "name": "@changethis/widget",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/widget.global.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build && tsc -p tsconfig.json --emitDeclarationOnly",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@changethis/shared": "0.1.0",
+    "html2canvas": "^1.4.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7"
+  }
+}
