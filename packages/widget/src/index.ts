@@ -126,8 +126,8 @@ export function initChangeThis(options: WidgetOptions): void {
             <button class="mode" data-mode="pin" data-active="${state.type === "pin"}">Pin</button>
             <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">Capture</button>
           </div>
-          <textarea placeholder="Décris le retour client ici">${escapeHtml(state.message)}</textarea>
-          <p class="meta">${state.pin ? `Pin: x=${state.pin.x}, y=${state.pin.y}` : "URL, navigateur et viewport seront ajoutés automatiquement."}</p>
+          <textarea placeholder="Decris le retour client ici">${escapeHtml(state.message)}</textarea>
+          <p class="meta">${state.pin ? `Pin: x=${state.pin.x}, y=${state.pin.y}` : "URL, navigateur et viewport seront ajoutes automatiquement."}</p>
           <div class="actions">
             <button class="cancel" data-action="close">Fermer</button>
             <button class="send" data-action="send" ${state.sending ? "disabled" : ""}>${state.sending ? "Envoi..." : "Envoyer"}</button>
@@ -182,7 +182,7 @@ export function initChangeThis(options: WidgetOptions): void {
         state.open = false;
       } catch (error) {
         console.error("[ChangeThis] Failed to send feedback", error);
-        window.alert("Impossible d'envoyer le feedback. Réessaie dans un instant.");
+        window.alert("Impossible d'envoyer le feedback. Reessaie dans un instant.");
       } finally {
         state.sending = false;
         render();
@@ -279,7 +279,7 @@ async function captureViewport(): Promise<string | undefined> {
 }
 
 function maskSensitiveFields(enabled: boolean): void {
-  document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea, [contenteditable='true']").forEach((element) => {
+  document.querySelectorAll<HTMLElement>("input, textarea, select, [contenteditable='true'], [data-changethis-mask], [data-changethis-exclude]").forEach((element) => {
     if (enabled) {
       element.dataset.changethisPreviousVisibility = element.style.visibility;
       element.style.visibility = "hidden";

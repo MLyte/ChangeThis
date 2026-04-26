@@ -1,21 +1,80 @@
-import { buildGitHubIssueDraft, type FeedbackPayload } from "@changethis/shared";
+import { buildGitHubIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { demoProject } from "../../../../lib/demo-project";
 
+const maxBodyBytes = 2_500_000;
+const maxScreenshotBytes = 2_000_000;
+const rateLimitWindowMs = 60_000;
+const rateLimitMaxRequests = 20;
+
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function corsHeaders(origin: string | null): HeadersInit {
+  if (!origin || !demoProject.allowedOrigins.includes(origin)) {
+    return {};
+  }
+
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin"
+  };
+}
+
+export async function OPTIONS(request: Request) {
+  const origin = request.headers.get("origin");
+  return new NextResponse(null, {
+    status: demoProject.allowedOrigins.includes(origin ?? "") ? 204 : 403,
+    headers: corsHeaders(origin)
+  });
+}
+
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
-  const payload = (await request.json()) as FeedbackPayload;
+  const headers = corsHeaders(origin);
+  const contentLength = request.headers.get("content-length");
+
+  if (contentLength && Number(contentLength) > maxBodyBytes) {
+    return NextResponse.json({ error: "Payload is too large" }, { status: 413, headers });
+  }
+
+  let rawPayload: unknown;
+
+  try {
+    rawPayload = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Request body must be valid JSON" }, { status: 400, headers });
+  }
+
+  const validation = validateFeedbackPayload(rawPayload, { maxScreenshotBytes });
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.error }, { status: 422, headers });
+  }
+
+  const payload = validation.value;
 
   if (payload.projectKey !== demoProject.publicKey) {
-    return NextResponse.json({ error: "Unknown project" }, { status: 404 });
+    return NextResponse.json({ error: "Unknown project" }, { status: 404, headers });
   }
 
-  if (origin && !demoProject.allowedOrigins.includes(origin)) {
-    return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403 });
+  if (!origin || !demoProject.allowedOrigins.includes(origin)) {
+    return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403, headers });
   }
 
-  if (!["comment", "pin", "screenshot"].includes(payload.type)) {
-    return NextResponse.json({ error: "Invalid feedback type" }, { status: 422 });
+  const rateLimit = checkRateLimit(`${getClientKey(request)}:${payload.projectKey}`);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many feedback submissions. Try again later." },
+      {
+        status: 429,
+        headers: {
+          ...headers,
+          "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000))
+        }
+      }
+    );
   }
 
   const issueDraft = buildGitHubIssueDraft(payload);
@@ -25,5 +84,39 @@ export async function POST(request: Request) {
     status: "received",
     next: "github_issue_creation",
     issueDraft
-  });
+  }, { headers });
+}
+
+function checkRateLimit(key: string): { allowed: true } | { allowed: false; resetAt: number } {
+  const now = Date.now();
+  const bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + rateLimitWindowMs });
+    cleanupRateLimitBuckets(now);
+    return { allowed: true };
+  }
+
+  if (bucket.count >= rateLimitMaxRequests) {
+    return { allowed: false, resetAt: bucket.resetAt };
+  }
+
+  bucket.count += 1;
+  return { allowed: true };
+}
+
+function cleanupRateLimitBuckets(now: number): void {
+  for (const [key, bucket] of rateLimitBuckets) {
+    if (bucket.resetAt <= now) {
+      rateLimitBuckets.delete(key);
+    }
+  }
+}
+
+function getClientKey(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
 }
