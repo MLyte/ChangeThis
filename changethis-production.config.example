@@ -1,0 +1,34 @@
+# ChangeThis production setup checklist.
+# Copy the relevant values into the real deployment environment.
+# This file is safe to commit: it contains no secrets.
+
+# App public URL, used by embeds and generated links.
+# NEXT_PUBLIC_APP_URL=https://app.changethis.dev
+
+# Public project keys used by the widget embeds.
+# These must match the keys injected on client websites.
+# NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY=changethis_project_key
+# NEXT_PUBLIC_ANDENNE_BEARS_PROJECT_KEY=andenne_bears_project_key
+# NEXT_PUBLIC_OPTIMASTER_PROJECT_KEY=optimaster_project_key
+# NEXT_PUBLIC_YODA_CARROSSERIE_PROJECT_KEY=yoda_carrosserie_project_key
+
+# Domain action still required if the production endpoint remains app.changethis.dev:
+# Add DNS for app.changethis.dev to the hosting provider that serves ChangeThis.
+# Then verify:
+#   https://app.changethis.dev/api/public/feedback
+
+# GitHub issue creation setup.
+# Create/configure the GitHub App, then set these deployment secrets.
+# GITHUB_APP_SLUG=
+# GITHUB_APP_ID=
+# GITHUB_APP_PRIVATE_KEY=
+# GITHUB_WEBHOOK_SECRET=
+
+# Optional hosted persistence layer.
+# NEXT_PUBLIC_SUPABASE_URL=
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=
+# SUPABASE_SERVICE_ROLE_KEY=
+
+# Smoke test after deployment.
+# From an allowed origin such as https://mathieuluyten.be, submit a widget note.
+# Expected result: the API returns 200 and either creates/stages a GitHub issue draft.

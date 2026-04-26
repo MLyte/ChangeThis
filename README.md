@@ -32,7 +32,7 @@ The hosted product should eventually expose:
 </script>
 ```
 
-For local development, build the widget package and load `packages/widget/dist/widget.global.js`.
+For local development, build the widget package and load `http://127.0.0.1:3000/widget.js`.
 
 When the widget is embedded on another local or production site, add that site to
 `DEMO_PROJECT_ALLOWED_ORIGINS` so the public feedback API can answer CORS

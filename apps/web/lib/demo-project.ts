@@ -1,10 +1,21 @@
-import type { IssueTarget } from "@changethis/shared";
+import type { IssueProvider, IssueTarget } from "@changethis/shared";
 
-type ChangeThisProject = {
+export type ChangeThisProject = {
   publicKey: string;
   name: string;
   allowedOrigins: string[];
   issueTarget: IssueTarget;
+};
+
+export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";
+
+export type ProviderIntegrationSummary = {
+  provider: IssueProvider;
+  name: string;
+  accountLabel: string;
+  status: ProviderIntegrationStatus;
+  connectPath: string;
+  managePath?: string;
 };
 
 const localOrigins = [
@@ -86,6 +97,24 @@ export const changeThisProjects: ChangeThisProject[] = [
 ];
 
 export const demoProject = changeThisProjects[0];
+
+export const providerIntegrations: ProviderIntegrationSummary[] = [
+  {
+    provider: "github",
+    name: "GitHub",
+    accountLabel: "MLyte",
+    status: "connected",
+    connectPath: "/api/integrations/github/connect",
+    managePath: "https://github.com/settings/installations"
+  },
+  {
+    provider: "gitlab",
+    name: "GitLab",
+    accountLabel: "Aucun compte lie",
+    status: "needs_setup",
+    connectPath: "/api/integrations/gitlab/connect"
+  }
+];
 
 export function findProjectByKey(projectKey: string): ChangeThisProject | undefined {
   return changeThisProjects.find((project) => project.publicKey === projectKey);

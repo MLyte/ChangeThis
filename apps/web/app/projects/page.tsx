@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { changeThisProjects, providerIntegrations } from "../../lib/demo-project";
+import { IssueDestinationSetup } from "./issue-destination-setup";
 
 const feedbacks = [
   {
@@ -40,6 +42,8 @@ export default function ProjectsPage() {
         <p className="lede">
           Premiere vue produit pour verifier le flux : retours recus, mode utilise, page concernee, et statut issue.
         </p>
+
+        <IssueDestinationSetup integrations={providerIntegrations} projects={changeThisProjects} />
 
         <div className="table">
           <div className="row header">
