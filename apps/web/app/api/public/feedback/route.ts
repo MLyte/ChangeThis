@@ -1,6 +1,6 @@
 import { buildGitHubIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
-import { demoProject } from "../../../../lib/demo-project";
+import { findProjectByKey, isKnownOrigin } from "../../../../lib/demo-project";
 
 const maxBodyBytes = 2_500_000;
 const maxScreenshotBytes = 2_000_000;
@@ -10,7 +10,7 @@ const rateLimitMaxRequests = 20;
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function corsHeaders(origin: string | null): HeadersInit {
-  if (!origin || !demoProject.allowedOrigins.includes(origin)) {
+  if (!isKnownOrigin(origin)) {
     return {};
   }
 
@@ -26,7 +26,7 @@ function corsHeaders(origin: string | null): HeadersInit {
 export async function OPTIONS(request: Request) {
   const origin = request.headers.get("origin");
   return new NextResponse(null, {
-    status: demoProject.allowedOrigins.includes(origin ?? "") ? 204 : 403,
+    status: isKnownOrigin(origin) ? 204 : 403,
     headers: corsHeaders(origin)
   });
 }
@@ -54,12 +54,13 @@ export async function POST(request: Request) {
   }
 
   const payload = validation.value;
+  const project = findProjectByKey(payload.projectKey);
 
-  if (payload.projectKey !== demoProject.publicKey) {
+  if (!project) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404, headers });
   }
 
-  if (!origin || !demoProject.allowedOrigins.includes(origin)) {
+  if (!origin || !project.allowedOrigins.includes(origin)) {
     return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403, headers });
   }
 
@@ -83,6 +84,10 @@ export async function POST(request: Request) {
     id: crypto.randomUUID(),
     status: "received",
     next: "github_issue_creation",
+    project: {
+      name: project.name,
+      github: project.github
+    },
     issueDraft
   }, { headers });
 }

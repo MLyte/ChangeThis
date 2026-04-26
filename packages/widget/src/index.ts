@@ -6,16 +6,23 @@ const capturePage = html2canvas as unknown as typeof import("html2canvas").defau
 type WidgetOptions = {
   projectKey: string;
   endpoint?: string;
+  buttonLabel?: string;
+  buttonStateLabel?: string;
+  buttonVariant?: "default" | "dev" | "prod" | "review";
+  visible?: boolean;
 };
 
 const rootId = "changethis-widget-root";
 
 export function initChangeThis(options: WidgetOptions): void {
-  if (!options.projectKey || document.getElementById(rootId)) {
+  if (!options.projectKey || options.visible === false || document.getElementById(rootId)) {
     return;
   }
 
   const endpoint = options.endpoint ?? inferEndpoint();
+  const buttonLabel = options.buttonLabel ?? "Feedback";
+  const buttonStateLabel = options.buttonStateLabel;
+  const buttonVariant = options.buttonVariant ?? "default";
   const root = document.createElement("div");
   root.id = rootId;
   root.attachShadow({ mode: "open" });
@@ -47,10 +54,26 @@ export function initChangeThis(options: WidgetOptions): void {
           background: #111827;
           color: #fff;
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
           font-size: 14px;
           font-weight: 700;
           padding: 12px 16px;
           box-shadow: 0 12px 30px rgba(17, 24, 39, 0.22);
+        }
+        .button[data-variant="dev"] { background: #1d4ed8; }
+        .button[data-variant="prod"] { background: #0f766e; }
+        .button[data-variant="review"] { background: #7c2d12; }
+        .button-state {
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.16);
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 1;
+          padding: 5px 7px;
+          text-transform: uppercase;
+          white-space: nowrap;
         }
         .panel {
           position: fixed;
@@ -117,7 +140,10 @@ export function initChangeThis(options: WidgetOptions): void {
         }
       </style>
       ${state.pin ? `<div class="pin" style="left:${state.pin.x}px;top:${state.pin.y}px">1</div>` : ""}
-      <button class="button" data-action="toggle">Feedback</button>
+      <button class="button" data-action="toggle" data-variant="${buttonVariant}">
+        <span>${escapeHtml(buttonLabel)}</span>
+        ${buttonStateLabel ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
+      </button>
       ${state.open ? `
         <section class="panel" aria-label="Envoyer un feedback">
           <p class="title">Que faut-il changer ?</p>
@@ -323,8 +349,14 @@ const currentScript = document.currentScript as HTMLScriptElement | null;
 const projectKey = currentScript?.dataset.project;
 
 if (projectKey) {
+  const variant = currentScript?.dataset.buttonVariant;
+
   initChangeThis({
     projectKey,
-    endpoint: currentScript?.dataset.endpoint
+    endpoint: currentScript?.dataset.endpoint,
+    buttonLabel: currentScript?.dataset.buttonLabel,
+    buttonStateLabel: currentScript?.dataset.buttonState,
+    buttonVariant: variant === "dev" || variant === "prod" || variant === "review" ? variant : undefined,
+    visible: currentScript?.dataset.visible !== "false"
   });
 }

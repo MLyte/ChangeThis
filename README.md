@@ -38,6 +38,9 @@ When the widget is embedded on another local or production site, add that site t
 `DEMO_PROJECT_ALLOWED_ORIGINS` so the public feedback API can answer CORS
 preflight and POST requests.
 
+The floating button can be adapted per site or page with `buttonLabel`,
+`buttonStateLabel`, `buttonVariant` (`dev`, `prod`, `review`) and `visible`.
+
 ## Development
 
 ```bash

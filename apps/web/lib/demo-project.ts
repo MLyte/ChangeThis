@@ -1,42 +1,89 @@
-const defaultAllowedOrigins = [
+type ChangeThisProject = {
+  publicKey: string;
+  name: string;
+  allowedOrigins: string[];
+  github: {
+    owner: string;
+    repo: string;
+  };
+};
+
+const localOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "http://localhost:8080",
-  "http://127.0.0.1:8080",
-  "https://andenne-bears.be",
-  "https://www.andenne-bears.be",
+  "http://127.0.0.1:8080"
+];
+
+const mathieuOrigins = [
   "https://mathieuluyten.be",
   "https://www.mathieuluyten.be"
 ];
 
-function getAllowedOrigins(): string[] {
-  const configuredOrigins = process.env.DEMO_PROJECT_ALLOWED_ORIGINS?.split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+const andenneOrigins = [
+  "https://andenne-bears.be",
+  "https://www.andenne-bears.be"
+];
 
-  return configuredOrigins?.length ? configuredOrigins : defaultAllowedOrigins;
-}
+function projectKey(envName: string, fallback: string): string {
+  const configuredKey = process.env[envName];
 
-function getDemoProjectKey(): string {
-  const projectKey = process.env.NEXT_PUBLIC_DEMO_PROJECT_KEY;
-
-  if (projectKey) {
-    return projectKey;
+  if (configuredKey) {
+    return configuredKey;
   }
 
   if (process.env.VERCEL_ENV === "production") {
-    throw new Error("NEXT_PUBLIC_DEMO_PROJECT_KEY must be configured in production");
+    throw new Error(`${envName} must be configured in production`);
   }
 
-  return "demo_project_key";
+  return fallback;
 }
 
-export const demoProject = {
-  publicKey: getDemoProjectKey(),
-  name: "ChangeThis Demo",
-  allowedOrigins: getAllowedOrigins(),
-  github: {
-    owner: "MLyte",
-    repo: "ChangeThis"
+export const changeThisProjects: ChangeThisProject[] = [
+  {
+    publicKey: projectKey("NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY", process.env.NEXT_PUBLIC_DEMO_PROJECT_KEY ?? "changethis_project_key"),
+    name: "ChangeThis",
+    allowedOrigins: [...localOrigins, ...mathieuOrigins],
+    github: {
+      owner: "MLyte",
+      repo: "ChangeThis"
+    }
+  },
+  {
+    publicKey: projectKey("NEXT_PUBLIC_ANDENNE_BEARS_PROJECT_KEY", "andenne_bears_project_key"),
+    name: "Andenne Bears",
+    allowedOrigins: [...localOrigins, ...mathieuOrigins, ...andenneOrigins],
+    github: {
+      owner: "MLyte",
+      repo: "andenne-bears.be"
+    }
+  },
+  {
+    publicKey: projectKey("NEXT_PUBLIC_OPTIMASTER_PROJECT_KEY", "optimaster_project_key"),
+    name: "OptiMaster",
+    allowedOrigins: [...localOrigins, ...mathieuOrigins],
+    github: {
+      owner: "MLyte",
+      repo: "OptiMaster"
+    }
+  },
+  {
+    publicKey: projectKey("NEXT_PUBLIC_YODA_CARROSSERIE_PROJECT_KEY", "yoda_carrosserie_project_key"),
+    name: "Yoda Carrosserie Service",
+    allowedOrigins: [...localOrigins, ...mathieuOrigins],
+    github: {
+      owner: "MLyte",
+      repo: "YodaCarrosserieService"
+    }
   }
-};
+];
+
+export const demoProject = changeThisProjects[0];
+
+export function findProjectByKey(projectKey: string): ChangeThisProject | undefined {
+  return changeThisProjects.find((project) => project.publicKey === projectKey);
+}
+
+export function isKnownOrigin(origin: string | null): boolean {
+  return Boolean(origin && changeThisProjects.some((project) => project.allowedOrigins.includes(origin)));
+}
