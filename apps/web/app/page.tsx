@@ -2,40 +2,42 @@ import Link from "next/link";
 
 const benefits = [
   {
-    title: "Fini les retours disperses",
-    body: "Plus de captures envoyees par mail, WhatsApp ou PDF sans URL ni contexte."
+    title: "Un retour = un contexte complet",
+    body: "URL, chemin, titre, navigateur, viewport, langue, pin et capture sont regroupes dans une seule charge utile."
   },
   {
-    title: "Pret pour vos issues",
-    body: "Chaque retour devient une issue tracable, labelisee et actionnable dans votre destination."
+    title: "Des projets separes",
+    body: "Chaque site utilise une cle publique et ses domaines autorises, avec sa destination d'issue propre."
   },
   {
-    title: "Simple pour le client",
-    body: "Pas de compte, pas de jargon, juste un bouton sur le site de staging."
+    title: "Pret pour GitHub et GitLab",
+    body: "Le dashboard prepare les integrations provider et la liaison namespace, repository et URL publique."
   },
   {
-    title: "Pret pour l'IA",
-    body: "Les feedbacks sont structures pour etre tries, resumes ou corriges plus tard par Codex."
+    title: "Lisible par l'IA",
+    body: "Les issues sont structurees pour etre triees, resumees et transformees en corrections par Codex."
   }
 ];
 
 const workflow = [
   {
     step: "01",
-    title: "Le client clique",
-    body: "Il ouvre le widget sur le site de staging, ajoute une note, une pin ou une capture."
+    title: "Installer le widget",
+    body: "Chargez /widget.js sur un site client, ajoutez la cle projet publique et choisissez le libelle du bouton."
   },
   {
     step: "02",
-    title: "ChangeThis capture le contexte",
-    body: "URL, viewport, navigateur, position, element cible et screenshot sont ajoutes automatiquement."
+    title: "Pointer le probleme",
+    body: "Le client laisse une note, epingle un element ou joint une capture sans compte et sans quitter la page."
   },
   {
     step: "03",
-    title: "Votre tracker recoit une issue propre",
-    body: "Le retour arrive avec labels, metadonnees et une structure lisible par toi comme par l'IA."
+    title: "Router vers le bon repo",
+    body: "ChangeThis valide l'origine, construit un brouillon d'issue et l'associe au projet configure."
   }
 ];
+
+const supportedProjects = ["ChangeThis", "OptiMaster", "Andenne Bears", "Yoda Carrosserie"];
 
 export default function HomePage() {
   return (
@@ -47,6 +49,7 @@ export default function HomePage() {
         </Link>
         <nav className="nav" aria-label="Main navigation">
           <a className="link" href="#workflow">Workflow</a>
+          <Link className="link" href="/projects">Projects</Link>
           <a className="link" href="/demo">Demo</a>
           <a className="link hide-mobile" href="https://github.com/MLyte/ChangeThis">GitHub</a>
           <a className="button" href="mailto:hello@changethis.dev?subject=ChangeThis%20beta">Join waitlist</a>
@@ -58,17 +61,17 @@ export default function HomePage() {
           <p className="eyebrow">Client feedback to issues</p>
           <h1>ChangeThis</h1>
           <p className="hero-statement">
-            Vos clients pointent ce qu&apos;il faut changer. Vous recevez des issues propres.
+            Le widget qui transforme un &quot;change this&quot; en issue exploitable.
           </p>
           <p className="lede">
-            Ajoutez un widget de feedback a vos sites de staging. Notes, pins et captures deviennent des issues
-            contextualisees, pretes a trier, corriger ou confier a l&apos;IA.
+            ChangeThis collecte notes, pins et captures sur vos sites de staging, valide l&apos;origine du projet,
+            prepare un brouillon d&apos;issue propre et vous aide a le router vers le bon repository.
           </p>
           <div className="hero-actions">
-            <a className="button" href="mailto:hello@changethis.dev?subject=ChangeThis%20beta">Demander un acces</a>
+            <Link className="button" href="/projects">Configurer les projets</Link>
             <a className="button secondary-button" href="#workflow">Voir le workflow</a>
           </div>
-          <p className="microcopy">Pense pour freelances, petites agences et studios web.</p>
+          <p className="microcopy">Open source, multi-projets, pret pour les integrations provider.</p>
         </div>
 
         <ProductScene />
@@ -77,7 +80,7 @@ export default function HomePage() {
       <section className="workflow-band" id="workflow">
         <div className="section-heading">
           <p className="eyebrow">Workflow</p>
-          <h2>Du change this a l&apos;issue exploitable</h2>
+          <h2>Du commentaire client au brouillon d&apos;issue contextualise</h2>
         </div>
         <div className="steps">
           {workflow.map((item) => (
@@ -93,7 +96,7 @@ export default function HomePage() {
       <section className="section">
         <div className="section-heading compact">
           <p className="eyebrow">Pourquoi</p>
-          <h2>Moins d&apos;allers-retours. Plus de corrections utiles.</h2>
+          <h2>Le feedback devient une donnee produit, pas une conversation perdue.</h2>
         </div>
         <div className="benefit-grid">
           {benefits.map((benefit) => (
@@ -107,36 +110,56 @@ export default function HomePage() {
 
       <section className="install-section">
         <div>
-          <p className="eyebrow">Installation</p>
-          <h2>Une ligne de script. Un workflow propre.</h2>
+          <p className="eyebrow">Etat du produit</p>
+          <h2>Le socle est en place pour relier sites clients et repositories.</h2>
           <p className="lede">
-            Collez le widget sur votre environnement de staging, connectez une destination, puis laissez vos clients
-            commenter directement sur le site.
+            Le MVP ne se limite plus a une demo locale. Il expose un bundle widget versionne, une API publique de
+            feedback, un modele de projets autorises et un dashboard de preparation des destinations d&apos;issues.
           </p>
           <ul className="check-list">
-            <li>Domaines autorises</li>
-            <li>Screenshots masques</li>
-            <li>Labels d&apos;issue automatiques</li>
-            <li>Aucun token d&apos;integration cote navigateur</li>
+            <li>Bundle servi via /widget.js et /widget.global.js</li>
+            <li>Projets publics avec domaines autorises</li>
+            <li>Brouillons provider-neutral pour GitHub ou GitLab</li>
+            <li>Configuration de production documentee</li>
           </ul>
         </div>
         <pre className="code-block"><code>{`<script
   src="https://app.changethis.dev/widget.js"
-  data-project="project_public_key">
+  data-project="project_public_key"
+  data-button-label="Feedback">
 </script>`}</code></pre>
+      </section>
+
+      <section className="section">
+        <div className="section-heading compact">
+          <p className="eyebrow">Miroirs pilotes</p>
+          <h2>Un seul outil pour plusieurs sites et plusieurs repos.</h2>
+          <p>
+            ChangeThis sert de couche de feedback pour des pages vitrines, des produits open source et des sites
+            clients. Chaque projet garde son origine autorisee, son libelle et sa destination d&apos;issue.
+          </p>
+        </div>
+        <div className="benefit-grid">
+          {supportedProjects.map((project) => (
+            <article className="benefit" key={project}>
+              <h3>{project}</h3>
+              <p>Cle publique, origine autorisee et repository cible configurables dans ChangeThis.</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="final-cta">
         <div>
           <p className="eyebrow">En construction</p>
-          <h2>Transformez les retours clients en corrections claires.</h2>
+          <h2>Le feedback client peut maintenant entrer dans votre chaine de livraison.</h2>
           <p>
-            ChangeThis est en construction. Rejoignez les premiers utilisateurs et testez le widget sur vos prochains
-            sites de staging.
+            La prochaine etape consiste a finaliser les credentials provider, persister les retours et automatiser la
+            creation d&apos;issues depuis les brouillons valides.
           </p>
         </div>
         <div className="hero-actions">
-          <a className="button light-button" href="mailto:hello@changethis.dev?subject=ChangeThis%20beta">Rejoindre la beta</a>
+          <Link className="button light-button" href="/projects">Ouvrir le dashboard</Link>
           <a className="button dark-outline" href="https://github.com/MLyte/ChangeThis">Suivre sur GitHub</a>
         </div>
       </section>
@@ -171,8 +194,8 @@ function ProductScene() {
           <button className="feedback-pill">Feedback</button>
           <span className="pin">1</span>
           <div className="client-note">
-            <strong>Le bouton n&apos;est pas assez visible sur mobile</strong>
-            <span>Pin sur .hero-cta</span>
+            <strong>Le CTA manque de contraste sur mobile</strong>
+            <span>Pin + screenshot, projet: client-site</span>
           </div>
         </div>
       </div>
@@ -186,7 +209,7 @@ function ProductScene() {
         <div className="labels">
           <span>source:client-feedback</span>
           <span>status:raw</span>
-          <span>type:design</span>
+          <span>mode:pin</span>
         </div>
         <dl>
           <div>
