@@ -2,7 +2,7 @@
 
 ## One-Line Pitch
 
-Clients comment directly on a staging website. Developers receive clean GitHub Issues with screenshots and technical context.
+Clients comment directly on a staging website. Developers receive clean issues with screenshots and technical context.
 
 ## Primary User
 
@@ -17,7 +17,7 @@ A freelance web developer or small agency that wants to stop collecting vague cl
    - screenshot note
 3. The client writes an optional message.
 4. The widget sends the feedback with page metadata.
-5. ChangeThis creates a GitHub Issue.
+5. ChangeThis creates or prepares an issue in the configured destination.
 6. The client sees a short success state.
 
 ## Captured Context
@@ -38,7 +38,7 @@ A freelance web developer or small agency that wants to stop collecting vague cl
 - Target element text
 - Screenshot data URL or storage path
 
-## Default GitHub Labels
+## Default Issue Labels
 
 - `source:client-feedback`
 - `status:raw`
@@ -53,14 +53,14 @@ A freelance web developer or small agency that wants to stop collecting vague cl
 
 - Billing
 - Full image annotation editor
-- Bidirectional GitHub sync
+- Bidirectional issue provider sync
 - Automatic PR creation
 - AI triage
 - Client accounts
 
 ## SaaS Milestones
 
-1. GitHub App installation flow
+1. Issue provider installation flow for GitHub and GitLab
 2. Supabase-backed projects and feedbacks
 3. Private screenshot storage
 4. Dashboard inbox

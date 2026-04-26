@@ -17,7 +17,7 @@ const feedbacks = [
     message: "La capture montre un espacement trop grand avant le footer.",
     page: "/about",
     mode: "screenshot",
-    status: "sent_to_github"
+    status: "sent_to_provider"
   }
 ];
 
@@ -38,7 +38,7 @@ export default function ProjectsPage() {
         <p className="eyebrow">MVP dashboard</p>
         <h1>Inbox feedback</h1>
         <p className="lede">
-          Premiere vue produit pour verifier le flux : retours recus, mode utilise, page concernee, et statut GitHub.
+          Premiere vue produit pour verifier le flux : retours recus, mode utilise, page concernee, et statut issue.
         </p>
 
         <div className="table">

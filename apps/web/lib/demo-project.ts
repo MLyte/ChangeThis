@@ -1,11 +1,10 @@
+import type { IssueTarget } from "@changethis/shared";
+
 type ChangeThisProject = {
   publicKey: string;
   name: string;
   allowedOrigins: string[];
-  github: {
-    owner: string;
-    repo: string;
-  };
+  issueTarget: IssueTarget;
 };
 
 const localOrigins = [
@@ -44,36 +43,44 @@ export const changeThisProjects: ChangeThisProject[] = [
     publicKey: projectKey("NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY", process.env.NEXT_PUBLIC_DEMO_PROJECT_KEY ?? "changethis_project_key"),
     name: "ChangeThis",
     allowedOrigins: [...localOrigins, ...mathieuOrigins],
-    github: {
-      owner: "MLyte",
-      repo: "ChangeThis"
+    issueTarget: {
+      provider: "github",
+      namespace: "MLyte",
+      project: "ChangeThis",
+      webUrl: "https://github.com/MLyte/ChangeThis"
     }
   },
   {
     publicKey: projectKey("NEXT_PUBLIC_ANDENNE_BEARS_PROJECT_KEY", "andenne_bears_project_key"),
     name: "Andenne Bears",
     allowedOrigins: [...localOrigins, ...mathieuOrigins, ...andenneOrigins],
-    github: {
-      owner: "MLyte",
-      repo: "andenne-bears.be"
+    issueTarget: {
+      provider: "github",
+      namespace: "MLyte",
+      project: "andenne-bears.be",
+      webUrl: "https://github.com/MLyte/andenne-bears.be"
     }
   },
   {
     publicKey: projectKey("NEXT_PUBLIC_OPTIMASTER_PROJECT_KEY", "optimaster_project_key"),
     name: "OptiMaster",
     allowedOrigins: [...localOrigins, ...mathieuOrigins],
-    github: {
-      owner: "MLyte",
-      repo: "OptiMaster"
+    issueTarget: {
+      provider: "github",
+      namespace: "MLyte",
+      project: "OptiMaster",
+      webUrl: "https://github.com/MLyte/OptiMaster"
     }
   },
   {
     publicKey: projectKey("NEXT_PUBLIC_YODA_CARROSSERIE_PROJECT_KEY", "yoda_carrosserie_project_key"),
     name: "Yoda Carrosserie Service",
     allowedOrigins: [...localOrigins, ...mathieuOrigins],
-    github: {
-      owner: "MLyte",
-      repo: "YodaCarrosserieService"
+    issueTarget: {
+      provider: "github",
+      namespace: "MLyte",
+      project: "YodaCarrosserieService",
+      webUrl: "https://github.com/MLyte/YodaCarrosserieService"
     }
   }
 ];

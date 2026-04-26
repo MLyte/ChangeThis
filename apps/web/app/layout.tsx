@@ -4,7 +4,7 @@ import { HiddenProjectShortcut } from "./hidden-project-shortcut";
 
 export const metadata: Metadata = {
   title: "ChangeThis",
-  description: "Client website feedback that turns into clean GitHub Issues."
+  description: "Client website feedback that turns into clean issues."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

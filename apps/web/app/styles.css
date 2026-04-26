@@ -8,7 +8,7 @@
   --soft: #eef3ef;
   --accent: #1f8a70;
   --coral: #f26b4f;
-  --github: #24292f;
+  --tracker: #24292f;
   --amber: #d99b2b;
 }
 
@@ -362,7 +362,7 @@ h3 {
 }
 
 .issue-panel {
-  background: var(--github);
+  background: var(--tracker);
   color: white;
   justify-self: end;
   margin-top: -58px;
@@ -383,10 +383,10 @@ h3 {
   margin-bottom: 12px;
 }
 
-.github-mark {
+.provider-mark {
   background: white;
   border-radius: 5px;
-  color: var(--github);
+  color: var(--tracker);
   display: grid;
   font-size: 11px;
   height: 25px;
@@ -542,7 +542,7 @@ dd {
 }
 
 .code-block {
-  background: var(--github);
+  background: var(--tracker);
   border-radius: 8px;
   color: white;
   font-size: 15px;

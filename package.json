@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "npm run build --workspace @changethis/shared && npm run dev --workspace @changethis/web",
     "build": "npm run build --workspace @changethis/shared && npm run build --workspace @changethis/widget && npm run build --workspace @changethis/web",
-    "lint": "npm run lint --workspace @changethis/shared && npm run lint --workspace @changethis/widget && npm run lint --workspace @changethis/web",
+    "lint": "npm run lint --workspace @changethis/shared && npm run build --workspace @changethis/shared && npm run lint --workspace @changethis/widget && npm run lint --workspace @changethis/web",
     "test": "npm run test --workspace @changethis/shared",
     "typecheck": "npm run build --workspace @changethis/shared && npm run typecheck --workspace @changethis/widget && npm run typecheck --workspace @changethis/web",
     "widget:build": "npm run build --workspace @changethis/shared && npm run build --workspace @changethis/widget"

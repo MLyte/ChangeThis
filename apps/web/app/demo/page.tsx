@@ -24,7 +24,7 @@ export default function DemoPage() {
           </p>
           <p className="lede">
             Cette page charge le bundle widget local et l&apos;API locale. Les retours generent un brouillon d&apos;issue
-            GitHub, sans creation reelle dans GitHub pour l&apos;instant.
+            provider-neutral, sans creation reelle dans une destination pour l&apos;instant.
           </p>
         </div>
 
