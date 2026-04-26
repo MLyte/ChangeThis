@@ -13,10 +13,37 @@ create table if not exists projects (
   name text not null,
   public_key text not null unique,
   allowed_origins text[] not null default '{}',
-  github_repo_owner text,
-  github_repo_name text,
-  github_installation_id bigint,
   created_at timestamptz not null default now()
+);
+
+create table if not exists provider_integrations (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  provider text not null,
+  auth_type text not null,
+  external_account_id text,
+  installation_id text,
+  base_url text,
+  status text not null default 'connected',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint provider_integrations_provider_check check (provider in ('github', 'gitlab')),
+  constraint provider_integrations_auth_type_check check (auth_type in ('github_app', 'oauth', 'project_token', 'personal_token')),
+  constraint provider_integrations_status_check check (status in ('connected', 'needs_reconnect', 'disabled'))
+);
+
+create table if not exists issue_targets (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  integration_id uuid references provider_integrations(id) on delete set null,
+  provider text not null,
+  namespace text not null,
+  project_name text not null,
+  external_project_id text,
+  web_url text,
+  created_at timestamptz not null default now(),
+  constraint issue_targets_provider_check check (provider in ('github', 'gitlab')),
+  constraint issue_targets_project_provider_unique unique (project_id, provider)
 );
 
 create table if not exists feedbacks (
@@ -36,19 +63,37 @@ create table if not exists feedbacks (
   element_selector text,
   element_text text,
   screenshot_path text,
-  github_issue_number integer,
-  github_issue_url text,
   created_at timestamptz not null default now(),
-  constraint feedbacks_status_check check (status in ('raw', 'sent_to_github', 'failed')),
+  constraint feedbacks_status_check check (status in ('raw', 'issue_creation_pending', 'sent_to_provider', 'failed')),
   constraint feedbacks_type_check check (type in ('comment', 'pin', 'screenshot')),
   constraint feedbacks_viewport_width_check check (viewport_width is null or viewport_width > 0),
   constraint feedbacks_viewport_height_check check (viewport_height is null or viewport_height > 0),
   constraint feedbacks_device_pixel_ratio_check check (device_pixel_ratio is null or device_pixel_ratio > 0)
 );
 
+create table if not exists external_issues (
+  id uuid primary key default gen_random_uuid(),
+  feedback_id uuid not null unique references feedbacks(id) on delete cascade,
+  issue_target_id uuid references issue_targets(id) on delete set null,
+  provider text not null,
+  external_id text,
+  external_iid integer,
+  external_number integer,
+  url text not null,
+  state text not null default 'open',
+  raw_payload jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint external_issues_provider_check check (provider in ('github', 'gitlab')),
+  constraint external_issues_state_check check (state in ('open', 'closed'))
+);
+
 alter table organizations enable row level security;
 alter table projects enable row level security;
+alter table provider_integrations enable row level security;
+alter table issue_targets enable row level security;
 alter table feedbacks enable row level security;
+alter table external_issues enable row level security;
 
 create policy "Organization owners can read their organizations"
   on organizations
@@ -97,6 +142,77 @@ create policy "Organization owners can manage projects"
     )
   );
 
+create policy "Organization owners can read provider integrations"
+  on provider_integrations
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from organizations
+      where organizations.id = provider_integrations.organization_id
+        and organizations.owner_id = auth.uid()
+    )
+  );
+
+create policy "Organization owners can manage provider integrations"
+  on provider_integrations
+  for all
+  to authenticated
+  using (
+    exists (
+      select 1
+      from organizations
+      where organizations.id = provider_integrations.organization_id
+        and organizations.owner_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from organizations
+      where organizations.id = provider_integrations.organization_id
+        and organizations.owner_id = auth.uid()
+    )
+  );
+
+create policy "Organization owners can read issue targets"
+  on issue_targets
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from projects
+      join organizations on organizations.id = projects.organization_id
+      where projects.id = issue_targets.project_id
+        and organizations.owner_id = auth.uid()
+    )
+  );
+
+create policy "Organization owners can manage issue targets"
+  on issue_targets
+  for all
+  to authenticated
+  using (
+    exists (
+      select 1
+      from projects
+      join organizations on organizations.id = projects.organization_id
+      where projects.id = issue_targets.project_id
+        and organizations.owner_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from projects
+      join organizations on organizations.id = projects.organization_id
+      where projects.id = issue_targets.project_id
+        and organizations.owner_id = auth.uid()
+    )
+  );
+
 create policy "Organization owners can read feedbacks"
   on feedbacks
   for select
@@ -107,6 +223,46 @@ create policy "Organization owners can read feedbacks"
       from projects
       join organizations on organizations.id = projects.organization_id
       where projects.id = feedbacks.project_id
+        and organizations.owner_id = auth.uid()
+    )
+  );
+
+create policy "Organization owners can read external issues"
+  on external_issues
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from feedbacks
+      join projects on projects.id = feedbacks.project_id
+      join organizations on organizations.id = projects.organization_id
+      where feedbacks.id = external_issues.feedback_id
+        and organizations.owner_id = auth.uid()
+    )
+  );
+
+create policy "Organization owners can manage external issues"
+  on external_issues
+  for all
+  to authenticated
+  using (
+    exists (
+      select 1
+      from feedbacks
+      join projects on projects.id = feedbacks.project_id
+      join organizations on organizations.id = projects.organization_id
+      where feedbacks.id = external_issues.feedback_id
+        and organizations.owner_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from feedbacks
+      join projects on projects.id = feedbacks.project_id
+      join organizations on organizations.id = projects.organization_id
+      where feedbacks.id = external_issues.feedback_id
         and organizations.owner_id = auth.uid()
     )
   );

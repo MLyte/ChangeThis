@@ -1,6 +1,7 @@
 export type FeedbackType = "comment" | "pin" | "screenshot";
 
-export type FeedbackStatus = "raw" | "sent_to_github" | "failed";
+export type FeedbackStatus = "raw" | "issue_creation_pending" | "sent_to_provider" | "failed";
+export type IssueProvider = "github" | "gitlab";
 
 export type PinTarget = {
   x: number;
@@ -32,11 +33,32 @@ export type FeedbackPayload = {
   screenshotDataUrl?: string;
 };
 
-export type GitHubIssueDraft = {
+export type IssueTarget = {
+  provider: IssueProvider;
+  namespace: string;
+  project: string;
+  externalProjectId?: string;
+  installationId?: string;
+  integrationId?: string;
+  webUrl?: string;
+};
+
+export type ExternalIssueRef = {
+  provider: IssueProvider;
+  id?: string;
+  iid?: number;
+  number?: number;
+  url: string;
+  state?: "open" | "closed";
+};
+
+export type IssueDraft = {
   title: string;
-  body: string;
+  description: string;
   labels: string[];
 };
+
+export type GitHubIssueDraft = IssueDraft;
 
 export type FeedbackValidationOptions = {
   maxMessageLength?: number;
@@ -121,7 +143,7 @@ export function validateFeedbackPayload(
   };
 }
 
-export function buildGitHubIssueDraft(feedback: FeedbackPayload): GitHubIssueDraft {
+export function buildIssueDraft(feedback: FeedbackPayload): IssueDraft {
   const pageLabel = feedback.metadata.path || "/";
   const titleSummary = summarize(feedback.message, feedback.pin?.text);
   const title = `[Feedback] ${pageLabel} - ${titleSummary}`;
@@ -130,11 +152,15 @@ export function buildGitHubIssueDraft(feedback: FeedbackPayload): GitHubIssueDra
   return {
     title,
     labels,
-    body: buildIssueBody(feedback)
+    description: buildIssueDescription(feedback)
   };
 }
 
-function buildIssueBody(feedback: FeedbackPayload): string {
+export function buildGitHubIssueDraft(feedback: FeedbackPayload): GitHubIssueDraft {
+  return buildIssueDraft(feedback);
+}
+
+function buildIssueDescription(feedback: FeedbackPayload): string {
   const lines = [
     "## Feedback client",
     "",

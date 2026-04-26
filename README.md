@@ -1,14 +1,14 @@
 # ChangeThis
 
-ChangeThis is a GitHub-first client feedback widget for websites in development.
+ChangeThis is a client feedback widget for websites in development that turns feedback into clean issues.
 
-Clients click a fixed feedback button, add a note, pin a page element, or send a screenshot. ChangeThis turns that context into a clean GitHub Issue with URL, viewport, browser details, screenshot metadata, and labels ready for triage.
+Clients click a fixed feedback button, add a note, pin a page element, or send a screenshot. ChangeThis turns that context into a clean issue with URL, viewport, browser details, screenshot metadata, and labels ready for triage.
 
 ## Product Direction
 
 - **Audience:** freelancers, small web agencies, and studios shipping client websites.
-- **Model:** open-core. The widget and core protocol can be open source; hosted dashboard, managed GitHub App, storage, teams, and AI triage are planned for the 2.0 hosted layer.
-- **Promise:** clients point at what needs changing; developers receive actionable GitHub Issues.
+- **Model:** open-core. The widget and core protocol can be open source; hosted dashboard, managed issue provider integrations, storage, teams, and AI triage are planned for the 2.0 hosted layer.
+- **Promise:** clients point at what needs changing; developers receive actionable issues in GitHub or GitLab.
 
 ## MVP
 
@@ -17,7 +17,7 @@ Clients click a fixed feedback button, add a note, pin a page element, or send a
 - Pin-on-page mode
 - Screenshot capture mode
 - Public API endpoint for feedback
-- GitHub Issue body generator
+- Provider-neutral issue draft generator
 - Minimal dashboard shell
 - Project public key and allowed-origin model
 
@@ -65,7 +65,7 @@ npm run widget:build
 npm run dev
 ```
 
-Then open `http://127.0.0.1:3000/demo` and use the floating Feedback button. The current MVP receives the feedback and returns a GitHub Issue draft; it does not create the GitHub issue yet.
+Then open `http://127.0.0.1:3000/demo` and use the floating Feedback button. The current MVP receives the feedback and returns a provider-neutral issue draft; it does not create the external issue yet.
 
 ## Validation
 
@@ -81,7 +81,7 @@ npm run build --workspace @changethis/web
 ```txt
 apps/web             Next.js dashboard and API
 packages/widget     Embeddable browser widget
-packages/shared     Shared feedback types and GitHub Issue formatting
+packages/shared     Shared feedback types and provider-neutral issue formatting
 docs                 Product and technical specs
 supabase/migrations Future database schema
 ```

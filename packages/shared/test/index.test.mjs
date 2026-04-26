@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildGitHubIssueDraft, validateFeedbackPayload } from "../dist/index.js";
+import { buildGitHubIssueDraft, buildIssueDraft, validateFeedbackPayload } from "../dist/index.js";
 
 function validPayload(overrides = {}) {
   return {
@@ -55,13 +55,20 @@ test("validateFeedbackPayload rejects oversized screenshots", () => {
   assert.match(result.error, /screenshotDataUrl/);
 });
 
-test("buildGitHubIssueDraft creates a concise issue draft", () => {
+test("buildIssueDraft creates a concise provider-neutral issue draft", () => {
   const validation = validateFeedbackPayload(validPayload());
   assert.equal(validation.ok, true);
 
-  const draft = buildGitHubIssueDraft(validation.value);
+  const draft = buildIssueDraft(validation.value);
 
   assert.equal(draft.title, "[Feedback] /contact - Make the call to action more visible");
   assert.deepEqual(draft.labels, ["source:client-feedback", "status:raw", "type:feedback", "mode:pin"]);
-  assert.match(draft.body, /Element probable: `\.hero-cta`/);
+  assert.match(draft.description, /Element probable: `\.hero-cta`/);
+});
+
+test("buildGitHubIssueDraft remains as a compatibility alias", () => {
+  const validation = validateFeedbackPayload(validPayload());
+  assert.equal(validation.ok, true);
+
+  assert.deepEqual(buildGitHubIssueDraft(validation.value), buildIssueDraft(validation.value));
 });

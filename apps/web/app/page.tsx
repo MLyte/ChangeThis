@@ -6,8 +6,8 @@ const benefits = [
     body: "Plus de captures envoyees par mail, WhatsApp ou PDF sans URL ni contexte."
   },
   {
-    title: "Pense pour GitHub",
-    body: "Chaque retour devient une issue tracable, labelisee et actionnable dans ton repo."
+    title: "Pret pour vos issues",
+    body: "Chaque retour devient une issue tracable, labelisee et actionnable dans votre destination."
   },
   {
     title: "Simple pour le client",
@@ -32,7 +32,7 @@ const workflow = [
   },
   {
     step: "03",
-    title: "GitHub recoit une issue propre",
+    title: "Votre tracker recoit une issue propre",
     body: "Le retour arrive avec labels, metadonnees et une structure lisible par toi comme par l'IA."
   }
 ];
@@ -55,10 +55,10 @@ export default function HomePage() {
 
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">Client feedback to GitHub Issues</p>
+          <p className="eyebrow">Client feedback to issues</p>
           <h1>ChangeThis</h1>
           <p className="hero-statement">
-            Vos clients pointent ce qu&apos;il faut changer. Vous recevez des GitHub Issues propres.
+            Vos clients pointent ce qu&apos;il faut changer. Vous recevez des issues propres.
           </p>
           <p className="lede">
             Ajoutez un widget de feedback a vos sites de staging. Notes, pins et captures deviennent des issues
@@ -110,14 +110,14 @@ export default function HomePage() {
           <p className="eyebrow">Installation</p>
           <h2>Une ligne de script. Un workflow propre.</h2>
           <p className="lede">
-            Collez le widget sur votre environnement de staging, connectez un repo GitHub, puis laissez vos clients
+            Collez le widget sur votre environnement de staging, connectez une destination, puis laissez vos clients
             commenter directement sur le site.
           </p>
           <ul className="check-list">
             <li>Domaines autorises</li>
             <li>Screenshots masques</li>
-            <li>Labels GitHub automatiques</li>
-            <li>Aucun token GitHub cote navigateur</li>
+            <li>Labels d&apos;issue automatiques</li>
+            <li>Aucun token d&apos;integration cote navigateur</li>
           </ul>
         </div>
         <pre className="code-block"><code>{`<script
@@ -179,8 +179,8 @@ function ProductScene() {
 
       <div className="issue-panel">
         <div className="issue-header">
-          <span className="github-mark">GH</span>
-          <span>GitHub Issue</span>
+          <span className="provider-mark">GH</span>
+          <span>Issue</span>
         </div>
         <h3>[Feedback] /contact - Bouton CTA peu visible</h3>
         <div className="labels">

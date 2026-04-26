@@ -1,4 +1,4 @@
-import { buildGitHubIssueDraft, validateFeedbackPayload } from "@changethis/shared";
+import { buildIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { findProjectByKey, isKnownOrigin } from "../../../../lib/demo-project";
 
@@ -14,8 +14,13 @@ function corsHeaders(origin: string | null): HeadersInit {
     return {};
   }
 
+  const allowedOrigin = origin;
+  if (!allowedOrigin) {
+    return {};
+  }
+
   return {
-    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
@@ -78,15 +83,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const issueDraft = buildGitHubIssueDraft(payload);
+  const issueDraft = buildIssueDraft(payload);
 
   return NextResponse.json({
     id: crypto.randomUUID(),
     status: "received",
-    next: "github_issue_creation",
+    next: "issue_creation",
     project: {
       name: project.name,
-      github: project.github
+      issueTarget: {
+        provider: project.issueTarget.provider,
+        namespace: project.issueTarget.namespace,
+        project: project.issueTarget.project,
+        webUrl: project.issueTarget.webUrl
+      }
     },
     issueDraft
   }, { headers });
