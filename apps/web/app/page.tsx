@@ -3,19 +3,19 @@ import Link from "next/link";
 const benefits = [
   {
     title: "Un retour = un contexte complet",
-    body: "URL, chemin, titre, navigateur, viewport, langue, pin et capture sont regroupes dans une seule charge utile."
+    body: "URL, chemin, titre, navigateur, viewport, langue, pin et capture sont regroupés dans une seule charge utile."
   },
   {
-    title: "Des projets separes",
-    body: "Chaque site utilise une cle publique et ses domaines autorises, avec sa destination d'issue propre."
+    title: "Des projets séparés",
+    body: "Chaque site utilise une clé publique et ses domaines autorisés, avec sa destination d'issue propre."
   },
   {
-    title: "Pret pour GitHub et GitLab",
-    body: "Le dashboard prepare les integrations provider et la liaison namespace, repository et URL publique."
+    title: "Prêt pour GitHub et GitLab",
+    body: "Le dashboard prépare les intégrations provider et la liaison namespace, repository et URL publique."
   },
   {
     title: "Lisible par l'IA",
-    body: "Les issues sont structurees pour etre triees, resumees et transformees en corrections par Codex."
+    body: "Les issues sont structurées pour être triées, résumées et transformées en corrections par Codex."
   }
 ];
 
@@ -23,12 +23,12 @@ const workflow = [
   {
     step: "01",
     title: "Installer le widget",
-    body: "Chargez /widget.js sur un site client, ajoutez la cle projet publique et choisissez le libelle du bouton."
+    body: "Chargez /widget.js sur un site client, ajoutez la clé projet publique et choisissez le libellé du bouton."
   },
   {
     step: "02",
-    title: "Pointer le probleme",
-    body: "Le client laisse une note, epingle un element ou joint une capture sans compte et sans quitter la page."
+    title: "Pointer le problème",
+    body: "Le client laisse une note, épingle un élément ou joint une capture sans compte et sans quitter la page."
   },
   {
     step: "03",
@@ -65,13 +65,13 @@ export default function HomePage() {
           </p>
           <p className="lede">
             ChangeThis collecte notes, pins et captures sur vos sites de staging, valide l&apos;origine du projet,
-            prepare un brouillon d&apos;issue propre et vous aide a le router vers le bon repository.
+            prépare un brouillon d&apos;issue propre et vous aide à le router vers le bon repository.
           </p>
           <div className="hero-actions">
             <Link className="button" href="/projects">Configurer les projets</Link>
             <a className="button secondary-button" href="#workflow">Voir le workflow</a>
           </div>
-          <p className="microcopy">Open source, multi-projets, pret pour les integrations provider.</p>
+          <p className="microcopy">Open source, multi-projets, prêt pour les intégrations provider.</p>
         </div>
 
         <ProductScene />
@@ -80,7 +80,7 @@ export default function HomePage() {
       <section className="workflow-band" id="workflow">
         <div className="section-heading">
           <p className="eyebrow">Workflow</p>
-          <h2>Du commentaire client au brouillon d&apos;issue contextualise</h2>
+          <h2>Du commentaire client au brouillon d&apos;issue contextualisé</h2>
         </div>
         <div className="steps">
           {workflow.map((item) => (
@@ -96,7 +96,7 @@ export default function HomePage() {
       <section className="section">
         <div className="section-heading compact">
           <p className="eyebrow">Pourquoi</p>
-          <h2>Le feedback devient une donnee produit, pas une conversation perdue.</h2>
+          <h2>Le feedback devient une donnée produit, pas une conversation perdue.</h2>
         </div>
         <div className="benefit-grid">
           {benefits.map((benefit) => (
@@ -110,17 +110,17 @@ export default function HomePage() {
 
       <section className="install-section">
         <div>
-          <p className="eyebrow">Etat du produit</p>
+          <p className="eyebrow">État du produit</p>
           <h2>Le socle est en place pour relier sites clients et repositories.</h2>
           <p className="lede">
-            Le MVP ne se limite plus a une demo locale. Il expose un bundle widget versionne, une API publique de
-            feedback, un modele de projets autorises et un dashboard de preparation des destinations d&apos;issues.
+            Le MVP ne se limite plus à une démo locale. Il expose un bundle widget versionné, une API publique de
+            feedback, un modèle de projets autorisés et un dashboard de préparation des destinations d&apos;issues.
           </p>
           <ul className="check-list">
             <li>Bundle servi via /widget.js et /widget.global.js</li>
-            <li>Projets publics avec domaines autorises</li>
+            <li>Projets publics avec domaines autorisés</li>
             <li>Brouillons provider-neutral pour GitHub ou GitLab</li>
-            <li>Configuration de production documentee</li>
+            <li>Configuration de production documentée</li>
           </ul>
         </div>
         <pre className="code-block"><code>{`<script
@@ -136,14 +136,14 @@ export default function HomePage() {
           <h2>Un seul outil pour plusieurs sites et plusieurs repos.</h2>
           <p>
             ChangeThis sert de couche de feedback pour des pages vitrines, des produits open source et des sites
-            clients. Chaque projet garde son origine autorisee, son libelle et sa destination d&apos;issue.
+            clients. Chaque projet garde son origine autorisée, son libellé et sa destination d&apos;issue.
           </p>
         </div>
         <div className="benefit-grid">
           {supportedProjects.map((project) => (
             <article className="benefit" key={project}>
               <h3>{project}</h3>
-              <p>Cle publique, origine autorisee et repository cible configurables dans ChangeThis.</p>
+              <p>Clé publique, origine autorisée et repository cible configurables dans ChangeThis.</p>
             </article>
           ))}
         </div>
@@ -152,10 +152,10 @@ export default function HomePage() {
       <section className="final-cta">
         <div>
           <p className="eyebrow">En construction</p>
-          <h2>Le feedback client peut maintenant entrer dans votre chaine de livraison.</h2>
+          <h2>Le feedback client peut maintenant entrer dans votre chaîne de livraison.</h2>
           <p>
-            La prochaine etape consiste a finaliser les credentials provider, persister les retours et automatiser la
-            creation d&apos;issues depuis les brouillons valides.
+            La prochaine étape consiste à finaliser les credentials provider, persister les retours et automatiser la
+            création d&apos;issues depuis les brouillons validés.
           </p>
         </div>
         <div className="hero-actions">

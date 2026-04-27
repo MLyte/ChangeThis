@@ -20,7 +20,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
   const [selectedProjectKey, setSelectedProjectKey] = useState(projects[0]?.publicKey ?? "");
   const [selectedProvider, setSelectedProvider] = useState<IssueProvider>("github");
   const [repoUrl, setRepoUrl] = useState("");
-  const [message, setMessage] = useState("Collez une URL GitHub ou GitLab pour verifier le repo.");
+  const [message, setMessage] = useState("Collez une URL GitHub ou GitLab pour vérifier le repo.");
   const [linkedTargets, setLinkedTargets] = useState<LinkedTarget[]>(() => {
     const defaultTargets = projects.map((project) => ({
       projectKey: project.publicKey,
@@ -54,7 +54,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
     const parsedTarget = parseRepoUrl(repoUrl, selectedProvider);
 
     if (!parsedTarget) {
-      setMessage("URL invalide pour ce provider. Exemple: https://github.com/org/repo ou https://gitlab.com/group/project.");
+      setMessage("URL invalide pour ce provider. Exemple : https://github.com/org/repo ou https://gitlab.com/group/project.");
       return;
     }
 
@@ -68,7 +68,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
 
     setLinkedTargets(nextTargets);
     window.localStorage.setItem(storageKey, JSON.stringify(nextTargets));
-    setMessage(`${parsedTarget.namespace}/${parsedTarget.project} lie au site selectionne.`);
+    setMessage(`${parsedTarget.namespace}/${parsedTarget.project} lié au site sélectionné.`);
   }
 
   function getLinkedTarget(project: ChangeThisProject): IssueTarget {
@@ -81,7 +81,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
         <div className="setup-heading">
           <div>
             <p className="eyebrow">Destinations d&apos;issues</p>
-            <h2 id="destinations-title">Connecter un compte, puis lier chaque site a un repo</h2>
+            <h2 id="destinations-title">Connecter un compte, puis lier chaque site à un repo</h2>
           </div>
           <a className="button secondary-button" href="#site-repos">Lier un site</a>
         </div>
@@ -94,7 +94,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
                   {integration.provider === "github" ? "GH" : "GL"}
                 </span>
                 <span className={`status-badge ${integration.status}`}>
-                  {integration.status === "connected" ? "Connecte" : "A connecter"}
+                  {integration.status === "connected" ? "Connecté" : "À connecter"}
                 </span>
               </div>
               <h3>{integration.name}</h3>
@@ -105,7 +105,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
                 </a>
                 {integration.managePath ? (
                   <a className="button secondary-button" href={integration.managePath}>
-                    Gerer
+                    Gérer
                   </a>
                 ) : null}
               </div>
@@ -117,7 +117,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
           <div>
             <h3>Ajouter un lien site vers repo</h3>
             <p>
-              Choisissez le provider, collez l&apos;URL du repo, puis ChangeThis saura ou creer les issues de ce site.
+              Choisissez le provider, collez l&apos;URL du repo, puis ChangeThis saura où créer les issues de ce site.
             </p>
           </div>
           <form className="repo-form" onSubmit={(event) => event.preventDefault()}>
@@ -147,7 +147,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
                 value={repoUrl}
               />
             </label>
-            <button className="button" onClick={linkRepo} type="button">Verifier et lier</button>
+            <button className="button" onClick={linkRepo} type="button">Vérifier et lier</button>
           </form>
           <p className="form-status" role="status">{message}</p>
         </div>
@@ -156,7 +156,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
       <section className="linked-sites" aria-labelledby="linked-sites-title">
         <div className="setup-heading">
           <div>
-            <p className="eyebrow">Sites lies</p>
+            <p className="eyebrow">Sites liés</p>
             <h2 id="linked-sites-title">Un repo d&apos;issues par site</h2>
           </div>
         </div>
@@ -177,7 +177,7 @@ export function IssueDestinationSetup({ projects, integrations }: Props) {
                   </span>
                   <div>
                     <strong>{issueTarget.namespace}/{issueTarget.project}</strong>
-                    <span>{providerConnected ? "Pret pour les issues" : "Connexion requise"}</span>
+                    <span>{providerConnected ? "Prêt pour les issues" : "Connexion requise"}</span>
                   </div>
                 </div>
                 {issueTarget.webUrl ? (
