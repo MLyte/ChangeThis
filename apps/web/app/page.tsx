@@ -1,38 +1,9 @@
 import Link from "next/link";
+import type { StoredFeedback } from "../lib/feedback-repository";
+import { getFeedbackRepository } from "../lib/feedback-repository";
+import { listConfiguredProjects } from "../lib/project-registry";
 
-const liveSignals = [
-  { label: "Retours a traiter", value: "12", tone: "warning" },
-  { label: "Sites configures", value: "4", tone: "ok" },
-  { label: "Retries en attente", value: "2", tone: "danger" }
-];
-
-const inboxItems = [
-  {
-    title: "[Feedback] /contact - CTA trop discret sur mobile",
-    project: "Yoda Carrosserie",
-    status: "A valider",
-    meta: "Pin + capture, 390 x 844"
-  },
-  {
-    title: "[Feedback] /checkout - erreur apres paiement",
-    project: "OptiMaster",
-    status: "Retry planifie",
-    meta: "GitHub 502, prochain essai dans 8 min"
-  },
-  {
-    title: "[Feedback] /team - photo incorrecte",
-    project: "Andenne Bears",
-    status: "Issue creee",
-    meta: "github.com/MLyte/andenne-bears.be#42"
-  }
-];
-
-const siteRows = [
-  { name: "ChangeThis", origin: "mathieuluyten.be", provider: "GitHub", repo: "MLyte/ChangeThis", state: "Pret" },
-  { name: "OptiMaster", origin: "app.optimaster.be", provider: "GitHub", repo: "MLyte/OptiMaster", state: "Pret" },
-  { name: "Andenne Bears", origin: "andenne-bears.be", provider: "GitHub", repo: "MLyte/andenne-bears.be", state: "Pret" },
-  { name: "Client GitLab", origin: "staging.client.dev", provider: "GitLab", repo: "client/site", state: "A connecter" }
-];
+export const dynamic = "force-dynamic";
 
 const workflow = [
   "Le widget capture le message, l'URL, le viewport, le pin et la capture.",
@@ -40,7 +11,27 @@ const workflow = [
   "ChangeThis cree l'issue dans le repo GitHub ou GitLab lie au site."
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [projects, feedbacks] = await Promise.all([
+    listConfiguredProjects(),
+    getFeedbackRepository().list()
+  ]);
+  const actionableFeedbacks = feedbacks.filter((feedback) => feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed");
+  const retryCount = feedbacks.filter((feedback) => feedback.status === "retrying").length;
+  const latestFeedbacks = feedbacks.slice(0, 3);
+  const siteRows = projects.map((project) => ({
+    name: project.name,
+    origin: project.allowedOrigins.find((origin) => !origin.includes("localhost") && !origin.includes("127.0.0.1")) ?? "local demo",
+    provider: project.issueTarget.provider,
+    repo: `${project.issueTarget.namespace}/${project.issueTarget.project}`,
+    state: project.issueTarget.webUrl ? "Pret" : "A configurer"
+  }));
+  const liveSignals = [
+    { label: "Retours a traiter", value: String(actionableFeedbacks.length), tone: actionableFeedbacks.length > 0 ? "warning" : "ok" },
+    { label: "Sites configures", value: String(projects.length), tone: "ok" },
+    { label: "Retries en attente", value: String(retryCount), tone: retryCount > 0 ? "danger" : "ok" }
+  ];
+
   return (
     <main className="shell app-home">
       <header className="topbar">
@@ -73,7 +64,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <ConsolePreview />
+        <ConsolePreview feedbacks={latestFeedbacks} siteRows={siteRows} />
       </section>
 
       <section className="ops-strip" aria-label="Etat operationnel">
@@ -144,7 +135,19 @@ export default function HomePage() {
   );
 }
 
-function ConsolePreview() {
+function ConsolePreview({
+  feedbacks,
+  siteRows
+}: {
+  feedbacks: StoredFeedback[];
+  siteRows: Array<{
+    name: string;
+    origin: string;
+    provider: string;
+    repo: string;
+    state: string;
+  }>;
+}) {
   return (
     <div className="console-preview" aria-label="Apercu de la console ChangeThis">
       <div className="preview-topline">
@@ -168,19 +171,29 @@ function ConsolePreview() {
               <span className="mini-label">Inbox</span>
               <h2>Retours entrants</h2>
             </div>
-            <span className="status-badge needs_setup">3 a traiter</span>
+            <span className="status-badge needs_setup">{feedbacks.length} recents</span>
           </div>
 
           <div className="preview-list">
-            {inboxItems.map((item) => (
-              <article className="preview-feedback" key={item.title}>
+            {feedbacks.length > 0 ? (
+              feedbacks.map((feedback) => (
+                <article className="preview-feedback" key={feedback.id}>
+                  <div>
+                    <h3>{feedback.issueDraft.title}</h3>
+                    <p>{feedback.projectName} - {feedback.payload.type} - {feedback.payload.metadata.viewport.width} x {feedback.payload.metadata.viewport.height}</p>
+                  </div>
+                  <span>{formatStatus(feedback.status)}</span>
+                </article>
+              ))
+            ) : (
+              <article className="preview-feedback">
                 <div>
-                  <h3>{item.title}</h3>
-                  <p>{item.project} - {item.meta}</p>
+                  <h3>Aucun feedback pour le moment</h3>
+                  <p>Envoyez un retour depuis la demo widget pour alimenter cette console.</p>
                 </div>
-                <span>{item.status}</span>
+                <span>pret</span>
               </article>
-            ))}
+            )}
           </div>
 
           <div className="preview-sites">
@@ -198,4 +211,17 @@ function ConsolePreview() {
       </div>
     </div>
   );
+}
+
+function formatStatus(status: StoredFeedback["status"]): string {
+  const labels: Record<StoredFeedback["status"], string> = {
+    raw: "a creer",
+    issue_creation_pending: "en cours",
+    retrying: "retry",
+    sent_to_provider: "envoye",
+    failed: "echec",
+    ignored: "ignore"
+  };
+
+  return labels[status];
 }
