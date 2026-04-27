@@ -8,8 +8,8 @@ The strongest point right now is that the widget, API, and provider-neutral issu
 
 ## Current Gaps
 
-- Feedback is not persisted yet.
-- The inbox is still mocked.
+- Feedback is only stored in the local Next.js process for the current session.
+- The inbox reads real local-session submissions, but not a durable database yet.
 - There is no feedback history.
 - External issue creation is not wired yet.
 - Provider failures cannot be retried or diagnosed from stored state.
@@ -18,8 +18,8 @@ The biggest missing piece is persistence. Before integrating real GitHub or GitL
 
 ## Recommended Next Steps
 
-1. Add Supabase/Postgres persistence for feedback submissions.
-2. Replace the mocked `/projects` inbox with real feedback data.
+1. Replace the local-session feedback store with Supabase/Postgres persistence.
+2. Keep `/projects` connected to the feedback repository instead of static mocks.
 3. Track statuses such as `raw`, `sent_to_provider`, and `failed`.
 4. Add a manual "Create issue" action from the inbox.
 5. Add GitHub App and GitLab integration after the manual workflow is validated.

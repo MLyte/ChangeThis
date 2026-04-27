@@ -1,6 +1,7 @@
 import { buildIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { findProjectByKey, isKnownOrigin } from "../../../../lib/demo-project";
+import { recordFeedback } from "../../../../lib/feedback-store";
 
 const maxBodyBytes = 2_500_000;
 const maxScreenshotBytes = 2_000_000;
@@ -84,10 +85,16 @@ export async function POST(request: Request) {
   }
 
   const issueDraft = buildIssueDraft(payload);
+  const feedback = recordFeedback({
+    id: crypto.randomUUID(),
+    project,
+    payload,
+    issueDraft
+  });
 
   return NextResponse.json({
-    id: crypto.randomUUID(),
-    status: "received",
+    id: feedback.id,
+    status: feedback.status,
     next: "issue_creation",
     project: {
       name: project.name,

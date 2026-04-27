@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Script from "next/script";
+import { demoProject } from "../../lib/demo-project";
 
 export default function DemoPage() {
   return (
@@ -11,7 +12,7 @@ export default function DemoPage() {
         </Link>
         <nav className="nav" aria-label="Demo navigation">
           <Link className="link" href="/projects">Inbox</Link>
-          <code>demo_project_key</code>
+          <code>{demoProject.publicKey}</code>
         </nav>
       </header>
 
@@ -62,7 +63,7 @@ export default function DemoPage() {
 
       <Script
         src="/widget.global.js"
-        data-project="demo_project_key"
+        data-project={demoProject.publicKey}
         data-endpoint="/api/public/feedback"
         strategy="afterInteractive"
       />

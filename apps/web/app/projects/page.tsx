@@ -1,29 +1,16 @@
 import Link from "next/link";
-import { changeThisProjects, providerIntegrations } from "../../lib/demo-project";
+import type { StoredFeedback } from "../../lib/feedback-store";
+import { changeThisProjects, demoProject, providerIntegrations } from "../../lib/demo-project";
+import { listFeedbacks } from "../../lib/feedback-store";
 import { IssueDestinationSetup } from "./issue-destination-setup";
 
-const feedbacks = [
-  {
-    message: "Le bouton de contact manque de contraste sur mobile.",
-    page: "/contact",
-    mode: "pin",
-    status: "status:raw"
-  },
-  {
-    message: "Remplacer le titre de la section services.",
-    page: "/",
-    mode: "comment",
-    status: "status:raw"
-  },
-  {
-    message: "La capture montre un espacement trop grand avant le footer.",
-    page: "/about",
-    mode: "screenshot",
-    status: "sent_to_provider"
-  }
-];
+export const dynamic = "force-dynamic";
 
 export default function ProjectsPage() {
+  const feedbacks = listFeedbacks();
+  const pendingCount = feedbacks.filter((feedback) => feedback.status === "issue_creation_pending").length;
+  const screenshotCount = feedbacks.filter((feedback) => Boolean(feedback.payload.screenshotDataUrl)).length;
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -32,7 +19,7 @@ export default function ProjectsPage() {
           ChangeThis
         </Link>
         <nav className="nav" aria-label="Project navigation">
-          <code>demo_project_key</code>
+          <code>{demoProject.publicKey}</code>
         </nav>
       </header>
 
@@ -40,28 +27,101 @@ export default function ProjectsPage() {
         <p className="eyebrow">MVP dashboard</p>
         <h1>Inbox feedback</h1>
         <p className="lede">
-          Premiere vue produit pour verifier le flux : retours recus, mode utilise, page concernee, et statut issue.
+          Premiere vue produit pour verifier le flux : retours recus, mode utilise, page concernee, et brouillon
+          d&apos;issue pret a envoyer.
         </p>
+
+        <div className="dashboard-metrics" aria-label="Feedback metrics">
+          <MetricCard label="Retours recus" value={feedbacks.length} />
+          <MetricCard label="Issues en attente" value={pendingCount} />
+          <MetricCard label="Captures recues" value={screenshotCount} />
+        </div>
 
         <IssueDestinationSetup integrations={providerIntegrations} projects={changeThisProjects} />
 
-        <div className="table">
-          <div className="row header">
-            <span>Feedback</span>
-            <span>Page</span>
-            <span>Mode</span>
-            <span>Statut</span>
-          </div>
-          {feedbacks.map((feedback) => (
-            <div className="row" key={`${feedback.page}-${feedback.message}`}>
-              <span>{feedback.message}</span>
-              <span>{feedback.page}</span>
-              <span>{feedback.mode}</span>
-              <span>{feedback.status}</span>
+        <section className="feedback-inbox" aria-labelledby="feedback-inbox-title">
+          <div className="setup-heading">
+            <div>
+              <p className="eyebrow">Retours collectes</p>
+              <h2 id="feedback-inbox-title">Inbox session locale</h2>
             </div>
-          ))}
-        </div>
+            <Link className="button secondary-button" href="/demo">Tester le widget</Link>
+          </div>
+
+          {feedbacks.length > 0 ? (
+            <div className="feedback-list">
+              {feedbacks.map((feedback) => (
+                <FeedbackCard feedback={feedback} key={feedback.id} />
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <h3>Aucun retour recu dans cette session</h3>
+              <p>
+                Ouvrez la demo, envoyez un feedback avec le widget, puis revenez ici. Le dashboard affichera le
+                brouillon d&apos;issue genere par l&apos;API.
+              </p>
+              <Link className="button" href="/demo">Ouvrir la demo</Link>
+            </div>
+          )}
+        </section>
       </section>
     </main>
   );
+}
+
+function MetricCard({ label, value }: { label: string; value: number }) {
+  return (
+    <article className="metric-card">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </article>
+  );
+}
+
+function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
+  const message = feedback.payload.message.trim() || "Aucun message fourni.";
+
+  return (
+    <article className="feedback-card">
+      <div className="feedback-main">
+        <div className="feedback-topline">
+          <span className={`mode-badge ${feedback.payload.type}`}>{feedback.payload.type}</span>
+          <span className="status-badge needs_setup">{formatStatus(feedback.status)}</span>
+          {feedback.payload.screenshotDataUrl ? <span className="status-badge connected">capture</span> : null}
+        </div>
+        <h3>{feedback.issueDraft.title}</h3>
+        <p>{message}</p>
+        <div className="feedback-meta">
+          <span>{feedback.project.name}</span>
+          <span>{feedback.payload.metadata.path}</span>
+          <span>{formatDate(feedback.receivedAt)}</span>
+        </div>
+      </div>
+
+      <aside className="issue-draft-preview" aria-label="Issue draft">
+        <span>Brouillon issue</span>
+        <strong>{feedback.issueDraft.labels.join(" / ")}</strong>
+        <p>{feedback.payload.pin?.selector ? `Element: ${feedback.payload.pin.selector}` : feedback.payload.metadata.title}</p>
+      </aside>
+    </article>
+  );
+}
+
+function formatStatus(status: StoredFeedback["status"]): string {
+  const labels: Record<StoredFeedback["status"], string> = {
+    raw: "brut",
+    issue_creation_pending: "issue a creer",
+    sent_to_provider: "envoye",
+    failed: "echec"
+  };
+
+  return labels[status];
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("fr-BE", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(value));
 }

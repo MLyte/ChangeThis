@@ -656,8 +656,36 @@ dd {
 
 .setup-panel,
 .linked-sites,
+.feedback-inbox,
 .table {
   margin-top: 34px;
+}
+
+.dashboard-metrics {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 28px;
+}
+
+.metric-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+}
+
+.metric-card strong {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.metric-card span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
 }
 
 .setup-heading {
@@ -809,6 +837,117 @@ dd {
   gap: 3px;
 }
 
+.feedback-list {
+  display: grid;
+  gap: 12px;
+}
+
+.feedback-card,
+.empty-state {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.feedback-card {
+  align-items: stretch;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.42fr);
+  padding: 16px;
+}
+
+.feedback-main {
+  display: grid;
+  gap: 10px;
+}
+
+.feedback-main h3 {
+  font-size: 20px;
+  margin-bottom: 0;
+}
+
+.feedback-main p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.feedback-topline,
+.feedback-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feedback-meta {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mode-badge {
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 28px;
+  padding: 6px 10px;
+}
+
+.mode-badge.comment {
+  background: var(--accent);
+}
+
+.mode-badge.pin {
+  background: var(--coral);
+}
+
+.mode-badge.screenshot {
+  background: var(--tracker);
+}
+
+.issue-draft-preview {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.issue-draft-preview span {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.issue-draft-preview strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.issue-draft-preview p,
+.empty-state p {
+  color: var(--muted);
+  line-height: 1.45;
+  margin-bottom: 0;
+}
+
+.empty-state {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 22px;
+}
+
+.empty-state h3 {
+  margin-bottom: 0;
+}
+
 .table {
   overflow: hidden;
 }
@@ -870,6 +1009,7 @@ code {
   }
 
   .benefit-grid,
+  .dashboard-metrics,
   .steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -885,6 +1025,7 @@ code {
   }
 
   .repo-form,
+  .feedback-card,
   .site-repo-row {
     grid-template-columns: 1fr;
   }
@@ -928,6 +1069,7 @@ code {
 
   .site-hero,
   .benefit-grid,
+  .dashboard-metrics,
   .steps,
   .integration-grid {
     grid-template-columns: 1fr;
