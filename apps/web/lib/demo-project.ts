@@ -110,7 +110,7 @@ export const providerIntegrations: ProviderIntegrationSummary[] = [
   {
     provider: "gitlab",
     name: "GitLab",
-    accountLabel: "Aucun compte lie",
+    accountLabel: "Aucun compte lié",
     status: "needs_setup",
     connectPath: "/api/integrations/gitlab/connect"
   }

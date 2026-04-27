@@ -27,14 +27,14 @@ export default function ProjectsPage() {
         <p className="eyebrow">MVP dashboard</p>
         <h1>Inbox feedback</h1>
         <p className="lede">
-          Premiere vue produit pour verifier le flux : retours recus, mode utilise, page concernee, et brouillon
-          d&apos;issue pret a envoyer.
+          Première vue produit pour vérifier le flux : retours reçus, mode utilisé, page concernée, et brouillon
+          d&apos;issue prêt à envoyer.
         </p>
 
         <div className="dashboard-metrics" aria-label="Feedback metrics">
-          <MetricCard label="Retours recus" value={feedbacks.length} />
+          <MetricCard label="Retours reçus" value={feedbacks.length} />
           <MetricCard label="Issues en attente" value={pendingCount} />
-          <MetricCard label="Captures recues" value={screenshotCount} />
+          <MetricCard label="Captures reçues" value={screenshotCount} />
         </div>
 
         <IssueDestinationSetup integrations={providerIntegrations} projects={changeThisProjects} />
@@ -56,12 +56,12 @@ export default function ProjectsPage() {
             </div>
           ) : (
             <div className="empty-state">
-              <h3>Aucun retour recu dans cette session</h3>
+              <h3>Aucun retour reçu dans cette session.</h3>
               <p>
-                Ouvrez la demo, envoyez un feedback avec le widget, puis revenez ici. Le dashboard affichera le
-                brouillon d&apos;issue genere par l&apos;API.
+                Ouvrez la démo, envoyez un feedback avec le widget, puis revenez ici. Le dashboard affichera le
+                brouillon d&apos;issue généré par l&apos;API.
               </p>
-              <Link className="button" href="/demo">Ouvrir la demo</Link>
+              <Link className="button" href="/demo">Ouvrir la démo</Link>
             </div>
           )}
         </section>
@@ -111,9 +111,9 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
 function formatStatus(status: StoredFeedback["status"]): string {
   const labels: Record<StoredFeedback["status"], string> = {
     raw: "brut",
-    issue_creation_pending: "issue a creer",
-    sent_to_provider: "envoye",
-    failed: "echec"
+    issue_creation_pending: "issue à créer",
+    sent_to_provider: "envoyé",
+    failed: "échec"
   };
 
   return labels[status];
