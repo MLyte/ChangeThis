@@ -95,6 +95,12 @@ textarea {
   color: var(--muted);
 }
 
+.lang-toggle {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
 .button {
   background: var(--ink);
   color: white;
