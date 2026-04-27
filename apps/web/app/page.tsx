@@ -191,7 +191,7 @@ function ProductScene() {
             </div>
             <div className="mock-media" />
           </div>
-          <button className="feedback-pill">Feedback</button>
+          <button className="feedback-pill">Preview</button>
           <span className="pin">1</span>
           <div className="client-note">
             <strong>Le CTA manque de contraste sur mobile</strong>
