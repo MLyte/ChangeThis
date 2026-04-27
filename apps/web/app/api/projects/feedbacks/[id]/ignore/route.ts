@@ -1,0 +1,28 @@
+import { NextResponse } from "next/server";
+import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
+import { logInfo, requestIdFrom } from "../../../../../../lib/logger";
+
+type RouteContext = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
+export async function POST(request: Request, context: RouteContext) {
+  const requestId = requestIdFrom(request);
+  const { id } = await context.params;
+  const repository = getFeedbackRepository();
+
+  try {
+    const feedback = await repository.markIgnored(id);
+    logInfo("feedback_ignored", {
+      request_id: requestId,
+      project_id: feedback.projectKey,
+      feedback_id: feedback.id
+    });
+
+    return NextResponse.json({ id: feedback.id, status: feedback.status });
+  } catch {
+    return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+  }
+}

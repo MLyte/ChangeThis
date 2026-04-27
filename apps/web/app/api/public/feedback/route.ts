@@ -1,7 +1,8 @@
 import { buildIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { findProjectByKey, isKnownOrigin } from "../../../../lib/demo-project";
-import { recordFeedback } from "../../../../lib/feedback-store";
+import { getFeedbackRepository } from "../../../../lib/feedback-repository";
+import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
 
 const maxBodyBytes = 2_500_000;
 const maxScreenshotBytes = 2_000_000;
@@ -38,11 +39,13 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const requestId = requestIdFrom(request);
   const origin = request.headers.get("origin");
   const headers = corsHeaders(origin);
   const contentLength = request.headers.get("content-length");
 
   if (contentLength && Number(contentLength) > maxBodyBytes) {
+    logWarn("feedback_rejected_payload_too_large", { request_id: requestId, origin, content_length: contentLength });
     return NextResponse.json({ error: "Payload is too large" }, { status: 413, headers });
   }
 
@@ -51,11 +54,13 @@ export async function POST(request: Request) {
   try {
     rawPayload = await request.json();
   } catch {
+    logWarn("feedback_rejected_invalid_json", { request_id: requestId, origin });
     return NextResponse.json({ error: "Request body must be valid JSON" }, { status: 400, headers });
   }
 
   const validation = validateFeedbackPayload(rawPayload, { maxScreenshotBytes });
   if (!validation.ok) {
+    logWarn("feedback_rejected_validation", { request_id: requestId, origin, error: validation.error });
     return NextResponse.json({ error: validation.error }, { status: 422, headers });
   }
 
@@ -63,15 +68,18 @@ export async function POST(request: Request) {
   const project = findProjectByKey(payload.projectKey);
 
   if (!project) {
+    logWarn("feedback_rejected_unknown_project", { request_id: requestId, origin, project_key: payload.projectKey });
     return NextResponse.json({ error: "Unknown project" }, { status: 404, headers });
   }
 
   if (!origin || !project.allowedOrigins.includes(origin)) {
+    logWarn("feedback_rejected_origin", { request_id: requestId, origin, project_key: payload.projectKey });
     return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403, headers });
   }
 
   const rateLimit = checkRateLimit(`${getClientKey(request)}:${payload.projectKey}`);
   if (!rateLimit.allowed) {
+    logWarn("feedback_rejected_rate_limited", { request_id: requestId, origin, project_key: payload.projectKey });
     return NextResponse.json(
       { error: "Too many feedback submissions. Try again later." },
       {
@@ -85,16 +93,25 @@ export async function POST(request: Request) {
   }
 
   const issueDraft = buildIssueDraft(payload);
-  const feedback = recordFeedback({
-    id: crypto.randomUUID(),
-    project,
+  const feedback = await getFeedbackRepository().create({
+    projectKey: project.publicKey,
+    projectName: project.name,
+    issueTarget: project.issueTarget,
     payload,
-    issueDraft
+    issueDraft,
+    screenshotDataUrl: payload.screenshotDataUrl
+  });
+
+  logInfo("feedback_received", {
+    request_id: requestId,
+    project_id: project.publicKey,
+    feedback_id: feedback.id,
+    has_screenshot: Boolean(feedback.screenshotAsset)
   });
 
   return NextResponse.json({
     id: feedback.id,
-    status: feedback.status,
+    status: "received",
     next: "issue_creation",
     project: {
       name: project.name,
@@ -106,7 +123,7 @@ export async function POST(request: Request) {
       }
     },
     issueDraft
-  }, { headers });
+  }, { headers: { ...headers, "X-Request-Id": requestId } });
 }
 
 function checkRateLimit(key: string): { allowed: true } | { allowed: false; resetAt: number } {

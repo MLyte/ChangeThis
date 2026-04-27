@@ -1,6 +1,6 @@
 export type FeedbackType = "comment" | "pin" | "screenshot";
 
-export type FeedbackStatus = "raw" | "issue_creation_pending" | "sent_to_provider" | "failed";
+export type FeedbackStatus = "raw" | "issue_creation_pending" | "retrying" | "sent_to_provider" | "failed" | "ignored";
 export type IssueProvider = "github" | "gitlab";
 
 export type PinTarget = {

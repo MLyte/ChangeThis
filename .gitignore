@@ -12,4 +12,5 @@ out
 coverage
 dev-server.log
 .changethis-*.log
+.changethis-data
 .DS_Store

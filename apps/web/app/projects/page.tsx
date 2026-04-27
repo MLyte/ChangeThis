@@ -1,15 +1,34 @@
 import Link from "next/link";
-import type { StoredFeedback } from "../../lib/feedback-store";
-import { changeThisProjects, demoProject, providerIntegrations } from "../../lib/demo-project";
-import { listFeedbacks } from "../../lib/feedback-store";
+import type { FeedbackStatus } from "@changethis/shared";
+import { changeThisProjects, providerIntegrations } from "../../lib/demo-project";
+import { getFeedbackRepository, type StoredFeedback } from "../../lib/feedback-repository";
+import { FeedbackActions } from "./feedback-actions";
 import { IssueDestinationSetup } from "./issue-destination-setup";
 
 export const dynamic = "force-dynamic";
 
-export default function ProjectsPage() {
-  const feedbacks = listFeedbacks();
-  const pendingCount = feedbacks.filter((feedback) => feedback.status === "issue_creation_pending").length;
-  const screenshotCount = feedbacks.filter((feedback) => Boolean(feedback.payload.screenshotDataUrl)).length;
+const statusLabels: Record<FeedbackStatus, string> = {
+  raw: "issue a creer",
+  issue_creation_pending: "creation en cours",
+  retrying: "retry planifie",
+  sent_to_provider: "envoye",
+  failed: "echec",
+  ignored: "ignore"
+};
+
+const statusClasses: Record<FeedbackStatus, string> = {
+  raw: "needs_setup",
+  issue_creation_pending: "needs_setup",
+  retrying: "needs_setup",
+  sent_to_provider: "connected",
+  failed: "failed",
+  ignored: "muted"
+};
+
+export default async function ProjectsPage() {
+  const feedbacks = await getFeedbackRepository().list();
+  const activeFeedbacks = feedbacks.filter((feedback) => feedback.status !== "ignored");
+  const pendingFeedbacks = feedbacks.filter((feedback) => feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed");
 
   return (
     <main className="shell">
@@ -19,104 +38,84 @@ export default function ProjectsPage() {
           ChangeThis
         </Link>
         <nav className="nav" aria-label="Project navigation">
-          <code>{demoProject.publicKey}</code>
+          <code>{changeThisProjects[0]?.publicKey ?? "demo_project_key"}</code>
         </nav>
       </header>
 
       <section className="dashboard">
-        <p className="eyebrow">MVP dashboard</p>
-        <h1>Inbox feedback</h1>
-        <p className="lede">
-          Première vue produit pour vérifier le flux : retours reçus, mode utilisé, page concernée, et brouillon
-          d&apos;issue prêt à envoyer.
-        </p>
-
-        <div className="dashboard-metrics" aria-label="Feedback metrics">
-          <MetricCard label="Retours reçus" value={feedbacks.length} />
-          <MetricCard label="Issues en attente" value={pendingCount} />
-          <MetricCard label="Captures reçues" value={screenshotCount} />
-        </div>
-
-        <IssueDestinationSetup integrations={providerIntegrations} projects={changeThisProjects} />
-
-        <section className="feedback-inbox" aria-labelledby="feedback-inbox-title">
-          <div className="setup-heading">
+        <section className="inbox-panel" aria-labelledby="local-inbox-title">
+          <div className="inbox-hero">
             <div>
               <p className="eyebrow">Retours collectes</p>
-              <h2 id="feedback-inbox-title">Inbox session locale</h2>
+              <h1 id="local-inbox-title">Inbox durable</h1>
+              <p className="lede">
+                Traitez les retours entrants, verifiez le brouillon d&apos;issue et envoyez-le vers le repo configure.
+              </p>
             </div>
-            <Link className="button secondary-button" href="/demo">Tester le widget</Link>
+            <div className="inbox-summary" aria-label="Etat de l'inbox">
+              <strong>{pendingFeedbacks.length}</strong>
+              <span>a remonter</span>
+            </div>
           </div>
 
-          {feedbacks.length > 0 ? (
-            <div className="feedback-list">
-              {feedbacks.map((feedback) => (
-                <FeedbackCard feedback={feedback} key={feedback.id} />
-              ))}
+          <div className="inbox-toolbar">
+            <a className="button" href="/demo">Tester le widget</a>
+            <form action="/api/projects/retries" method="post">
+              <button className="button secondary-button" type="submit">Rejouer les retries dus</button>
+            </form>
+          </div>
+
+          {activeFeedbacks.length === 0 ? (
+            <div className="empty-state">
+              <h2>Aucun retour pour le moment</h2>
+              <p>Envoyez un feedback depuis la page demo: il restera disponible apres redemarrage du serveur.</p>
             </div>
           ) : (
-            <div className="empty-state">
-              <h3>Aucun retour reçu dans cette session.</h3>
-              <p>
-                Ouvrez la démo, envoyez un feedback avec le widget, puis revenez ici. Le dashboard affichera le
-                brouillon d&apos;issue généré par l&apos;API.
-              </p>
-              <Link className="button" href="/demo">Ouvrir la démo</Link>
-            </div>
+            activeFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)
           )}
         </section>
+
+        <IssueDestinationSetup integrations={providerIntegrations} projects={changeThisProjects} />
       </section>
     </main>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
-  return (
-    <article className="metric-card">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </article>
-  );
-}
-
 function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
-  const message = feedback.payload.message.trim() || "Aucun message fourni.";
+  const draftLabels = feedback.issueDraft.labels.join(" / ");
 
   return (
     <article className="feedback-card">
       <div className="feedback-main">
-        <div className="feedback-topline">
-          <span className={`mode-badge ${feedback.payload.type}`}>{feedback.payload.type}</span>
-          <span className="status-badge needs_setup">{formatStatus(feedback.status)}</span>
-          {feedback.payload.screenshotDataUrl ? <span className="status-badge connected">capture</span> : null}
+        <div className="feedback-tags" aria-label="Meta feedback">
+          <span className="status-badge connected">{feedback.payload.type}</span>
+          <span className={`status-badge ${statusClasses[feedback.status]}`}>
+            {statusLabels[feedback.status]}
+          </span>
         </div>
-        <h3>{feedback.issueDraft.title}</h3>
-        <p>{message}</p>
+        <h2>{feedback.issueDraft.title}</h2>
+        <p>{feedback.payload.message || "Aucun message fourni."}</p>
+        {feedback.lastError ? <p className="error-text">{feedback.lastError}</p> : null}
         <div className="feedback-meta">
-          <span>{feedback.project.name}</span>
+          <span>{feedback.projectName}</span>
           <span>{feedback.payload.metadata.path}</span>
-          <span>{formatDate(feedback.receivedAt)}</span>
+          <span>{formatDate(feedback.createdAt)}</span>
+          {feedback.nextRetryAt ? <span>Retry: {formatDate(feedback.nextRetryAt)}</span> : null}
         </div>
       </div>
-
-      <aside className="issue-draft-preview" aria-label="Issue draft">
-        <span>Brouillon issue</span>
-        <strong>{feedback.issueDraft.labels.join(" / ")}</strong>
-        <p>{feedback.payload.pin?.selector ? `Element: ${feedback.payload.pin.selector}` : feedback.payload.metadata.title}</p>
-      </aside>
+      <div className="issue-draft">
+        <p className="eyebrow">Brouillon issue</p>
+        <strong>{feedback.issueTarget.namespace}/{feedback.issueTarget.project}</strong>
+        <span>{draftLabels}</span>
+        {feedback.screenshotAsset ? <span>Capture: {Math.round(feedback.screenshotAsset.bytes / 1024)} Ko</span> : null}
+      </div>
+      <FeedbackActions
+        externalIssueUrl={feedback.externalIssue?.url}
+        feedbackId={feedback.id}
+        status={feedback.status}
+      />
     </article>
   );
-}
-
-function formatStatus(status: StoredFeedback["status"]): string {
-  const labels: Record<StoredFeedback["status"], string> = {
-    raw: "brut",
-    issue_creation_pending: "issue à créer",
-    sent_to_provider: "envoyé",
-    failed: "échec"
-  };
-
-  return labels[status];
 }
 
 function formatDate(value: string): string {

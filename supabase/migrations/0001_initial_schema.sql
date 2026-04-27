@@ -64,11 +64,43 @@ create table if not exists feedbacks (
   element_text text,
   screenshot_path text,
   created_at timestamptz not null default now(),
-  constraint feedbacks_status_check check (status in ('raw', 'issue_creation_pending', 'sent_to_provider', 'failed')),
+  constraint feedbacks_status_check check (status in ('raw', 'issue_creation_pending', 'retrying', 'sent_to_provider', 'failed', 'ignored')),
   constraint feedbacks_type_check check (type in ('comment', 'pin', 'screenshot')),
   constraint feedbacks_viewport_width_check check (viewport_width is null or viewport_width > 0),
   constraint feedbacks_viewport_height_check check (viewport_height is null or viewport_height > 0),
   constraint feedbacks_device_pixel_ratio_check check (device_pixel_ratio is null or device_pixel_ratio > 0)
+);
+
+create table if not exists feedback_status_events (
+  id uuid primary key default gen_random_uuid(),
+  feedback_id uuid not null references feedbacks(id) on delete cascade,
+  from_status text,
+  to_status text not null,
+  reason text,
+  provider text,
+  external_url text,
+  created_at timestamptz not null default now(),
+  constraint feedback_status_events_from_status_check check (from_status is null or from_status in ('raw', 'issue_creation_pending', 'retrying', 'sent_to_provider', 'failed', 'ignored')),
+  constraint feedback_status_events_to_status_check check (to_status in ('raw', 'issue_creation_pending', 'retrying', 'sent_to_provider', 'failed', 'ignored')),
+  constraint feedback_status_events_provider_check check (provider is null or provider in ('github', 'gitlab'))
+);
+
+create table if not exists provider_issue_attempts (
+  id uuid primary key default gen_random_uuid(),
+  feedback_id uuid not null references feedbacks(id) on delete cascade,
+  provider text not null,
+  idempotency_key text not null,
+  status text not null default 'pending',
+  retry_count integer not null default 0,
+  next_retry_at timestamptz,
+  last_error text,
+  raw_payload jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint provider_issue_attempts_provider_check check (provider in ('github', 'gitlab')),
+  constraint provider_issue_attempts_status_check check (status in ('pending', 'retrying', 'succeeded', 'failed')),
+  constraint provider_issue_attempts_retry_count_check check (retry_count >= 0),
+  constraint provider_issue_attempts_idempotency_unique unique (provider, idempotency_key)
 );
 
 create table if not exists external_issues (
@@ -94,6 +126,8 @@ alter table provider_integrations enable row level security;
 alter table issue_targets enable row level security;
 alter table feedbacks enable row level security;
 alter table external_issues enable row level security;
+alter table feedback_status_events enable row level security;
+alter table provider_issue_attempts enable row level security;
 
 create policy "Organization owners can read their organizations"
   on organizations
@@ -238,6 +272,36 @@ create policy "Organization owners can read external issues"
       join projects on projects.id = feedbacks.project_id
       join organizations on organizations.id = projects.organization_id
       where feedbacks.id = external_issues.feedback_id
+        and organizations.owner_id = auth.uid()
+    )
+  );
+
+create policy "Organization owners can read feedback status events"
+  on feedback_status_events
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from feedbacks
+      join projects on projects.id = feedbacks.project_id
+      join organizations on organizations.id = projects.organization_id
+      where feedbacks.id = feedback_status_events.feedback_id
+        and organizations.owner_id = auth.uid()
+    )
+  );
+
+create policy "Organization owners can read provider issue attempts"
+  on provider_issue_attempts
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from feedbacks
+      join projects on projects.id = feedbacks.project_id
+      join organizations on organizations.id = projects.organization_id
+      where feedbacks.id = provider_issue_attempts.feedback_id
         and organizations.owner_id = auth.uid()
     )
   );
