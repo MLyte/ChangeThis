@@ -63,6 +63,10 @@ export default function HomePage() {
           <p className="hero-statement">
             Le widget qui transforme un &quot;change this&quot; en issue exploitable.
           </p>
+          <blockquote className="hero-quote" cite="https://changethis.dev">
+            <p>&laquo; Apprendre des autres, apprendre aux autres. &raquo;</p>
+            <footer>— Mantra produit ChangeThis</footer>
+          </blockquote>
           <p className="lede">
             ChangeThis collecte notes, pins et captures sur vos sites de staging, valide l&apos;origine du projet,
             prépare un brouillon d&apos;issue propre et vous aide à le router vers le bon repository.
