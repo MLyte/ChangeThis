@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildGitHubIssueDraft, buildIssueDraft, validateFeedbackPayload } from "../dist/index.js";
+import { buildGitHubIssueDraft, buildIssueDraft, validateFeedbackPayload, validateIssueTarget } from "../dist/index.js";
 
 function validPayload(overrides = {}) {
   return {
@@ -71,4 +71,40 @@ test("buildGitHubIssueDraft remains as a compatibility alias", () => {
   assert.equal(validation.ok, true);
 
   assert.deepEqual(buildGitHubIssueDraft(validation.value), buildIssueDraft(validation.value));
+});
+
+test("validateIssueTarget accepts explicit GitHub and GitLab destinations", () => {
+  assert.deepEqual(validateIssueTarget({
+    provider: "github",
+    namespace: "MLyte",
+    project: "ChangeThis",
+    webUrl: "https://github.com/MLyte/ChangeThis"
+  }), {
+    ok: true,
+    value: {
+      provider: "github",
+      namespace: "MLyte",
+      project: "ChangeThis",
+      externalProjectId: undefined,
+      installationId: undefined,
+      integrationId: undefined,
+      webUrl: "https://github.com/MLyte/ChangeThis"
+    }
+  });
+
+  const gitlab = validateIssueTarget({
+    provider: "gitlab",
+    namespace: "group/subgroup",
+    project: "site",
+    externalProjectId: "group%2Fsubgroup%2Fsite",
+    webUrl: "https://gitlab.com/group/subgroup/site"
+  });
+
+  assert.equal(gitlab.ok, true);
+});
+
+test("validateIssueTarget rejects ambiguous or incomplete destinations", () => {
+  assert.equal(validateIssueTarget({ provider: "github", namespace: "org/team", project: "repo" }).ok, false);
+  assert.equal(validateIssueTarget({ provider: "gitlab", namespace: "group" }).ok, false);
+  assert.equal(validateIssueTarget({ provider: "bitbucket", namespace: "org", project: "repo" }).ok, false);
 });

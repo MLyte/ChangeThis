@@ -18,22 +18,23 @@ export default function DemoPage() {
 
       <section className="demo-page">
         <div className="demo-copy">
-          <p className="eyebrow">Demo widget</p>
+          <p className="eyebrow">Bac a sable widget</p>
           <h1>Site client de test</h1>
           <p className="hero-statement">
-            Utilise le bouton Feedback en bas à droite pour envoyer un retour local.
+            Utilisez le bouton Feedback en bas a droite pour creer un retour dans l&apos;inbox locale.
           </p>
           <p className="lede">
-            Cette page charge le bundle widget local et l&apos;API locale. Les retours génèrent un brouillon d&apos;issue
-            provider-neutral, sans création réelle dans une destination pour l&apos;instant.
+            Cette page charge le bundle widget local et l&apos;API locale. Les retours arrivent dans l&apos;inbox durable,
+            puis peuvent etre envoyes vers GitHub ou GitLab selon la destination configuree pour le site.
           </p>
         </div>
 
         <div className="demo-layout">
           <section className="demo-content">
+            <span className="status-badge needs_setup">Staging client</span>
             <h2>Refonte page contact</h2>
             <p>
-              Le client peut cliquer n&apos;importe où sur cette page, pointer un élément visuel, ajouter une note, ou
+              Le client peut cliquer n&apos;importe ou sur cette page, pointer un element visuel, ajouter une note, ou
               demander une capture du viewport.
             </p>
             <div className="demo-actions">
@@ -43,19 +44,19 @@ export default function DemoPage() {
           </section>
 
           <aside className="demo-sidebar">
-            <h3>Éléments à tester</h3>
+            <h3>Scenarios a tester</h3>
             <ul className="check-list">
-              <li>Mode Note</li>
-              <li>Mode Pin sur le bouton principal</li>
-              <li>Mode Capture avec champs masqués</li>
+              <li>Note simple sur le contenu</li>
+              <li>Pin sur le bouton principal</li>
+              <li>Capture avec champs sensibles masques</li>
             </ul>
             <label>
               Email client
               <input type="email" defaultValue="client@example.com" />
             </label>
             <label>
-              Commentaire privé
-              <textarea defaultValue="Ce champ doit être masqué pendant la capture." />
+              Commentaire prive
+              <textarea defaultValue="Ce champ doit etre masque pendant la capture." />
             </label>
           </aside>
         </div>

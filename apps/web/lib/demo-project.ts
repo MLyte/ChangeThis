@@ -1,4 +1,4 @@
-import type { IssueProvider, IssueTarget } from "@changethis/shared";
+import { validateIssueTarget, type IssueProvider, type IssueTarget } from "@changethis/shared";
 
 export type ChangeThisProject = {
   publicKey: string;
@@ -116,10 +116,29 @@ export const providerIntegrations: ProviderIntegrationSummary[] = [
   }
 ];
 
+validateDefaultProjects(changeThisProjects);
+
 export function findProjectByKey(projectKey: string): ChangeThisProject | undefined {
   return changeThisProjects.find((project) => project.publicKey === projectKey);
 }
 
 export function isKnownOrigin(origin: string | null): boolean {
   return Boolean(origin && changeThisProjects.some((project) => project.allowedOrigins.includes(origin)));
+}
+
+function validateDefaultProjects(projects: ChangeThisProject[]): void {
+  const seenKeys = new Set<string>();
+
+  for (const project of projects) {
+    if (seenKeys.has(project.publicKey)) {
+      throw new Error(`Duplicate project key configured: ${project.publicKey}`);
+    }
+
+    seenKeys.add(project.publicKey);
+
+    const validation = validateIssueTarget(project.issueTarget);
+    if (!validation.ok) {
+      throw new Error(`Invalid issue target for ${project.name}: ${validation.error}`);
+    }
+  }
 }

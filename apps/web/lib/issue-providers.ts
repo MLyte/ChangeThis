@@ -1,4 +1,4 @@
-import type { ExternalIssueRef, IssueDraft, IssueProvider, IssueTarget } from "@changethis/shared";
+import { validateIssueTarget, type ExternalIssueRef, type IssueDraft, type IssueProvider, type IssueTarget } from "@changethis/shared";
 
 export type IssueProviderErrorCode =
   | "auth_failed"
@@ -46,8 +46,8 @@ function createUnsupportedProviderClient(provider: IssueProvider): IssueProvider
     async createIssue() {
       throw new IssueProviderError(
         provider,
-        "transient_failure",
-        `${provider} issue creation is not wired yet.`
+        "auth_failed",
+        `${provider} credentials are not configured.`
       );
     }
   };
@@ -56,8 +56,9 @@ function createUnsupportedProviderClient(provider: IssueProvider): IssueProvider
 const githubClient: IssueProviderClient = {
   provider: "github",
   async createIssue(target, draft, options) {
+    const validatedTarget = requireValidIssueTarget("github", target);
     const token = requireEnv("GITHUB_TOKEN");
-    const response = await fetch(`https://api.github.com/repos/${target.namespace}/${target.project}/issues`, {
+    const response = await fetch(`https://api.github.com/repos/${validatedTarget.namespace}/${validatedTarget.project}/issues`, {
       method: "POST",
       headers: {
         Accept: "application/vnd.github+json",
@@ -97,8 +98,9 @@ const githubClient: IssueProviderClient = {
 const gitlabClient: IssueProviderClient = {
   provider: "gitlab",
   async createIssue(target, draft, options) {
+    const validatedTarget = requireValidIssueTarget("gitlab", target);
     const token = requireEnv("GITLAB_TOKEN");
-    const projectId = target.externalProjectId ?? encodeURIComponent(`${target.namespace}/${target.project}`);
+    const projectId = validatedTarget.externalProjectId ?? encodeURIComponent(`${validatedTarget.namespace}/${validatedTarget.project}`);
     const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
     const response = await fetch(`${baseUrl}/api/v4/projects/${projectId}/issues`, {
       method: "POST",
@@ -198,6 +200,16 @@ function requireEnv(name: string): string {
   }
 
   return value;
+}
+
+function requireValidIssueTarget(provider: IssueProvider, target: IssueTarget): IssueTarget {
+  const validation = validateIssueTarget(target);
+
+  if (!validation.ok || validation.value.provider !== provider) {
+    throw new IssueProviderError(provider, "validation_failed", validation.ok ? `Issue target provider must be ${provider}.` : validation.error);
+  }
+
+  return validation.value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

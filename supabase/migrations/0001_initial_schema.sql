@@ -43,12 +43,13 @@ create table if not exists issue_targets (
   web_url text,
   created_at timestamptz not null default now(),
   constraint issue_targets_provider_check check (provider in ('github', 'gitlab')),
-  constraint issue_targets_project_provider_unique unique (project_id, provider)
+  constraint issue_targets_project_unique unique (project_id)
 );
 
 create table if not exists feedbacks (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
+  issue_target_id uuid not null references issue_targets(id) on delete restrict,
   status text not null default 'raw',
   type text not null,
   message text not null default '',

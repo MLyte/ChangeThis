@@ -56,6 +56,7 @@ Useful local routes:
 - `/` landing page
 - `/demo` test page that loads the real widget bundle against the local API
 - `/projects` durable feedback inbox
+- `/api/projects/issue-targets` server-side GitHub/GitLab destination configuration per site
 - `/api/widget/config?project=demo_project_key` demo widget configuration
 - `/api/public/feedback` feedback API endpoint
 - `/api/projects/feedbacks/:id/issue` manual issue creation endpoint

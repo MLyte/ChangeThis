@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { validateIssueTarget } from "@changethis/shared";
 import type {
   ExternalIssueRef,
   FeedbackPayload,
@@ -95,6 +96,12 @@ class FileFeedbackRepository implements FeedbackRepository {
   constructor(private readonly filePath: string) {}
 
   async create(input: CreateFeedbackInput): Promise<StoredFeedback> {
+    const issueTargetValidation = validateIssueTarget(input.issueTarget);
+
+    if (!issueTargetValidation.ok) {
+      throw new Error(`Cannot store feedback without a valid issue target: ${issueTargetValidation.error}`);
+    }
+
     return this.update((store) => {
       const now = new Date().toISOString();
       const id = crypto.randomUUID();
@@ -105,7 +112,7 @@ class FileFeedbackRepository implements FeedbackRepository {
         id,
         projectKey: input.projectKey,
         projectName: input.projectName,
-        issueTarget: input.issueTarget,
+        issueTarget: issueTargetValidation.value,
         payload: {
           ...input.payload,
           screenshotDataUrl: undefined

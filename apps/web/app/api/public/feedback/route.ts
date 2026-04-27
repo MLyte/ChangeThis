@@ -1,8 +1,9 @@
 import { buildIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
-import { findProjectByKey, isKnownOrigin } from "../../../../lib/demo-project";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
+import { ensureIssueTargetConfigured, findConfiguredProjectByKey } from "../../../../lib/project-registry";
+import { isKnownOrigin } from "../../../../lib/demo-project";
 
 const maxBodyBytes = 2_500_000;
 const maxScreenshotBytes = 2_000_000;
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
   }
 
   const payload = validation.value;
-  const project = findProjectByKey(payload.projectKey);
+  const project = await findConfiguredProjectByKey(payload.projectKey);
 
   if (!project) {
     logWarn("feedback_rejected_unknown_project", { request_id: requestId, origin, project_key: payload.projectKey });
@@ -75,6 +76,16 @@ export async function POST(request: Request) {
   if (!origin || !project.allowedOrigins.includes(origin)) {
     logWarn("feedback_rejected_origin", { request_id: requestId, origin, project_key: payload.projectKey });
     return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403, headers });
+  }
+
+  let issueTarget;
+
+  try {
+    issueTarget = ensureIssueTargetConfigured(project);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Issue destination is not configured";
+    logWarn("feedback_rejected_issue_target_missing", { request_id: requestId, origin, project_key: payload.projectKey, error: message });
+    return NextResponse.json({ error: message }, { status: 409, headers });
   }
 
   const rateLimit = checkRateLimit(`${getClientKey(request)}:${payload.projectKey}`);
@@ -96,7 +107,7 @@ export async function POST(request: Request) {
   const feedback = await getFeedbackRepository().create({
     projectKey: project.publicKey,
     projectName: project.name,
-    issueTarget: project.issueTarget,
+    issueTarget,
     payload,
     issueDraft,
     screenshotDataUrl: payload.screenshotDataUrl
@@ -106,6 +117,7 @@ export async function POST(request: Request) {
     request_id: requestId,
     project_id: project.publicKey,
     feedback_id: feedback.id,
+    issue_provider: issueTarget.provider,
     has_screenshot: Boolean(feedback.screenshotAsset)
   });
 
@@ -116,10 +128,10 @@ export async function POST(request: Request) {
     project: {
       name: project.name,
       issueTarget: {
-        provider: project.issueTarget.provider,
-        namespace: project.issueTarget.namespace,
-        project: project.issueTarget.project,
-        webUrl: project.issueTarget.webUrl
+        provider: issueTarget.provider,
+        namespace: issueTarget.namespace,
+        project: issueTarget.project,
+        webUrl: issueTarget.webUrl
       }
     },
     issueDraft

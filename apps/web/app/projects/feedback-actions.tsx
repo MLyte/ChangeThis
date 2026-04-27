@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import type { FeedbackStatus } from "@changethis/shared";
 
 type Props = {
@@ -13,11 +13,24 @@ type Props = {
 export function FeedbackActions({ feedbackId, status, externalIssueUrl }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | undefined>();
 
   function run(path: string) {
     startTransition(async () => {
-      await fetch(path, { method: "POST" });
-      router.refresh();
+      setError(undefined);
+
+      try {
+        const response = await fetch(path, { method: "POST" });
+
+        if (!response.ok) {
+          setError("Action impossible pour le moment. Reessayez dans quelques secondes.");
+          return;
+        }
+
+        router.refresh();
+      } catch {
+        setError("Connexion interrompue. Verifiez le serveur local puis reessayez.");
+      }
     });
   }
 
@@ -59,6 +72,7 @@ export function FeedbackActions({ feedbackId, status, externalIssueUrl }: Props)
       >
         Ignorer
       </button>
+      {error ? <span className="action-error" role="alert">{error}</span> : null}
     </div>
   );
 }

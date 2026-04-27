@@ -43,6 +43,10 @@ export type IssueTarget = {
   webUrl?: string;
 };
 
+export type IssueTargetValidationResult =
+  | { ok: true; value: IssueTarget }
+  | { ok: false; error: string };
+
 export type ExternalIssueRef = {
   provider: IssueProvider;
   id?: string;
@@ -78,6 +82,7 @@ type PinValidationResult =
   | { ok: false; error: string };
 
 const feedbackTypes = ["comment", "pin", "screenshot"] as const;
+const issueProviders = ["github", "gitlab"] as const;
 const defaultMaxMessageLength = 5000;
 const defaultMaxScreenshotBytes = 2_000_000;
 
@@ -158,6 +163,57 @@ export function buildIssueDraft(feedback: FeedbackPayload): IssueDraft {
 
 export function buildGitHubIssueDraft(feedback: FeedbackPayload): GitHubIssueDraft {
   return buildIssueDraft(feedback);
+}
+
+export function validateIssueTarget(value: unknown): IssueTargetValidationResult {
+  if (!isRecord(value)) {
+    return invalid("issueTarget must be a JSON object");
+  }
+
+  if (!isIssueProvider(value.provider)) {
+    return invalid("issueTarget.provider must be github or gitlab");
+  }
+
+  if (!isNonEmptyString(value.namespace, 255)) {
+    return invalid("issueTarget.namespace is required");
+  }
+
+  if (!isNonEmptyString(value.project, 255)) {
+    return invalid("issueTarget.project is required");
+  }
+
+  if (value.provider === "github" && (value.namespace.includes("/") || value.project.includes("/"))) {
+    return invalid("GitHub issue targets must use a single owner and repository name");
+  }
+
+  if (value.externalProjectId !== undefined && !isNonEmptyString(value.externalProjectId, 255)) {
+    return invalid("issueTarget.externalProjectId must be a non-empty string");
+  }
+
+  if (value.installationId !== undefined && !isNonEmptyString(value.installationId, 255)) {
+    return invalid("issueTarget.installationId must be a non-empty string");
+  }
+
+  if (value.integrationId !== undefined && !isNonEmptyString(value.integrationId, 255)) {
+    return invalid("issueTarget.integrationId must be a non-empty string");
+  }
+
+  if (value.webUrl !== undefined && (typeof value.webUrl !== "string" || !isHttpUrl(value.webUrl))) {
+    return invalid("issueTarget.webUrl must be an HTTP URL");
+  }
+
+  return {
+    ok: true,
+    value: {
+      provider: value.provider,
+      namespace: value.namespace,
+      project: value.project,
+      externalProjectId: value.externalProjectId,
+      installationId: value.installationId,
+      integrationId: value.integrationId,
+      webUrl: value.webUrl
+    }
+  };
 }
 
 function buildIssueDescription(feedback: FeedbackPayload): string {
@@ -318,6 +374,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isFeedbackType(value: unknown): value is FeedbackType {
   return typeof value === "string" && feedbackTypes.includes(value as FeedbackType);
+}
+
+function isIssueProvider(value: unknown): value is IssueProvider {
+  return typeof value === "string" && issueProviders.includes(value as IssueProvider);
 }
 
 function isNonEmptyString(value: unknown, maxLength: number): value is string {

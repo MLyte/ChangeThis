@@ -1,3 +1,4 @@
+import { validateIssueTarget } from "@changethis/shared";
 import type { StoredFeedback } from "./feedback-repository";
 import { getFeedbackRepository } from "./feedback-repository";
 import { getIssueProviderClient, IssueProviderError } from "./issue-providers";
@@ -12,6 +13,25 @@ export async function createIssueForFeedback(feedback: StoredFeedback, requestId
   }
 
   const repository = getFeedbackRepository();
+  const issueTargetValidation = validateIssueTarget(feedback.issueTarget);
+
+  if (!issueTargetValidation.ok) {
+    const updated = await repository.recordIssueAttempt(feedback.id, {
+      ok: false,
+      error: `Issue destination is invalid: ${issueTargetValidation.error}`,
+      retryable: false
+    });
+
+    logWarn("provider_issue_create_rejected_invalid_target", {
+      request_id: requestId,
+      project_id: feedback.projectKey,
+      feedback_id: feedback.id,
+      error: issueTargetValidation.error
+    });
+
+    return updated;
+  }
+
   const pendingFeedback = await repository.markIssueCreationPending(feedback.id);
   const client = getIssueProviderClient(feedback.issueTarget.provider);
   const idempotencyKey = `changethis:${pendingFeedback.id}`;
