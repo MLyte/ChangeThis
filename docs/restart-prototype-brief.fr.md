@@ -8,6 +8,10 @@ La promesse du prototype est volontairement simple:
 
 > Le client pointe ce qui doit changer. ChangeThis capture le contexte et route l'issue vers GitHub ou GitLab selon le site.
 
+Mantra produit conserve pour les prochaines iterations editoriales:
+
+> Apprendre des autres, apprendre aux autres.
+
 ## Roles cibles
 
 - Client ou reviewer: laisse une note, un pin ou une capture sans compte GitHub/GitLab.
@@ -53,3 +57,4 @@ Chaque destination contient:
 - Ajouter stockage objet pour captures.
 - Brancher GitHub App/GitLab OAuth en plus des tokens.
 - Ajouter detail feedback et historique d'evenements complet.
+- Preparer une internationalisation FR/EN sans transformer la console serveur en landing page client-side.

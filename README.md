@@ -80,6 +80,14 @@ GITLAB_TOKEN=gitlab_project_or_personal_token
 
 Without a provider token, manual issue creation records a retryable failure instead of dropping the feedback. Replaying due retries is available from `/projects` or by posting to `/api/projects/retries`.
 
+## Frontend Dependency Policy
+
+To keep the workspace stable, maintain compatibility between Next.js and React before upgrading packages.
+
+- Do not use `npm audit fix --force` in this repository because it can introduce breaking major changes.
+- Prefer targeted upgrades, for example `npm install -w apps/web next@latest`, and validate with a web build before committing.
+- Keep the baseline workflow: small iterations, one problem at a time, and `npm run build -w apps/web` as the final gate for frontend dependency changes.
+
 ## Validation
 
 ```bash
