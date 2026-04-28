@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 const authCookieNames = [
   "changethis_access_token",
   "sb-access-token",
-  "supabase-auth-token"
+  "supabase-auth-token",
+  "supabase-refresh-token"
 ];
 
 export async function GET(request: Request) {
