@@ -1,41 +1,41 @@
 # Variables d’environnement minimales (local)
 
-Ce document liste le **minimum utile** pour lancer ChangeThis en local, avec des valeurs d’exemple non sensibles.
+Ce document liste le minimum utile pour lancer ChangeThis en local et les variables à activer pour tester des features complètes.
 
 ## TL;DR
-- Pour lancer `npm run dev` en local, **aucune variable n’est strictement obligatoire** : le repo possède des fallbacks pour les clés projet et le répertoire de stockage local.
-- Certaines variables deviennent nécessaires seulement pour des fonctionnalités optionnelles (création d’issues GitHub/GitLab).
+
+- `npm run dev` en local fonctionne avec :
+  - `NEXT_PUBLIC_APP_URL` (URL de l’app)
+  - `AUTH_MODE=local`
+  - `DATA_STORE=file`
+- Les autres variables sont optionnelles selon le flux que vous voulez activer.
 
 ## Variables minimales recommandées
 
 ```env
-# Optionnel (fallback automatique vers .changethis-data)
+NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
+AUTH_MODE=local
+DATA_STORE=file
 CHANGETHIS_DATA_DIR=.changethis-data
-
-# Optionnel, mais nécessaire pour créer des issues GitHub depuis /projects
-GITHUB_TOKEN=
-
-# Optionnel, mais nécessaire pour créer des issues GitLab depuis /projects
-GITLAB_TOKEN=
-# Optionnel (défaut: https://gitlab.com)
-GITLAB_BASE_URL=https://gitlab.com
 ```
 
-## Détail par variable
+## Variables optionnelles en local
 
-| Variable | Obligatoire pour `npm run dev` | Quand l’ajouter | Exemple local |
-|---|---|---|---|
-| `CHANGETHIS_DATA_DIR` | Non | Changer l’emplacement du store feedback local | `.changethis-data` |
-| `GITHUB_TOKEN` | Non | Activer la création d’issues GitHub | `github_pat_xxx` |
-| `GITLAB_TOKEN` | Non | Activer la création d’issues GitLab | `glpat-xxx` |
-| `GITLAB_BASE_URL` | Non | GitLab self-hosted | `https://gitlab.example.com` |
+| Variable | Quand l’ajouter | Utilité |
+|---|---|---|
+| `CHANGETHIS_DATA_DIR` | Changer l’emplacement du store local | Emplacement alternatif du dossier de persistance locale. |
+| `GITHUB_TOKEN` | Activer la création d’issues GitHub | Provider token de secours pour `/projects` (si pas d’intégration App). |
+| `CHANGETHIS_GITHUB_TOKEN` | Même usage que `GITHUB_TOKEN` | Variante non conflictuelle avec le secret GitHub App. |
+| `GITLAB_TOKEN` | Activer la création d’issues GitLab | Provider token GitLab (défaut self-hosting via `GITLAB_BASE_URL`). |
+| `CHANGETHIS_GITLAB_TOKEN` | Même usage que `GITLAB_TOKEN` | Variante non conflictuelle avec OAuth/token App. |
+| `GITLAB_BASE_URL` | Tester GitLab self-hosted | URL de votre instance GitLab. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Expérimenter le mode Supabase | Active le client Supabase public. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Expérimenter le mode Supabase | Clé anonyme Supabase côté client. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Expérimenter le mode Supabase | Requis pour les appels REST serveur Supabase. |
+| `NEXT_PUBLIC_*_PROJECT_KEY` | Utiliser vos propres clés de demo-project | Remplace les clés fallback de démonstration. |
 
-## Variables déjà fallbackées en local
-- Les clés projet publiques (`NEXT_PUBLIC_*_PROJECT_KEY`) disposent de valeurs de fallback en local.
-- En production (`VERCEL_ENV=production`), ces clés doivent être définies explicitement.
+## Variables de production à connaître (références)
 
-## Références
-- Exemple de variables: `.env.example`
-- Fallbacks clés projet et origines: `apps/web/lib/demo-project.ts`
-- Tokens providers: `apps/web/lib/issue-providers.ts`
-- Store local: `apps/web/lib/project-registry.ts` et `apps/web/lib/feedback-repository.ts`
+- `CHANGETHIS_SECRET_KEY` (obligatoire en production pour le stockage credential sécurisé).
+- Variables `GITHUB_APP_*`, `GITHUB_INSTALLATION_ID`, `GITLAB_OAUTH_*`, `*_WEBHOOK_SECRET` quand les intégrations OAuth/App sont activées.
+- Intégrations par workspace: `*_PROVIDER_INTEGRATION_ID` et connexions persistées.

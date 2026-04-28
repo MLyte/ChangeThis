@@ -10,6 +10,17 @@ Clients click a fixed feedback button, add a note, pin a page element, or send a
 - **Model:** open-core. The widget and core protocol can be open source; hosted dashboard, managed issue provider integrations, storage, teams, and AI triage are planned for the 2.0 hosted layer.
 - **Promise:** clients point at what needs changing; developers receive actionable issues in GitHub or GitLab.
 
+## Flow: `widget -> inbox -> issue`
+
+1. Install the public widget script on a real client site using the site public key.
+2. A visitor submits feedback (`comment`, `pin`, `screenshot`) from the widget.
+3. The widget calls `POST /api/public/feedback`; the payload is validated and attached to the configured site.
+4. Feedback appears in `/projects` with status and context (URL, viewport, metadata, screenshot reference).
+5. The team reviews each item and triggers creation to the configured destination on GitHub/GitLab (`issue targets`) from the dashboard.
+6. The result is visible in the status history, enabling audit and retry where needed.
+
+This is the expected commercial path from first feedback to developer triage. When billing and workspace quotas are enabled, actions are gated by plan/role rules.
+
 ## MVP
 
 - Fixed feedback widget

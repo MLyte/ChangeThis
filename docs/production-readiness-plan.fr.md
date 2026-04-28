@@ -12,6 +12,31 @@ Ne pas lancer avec un critère vague. Utiliser un Go/No-Go basé sur des SLO/SLI
 - **Sécurité**: origines autorisées strictes, secrets gérés en env, journalisation d'audit.
 - **Observabilité**: logs structurés, métriques et alertes exploitables.
 
+## 1.1) Checklist Go/No-Go commerciale (décision de lancement)
+
+Le projet peut passer en commercial uniquement si **tous** les critères ci-dessous sont validés.  
+En cas d'un seul critère non tenu, la décision est **No-Go**.
+
+- [ ] **Go bloquant** — Le flux `widget -> inbox -> issue` fonctionne en conditions réelles (site réel, origine autorisée, destination externe configurée).
+- [ ] **Go bloquant** — Persistance production active par workspace (pas de fallback local en prod), migrations applicables en 1 étape rollback incluse.
+- [ ] **Go bloquant** — Contrôle d'accès workspace/ rôle (`viewer` limité, `admin/owner` pour actions critiques) vérifié sur toutes les routes dashboard et API critiques.
+- [ ] **Go bloquant** — Sécurité d'entrée/sortie : CORS + CSRF + validation stricte, secrets minimum exposés, logs sensibles masqués.
+- [ ] **Go bloquant** — Observabilité minimale opérationnelle : `/health`, `/ready`, alertes 5xx et backlog retries, métriques feedback/providers.
+- [ ] **Go bloquant** — Capacité de support au lancement : runbook incident, contact support disponible, export et suppression de données supportés.
+- [ ] **Go bloquant** — Coûts et limites plan produit définis (prix, trial, quotas, blocage explicite des dépassements).
+- [ ] **Go bloquant** — Documentation commerciale et onboarding client publiées (Démarrage rapide, installation widget, FAQ commerciale de base).
+
+## 1.2) Matrice d'évolution vers le commercialisable
+
+| Domaine | Prototype | Beta | Commercialisable |
+| --- | --- | --- | --- |
+| **Auth** | Authentification basique, non robuste en production. | Auth optionnelle ou partiellement persistée, session et rôles basiques. | Auth Supabase/IdP imposée en prod, sessions sécurisées, rôles `viewer`/`member`/`admin`/`owner` et scope workspace systématique. |
+| **Données** | Stockage mémoire/fichier simple pour feedbacks et statut. | Persistance partielle avec migration de données vers PostgreSQL. | Stockage production complet par workspace: feedbacks, statuts, projets, destinations, intégrations, logs métier + migrations et rollback documentés. |
+| **Widget** | Intégration démo, flux non garanti en conditions réelles. | Widget public utilisable avec script d'installation et checks de base. | Widget public versionné (`/widget.js` + `/widget.global.js`), validation d'origine, compatibilité navigateur, fallback documenté, performance budgétée. |
+| **Intégrations** | Intégrations manuelles / localisées, souvent hardcodées. | Création d'issue et callbacks stables sur un provider principal. | Flux GitHub/GitLab opérationnels (installation/token, rotation, pagination, erreurs), relances + idempotence + sécurisation provider. |
+| **Support** | Pas de workflow support dédié. | Journal de logs + docs minimales. | Runbooks opérationnels, `/health` + `/ready`, monitoring, alerte 5xx/backlog retries, FAQ/support produit, export et suppression data client. |
+| **Billing** | Aucun modèle commercial opérationnel. | Positionnement et pricing documentés. | Plans et limites définis, trial actif/expiré, règles de blocage explicites et UX de statut billing visible dans le produit. |
+
 ## 2) Priorité absolue: persistance durable
 
 Le projet indique déjà que la principale limite actuelle est le stockage en mémoire de la session Next.js.

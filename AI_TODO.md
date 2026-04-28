@@ -1,81 +1,389 @@
 # AI_TODO.md
 
-## Projet détecté
-- **Type** : monorepo JavaScript/TypeScript orienté produit SaaS (widget embarquable + dashboard web + API).
-- **Composants** :
-  - `apps/web` : application Next.js (UI + routes API)
-  - `packages/widget` : widget navigateur buildé via Vite
-  - `packages/shared` : types/logique partagée
-  - `supabase/migrations` : contrat de schéma DB (cible future)
-- **Données locales** : stockage feedback durable via `CHANGETHIS_DATA_DIR` (ex. `.changethis-data/feedback-store.json`).
-- **Intégrations** : GitHub/GitLab (création d’issues), Supabase (prévu/partiel selon environnement).
+## Règle d'exécution IA
+- Traiter uniquement la première tâche non cochée de ce fichier.
+- Faire un changement minimal, vérifiable et réversible.
+- Exécuter le check pertinent après chaque changement.
+- Cocher la tâche terminée et ajouter une note courte dans la section "Journal".
+- S'arrêter avant la section "Intervention utilisateur requise" si une tâche dépend d'une décision, d'un accès, d'un secret, d'un compte ou d'une validation humaine.
 
-## Commandes utiles
-- Installation / dev :
-  - `npm install`
-  - `npm run dev`
-- Vérifications globales :
-  - `npm test`
-  - `npm run typecheck`
-  - `npm run lint`
-  - `npm run build`
-- Vérifications ciblées :
-  - `npm run build --workspace @changethis/shared`
-  - `npm run build --workspace @changethis/widget`
-  - `npm run typecheck --workspace @changethis/web`
-  - `npm run lint --workspace @changethis/web`
-  - `npm run build --workspace @changethis/web`
+- [x] Créer le script de lancement Windows `start-service.bat` pour NSSM.
+## 1. Socle commercialisable immédiat
+- [x] Créer un document `docs/commercial-readiness-map.md` qui décrit les blocs manquants pour passer du prototype local au SaaS vendable.
+- [x] Ajouter une checklist Go/No-Go commerciale dans `docs/production-readiness-plan.fr.md`.
+- [x] Ajouter une matrice "prototype / beta / commercialisable" pour auth, données, widget, intégrations, support et billing.
+- [x] Vérifier que `README.md` explique clairement le produit, le public cible et le flux `widget -> inbox -> issue`.
+- [x] Mettre à jour `docs/local-env-minimal.md` avec les variables réellement nécessaires aujourd'hui.
+- [x] Ajouter un fichier `.env.production.example` sans secrets avec toutes les variables de production attendues.
+- [x] Ajouter un script de validation env qui échoue si `AUTH_MODE`, `DATA_STORE`, `NEXT_PUBLIC_APP_URL` ou les secrets requis manquent.
+- [x] Ajouter une garde qui refuse `AUTH_MODE=local` en production.
+- [x] Ajouter une garde qui refuse `DATA_STORE=file` en production.
+- [x] Ajouter une garde qui refuse les project keys de fallback en production.
 
-## Workflow IA
-1. Lire `AGENTS.md`, puis revenir ici.
-2. Prendre **uniquement** la première tâche non cochée.
-3. Faire un changement minimal et réversible.
-4. Exécuter les checks pertinents (ou expliquer le blocage).
-5. Cocher la tâche, noter brièvement ce qui a été fait.
-6. Si blocage : créer une note dans **Blocages** avec contexte + action proposée.
+## 2. Auth, workspaces et rôles
+- [ ] Implémenter le login Supabase réel sur `/login` avec email/password ou magic link.
+- [ ] Créer une route callback/session Supabase qui pose un cookie serveur sécurisé.
+- [ ] Remplacer la session locale par une session Supabase obligatoire en production.
+- [ ] Lier chaque requête dashboard à un `workspaceId` issu de la session.
+- [ ] Filtrer toutes les lectures de feedbacks par workspace.
+- [ ] Filtrer toutes les lectures de projets/sites par workspace.
+- [ ] Filtrer toutes les intégrations provider par workspace.
+- [ ] Appliquer les rôles `viewer`, `member`, `admin` et `owner` sur chaque route API privée.
+- [ ] Restreindre la modification des destinations d'issues aux rôles `admin` et `owner`.
+- [ ] Restreindre les relances de retries aux rôles `admin` et `owner`.
+- [ ] Ajouter un flux d'onboarding qui crée l'organisation, le workspace, l'owner et le premier site.
+- [ ] Ajouter une page de gestion des membres du workspace.
+- [ ] Ajouter une invitation membre avec statut `invited`.
+- [ ] Ajouter une désactivation membre avec statut `disabled`.
+- [ ] Ajouter un sélecteur de workspace si un utilisateur appartient à plusieurs organisations.
 
-### Blocages
-- 2026-04-28 : `npm run lint --workspace @changethis/web` échoue dans `apps/web/app/projects/issue-destination-setup.tsx` (`react-hooks/set-state-in-effect`, `react/no-unescaped-entities`), fichier UI hors périmètre de la tâche repositories. ESLint ciblé sur les fichiers modifiés OK.
+## 3. Onboarding produit
+- [ ] Définir le parcours premier utilisateur de `signup/login` jusqu'au premier feedback reçu.
+- [ ] Créer une checklist onboarding affichée dans l'app avec étapes compte Git, site, script, feedback test et issue créée.
+- [ ] Ajouter un état vide guidé pour `/projects` quand aucun site réel n'est configuré.
+- [ ] Ajouter un état vide guidé pour `/settings/connected-sites` quand aucun site n'existe.
+- [ ] Ajouter une action "Créer un site" avec nom, domaine autorisé et clé publique générée.
+- [ ] Ajouter une validation visible des origines autorisées avant de fournir le script widget.
+- [ ] Ajouter un test de feedback depuis un site configuré, distinct de la page `/demo`.
+- [ ] Ajouter une confirmation de fin d'onboarding quand un feedback réel crée une issue externe.
+- [ ] Ajouter une vue "inviter un développeur ou collègue" pour les usages agence et équipe.
 
-## Roadmap courte (pragmatique)
-- Stabiliser la documentation d’exploitation locale (env + runbook minimal).
-- Fiabiliser la boucle qualité (lint/typecheck/tests ciblés par workspace).
-- Renforcer progressivement la robustesse des flux feedback -> issue provider.
+## 4. Données et stockage production
+- [ ] Implémenter un repository Supabase/Postgres pour les feedbacks.
+- [ ] Implémenter un repository Supabase/Postgres pour les événements de statut.
+- [ ] Implémenter un repository Supabase/Postgres pour les projets/sites.
+- [ ] Implémenter un repository Supabase/Postgres pour les destinations d'issues.
+- [ ] Implémenter un repository Supabase/Postgres pour les intégrations provider.
+- [ ] Ajouter un switch `DATA_STORE=supabase` qui utilise uniquement Postgres en production.
+- [ ] Lire les project public keys actifs depuis la base plutôt que depuis des constantes locales.
+- [ ] Supprimer la dépendance production aux projets codés en dur dans `demo-project.ts`.
+- [ ] Ajouter une rotation des project public keys via `project_public_keys`.
+- [ ] Migrer les screenshots depuis les data URLs vers Supabase Storage ou stockage objet.
+- [ ] Stocker uniquement un chemin d'objet ou une URL signée pour chaque screenshot.
+- [ ] Ajouter une table ou colonne pour le hash de contenu des screenshots.
+- [ ] Ajouter une migration pour les index nécessaires aux listes feedbacks par projet, statut et date.
+- [ ] Ajouter une migration pour les timestamps `updated_at` automatiques.
+- [ ] Ajouter une migration pour conserver le raw payload provider des créations d'issues.
+- [ ] Ajouter un script de seed local non sensible pour créer un workspace et un site de démo.
+- [ ] Ajouter un script de migration du store fichier local vers Supabase.
+- [ ] Ajouter une commande de vérification d'intégrité des feedbacks, assets et issue targets.
+- [ ] Ajouter une procédure de backup Supabase avec fréquence, rétention et owner.
+- [ ] Ajouter une procédure de restore Supabase testée sur environnement isolé.
+- [ ] Ajouter une procédure d'export client des feedbacks d'un workspace.
+- [ ] Ajouter une procédure de suppression définitive workspace/projet/feedback.
 
-## Tâches atomiques
-- [x] Vérifier et documenter (dans `docs/`) la liste minimale des variables d’environnement indispensables au lancement local, avec valeurs d’exemple non sensibles.
-- [x] Exécuter `npm run typecheck` et noter les écarts éventuels par workspace.
-- [x] Exécuter `npm run lint` et lister les corrections strictement nécessaires.
-- [x] Valider le build du widget (`@changethis/widget`) puis du web (`@changethis/web`).
-- [x] Rejouer un test manuel de flux `/demo` -> `/projects` et documenter le résultat.
+## 5. Widget commercial
+- [ ] Ajouter une version publique du widget dans le bundle servi.
+- [ ] Ajouter des cache headers versionnés pour `/widget.js` et `/widget.global.js`.
+- [ ] Ajouter une option widget pour désactiver la capture screenshot par site.
+- [ ] Ajouter une vérification de compatibilité navigateur du widget.
+- [ ] Ajouter un fallback UX si le bundle widget n'est pas construit.
+- [ ] Ajouter des tests unitaires widget pour `inferEndpoint` depuis `data-endpoint`, `script.src` et fallback.
+- [ ] Ajouter des tests unitaires widget pour `inferLocale` depuis attribut, localStorage et langue document.
+- [ ] Ajouter des tests widget pour le rendu Shadow DOM sans collision avec CSS hôte.
+- [ ] Ajouter des tests widget pour ouverture/fermeture sans doublonner `changethis-widget-root`.
+- [ ] Ajouter des tests widget pour échappement HTML des labels, messages et métadonnées.
+- [ ] Ajouter des tests widget pour masquage temporaire des champs sensibles pendant capture.
+- [ ] Ajouter des tests widget pour restauration des champs sensibles après échec de capture.
+- [ ] Ajouter des tests widget pour sélection de zone minimale ignorée.
+- [ ] Ajouter des tests widget pour repositionnement du pin après scroll et resize.
+- [ ] Ajouter un smoke test du bundle `/widget.js` et `/widget.global.js` dans une page HTML externe.
+- [ ] Définir un budget de taille pour `packages/widget/dist/widget.global.js`.
+- [ ] Ajouter un check CI qui échoue si le bundle widget dépasse le budget validé.
+- [ ] Mesurer le coût d'initialisation du widget sur page externe.
+- [ ] Mesurer le temps de capture screenshot p50/p95 sur desktop et mobile.
 
+## 6. Intégrations GitHub/GitLab
+- [ ] Finaliser le flux GitHub App installation avec récupération et stockage de l'installation par workspace.
+- [ ] Finaliser la création de token GitHub installation par intégration workspace.
+- [ ] Associer chaque issue target GitHub à une intégration provider explicite.
+- [ ] Valider que le repository sélectionné appartient à l'intégration GitHub connectée.
+- [ ] Finaliser le refresh token GitLab OAuth.
+- [ ] Associer chaque issue target GitLab à une intégration provider explicite.
+- [ ] Valider que le projet GitLab sélectionné appartient à l'intégration GitLab connectée.
+- [ ] Ajouter la déconnexion d'un compte GitHub.
+- [ ] Ajouter la déconnexion d'un compte GitLab.
+- [ ] Ajouter la reconnexion d'un provider en statut `needs_reconnect`.
+- [ ] Ajouter une vérification périodique de validité des credentials provider.
+- [ ] Ajouter la pagination complète des repositories GitHub au-delà de 100 résultats.
+- [ ] Ajouter la pagination complète des projets GitLab au-delà de 100 résultats.
+- [ ] Ajouter la recherche serveur des repositories providers.
+- [ ] Ajouter une gestion explicite des permissions manquantes sur labels/issues.
+- [ ] Ajouter une création optionnelle des labels manquants côté provider.
+- [ ] Ajouter un fallback d'idempotence applicatif quand le provider ignore `Idempotency-Key`.
+- [ ] Ajouter le support d'attachement ou lien sécurisé de screenshot dans le corps d'issue.
+- [ ] Ajouter une synchronisation minimale du statut externe issue open/closed.
+- [ ] Ajouter des webhooks provider pour détecter installation supprimée ou token révoqué.
 
-## Notes de résultat
-- 2026-04-28 : revue textes FR/EN effectuée avec deux agents spécialisés; accents et anglicismes visibles corrigés dans i18n et textes hardcodés des sites connectés.
-- Checks OK : `npm run typecheck --workspace @changethis/web` et `npm run lint --workspace @changethis/web`.
-- 2026-04-28 : page Issues revue en dashboard 2026 avec hero opérationnel, métriques de file, signaux opérateur, rail latéral et cartes feedback plus scannables.
-- Checks OK : `npm run typecheck --workspace @changethis/web` et `npm run lint --workspace @changethis/web`.
-- 2026-04-28 : logo image `logoChangeThis.png` utilisé dans le header et le footer, avec lien footer discret `créateur de l'app` vers `https://mathieuluyten.be`.
-- Checks OK : `npm run typecheck --workspace @changethis/web` et `npm run lint --workspace @changethis/web`.
-- 2026-04-28 : passe textes visibles effectuée sur `apps/web/app/i18n.tsx` et `apps/web/app/projects/issue-destination-setup.tsx` pour retirer les formulations exposées de type dette/prochaine étape; check OK `npm run typecheck --workspace @changethis/web`.
-- 2026-04-28 : API minimale `GET /api/integrations/[provider]/repositories` ajoutée pour lister les repositories GitHub/GitLab accessibles via credentials courants, avec réponse normalisée.
-- Checks : `npm run typecheck --workspace @changethis/web` OK; `npx eslint lib/issue-providers.ts 'app/api/integrations/[provider]/repositories/route.ts'` OK; lint workspace bloqué par un fichier UI hors périmètre (voir Blocages).
-- 2026-04-28 : correction navigation `/projects` avec header Issues / Paramètres uniquement, settings en sidebar Connexions Git / Sites connectés, sans changement backend/auth/provider.
-- Checks OK : `npm run typecheck --workspace @changethis/web`, `npm run lint --workspace @changethis/web`, `npm run build --workspace @changethis/web` (build relancé avec prefix repo explicite après un `spawn EPERM` sandbox).
-- 2026-04-28 : tranche fondations auth Pasteur ajoutee (ADR Supabase Auth, env `AUTH_MODE`/`DATA_STORE`/`ENABLE_PUBLIC_SIGNUP`, mode auth explicite, RBAC minimal et role workspace Supabase).
-- 2026-04-28 : checks tranche auth OK (`npm run typecheck --workspace @changethis/web`, `npm run lint --workspace @changethis/web`).
-- 2026-04-27 : tâche 1 terminée via `docs/local-env-minimal.md` (minimum local + variables optionnelles providers + rappels de fallback local).
-- 2026-04-27 : `npm run typecheck` OK sur `@changethis/shared`, `@changethis/widget`, `@changethis/web` (aucun écart détecté; warning npm local `Unknown env config "http-proxy"`).
-- 2026-04-27 : `npm run lint` OK (aucune correction nécessaire; même warning npm local `http-proxy`).
-- 2026-04-27 : build validé pour `@changethis/widget` puis `@changethis/web` (succès complet).
-- 2026-04-27 : test flux `/demo` -> `/projects` validé en local via POST sur `/api/public/feedback` (200) puis vérification de présence du feedback dans `/projects`.
+## 7. Inbox, settings et analytics
+- [ ] Ajouter la création, modification et suppression d'un site connecté depuis l'interface.
+- [ ] Ajouter la modification des domaines autorisés par site.
+- [ ] Ajouter la rotation de clé publique widget par site.
+- [ ] Ajouter la désactivation temporaire d'un site sans supprimer son historique.
+- [ ] Ajouter la suppression d'un site avec confirmation et impact affiché.
+- [ ] Ajouter la gestion des connexions Git par workspace et non seulement par environnement serveur.
+- [ ] Ajouter l'état d'expiration ou d'erreur des tokens GitHub/GitLab.
+- [ ] Ajouter un test de connexion provider depuis la carte GitHub/GitLab.
+- [ ] Ajouter le choix du dépôt cible depuis la liste provider avec recherche.
+- [ ] Ajouter la configuration des labels d'issue par site.
+- [ ] Ajouter la configuration du template d'issue par site.
+- [ ] Ajouter la configuration de la langue par workspace.
+- [ ] Ajouter une page profil utilisateur avec email, nom et préférences.
+- [ ] Ajouter une pagination serveur pour `/projects`.
+- [ ] Ajouter un tri serveur par date et statut pour l'inbox.
+- [ ] Ajouter un filtre par site sur l'inbox.
+- [ ] Ajouter un filtre par statut sur l'inbox.
+- [ ] Ajouter un filtre par date sur l'inbox.
+- [ ] Ajouter une recherche texte dans les feedbacks.
+- [ ] Ajouter un export CSV des feedbacks filtrés.
+- [ ] Ajouter un tableau de bord volume feedback par période.
+- [ ] Ajouter un indicateur taux de conversion feedback vers issue créée.
+- [ ] Ajouter un indicateur temps médian entre feedback reçu et issue créée.
+- [ ] Ajouter une répartition des feedbacks par site.
+- [ ] Ajouter une répartition des feedbacks par statut.
+- [ ] Ajouter une répartition des erreurs provider par cause.
+- [ ] Ajouter un suivi d'activation onboarding par workspace.
+- [ ] Ajouter un suivi des limites de plan consommées.
 
+## 8. Fiabilité et jobs
+- [ ] Transformer la création d'issue en job asynchrone après réception feedback.
+- [ ] Ajouter une file de jobs durable pour les créations d'issues.
+- [ ] Ajouter un worker de retries indépendant des requêtes dashboard.
+- [ ] Ajouter une route cron protégée pour traiter les retries dus.
+- [ ] Ajouter un maximum de retries configurable.
+- [ ] Ajouter un statut terminal après dépassement du maximum de retries.
+- [ ] Ajouter un verrou distribué pour éviter deux créations d'issues concurrentes sur le même feedback.
+- [ ] Ajouter un timeout explicite sur tous les appels GitHub.
+- [ ] Ajouter un timeout explicite sur tous les appels GitLab.
+- [ ] Ajouter un timeout explicite sur tous les appels Supabase REST.
+- [ ] Ajouter un circuit breaker simple par provider.
+- [ ] Ajouter une stratégie de backoff avec jitter.
+- [ ] Ajouter une vue `failed` pour traiter les feedbacks en erreur.
+- [ ] Ajouter une action de relance manuelle d'un feedback échoué.
+- [ ] Ajouter une action d'annulation ou archivage définitif d'un feedback.
+- [ ] Ajouter une protection contre les doublons de feedback soumis plusieurs fois par le widget.
+- [ ] Ajouter une taille maximale de store ou pagination côté dashboard.
+- [ ] Remplacer le rate limit mémoire par un store partagé compatible serverless.
+- [ ] Ajouter un test de charge léger sur `POST /api/public/feedback` avec origines autorisées.
+- [ ] Vérifier que les screenshots volumineux ne bloquent pas durablement le serveur Next.js.
 
-## Notes tranche UI auth
-- [x] 2026-04-28 : Connexions Git recentree sur les comptes, Sites connectes recoit le script par site, le CTA Ajouter un nouveau site et une modal de destination d'issues.
-- [x] 2026-04-28 : Parametres separe en routes dediees `/settings/git-connections` et `/settings/connected-sites`, avec sidebar active pour limiter les informations visibles.
-- [x] 2026-04-28 : header applicatif `/projects` simplifie avec nav Issues / Sites connectes / Parametres, langue separee et session discrete; checks web typecheck/lint OK.
-- [x] 2026-04-28 : page `/login`, route `/logout` et lien session/logout discret dans `/projects` ajoutes sans modifier `apps/web/lib/auth.ts` ni `apps/web/lib/supabase-server.ts`.
-- Checks OK : `npm run typecheck --workspace @changethis/web` et `npm run lint --workspace @changethis/web`.
-- 2026-04-28 : modal Sites connectes equipee d'une UI repositories progressive dans `issue-destination-setup.tsx` avec chargement/select si API disponible et fallback URL conserve; routes API non modifiees.
-- Checks OK : `npm run typecheck --workspace @changethis/web` et `npm run lint --workspace @changethis/web`.
+## 9. Sécurité
+- [ ] Ajouter des headers de sécurité Next.js dans `next.config.ts`.
+- [ ] Ajouter une CSP compatible widget/dashboard.
+- [ ] Ajouter `X-Frame-Options` ou `frame-ancestors` adapté au dashboard.
+- [ ] Ajouter HSTS, Referrer-Policy, Permissions-Policy et X-Content-Type-Options.
+- [ ] Ajouter une validation stricte des méthodes HTTP sur toutes les routes API.
+- [ ] Ajouter une protection CSRF sur les POST privés du dashboard.
+- [ ] Vérifier que toutes les actions privées exigent une session workspace.
+- [ ] Ajouter une validation d'origine stricte pour `/api/widget/config`.
+- [ ] Ne pas exposer `issueTarget` complet dans `/api/widget/config` si non nécessaire au widget.
+- [ ] Ajouter une limite de longueur sur les champs texte dans les routes privées.
+- [ ] Ajouter une validation MIME réelle des screenshots côté serveur.
+- [ ] Ajouter un scan ou une stratégie de quarantaine pour les uploads image.
+- [ ] Redacter les secrets et tokens dans tous les logs d'erreur.
+- [ ] Ajouter une rotation documentée de `CHANGETHIS_SECRET_KEY`.
+- [ ] Remplacer le stockage local chiffré des credentials provider par un coffre compatible production.
+- [ ] Ajouter une vérification d'âge et d'intégrité du `state` OAuth provider.
+- [ ] Signer le `state` OAuth avec HMAC.
+- [ ] Ajouter la vérification des webhooks GitHub avec `GITHUB_WEBHOOK_SECRET`.
+- [ ] Ajouter la vérification des webhooks GitLab avec `GITLAB_WEBHOOK_SECRET`.
+- [ ] Ajouter une politique RLS d'insertion publique contrôlée pour les feedbacks si l'API écrit directement via Supabase.
+- [ ] Ajouter des tests RLS pour owner, admin, member, viewer et utilisateur externe.
+- [ ] Ajouter `npm audit --audit-level=high` comme gate documenté.
+- [ ] Documenter chaque exception `npm audit` avec package, CVE, impact et plan de correction.
+- [ ] Ajouter un scan de secrets local/CI sur l'historique et le workspace courant.
+- [ ] Vérifier que `.changethis-data`, `.env*` et logs locaux restent exclus Git.
+
+## 10. Tests et accessibilité
+- [ ] Ajouter une CI qui exécute `npm test`, `npm run typecheck`, `npm run lint` et `npm run build`.
+- [ ] Ajouter des tests unitaires pour `auth.ts`.
+- [ ] Ajouter des tests unitaires pour `provider-integrations.ts`.
+- [ ] Ajouter des tests unitaires pour `credential-store.ts`.
+- [ ] Ajouter des tests unitaires pour `issue-providers.ts` avec fetch mocké.
+- [ ] Ajouter des tests unitaires pour `issue-workflow.ts`.
+- [ ] Ajouter des tests unitaires pour `project-registry.ts`.
+- [ ] Ajouter des tests API pour `/api/public/feedback`.
+- [ ] Ajouter des tests API pour `/api/widget/config`.
+- [ ] Ajouter des tests API pour `/api/projects/issue-targets`.
+- [ ] Ajouter des tests API pour `/api/projects/feedbacks/[id]/issue`.
+- [ ] Ajouter des tests API pour `/api/projects/feedbacks/[id]/ignore`.
+- [ ] Ajouter des tests API pour `/api/projects/retries`.
+- [ ] Ajouter des tests API pour `/api/integrations/[provider]/repositories`.
+- [ ] Ajouter des tests API pour les callbacks GitHub et GitLab.
+- [ ] Ajouter des tests d'intégration Supabase repository.
+- [ ] Ajouter des tests d'intégration Supabase Storage screenshots.
+- [ ] Ajouter un scénario E2E `/demo` -> widget comment -> `/projects` visible.
+- [ ] Ajouter un scénario E2E widget mode pin avec coordonnées persistées.
+- [ ] Ajouter un scénario E2E widget mode capture avec asset screenshot persisté.
+- [ ] Ajouter un scénario E2E création d'issue GitHub mockée depuis `/projects`.
+- [ ] Ajouter un scénario E2E création d'issue GitLab mockée depuis `/projects`.
+- [ ] Ajouter un scénario E2E retry provider `failed/retrying` -> `sent_to_provider`.
+- [ ] Ajouter un scénario E2E accès `/projects` refusé sans session en `AUTH_MODE=supabase`.
+- [ ] Ajouter un scénario E2E rôle `viewer` empêché de modifier les destinations d'issues.
+- [ ] Ajouter des tests cross-browser du widget sur Chromium, Firefox et WebKit.
+- [ ] Auditer `/`, `/demo`, `/login`, `/projects` et `/settings/*` avec axe automatisé.
+- [ ] Ajouter des tests clavier pour ouvrir, utiliser et fermer le widget sans souris.
+- [ ] Ajouter les labels ARIA manquants du widget pour modes, textarea, bouton d'envoi et notice.
+- [ ] Vérifier le focus management du panneau widget à l'ouverture et à la fermeture.
+- [ ] Vérifier les contrastes du widget pour variantes `default`, `dev`, `prod`, `review`.
+- [ ] Vérifier les contrastes du dashboard pour badges, boutons, liens et états d'erreur.
+- [ ] Tester les écrans critiques en viewport mobile 390px sans chevauchement de texte.
+- [ ] Tester les écrans critiques en zoom navigateur 200%.
+
+## 11. Observabilité et support
+- [ ] Ajouter un endpoint `/api/health` sans secret.
+- [ ] Ajouter un endpoint `/api/ready` qui vérifie DB, storage et provider config.
+- [ ] Ajouter des métriques API: latence, taux 2xx/4xx/5xx, refus validation, refus origine et rate limit.
+- [ ] Ajouter des métriques provider: succès, échecs, rate limits, retries dus et retries bloqués.
+- [ ] Ajouter des métriques widget: erreurs d'envoi, temps de capture et version bundle.
+- [ ] Ajouter une corrélation `request_id` dans toutes les réponses API critiques.
+- [ ] Propager `request_id` dans les événements de statut.
+- [ ] Ajouter un audit log pour changements de destination d'issue.
+- [ ] Ajouter un audit log pour connexion/déconnexion provider.
+- [ ] Ajouter un audit log pour invitations et changements de rôle.
+- [ ] Ajouter une redaction automatique des payloads sensibles dans les logs.
+- [ ] Ajouter une intégration d'erreurs runtime compatible production.
+- [ ] Ajouter une intégration de tracing compatible Next.js.
+- [ ] Ajouter un dashboard opérationnel minimal staging/production.
+- [ ] Ajouter des alertes sur taux 5xx API.
+- [ ] Ajouter des alertes sur échecs provider répétés.
+- [ ] Ajouter des alertes sur feedbacks bloqués en `retrying`.
+- [ ] Ajouter des alertes sur queue bloquée au-delà du SLO.
+- [ ] Ajouter des alertes sur expiration prochaine des credentials provider.
+- [ ] Ajouter une page aide intégrée avec installation widget, connexions Git et résolution d'erreurs.
+- [ ] Ajouter un lien support visible dans le footer ou les paramètres.
+- [ ] Ajouter un formulaire de contact support depuis l'app.
+- [ ] Ajouter une collecte de contexte support incluant workspace, site, statut provider et request id.
+- [ ] Ajouter des messages d'erreur actionnables pour OAuth, token manquant, origine refusée et rate limit.
+- [ ] Ajouter une page interne de diagnostic par feedback ID avec événements et issue externe.
+
+## 12. Billing, trial et plans
+- [ ] Définir en code une structure de plans commerciaux avec limites sites, feedbacks, membres et stockage.
+- [ ] Ajouter une page pricing publique alignée sur les plans définis.
+- [ ] Ajouter un écran billing dans les paramètres.
+- [ ] Ajouter un état trial actif avec date de fin visible dans l'app.
+- [ ] Ajouter un état trial expiré avec blocage clair des actions payantes.
+- [ ] Ajouter une logique d'upgrade/downgrade liée aux limites produit.
+- [ ] Ajouter une intégration paiement pour abonnement SaaS.
+- [ ] Ajouter un lien portail client accessible depuis billing.
+- [ ] Ajouter un suivi des limites de plan consommées.
+- [ ] Ajouter une matrice des fonctionnalités par plan dans la documentation.
+
+## 13. Documentation client et release
+- [ ] Créer une documentation "Démarrage rapide" orientée client SaaS.
+- [ ] Créer une documentation "Installer le widget sur un site".
+- [ ] Créer une documentation "Configurer GitHub".
+- [ ] Créer une documentation "Configurer GitLab".
+- [ ] Créer une documentation "Gérer les domaines autorisés".
+- [ ] Créer une documentation "Comprendre les statuts de feedback".
+- [ ] Créer une documentation "Créer et rejouer une issue".
+- [ ] Créer une documentation "Sécurité et données capturées".
+- [ ] Créer une documentation "FAQ commerciale".
+- [ ] Ajouter des captures d'écran produit à la documentation.
+- [ ] Ajouter une page changelog publique.
+- [ ] Ajouter une checklist smoke staging après déploiement.
+- [ ] Ajouter une checklist smoke production après déploiement.
+- [ ] Ajouter versioning du widget et endpoint exposant la version déployée.
+- [ ] Ajouter changelog release avec migrations, env vars et risques connus.
+- [ ] Ajouter procédure rollback application.
+- [ ] Ajouter procédure rollback widget.
+- [ ] Ajouter procédure rollback migration DB.
+- [ ] Ajouter validation Go/No-Go avec SLO API, taux succès provider et absence de pertes de feedback.
+
+## 14. Runbooks opérationnels
+- [ ] Ajouter runbook incident "feedback API retourne 5xx".
+- [ ] Ajouter runbook incident "provider GitHub/GitLab rate limited".
+- [ ] Ajouter runbook incident "OAuth provider cassé ou callback invalide".
+- [ ] Ajouter runbook incident "feedbacks bloqués en retrying".
+- [ ] Ajouter runbook incident "origine client refusée par CORS".
+- [ ] Ajouter runbook incident "secret compromis".
+- [ ] Ajouter runbook incident "restore backup nécessaire".
+- [ ] Ajouter runbook incident "provider indisponible".
+- [ ] Ajouter runbook incident "base indisponible".
+- [ ] Ajouter modèle de réponse support pour bug widget client.
+- [ ] Ajouter modèle de réponse support pour problème connexion GitHub/GitLab.
+
+## 15. Légal et conformité technique
+- [ ] Ajouter une page sécurité décrivant secrets, RLS, stockage, backups et accès provider.
+- [ ] Ajouter une mention visible sur les données capturées par le widget.
+- [ ] Ajouter un mécanisme de masquage documenté des champs sensibles.
+- [ ] Ajouter une procédure d'export des données workspace.
+- [ ] Ajouter une procédure de suppression des données workspace.
+- [ ] Ajouter une politique TTL configurable pour screenshots et feedbacks selon statut.
+- [ ] Vérifier que les screenshots ne sont pas stockés durablement en data URL en production.
+- [ ] Ajouter une revue consentement/cookies si des analytics marketing sont ajoutés.
+
+## Audit Investisseur (pré-GO)
+- [ ] (P0) Préparer une matrice ICP + pricing narrative avec 3 plans de départ (free pilot/pro/team) et hypothèses de coût d'acquisition.
+- [ ] (P0) Remplacer la source projet localisée (`apps/web/lib/demo-project.ts`, `apps/web/lib/project-registry.ts`) par une persistance workspace-backed dès que possible hors DEV.
+- [ ] (P0) Implémenter une garde de démarrage qui bloque en production `AUTH_MODE=local`, `DATA_STORE=file`, projet fallback local, variables critiques manquantes.
+- [ ] (P0) Finaliser la logique tenant-safe: toutes les routes dashboard et API critiques scoping systématique `workspaceId`, y compris `/api/public/feedback`, `/api/projects/*`, `/api/integrations/*`.
+- [ ] (P0) Implémenter/renforcer les permissions server-side `viewer`, `member`, `admin`, `owner` sur l’ensemble des routes privatives avant exposition client.
+- [ ] (P1) Mettre en place le flux de retries durable et idempotent via queue + worker + verrou de concurrence pour éviter la double création d'issue.
+- [ ] (P1) Créer `/api/health` et `/api/ready` + checks SLO/SLI de base (`2xx/4xx/5xx`, retry backlog, latence et disponibilité provider).
+- [ ] (P1) Ajouter une première couche de sécurité web: headers de sécurité HTTP, CSP, validation méthode/origine, CSRF sur POST dashboard.
+- [ ] (P1) Migrer définitivement les screenshots hors data URL persistées, vers stockage objet + TTL de rétention.
+- [ ] (P1) Finaliser onboarding réel du 1er feedback: création de site, script intégré, destination issue sélectionnée, confirmation issue créée.
+- [ ] (P2) Publier pages commerciales minimales: pricing, démarrage rapide, installation widget, FAQ commerciale.
+- [ ] (P2) Construire la logique de limites de plans (quotas) et d’impact visible dans le produit, sans encore verrouiller le fournisseur de paiement.
+- [ ] (P2) Ajouter les fonctions de sortie client: export feedback, suppression définitive workspace/site/feedback, diagnostic par feedback ID.
+- [ ] (P2) Formaliser conformité opérationnelle: privacy/RGPD, retention, DPA, politique cookies si analytics marketing.
+
+## Intervention utilisateur requise
+- [ ] (depuis Audit Investisseur) Valider la proposition de valeur commerciale et définir l'ICP prioritaire (freelance, agence, studio).
+- [ ] (depuis section 12) Valider la structure des plans commerciaux: limites par plan, trial actif/expiré, seuils d'upgrade/downgrade, usages facturables et règles de blocage.
+- [ ] (depuis section 12) Valider la stratégie de paiement: provider retenu, conditions du cycle payant, portail client et UX billing.
+- [ ] (depuis sections 12, 13, 15) Valider le copy définitif du pricing, de la FAQ commerciale, de la documentation onboarding/widget, et des contenus de conformité client.
+- [ ] Valider le positionnement commercial cible: freelance, agence, studio ou équipe produit B2B.
+- [ ] Valider les plans, prix, limites d'usage et durée du trial.
+- [ ] Choisir le fournisseur de paiement.
+- [ ] Choisir l'hébergeur production pour l'application Next.js.
+- [ ] Choisir le domaine public de l'application ChangeThis.
+- [ ] Configurer les DNS du domaine choisi vers l'hébergeur.
+- [ ] Créer le projet Supabase production.
+- [ ] Fournir `NEXT_PUBLIC_SUPABASE_URL` production.
+- [ ] Fournir `NEXT_PUBLIC_SUPABASE_ANON_KEY` production.
+- [ ] Fournir `SUPABASE_SERVICE_ROLE_KEY` production.
+- [ ] Créer le bucket Supabase Storage production pour les screenshots.
+- [ ] Choisir la solution de stockage objet production si Supabase Storage n'est pas retenu.
+- [ ] Choisir la politique de rétention des feedbacks et screenshots.
+- [ ] Générer et fournir `CHANGETHIS_SECRET_KEY` production.
+- [ ] Créer ou valider la GitHub App ChangeThis.
+- [ ] Fournir `GITHUB_APP_SLUG`.
+- [ ] Fournir `GITHUB_APP_ID`.
+- [ ] Fournir `GITHUB_APP_PRIVATE_KEY`.
+- [ ] Fournir `GITHUB_WEBHOOK_SECRET`.
+- [ ] Installer la GitHub App sur les repositories clients pilotes.
+- [ ] Créer ou valider l'application OAuth GitLab.
+- [ ] Fournir `GITLAB_OAUTH_APP_ID`.
+- [ ] Fournir `GITLAB_OAUTH_APP_SECRET`.
+- [ ] Fournir `GITLAB_WEBHOOK_SECRET`.
+- [ ] Choisir si GitLab self-hosted doit être supporté dès la première version commerciale.
+- [ ] Fournir `GITLAB_BASE_URL` si GitLab self-hosted est retenu.
+- [ ] Choisir le provider de coffre secrets production si le stockage local chiffré est remplacé.
+- [ ] Choisir l'outil de monitoring, alerting, erreurs et traces.
+- [ ] Choisir l'outil de scan secrets/vulnérabilités utilisé en CI.
+- [ ] Définir les SLO commerciaux: disponibilité API, latence p95, taux succès provider, délai de création d'issue et MTTR.
+- [ ] Choisir si les inscriptions publiques sont ouvertes au lancement.
+- [ ] Choisir le modèle de workspace initial: mono-organisation par compte ou multi-workspace.
+- [ ] Choisir si la création d'issue doit être automatique dès réception ou validée manuellement par défaut.
+- [ ] Fournir les contenus marketing de la page pricing.
+- [ ] Fournir les contenus support et adresse de contact support.
+- [ ] Valider le modèle support: canal, horaires, SLA et owner d'astreinte.
+- [ ] Faire rédiger ou valider Privacy Policy, CGV/Terms, DPA et politique cookies.
+- [ ] Valider les métriques analytics autorisées et leur conformité RGPD.
+- [ ] Valider les clients pilotes et le périmètre du dry-run staging.
+- [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
+
+## Journal
+- [2026-04-28] Tâche 10 complétée: garde production dans `scripts/check-env.mjs` contre les project keys fallback connues.
+- [2026-04-28] Tâche 9 complétée: ajout de la validation production dans `scripts/check-env.mjs` interdisant `DATA_STORE=file`.
+- [2026-04-28] Tâche 8 complétée: ajout d'une validation production dans `scripts/check-env.mjs` interdisant `AUTH_MODE=local` en production.
+- [2026-04-28] Tâche 7 complétée: ajout de `scripts/check-env.mjs` + script npm `env:check` pour valider les vars d’environnement critiques et les secrets selon le mode.
+- [2026-04-28] Tâche 6 complétée: création de `.env.production.example` (sans secrets) listant les variables production attendues.
+- [2026-04-28] Tâche 5 complétée: mise à jour de `docs/local-env-minimal.md` avec les variables réellement nécessaires en local et les variables optionnelles par scénario.
+- [2026-04-28] Tâche 4 complétée: ajout d'une section `widget -> inbox -> issue` explicite dans `README.md` pour le parcours produit cible.
+- [2026-04-28] Tâche 3 complétée: ajout d'une matrice prototype / beta / commercialisable (auth, données, widget, intégrations, support, billing) dans `docs/production-readiness-plan.fr.md`.
+- [2026-04-28] Tâche 2 complétée: ajout d'une checklist Go/No-Go commerciale dans `docs/production-readiness-plan.fr.md` (critères bloquants de lancement commercial).
+- [2026-04-28] Tâche 1 complétée: création de `docs/commercial-readiness-map.md` avec une matrice structurée des blocs manquants (produit, architecture, intégrations, conformité, opérations, commercial) pour passer au mode SaaS.
+
