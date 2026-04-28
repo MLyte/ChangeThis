@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Archive, ExternalLink, RotateCcw, Send } from "lucide-react";
 import type { FeedbackStatus } from "@changethis/shared";
+import { T, useLanguage } from "../i18n";
 
 type Props = {
   feedbackId: string;
@@ -11,6 +13,7 @@ type Props = {
 };
 
 export function FeedbackActions({ feedbackId, status, externalIssueUrl }: Props) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
@@ -23,13 +26,13 @@ export function FeedbackActions({ feedbackId, status, externalIssueUrl }: Props)
         const response = await fetch(path, { method: "POST" });
 
         if (!response.ok) {
-          setError("Action impossible pour le moment. Reessayez dans quelques secondes.");
+          setError(t("actions.error.impossible"));
           return;
         }
 
         router.refresh();
       } catch {
-        setError("Connexion interrompue. Verifiez le serveur local puis reessayez.");
+        setError(t("actions.error.connection"));
       }
     });
   }
@@ -38,7 +41,8 @@ export function FeedbackActions({ feedbackId, status, externalIssueUrl }: Props)
     return (
       <div className="feedback-actions">
         <a className="button" href={externalIssueUrl}>
-          Voir l&apos;issue
+          <ExternalLink aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+          <T k="actions.issue.view" />
         </a>
       </div>
     );
@@ -47,12 +51,12 @@ export function FeedbackActions({ feedbackId, status, externalIssueUrl }: Props)
   if (status === "ignored") {
     return (
       <div className="feedback-actions">
-        <span className="button secondary-button disabled-button">Ignore</span>
+        <span className="button secondary-button disabled-button"><T k="actions.ignored" /></span>
       </div>
     );
   }
 
-  const createLabel = status === "retrying" || status === "failed" ? "Rejouer" : "Creer l'issue";
+  const createLabelKey = status === "retrying" || status === "failed" ? "actions.replay" : "actions.create";
 
   return (
     <div className="feedback-actions">
@@ -62,7 +66,12 @@ export function FeedbackActions({ feedbackId, status, externalIssueUrl }: Props)
         onClick={() => run(`/api/projects/feedbacks/${feedbackId}/issue`)}
         type="button"
       >
-        {isPending ? "Traitement..." : createLabel}
+        {isPending ? null : createLabelKey === "actions.replay" ? (
+          <RotateCcw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+        ) : (
+          <Send aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+        )}
+        {isPending ? <T k="actions.processing" /> : <T k={createLabelKey} />}
       </button>
       <button
         className="button secondary-button"
@@ -70,7 +79,8 @@ export function FeedbackActions({ feedbackId, status, externalIssueUrl }: Props)
         onClick={() => run(`/api/projects/feedbacks/${feedbackId}/ignore`)}
         type="button"
       >
-        Ignorer
+        <Archive aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+        <T k="actions.ignore" />
       </button>
       {error ? <span className="action-error" role="alert">{error}</span> : null}
     </div>

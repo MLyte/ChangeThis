@@ -1,5 +1,5 @@
 import html2canvas from "html2canvas";
-import type { FeedbackPayload, FeedbackType, PinTarget } from "@changethis/shared";
+import type { CaptureArea, FeedbackPayload, FeedbackType, PinTarget } from "@changethis/shared";
 
 const capturePage = html2canvas as unknown as typeof import("html2canvas").default;
 
@@ -9,10 +9,44 @@ type WidgetOptions = {
   buttonLabel?: string;
   buttonStateLabel?: string;
   buttonVariant?: "default" | "dev" | "prod" | "review";
+  locale?: "fr" | "en";
   visible?: boolean;
 };
 
 const rootId = "changethis-widget-root";
+const languageStorageKey = "changethis:preferredLanguage";
+const widgetCopy = {
+  fr: {
+    button: "Feedback",
+    title: "Que faut-il changer ?",
+    note: "Note",
+    pin: "Pin",
+    screenshot: "Capture",
+    placeholder: "Décris le retour client ici",
+    metaDefault: "URL, navigateur et viewport seront ajoutés automatiquement.",
+    close: "Fermer",
+    sending: "Envoi...",
+    send: "Envoyer",
+    selectArea: "Trace la zone a capturer",
+    sent: "Feedback envoye. Merci.",
+    alertError: "Impossible d'envoyer le feedback. Réessaie dans un instant."
+  },
+  en: {
+    button: "Feedback",
+    title: "What should change?",
+    note: "Note",
+    pin: "Pin",
+    screenshot: "Screenshot",
+    placeholder: "Describe the client feedback here",
+    metaDefault: "URL, browser and viewport will be added automatically.",
+    close: "Close",
+    sending: "Sending...",
+    send: "Send",
+    selectArea: "Drag the area to capture",
+    sent: "Feedback sent. Thank you.",
+    alertError: "Unable to send feedback. Try again in a moment."
+  }
+};
 
 export function initChangeThis(options: WidgetOptions): void {
   if (!options.projectKey || options.visible === false || document.getElementById(rootId)) {
@@ -20,7 +54,8 @@ export function initChangeThis(options: WidgetOptions): void {
   }
 
   const endpoint = options.endpoint ?? inferEndpoint();
-  const buttonLabel = options.buttonLabel ?? "Feedback";
+  const copy = widgetCopy[options.locale ?? inferLocale()];
+  const buttonLabel = options.buttonLabel ?? copy.button;
   const buttonStateLabel = options.buttonStateLabel;
   const buttonVariant = options.buttonVariant ?? "default";
   const root = document.createElement("div");
@@ -32,13 +67,26 @@ export function initChangeThis(options: WidgetOptions): void {
     open: false,
     type: "comment" as FeedbackType,
     pin: undefined as PinTarget | undefined,
+    captureArea: undefined as CaptureArea | undefined,
     sending: false,
-    message: ""
+    message: "",
+    notice: ""
+  };
+
+  const updatePinnedMarker = () => {
+    const marker = root.shadowRoot?.querySelector<HTMLElement>(".pin");
+    if (!marker || !state.pin) return;
+
+    const position = pinViewportPosition(state.pin);
+    marker.style.left = `${position.x}px`;
+    marker.style.top = `${position.y}px`;
   };
 
   const render = () => {
     const shadow = root.shadowRoot;
     if (!shadow) return;
+
+    const pinPosition = state.pin ? pinViewportPosition(state.pin) : undefined;
 
     shadow.innerHTML = `
       <style>
@@ -138,25 +186,40 @@ export function initChangeThis(options: WidgetOptions): void {
           font-weight: 800;
           box-shadow: 0 8px 22px rgba(225, 29, 72, 0.35);
         }
+        .notice {
+          position: fixed;
+          right: 20px;
+          bottom: 76px;
+          z-index: 2147483647;
+          border: 1px solid #bbf7d0;
+          border-radius: 8px;
+          background: #f0fdf4;
+          color: #166534;
+          font-size: 13px;
+          font-weight: 800;
+          padding: 12px 14px;
+          box-shadow: 0 14px 34px rgba(22, 101, 52, 0.16);
+        }
       </style>
-      ${state.pin ? `<div class="pin" style="left:${state.pin.x}px;top:${state.pin.y}px">1</div>` : ""}
+      ${state.pin && pinPosition ? `<div class="pin" style="left:${pinPosition.x}px;top:${pinPosition.y}px">1</div>` : ""}
+      ${state.notice ? `<div class="notice" role="status">${escapeHtml(state.notice)}</div>` : ""}
       <button class="button" data-action="toggle" data-variant="${buttonVariant}">
         <span>${escapeHtml(buttonLabel)}</span>
         ${buttonStateLabel ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
       </button>
       ${state.open ? `
         <section class="panel" aria-label="Envoyer un feedback">
-          <p class="title">Que faut-il changer ?</p>
+          <p class="title">${escapeHtml(copy.title)}</p>
           <div class="modes">
-            <button class="mode" data-mode="comment" data-active="${state.type === "comment"}">Note</button>
-            <button class="mode" data-mode="pin" data-active="${state.type === "pin"}">Pin</button>
-            <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">Capture</button>
+            <button class="mode" data-mode="comment" data-active="${state.type === "comment"}">${escapeHtml(copy.note)}</button>
+            <button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${escapeHtml(copy.pin)}</button>
+            <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${escapeHtml(copy.screenshot)}</button>
           </div>
-          <textarea placeholder="Decris le retour client ici">${escapeHtml(state.message)}</textarea>
-          <p class="meta">${state.pin ? `Pin: x=${state.pin.x}, y=${state.pin.y}` : "URL, navigateur et viewport seront ajoutes automatiquement."}</p>
+          <textarea placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.message)}</textarea>
+          <p class="meta">${feedbackMeta(state, copy.metaDefault)}</p>
           <div class="actions">
-            <button class="cancel" data-action="close">Fermer</button>
-            <button class="send" data-action="send" ${state.sending ? "disabled" : ""}>${state.sending ? "Envoi..." : "Envoyer"}</button>
+            <button class="cancel" data-action="close">${escapeHtml(copy.close)}</button>
+            <button class="send" data-action="send" ${state.sending ? "disabled" : ""}>${state.sending ? escapeHtml(copy.sending) : escapeHtml(copy.send)}</button>
           </div>
         </section>
       ` : ""}
@@ -175,13 +238,28 @@ export function initChangeThis(options: WidgetOptions): void {
     shadow.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         state.type = button.dataset.mode as FeedbackType;
+        state.notice = "";
         if (state.type === "pin") {
+          state.captureArea = undefined;
           startPinMode((pin) => {
             state.pin = pin;
             state.open = true;
             render();
           });
           state.open = false;
+        } else if (state.type === "screenshot") {
+          state.pin = undefined;
+          state.open = false;
+          render();
+          startCaptureSelection(copy.selectArea, (area) => {
+            state.captureArea = area;
+            state.open = true;
+            render();
+          });
+          return;
+        } else {
+          state.pin = undefined;
+          state.captureArea = undefined;
         }
         render();
       });
@@ -200,21 +278,31 @@ export function initChangeThis(options: WidgetOptions): void {
           projectKey: options.projectKey,
           type: state.type,
           message: state.message,
-          pin: state.pin
+          pin: state.pin,
+          captureArea: state.captureArea
         });
         state.message = "";
         state.pin = undefined;
+        state.captureArea = undefined;
         state.type = "comment";
         state.open = false;
+        state.notice = copy.sent;
+        window.setTimeout(() => {
+          state.notice = "";
+          render();
+        }, 3600);
       } catch (error) {
         console.error("[ChangeThis] Failed to send feedback", error);
-        window.alert("Impossible d'envoyer le feedback. Reessaie dans un instant.");
+        window.alert(copy.alertError);
       } finally {
         state.sending = false;
         render();
       }
     });
   };
+
+  window.addEventListener("scroll", updatePinnedMarker, { passive: true });
+  window.addEventListener("resize", updatePinnedMarker);
 
   render();
 }
@@ -225,16 +313,20 @@ async function submitFeedback(params: {
   type: FeedbackType;
   message: string;
   pin?: PinTarget;
+  captureArea?: CaptureArea;
 }) {
-  const screenshotDataUrl = params.type === "screenshot" || params.type === "pin"
-    ? await captureViewport()
-    : undefined;
+  const screenshotDataUrl = params.type === "screenshot" && params.captureArea
+    ? await captureViewport(params.captureArea)
+    : params.type === "pin"
+      ? await captureViewport()
+      : undefined;
 
   const payload: FeedbackPayload = {
     projectKey: params.projectKey,
     type: params.type,
     message: params.message,
     pin: params.pin,
+    captureArea: params.captureArea,
     screenshotDataUrl,
     metadata: {
       url: window.location.href,
@@ -244,6 +336,10 @@ async function submitFeedback(params: {
       viewport: {
         width: window.innerWidth,
         height: window.innerHeight
+      },
+      scroll: {
+        x: window.scrollX,
+        y: window.scrollY
       },
       devicePixelRatio: window.devicePixelRatio,
       language: navigator.language,
@@ -264,6 +360,106 @@ async function submitFeedback(params: {
   }
 }
 
+function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => void): void {
+  const layer = document.createElement("div");
+  layer.innerHTML = `
+    <style>
+      .changethis-selection-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        cursor: crosshair;
+        background: rgba(17, 24, 39, 0.18);
+      }
+      .changethis-selection-help {
+        position: fixed;
+        left: 50%;
+        top: 18px;
+        transform: translateX(-50%);
+        border-radius: 999px;
+        background: #111827;
+        color: #fff;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: 13px;
+        font-weight: 800;
+        padding: 10px 14px;
+      }
+      .changethis-selection-box {
+        position: fixed;
+        border: 2px solid #fff;
+        background: rgba(15, 118, 110, 0.22);
+        box-shadow: 0 0 0 9999px rgba(17, 24, 39, 0.36);
+      }
+    </style>
+    <div class="changethis-selection-layer">
+      <div class="changethis-selection-help">${escapeHtml(label)}</div>
+      <div class="changethis-selection-box" hidden></div>
+    </div>
+  `;
+  document.documentElement.appendChild(layer);
+
+  const surface = layer.querySelector<HTMLElement>(".changethis-selection-layer");
+  const box = layer.querySelector<HTMLElement>(".changethis-selection-box");
+  let startX = 0;
+  let startY = 0;
+  let latestX = 0;
+  let latestY = 0;
+  let dragging = false;
+
+  const updateBox = () => {
+    if (!box) return;
+    const left = Math.min(startX, latestX);
+    const top = Math.min(startY, latestY);
+    const width = Math.abs(latestX - startX);
+    const height = Math.abs(latestY - startY);
+    box.hidden = width < 4 || height < 4;
+    box.style.left = `${left}px`;
+    box.style.top = `${top}px`;
+    box.style.width = `${width}px`;
+    box.style.height = `${height}px`;
+  };
+
+  surface?.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    latestX = event.clientX;
+    latestY = event.clientY;
+    surface.setPointerCapture(event.pointerId);
+    updateBox();
+  });
+
+  surface?.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    latestX = event.clientX;
+    latestY = event.clientY;
+    updateBox();
+  });
+
+  surface?.addEventListener("pointerup", (event) => {
+    if (!dragging) return;
+    dragging = false;
+    latestX = event.clientX;
+    latestY = event.clientY;
+    const x = Math.min(startX, latestX);
+    const y = Math.min(startY, latestY);
+    const width = Math.abs(latestX - startX);
+    const height = Math.abs(latestY - startY);
+    layer.remove();
+
+    if (width < 8 || height < 8) {
+      return;
+    }
+
+    onSelect({
+      x: Math.round(x),
+      y: Math.round(y),
+      width: Math.round(width),
+      height: Math.round(height)
+    });
+  });
+}
+
 function startPinMode(onSelect: (pin: PinTarget) => void): void {
   const previousCursor = document.documentElement.style.cursor;
   document.documentElement.style.cursor = "crosshair";
@@ -276,8 +472,8 @@ function startPinMode(onSelect: (pin: PinTarget) => void): void {
 
     const target = event.target instanceof Element ? event.target : undefined;
     onSelect({
-      x: event.clientX,
-      y: event.clientY,
+      x: event.clientX + window.scrollX,
+      y: event.clientY + window.scrollY,
       selector: target ? buildSelector(target) : undefined,
       text: target?.textContent?.trim().slice(0, 120)
     });
@@ -286,7 +482,7 @@ function startPinMode(onSelect: (pin: PinTarget) => void): void {
   document.addEventListener("click", handleClick, true);
 }
 
-async function captureViewport(): Promise<string | undefined> {
+async function captureViewport(area?: CaptureArea): Promise<string | undefined> {
   try {
     maskSensitiveFields(true);
     const canvas = await capturePage(document.body, {
@@ -298,10 +494,36 @@ async function captureViewport(): Promise<string | undefined> {
       scrollY: window.scrollY,
       useCORS: true
     });
-    return canvas.toDataURL("image/jpeg", 0.82);
+    const output = area ? cropCanvas(canvas, area) : canvas;
+    return output.toDataURL("image/jpeg", 0.82);
   } finally {
     maskSensitiveFields(false);
   }
+}
+
+function cropCanvas(source: HTMLCanvasElement, area: CaptureArea): HTMLCanvasElement {
+  const ratio = window.devicePixelRatio || 1;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(area.width * ratio));
+  canvas.height = Math.max(1, Math.round(area.height * ratio));
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return source;
+  }
+
+  context.drawImage(
+    source,
+    Math.round(area.x * ratio),
+    Math.round(area.y * ratio),
+    canvas.width,
+    canvas.height,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+  return canvas;
 }
 
 function maskSensitiveFields(enabled: boolean): void {
@@ -314,6 +536,28 @@ function maskSensitiveFields(enabled: boolean): void {
       delete element.dataset.changethisPreviousVisibility;
     }
   });
+}
+
+function pinViewportPosition(pin: PinTarget): { x: number; y: number } {
+  return {
+    x: pin.x - window.scrollX,
+    y: pin.y - window.scrollY
+  };
+}
+
+function feedbackMeta(
+  state: { pin?: PinTarget; captureArea?: CaptureArea },
+  fallback: string
+): string {
+  if (state.pin) {
+    return `Pin: x=${Math.round(state.pin.x)}, y=${Math.round(state.pin.y)}`;
+  }
+
+  if (state.captureArea) {
+    return `Capture: ${Math.round(state.captureArea.width)}x${Math.round(state.captureArea.height)}`;
+  }
+
+  return escapeHtml(fallback);
 }
 
 function buildSelector(element: Element): string {
@@ -337,6 +581,21 @@ function inferEndpoint(): string {
   return "/api/public/feedback";
 }
 
+function inferLocale(): "fr" | "en" {
+  const script = document.currentScript as HTMLScriptElement | null;
+  const scriptLocale = script?.dataset.locale;
+  if (scriptLocale === "fr" || scriptLocale === "en") {
+    return scriptLocale;
+  }
+
+  const storedLocale = window.localStorage.getItem(languageStorageKey);
+  if (storedLocale === "fr" || storedLocale === "en") {
+    return storedLocale;
+  }
+
+  return document.documentElement.lang.toLowerCase().startsWith("fr") ? "fr" : "en";
+}
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -357,6 +616,7 @@ if (projectKey) {
     buttonLabel: currentScript?.dataset.buttonLabel,
     buttonStateLabel: currentScript?.dataset.buttonState,
     buttonVariant: variant === "dev" || variant === "prod" || variant === "review" ? variant : undefined,
+    locale: currentScript?.dataset.locale === "fr" || currentScript?.dataset.locale === "en" ? currentScript.dataset.locale : undefined,
     visible: currentScript?.dataset.visible !== "false"
   });
 }

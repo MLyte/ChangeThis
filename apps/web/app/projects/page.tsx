@@ -1,20 +1,24 @@
 import Link from "next/link";
+import { forbidden, unauthorized } from "next/navigation";
 import type { FeedbackStatus } from "@changethis/shared";
-import { providerIntegrations } from "../../lib/demo-project";
+import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import { getFeedbackRepository, type StoredFeedback } from "../../lib/feedback-repository";
 import { listConfiguredProjects } from "../../lib/project-registry";
+import { AppFooter } from "../app-footer";
+import { AppHeader } from "../app-header";
+import { T } from "../i18n";
 import { FeedbackActions } from "./feedback-actions";
-import { IssueDestinationSetup } from "./issue-destination-setup";
+import { ScreenshotPreview } from "./screenshot-preview";
 
 export const dynamic = "force-dynamic";
 
-const statusLabels: Record<FeedbackStatus, string> = {
-  raw: "A creer",
-  issue_creation_pending: "Creation en cours",
-  retrying: "Retry planifie",
-  sent_to_provider: "Envoye",
-  failed: "Echec provider",
-  ignored: "Ignore"
+const statusLabelKeys: Record<FeedbackStatus, string> = {
+  raw: "status.raw.long",
+  issue_creation_pending: "status.issue_creation_pending.long",
+  retrying: "status.retrying.long",
+  sent_to_provider: "status.sent_to_provider.long",
+  failed: "status.failed.long",
+  ignored: "status.ignored.long"
 };
 
 const statusClasses: Record<FeedbackStatus, string> = {
@@ -26,7 +30,22 @@ const statusClasses: Record<FeedbackStatus, string> = {
   ignored: "muted"
 };
 
+const projectNavItems = [
+  { href: "/projects", labelKey: "nav.issues" },
+  { href: "/settings", labelKey: "nav.settings" }
+];
+
 export default async function ProjectsPage() {
+  const session = await requireWorkspaceSession();
+
+  if (isAuthFailure(session)) {
+    if (session.status === 401) {
+      unauthorized();
+    }
+
+    forbidden();
+  }
+
   const projects = await listConfiguredProjects();
   const feedbacks = await getFeedbackRepository().list();
   const activeFeedbacks = feedbacks.filter((feedback) => feedback.status !== "ignored");
@@ -40,125 +59,119 @@ export default async function ProjectsPage() {
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <Link className="brand" href="/">
-          <span className="brand-mark">CT</span>
-          ChangeThis
-        </Link>
-        <nav className="nav" aria-label="Project navigation">
-          <code>{projects[0]?.publicKey ?? "demo_project_key"}</code>
-        </nav>
-      </header>
+      <AppHeader
+        navItems={projectNavItems}
+        session={{
+          email: session.user.email,
+          isLocalMode: session.user.id === "local-dev-user"
+        }}
+      />
 
       <section className="dashboard">
         <div className="dashboard-header">
           <div>
-            <p className="eyebrow">Console operationnelle</p>
-            <h1>Inbox ChangeThis</h1>
+            <p className="eyebrow"><T k="projects.eyebrow" /></p>
+            <h1><T k="projects.title" /></h1>
             <p className="lede">
-              Centralisez les retours des sites, controlez le brouillon d&apos;issue et envoyez-le vers la bonne
-              destination GitHub ou GitLab.
+              <T k="projects.lede" />
             </p>
           </div>
-          <Link className="button" href="/demo">Envoyer un retour test</Link>
+          <Link className="button" href="/demo"><T k="projects.testFeedback" /></Link>
         </div>
 
-        <section className="ops-strip" aria-label="Etat production">
+        <section className="ops-strip" aria-label="État production">
           <div>
             <span>{projects.length}</span>
-            <strong>sites pilotes</strong>
+            <strong><T k="projects.ops.sites" /></strong>
           </div>
           <div>
             <span>{githubProjects}</span>
-            <strong>vers GitHub</strong>
+            <strong><T k="projects.ops.github" /></strong>
           </div>
           <div>
             <span>{gitlabProjects}</span>
-            <strong>vers GitLab</strong>
+            <strong><T k="projects.ops.gitlab" /></strong>
           </div>
           <div>
             <span>{feedbacks.length}</span>
-            <strong>feedbacks durables</strong>
+            <strong><T k="projects.ops.feedbacks" /></strong>
           </div>
         </section>
 
-        <div className="metric-grid" aria-label="Synthese de l'inbox">
-          <MetricCard label="A traiter" value={pendingFeedbacks.length} tone="warning" />
-          <MetricCard label="Retries" value={retryFeedbacks.length} tone="warning" />
-          <MetricCard label="Echecs fixes requis" value={failedFeedbacks.length} tone="danger" />
-          <MetricCard label="Issues creees" value={sentFeedbacks.length} tone="ok" />
+        <div className="metric-grid" aria-label="Synthèse de l'inbox">
+          <MetricCard labelKey="projects.metric.pending" value={pendingFeedbacks.length} tone="warning" />
+          <MetricCard labelKey="projects.metric.retries" value={retryFeedbacks.length} tone="warning" />
+          <MetricCard labelKey="projects.metric.failed" value={failedFeedbacks.length} tone="danger" />
+          <MetricCard labelKey="projects.metric.sent" value={sentFeedbacks.length} tone="ok" />
         </div>
 
-        <section className="inbox-panel" aria-labelledby="local-inbox-title">
+        <section className="inbox-panel" id="issues" aria-labelledby="local-inbox-title">
           <div className="inbox-hero">
             <div>
-              <p className="eyebrow">Retours collectes</p>
-              <h2 id="local-inbox-title">File de traitement</h2>
+              <p className="eyebrow"><T k="projects.inbox.eyebrow" /></p>
+              <h2 id="local-inbox-title"><T k="projects.inbox.title" /></h2>
               <p className="lede">
-                Priorisez les nouveaux retours, rejouez les erreurs temporaires et gardez les retours ignores hors de
-                la file principale.
+                <T k="projects.inbox.copy" />
               </p>
             </div>
-            <div className="inbox-summary" aria-label="Etat de l'inbox">
+            <div className="inbox-summary" aria-label="État de l'inbox">
               <strong>{pendingFeedbacks.length}</strong>
-              <span>a traiter</span>
+              <span><T k="projects.inbox.pending" /></span>
             </div>
           </div>
 
           <div className="inbox-toolbar">
-            <a className="button" href="/demo">Tester le widget</a>
+            <a className="button" href="/demo"><T k="projects.inbox.test" /></a>
             <form action="/api/projects/retries" method="post">
-              <button className="button secondary-button" type="submit">Rejouer les retries dus</button>
+              <button className="button secondary-button" type="submit"><T k="projects.inbox.retryDue" /></button>
             </form>
           </div>
 
           {activeFeedbacks.length === 0 ? (
             <div className="empty-state">
-              <h2>Aucun retour actif</h2>
+              <h2><T k="projects.empty.title" /></h2>
               <p>
-                Envoyez un feedback depuis la demo pour creer une premiere carte inbox. Les retours ignores restent
-                archives et les nouveaux feedbacks reapparaitront ici.
+                <T k="projects.empty.copy" />
               </p>
-              <Link className="button" href="/demo">Tester le widget</Link>
+              <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
             </div>
           ) : (
             activeFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)
           )}
         </section>
 
-        <IssueDestinationSetup integrations={providerIntegrations} projects={projects} />
-
         <section className="operations-panel" aria-labelledby="ops-title">
           <div className="setup-heading">
             <div>
-              <p className="eyebrow">Etats et reprise</p>
-              <h2 id="ops-title">Ce que ChangeThis garde visible</h2>
+              <p className="eyebrow"><T k="projects.ops.eyebrow" /></p>
+              <h2 id="ops-title"><T k="projects.ops.title" /></h2>
             </div>
           </div>
           <div className="ops-grid">
             <article className="ops-card">
-              <h3>Erreur provider</h3>
-              <p>Le message d&apos;erreur reste sur la carte. Si l&apos;erreur est temporaire, un prochain retry est planifie.</p>
+              <h3><T k="projects.ops.provider.title" /></h3>
+              <p><T k="projects.ops.provider.copy" /></p>
             </article>
             <article className="ops-card">
-              <h3>Retry manuel</h3>
-              <p>Le bouton Rejouer relance la creation d&apos;issue pour un feedback precis, sans dupliquer une issue deja envoyee.</p>
+              <h3><T k="projects.ops.manual.title" /></h3>
+              <p><T k="projects.ops.manual.copy" /></p>
             </article>
             <article className="ops-card">
-              <h3>Archive propre</h3>
-              <p>{ignoredFeedbacks.length} retour(s) ignore(s) ne polluent plus l&apos;inbox, mais restent dans le store local.</p>
+              <h3><T k="projects.ops.archive.title" /></h3>
+              <p>{ignoredFeedbacks.length} <T k="projects.ops.archive.copy" /></p>
             </article>
           </div>
         </section>
       </section>
+      <AppFooter />
     </main>
   );
 }
 
-function MetricCard({ label, value, tone }: { label: string; value: number; tone: "ok" | "warning" | "danger" }) {
+function MetricCard({ labelKey, value, tone }: { labelKey: string; value: number; tone: "ok" | "warning" | "danger" }) {
   return (
     <article className={`metric-card ${tone}`}>
-      <span>{label}</span>
+      <span><T k={labelKey} /></span>
       <strong>{value}</strong>
     </article>
   );
@@ -172,23 +185,23 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   return (
     <article className={`feedback-card ${feedback.status}`}>
       <div className="feedback-main">
-        <div className="feedback-tags" aria-label="Meta feedback">
+        <div className="feedback-tags" aria-label="Métadonnées du feedback">
           <span className="status-badge connected">{feedback.payload.type}</span>
           <span className={`status-badge ${statusClasses[feedback.status]}`}>
-            {statusLabels[feedback.status]}
+            <T k={statusLabelKeys[feedback.status]} />
           </span>
         </div>
         <h2>{feedback.issueDraft.title}</h2>
-        <p>{feedback.payload.message || "Aucun message fourni."}</p>
+        <p>{feedback.payload.message || <T k="projects.feedback.noMessage" />}</p>
         {feedback.lastError ? (
           <div className="error-callout">
-            <strong>Creation d&apos;issue impossible</strong>
+            <strong><T k="projects.feedback.issueError" /></strong>
             <span>{feedback.lastError}</span>
           </div>
         ) : null}
         {hasRetry ? (
           <div className="retry-callout">
-            Prochain essai automatique: {formatDate(feedback.nextRetryAt as string)}
+            <T k="projects.feedback.nextRetry" />: {formatDate(feedback.nextRetryAt as string)}
           </div>
         ) : null}
         <div className="feedback-meta">
@@ -199,12 +212,18 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
         </div>
       </div>
       <div className="issue-draft">
-        <p className="eyebrow">Brouillon issue</p>
+        <p className="eyebrow"><T k="projects.feedback.draft" /></p>
         <strong>{feedback.issueTarget.namespace}/{feedback.issueTarget.project}</strong>
         <span>{draftLabels}</span>
         {feedback.payload.pin ? <span>Pin: {Math.round(feedback.payload.pin.x)}, {Math.round(feedback.payload.pin.y)}</span> : null}
-        {feedback.screenshotAsset ? <span>Capture: {Math.round(feedback.screenshotAsset.bytes / 1024)} Ko</span> : null}
-        <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}>Destination {feedback.issueTarget.provider}</a>
+        {feedback.screenshotAsset ? (
+          <ScreenshotPreview
+            asset={feedback.screenshotAsset}
+            metadata={feedback.payload.metadata}
+            pin={feedback.payload.pin}
+          />
+        ) : null}
+        <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}><T k="projects.feedback.destination" /> {feedback.issueTarget.provider}</a>
       </div>
       <FeedbackActions
         externalIssueUrl={feedback.externalIssue?.url}

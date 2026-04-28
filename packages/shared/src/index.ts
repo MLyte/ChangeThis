@@ -2,12 +2,62 @@ export type FeedbackType = "comment" | "pin" | "screenshot";
 
 export type FeedbackStatus = "raw" | "issue_creation_pending" | "retrying" | "sent_to_provider" | "failed" | "ignored";
 export type IssueProvider = "github" | "gitlab";
+export type WorkspaceMemberRole = "owner" | "admin" | "member" | "viewer";
+export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";
+
+export type Workspace = {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkspaceMember = {
+  id: string;
+  workspaceId: string;
+  email: string;
+  name?: string;
+  role: WorkspaceMemberRole;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Site = {
+  id: string;
+  workspaceId: string;
+  publicKey: string;
+  name: string;
+  allowedOrigins: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProviderIntegration = {
+  id: string;
+  workspaceId: string;
+  provider: IssueProvider;
+  accountLabel: string;
+  status: ProviderIntegrationStatus;
+  issueTarget?: IssueTarget;
+  connectPath?: string;
+  managePath?: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type PinTarget = {
   x: number;
   y: number;
   selector?: string;
   text?: string;
+};
+
+export type CaptureArea = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 export type FeedbackMetadata = {
@@ -18,6 +68,10 @@ export type FeedbackMetadata = {
   viewport: {
     width: number;
     height: number;
+  };
+  scroll?: {
+    x: number;
+    y: number;
   };
   devicePixelRatio: number;
   language: string;
@@ -30,6 +84,7 @@ export type FeedbackPayload = {
   message: string;
   metadata: FeedbackMetadata;
   pin?: PinTarget;
+  captureArea?: CaptureArea;
   screenshotDataUrl?: string;
 };
 
@@ -81,6 +136,10 @@ type PinValidationResult =
   | { ok: true; value?: PinTarget }
   | { ok: false; error: string };
 
+type CaptureAreaValidationResult =
+  | { ok: true; value?: CaptureArea }
+  | { ok: false; error: string };
+
 const feedbackTypes = ["comment", "pin", "screenshot"] as const;
 const issueProviders = ["github", "gitlab"] as const;
 const defaultMaxMessageLength = 5000;
@@ -125,6 +184,11 @@ export function validateFeedbackPayload(
     return pin;
   }
 
+  const captureArea = validateCaptureArea(value.captureArea);
+  if (!captureArea.ok) {
+    return captureArea;
+  }
+
   if (value.screenshotDataUrl !== undefined) {
     if (typeof value.screenshotDataUrl !== "string" || !value.screenshotDataUrl.startsWith("data:image/")) {
       return invalid("screenshotDataUrl must be an image data URL");
@@ -143,6 +207,7 @@ export function validateFeedbackPayload(
       message: value.message,
       metadata: metadata.value,
       pin: pin.value,
+      captureArea: captureArea.value,
       screenshotDataUrl: value.screenshotDataUrl
     }
   };
@@ -250,6 +315,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
         type: feedback.type,
         metadata: feedback.metadata,
         pin: feedback.pin ?? null,
+        captureArea: feedback.captureArea ?? null,
         hasScreenshot: Boolean(feedback.screenshotDataUrl)
       },
       null,
@@ -314,21 +380,34 @@ function validateMetadata(value: unknown): MetadataValidationResult {
     return invalid("metadata.createdAt must be an ISO date string");
   }
 
+  const metadata: FeedbackMetadata = {
+    url: value.url,
+    path: value.path,
+    title: value.title,
+    userAgent: value.userAgent,
+    viewport: {
+      width: value.viewport.width,
+      height: value.viewport.height
+    },
+    devicePixelRatio: value.devicePixelRatio,
+    language: value.language,
+    createdAt: value.createdAt
+  };
+
+  if (value.scroll !== undefined) {
+    if (!isRecord(value.scroll) || !isNonNegativeNumber(value.scroll.x, 100_000) || !isNonNegativeNumber(value.scroll.y, 100_000)) {
+      return invalid("metadata.scroll must contain non-negative x and y");
+    }
+
+    metadata.scroll = {
+      x: value.scroll.x,
+      y: value.scroll.y
+    };
+  }
+
   return {
     ok: true,
-    value: {
-      url: value.url,
-      path: value.path,
-      title: value.title,
-      userAgent: value.userAgent,
-      viewport: {
-        width: value.viewport.width,
-        height: value.viewport.height
-      },
-      devicePixelRatio: value.devicePixelRatio,
-      language: value.language,
-      createdAt: value.createdAt
-    }
+    value: metadata
   };
 }
 
@@ -360,6 +439,35 @@ function validatePin(value: unknown): PinValidationResult {
       y: value.y,
       selector: value.selector,
       text: value.text
+    }
+  };
+}
+
+function validateCaptureArea(value: unknown): CaptureAreaValidationResult {
+  if (value === undefined) {
+    return { ok: true };
+  }
+
+  if (!isRecord(value)) {
+    return invalid("captureArea must be an object");
+  }
+
+  if (
+    !isNonNegativeNumber(value.x, 10_000)
+    || !isNonNegativeNumber(value.y, 10_000)
+    || !isPositiveInteger(value.width, 10_000)
+    || !isPositiveInteger(value.height, 10_000)
+  ) {
+    return invalid("captureArea must contain x, y, width, and height");
+  }
+
+  return {
+    ok: true,
+    value: {
+      x: value.x,
+      y: value.y,
+      width: value.width,
+      height: value.height
     }
   };
 }

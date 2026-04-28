@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Script from "next/script";
 import { demoProject } from "../../lib/demo-project";
+import { LanguageSwitch, T } from "../i18n";
 
 export default function DemoPage() {
   return (
@@ -10,63 +10,62 @@ export default function DemoPage() {
           <span className="brand-mark">CT</span>
           ChangeThis
         </Link>
-        <nav className="nav" aria-label="Demo navigation">
-          <Link className="link" href="/projects">Inbox</Link>
+        <nav className="nav" aria-label="Navigation démo">
+          <Link className="link" href="/projects"><T k="nav.inbox" /></Link>
           <code>{demoProject.publicKey}</code>
+          <LanguageSwitch />
         </nav>
       </header>
 
       <section className="demo-page">
         <div className="demo-copy">
-          <p className="eyebrow">Bac a sable widget</p>
-          <h1>Site client de test</h1>
+          <p className="eyebrow"><T k="demo.eyebrow" /></p>
+          <h1><T k="demo.title" /></h1>
           <p className="hero-statement">
-            Utilisez le bouton Feedback en bas a droite pour creer un retour dans l&apos;inbox locale.
+            <T k="demo.statement" />
           </p>
           <p className="lede">
-            Cette page charge le bundle widget local et l&apos;API locale. Les retours arrivent dans l&apos;inbox durable,
-            puis peuvent etre envoyes vers GitHub ou GitLab selon la destination configuree pour le site.
+            <T k="demo.lede" />
           </p>
         </div>
 
         <div className="demo-layout">
           <section className="demo-content">
-            <span className="status-badge needs_setup">Staging client</span>
-            <h2>Refonte page contact</h2>
+            <span className="status-badge needs_setup"><T k="demo.badge" /></span>
+            <h2><T k="demo.content.title" /></h2>
             <p>
-              Le client peut cliquer n&apos;importe ou sur cette page, pointer un element visuel, ajouter une note, ou
-              demander une capture du viewport.
+              <T k="demo.content.copy" />
             </p>
             <div className="demo-actions">
-              <button>Demander un devis</button>
-              <button className="quiet">Voir les services</button>
+              <button><T k="demo.cta.primary" /></button>
+              <button className="quiet"><T k="demo.cta.secondary" /></button>
             </div>
           </section>
 
           <aside className="demo-sidebar">
-            <h3>Scenarios a tester</h3>
+            <h3><T k="demo.scenarios.title" /></h3>
             <ul className="check-list">
-              <li>Note simple sur le contenu</li>
-              <li>Pin sur le bouton principal</li>
-              <li>Capture avec champs sensibles masques</li>
+              <li><T k="demo.scenarios.1" /></li>
+              <li><T k="demo.scenarios.2" /></li>
+              <li><T k="demo.scenarios.3" /></li>
             </ul>
             <label>
-              Email client
+              <T k="demo.email" />
               <input type="email" defaultValue="client@example.com" />
             </label>
             <label>
-              Commentaire prive
-              <textarea defaultValue="Ce champ doit etre masque pendant la capture." />
+              <T k="demo.privateComment" />
+              <textarea />
             </label>
           </aside>
         </div>
       </section>
 
-      <Script
+      <script
         src="/widget.global.js"
         data-project={demoProject.publicKey}
         data-endpoint="/api/public/feedback"
-        strategy="afterInteractive"
+        async
       />
     </main>
   );

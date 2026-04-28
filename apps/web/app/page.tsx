@@ -2,14 +2,13 @@ import Link from "next/link";
 import type { StoredFeedback } from "../lib/feedback-repository";
 import { getFeedbackRepository } from "../lib/feedback-repository";
 import { listConfiguredProjects } from "../lib/project-registry";
+import { AppFooter } from "./app-footer";
+import { AppHeader } from "./app-header";
+import { T } from "./i18n";
 
 export const dynamic = "force-dynamic";
 
-const workflow = [
-  "Le widget capture le message, l'URL, le viewport, le pin et la capture.",
-  "L'inbox qualifie le retour, affiche le brouillon et garde l'historique de retry.",
-  "ChangeThis cree l'issue dans le repo GitHub ou GitLab lie au site."
-];
+const workflowKeys = ["home.workflow.1", "home.workflow.2", "home.workflow.3"];
 
 export default async function HomePage() {
   const [projects, feedbacks] = await Promise.all([
@@ -24,53 +23,46 @@ export default async function HomePage() {
     origin: project.allowedOrigins.find((origin) => !origin.includes("localhost") && !origin.includes("127.0.0.1")) ?? "local demo",
     provider: project.issueTarget.provider,
     repo: `${project.issueTarget.namespace}/${project.issueTarget.project}`,
-    state: project.issueTarget.webUrl ? "Pret" : "A configurer"
+    stateKey: project.issueTarget.webUrl ? "home.siteState.ready" : "home.siteState.configure"
   }));
   const liveSignals = [
-    { label: "Retours a traiter", value: String(actionableFeedbacks.length), tone: actionableFeedbacks.length > 0 ? "warning" : "ok" },
-    { label: "Sites configures", value: String(projects.length), tone: "ok" },
-    { label: "Retries en attente", value: String(retryCount), tone: retryCount > 0 ? "danger" : "ok" }
+    { labelKey: "home.metric.actionable", value: String(actionableFeedbacks.length), tone: actionableFeedbacks.length > 0 ? "warning" : "ok" },
+    { labelKey: "home.metric.sites", value: String(projects.length), tone: "ok" },
+    { labelKey: "home.metric.retries", value: String(retryCount), tone: retryCount > 0 ? "danger" : "ok" }
   ];
 
   return (
     <main className="shell app-home">
-      <header className="topbar">
-        <Link className="brand" href="/">
-          <span className="brand-mark">CT</span>
-          ChangeThis
-        </Link>
-        <nav className="nav" aria-label="Navigation principale">
-          <Link className="link" href="/projects">Inbox</Link>
-          <Link className="link" href="/demo">Demo widget</Link>
-          <a className="link hide-mobile" href="https://github.com/MLyte/ChangeThis">GitHub</a>
-          <Link className="button" href="/projects">Ouvrir la console</Link>
-        </nav>
-      </header>
+      <AppHeader
+        navItems={[
+          { href: "/projects", labelKey: "nav.issues" },
+          { href: "/settings", labelKey: "nav.settings" }
+        ]}
+      />
 
       <section className="workspace-hero" aria-labelledby="product-title">
         <div className="workspace-copy">
-          <p className="eyebrow">Console feedback</p>
+          <p className="eyebrow"><T k="home.hero.eyebrow" /></p>
           <h1 id="product-title">ChangeThis</h1>
           <p className="hero-statement">
-            Une inbox produit pour transformer les retours clients en issues GitHub ou GitLab exploitables.
+            <T k="home.hero.statement" />
           </p>
           <p className="lede">
-            Installez le widget sur chaque site, reliez le site a son repo, puis traitez les retours entrants avec
-            contexte complet, brouillon d&apos;issue, et retries visibles.
+            <T k="home.hero.lede" />
           </p>
           <div className="hero-actions">
-            <Link className="button" href="/projects">Traiter l&apos;inbox</Link>
-            <Link className="button secondary-button" href="/demo">Envoyer un retour test</Link>
+            <Link className="button" href="/projects"><T k="home.hero.primary" /></Link>
+            <Link className="button secondary-button" href="/demo"><T k="home.hero.secondary" /></Link>
           </div>
         </div>
 
         <ConsolePreview feedbacks={latestFeedbacks} siteRows={siteRows} />
       </section>
 
-      <section className="ops-strip" aria-label="Etat operationnel">
+      <section className="ops-strip" aria-label="État opérationnel">
         {liveSignals.map((signal) => (
-          <article className={`signal-card ${signal.tone}`} key={signal.label}>
-            <span>{signal.label}</span>
+          <article className={`signal-card ${signal.tone}`} key={signal.labelKey}>
+            <span><T k={signal.labelKey} /></span>
             <strong>{signal.value}</strong>
           </article>
         ))}
@@ -78,39 +70,39 @@ export default async function HomePage() {
 
       <section className="section product-section">
         <div className="section-heading compact">
-          <p className="eyebrow">Premiere vue utilisable</p>
-          <h2>Tout ce qu&apos;il faut pour passer du signal client a l&apos;action.</h2>
+          <p className="eyebrow"><T k="home.product.eyebrow" /></p>
+          <h2><T k="home.product.title" /></h2>
         </div>
         <div className="product-grid">
           <article className="product-block">
-            <h3>Inbox durable</h3>
-            <p>Les retours restent disponibles apres redemarrage, avec statuts, erreurs provider et prochain retry.</p>
+            <h3><T k="home.product.inbox.title" /></h3>
+            <p><T k="home.product.inbox.copy" /></p>
           </article>
           <article className="product-block">
-            <h3>Configuration par site</h3>
-            <p>Chaque cle publique garde ses origines autorisees et son repo cible GitHub ou GitLab.</p>
+            <h3><T k="home.product.config.title" /></h3>
+            <p><T k="home.product.config.copy" /></p>
           </article>
           <article className="product-block">
-            <h3>Brouillon lisible</h3>
-            <p>L&apos;issue contient message, page, viewport, langue, labels, pin, capture et donnees techniques.</p>
+            <h3><T k="home.product.draft.title" /></h3>
+            <p><T k="home.product.draft.copy" /></p>
           </article>
           <article className="product-block">
-            <h3>Reprise controlee</h3>
-            <p>Les echecs d&apos;API sont visibles, rejouables manuellement, puis automatisables via la route de retries.</p>
+            <h3><T k="home.product.retry.title" /></h3>
+            <p><T k="home.product.retry.copy" /></p>
           </article>
         </div>
       </section>
 
       <section className="workflow-band">
         <div className="section-heading">
-          <p className="eyebrow">Flux produit</p>
-          <h2>Un circuit court, mais tracable.</h2>
+          <p className="eyebrow"><T k="home.workflow.eyebrow" /></p>
+          <h2><T k="home.workflow.title" /></h2>
         </div>
         <div className="steps">
-          {workflow.map((item, index) => (
+          {workflowKeys.map((item, index) => (
             <article className="step" key={item}>
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <p>{item}</p>
+              <p><T k={item} /></p>
             </article>
           ))}
         </div>
@@ -118,11 +110,10 @@ export default async function HomePage() {
 
       <section className="install-section">
         <div>
-          <p className="eyebrow">Installation widget</p>
-          <h2>Une balise par site, une cle publique par projet.</h2>
+          <p className="eyebrow"><T k="home.install.eyebrow" /></p>
+          <h2><T k="home.install.title" /></h2>
           <p className="lede">
-            Le bundle local expose le meme chemin que la production. La page demo permet de tester le flux complet
-            sans compte client.
+            <T k="home.install.copy" />
           </p>
         </div>
         <pre className="code-block"><code>{`<script
@@ -131,6 +122,7 @@ export default async function HomePage() {
   data-button-label="Feedback">
 </script>`}</code></pre>
       </section>
+      <AppFooter />
     </main>
   );
 }
@@ -145,11 +137,11 @@ function ConsolePreview({
     origin: string;
     provider: string;
     repo: string;
-    state: string;
+    stateKey: string;
   }>;
 }) {
   return (
-    <div className="console-preview" aria-label="Apercu de la console ChangeThis">
+    <div className="console-preview" aria-label="Aperçu de la console ChangeThis">
       <div className="preview-topline">
         <span className="window-dot coral" />
         <span className="window-dot amber" />
@@ -160,8 +152,8 @@ function ConsolePreview({
       <div className="preview-layout">
         <aside className="preview-sidebar">
           <span className="sidebar-item active">Inbox</span>
-          <span className="sidebar-item">Sites</span>
-          <span className="sidebar-item">Integrations</span>
+          <span className="sidebar-item"><T k="home.preview.sidebar.sites" /></span>
+          <span className="sidebar-item"><T k="home.preview.sidebar.integrations" /></span>
           <span className="sidebar-item">Retries</span>
         </aside>
 
@@ -169,9 +161,9 @@ function ConsolePreview({
           <div className="preview-header">
             <div>
               <span className="mini-label">Inbox</span>
-              <h2>Retours entrants</h2>
+              <h2><T k="home.preview.header" /></h2>
             </div>
-            <span className="status-badge needs_setup">{feedbacks.length} recents</span>
+            <span className="status-badge needs_setup">{feedbacks.length} <T k="home.preview.recent" /></span>
           </div>
 
           <div className="preview-list">
@@ -188,10 +180,10 @@ function ConsolePreview({
             ) : (
               <article className="preview-feedback">
                 <div>
-                  <h3>Aucun feedback pour le moment</h3>
-                  <p>Envoyez un retour depuis la demo widget pour alimenter cette console.</p>
+                  <h3><T k="home.preview.empty.title" /></h3>
+                  <p><T k="home.preview.empty.copy" /></p>
                 </div>
-                <span>pret</span>
+                <span><T k="home.preview.ready" /></span>
               </article>
             )}
           </div>
@@ -203,7 +195,7 @@ function ConsolePreview({
                 <span>{site.origin}</span>
                 <span>{site.provider}</span>
                 <span>{site.repo}</span>
-                <em>{site.state}</em>
+                <em><T k={site.stateKey} /></em>
               </div>
             ))}
           </div>
@@ -213,15 +205,6 @@ function ConsolePreview({
   );
 }
 
-function formatStatus(status: StoredFeedback["status"]): string {
-  const labels: Record<StoredFeedback["status"], string> = {
-    raw: "a creer",
-    issue_creation_pending: "en cours",
-    retrying: "retry",
-    sent_to_provider: "envoye",
-    failed: "echec",
-    ignored: "ignore"
-  };
-
-  return labels[status];
+function formatStatus(status: StoredFeedback["status"]) {
+  return <T k={`status.${status}`} />;
 }

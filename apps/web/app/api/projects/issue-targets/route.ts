@@ -5,9 +5,16 @@ import {
   ProjectTargetValidationError,
   saveProjectIssueTarget
 } from "../../../../lib/project-registry";
+import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../lib/auth";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const session = await requireWorkspaceSession(request);
+
+  if (isAuthFailure(session)) {
+    return authFailureResponse(session);
+  }
+
   const projects = await listConfiguredProjects();
 
   return NextResponse.json({
@@ -21,6 +28,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const session = await requireWorkspaceSession(request);
+
+  if (isAuthFailure(session)) {
+    return authFailureResponse(session);
+  }
+
   const requestId = requestIdFrom(request);
   let body: unknown;
 

@@ -1,21 +1,12 @@
-import { validateIssueTarget, type IssueProvider, type IssueTarget } from "@changethis/shared";
+import {
+  validateIssueTarget,
+  type IssueTarget,
+  type Site,
+  type Workspace
+} from "@changethis/shared";
 
-export type ChangeThisProject = {
-  publicKey: string;
-  name: string;
-  allowedOrigins: string[];
+export type ChangeThisProject = Site & {
   issueTarget: IssueTarget;
-};
-
-export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";
-
-export type ProviderIntegrationSummary = {
-  provider: IssueProvider;
-  name: string;
-  accountLabel: string;
-  status: ProviderIntegrationStatus;
-  connectPath: string;
-  managePath?: string;
 };
 
 const localOrigins = [
@@ -49,70 +40,112 @@ function projectKey(envName: string, fallback: string): string {
   return fallback;
 }
 
-export const changeThisProjects: ChangeThisProject[] = [
+const localTimestamp = "2026-04-27T00:00:00.000Z";
+
+export const localWorkspace: Workspace = {
+  id: "workspace_changethis_local",
+  name: "ChangeThis Local",
+  slug: "changethis-local",
+  createdAt: localTimestamp,
+  updatedAt: localTimestamp
+};
+
+export const localSites: Site[] = [
   {
+    id: "site_changethis",
+    workspaceId: localWorkspace.id,
     publicKey: projectKey("NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY", process.env.NEXT_PUBLIC_DEMO_PROJECT_KEY ?? "changethis_project_key"),
     name: "ChangeThis",
     allowedOrigins: [...localOrigins, ...mathieuOrigins],
-    issueTarget: {
-      provider: "github",
-      namespace: "MLyte",
-      project: "ChangeThis",
-      webUrl: "https://github.com/MLyte/ChangeThis"
-    }
+    createdAt: localTimestamp,
+    updatedAt: localTimestamp
   },
   {
+    id: "site_andenne_bears",
+    workspaceId: localWorkspace.id,
     publicKey: projectKey("NEXT_PUBLIC_ANDENNE_BEARS_PROJECT_KEY", "andenne_bears_project_key"),
     name: "Andenne Bears",
     allowedOrigins: [...localOrigins, ...mathieuOrigins, ...andenneOrigins],
-    issueTarget: {
-      provider: "github",
-      namespace: "MLyte",
-      project: "andenne-bears.be",
-      webUrl: "https://github.com/MLyte/andenne-bears.be"
-    }
+    createdAt: localTimestamp,
+    updatedAt: localTimestamp
   },
   {
+    id: "site_optimaster",
+    workspaceId: localWorkspace.id,
     publicKey: projectKey("NEXT_PUBLIC_OPTIMASTER_PROJECT_KEY", "optimaster_project_key"),
     name: "OptiMaster",
     allowedOrigins: [...localOrigins, ...mathieuOrigins],
-    issueTarget: {
-      provider: "github",
-      namespace: "MLyte",
-      project: "OptiMaster",
-      webUrl: "https://github.com/MLyte/OptiMaster"
-    }
+    createdAt: localTimestamp,
+    updatedAt: localTimestamp
   },
   {
+    id: "site_yoda_carrosserie",
+    workspaceId: localWorkspace.id,
     publicKey: projectKey("NEXT_PUBLIC_YODA_CARROSSERIE_PROJECT_KEY", "yoda_carrosserie_project_key"),
     name: "Yoda Carrosserie Service",
     allowedOrigins: [...localOrigins, ...mathieuOrigins],
-    issueTarget: {
-      provider: "github",
-      namespace: "MLyte",
-      project: "YodaCarrosserieService",
-      webUrl: "https://github.com/MLyte/YodaCarrosserieService"
-    }
+    createdAt: localTimestamp,
+    updatedAt: localTimestamp
   }
 ];
 
+const localSiteIssueTargets: Record<string, IssueTarget> = {
+  site_changethis: {
+    provider: "github",
+    namespace: "MLyte",
+    project: "ChangeThis",
+    webUrl: "https://github.com/MLyte/ChangeThis"
+  },
+  site_andenne_bears: {
+    provider: "github",
+    namespace: "MLyte",
+    project: "andenne-bears.be",
+    webUrl: "https://github.com/MLyte/andenne-bears.be"
+  },
+  site_optimaster: {
+    provider: "github",
+    namespace: "MLyte",
+    project: "OptiMaster",
+    webUrl: "https://github.com/MLyte/OptiMaster"
+  },
+  site_yoda_carrosserie: {
+    provider: "github",
+    namespace: "MLyte",
+    project: "YodaCarrosserieService",
+    webUrl: "https://github.com/MLyte/YodaCarrosserieService"
+  }
+};
+
+export const changeThisProjects: ChangeThisProject[] = localSites.map((site) => ({
+  ...site,
+  issueTarget: localSiteIssueTargets[site.id]
+}));
+
 export const demoProject = changeThisProjects[0];
 
-export const providerIntegrations: ProviderIntegrationSummary[] = [
+export const providerIntegrations = [
   {
+    id: "integration_github_mlyte",
+    workspaceId: localWorkspace.id,
     provider: "github",
     name: "GitHub",
     accountLabel: "MLyte",
     status: "connected",
     connectPath: "/api/integrations/github/connect",
-    managePath: "https://github.com/settings/installations"
+    managePath: "https://github.com/settings/installations",
+    createdAt: localTimestamp,
+    updatedAt: localTimestamp
   },
   {
+    id: "integration_gitlab_local",
+    workspaceId: localWorkspace.id,
     provider: "gitlab",
     name: "GitLab",
     accountLabel: "Aucun compte lié",
     status: "needs_setup",
-    connectPath: "/api/integrations/gitlab/connect"
+    connectPath: "/api/integrations/gitlab/connect",
+    createdAt: localTimestamp,
+    updatedAt: localTimestamp
   }
 ];
 

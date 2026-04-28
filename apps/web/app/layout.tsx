@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import "./styles.css";
 import { HiddenProjectShortcut } from "./hidden-project-shortcut";
+import { LanguageProvider } from "./i18n";
 
 export const metadata: Metadata = {
   title: "ChangeThis",
-  description: "Client website feedback that turns into clean issues."
+  description: "Widget de feedback client qui transforme les retours en issues exploitables."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="fr-BE" suppressHydrationWarning>
       <body>
-        {children}
-        <HiddenProjectShortcut />
+        <LanguageProvider>
+          {children}
+          <HiddenProjectShortcut />
+        </LanguageProvider>
       </body>
     </html>
   );

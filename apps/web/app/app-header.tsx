@@ -1,0 +1,71 @@
+import Link from "next/link";
+import { Inbox, LogOut, Settings, UserRound, type LucideIcon } from "lucide-react";
+import { LanguageSwitch, T } from "./i18n";
+
+type HeaderNavItem = {
+  href: string;
+  labelKey: string;
+};
+
+type AppHeaderProps = {
+  navItems?: HeaderNavItem[];
+  session?: {
+    email: string;
+    isLocalMode: boolean;
+  };
+};
+
+export function AppHeader({ navItems = [], session }: AppHeaderProps) {
+  return (
+    <header className="topbar app-header">
+      <Link className="brand" href="/">
+        <span className="brand-mark">CT</span>
+        ChangeThis
+      </Link>
+
+      <div className="topbar-actions">
+        {navItems.length > 0 ? (
+          <nav className="primary-nav" aria-label="Application">
+            {navItems.map((item) => (
+              <Link className="app-nav-link" href={item.href} key={item.href}>
+                <NavIcon labelKey={item.labelKey} />
+                <T k={item.labelKey} />
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+
+        <LanguageSwitch />
+
+        {session ? (
+          <div className="session-menu" aria-label="Session">
+            <UserRound aria-hidden="true" className="ui-icon muted-icon" size={16} strokeWidth={2.2} />
+            <span>{session.email}</span>
+            {session.isLocalMode ? <strong><T k="nav.localMode" /></strong> : null}
+            <form action="/logout" method="post">
+              <button className="link session-link" type="submit">
+                <LogOut aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+                <T k="nav.logout" />
+              </button>
+            </form>
+          </div>
+        ) : null}
+      </div>
+    </header>
+  );
+}
+
+function NavIcon({ labelKey }: { labelKey: string }) {
+  const Icon = navIcons[labelKey];
+
+  if (!Icon) {
+    return null;
+  }
+
+  return <Icon aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />;
+}
+
+const navIcons: Record<string, LucideIcon> = {
+  "nav.issues": Inbox,
+  "nav.settings": Settings
+};
