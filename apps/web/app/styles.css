@@ -360,6 +360,7 @@ h1 {
 .product-title-logo {
   flex: 0 0 auto;
   height: clamp(54px, 8vw, 106px);
+  object-fit: contain;
   width: clamp(54px, 8vw, 106px);
 }
 

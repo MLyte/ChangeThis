@@ -5,6 +5,7 @@ import { getFeedbackRepository } from "../lib/feedback-repository";
 import { listConfiguredProjects } from "../lib/project-registry";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
+import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export default async function HomePage() {
         <div className="workspace-copy">
           <p className="eyebrow"><T k="home.hero.eyebrow" /></p>
           <h1 id="product-title" className="product-title">
-            <Image src="/assets/logo.svg" alt="" aria-hidden="true" className="product-title-logo" width={132} height={132} priority />
+            <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
             <span>ChangeThis</span>
           </h1>
           <p className="hero-statement">
