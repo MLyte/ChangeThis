@@ -40,8 +40,14 @@ const localDevSession: AuthSession = {
   }
 };
 
+const isProductionRuntime = process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+
 export async function getCurrentSession(request?: Request): Promise<AuthSession | null> {
   if (getAuthMode() === "local") {
+    if (isProductionRuntime) {
+      return null;
+    }
+
     return localDevSession;
   }
 
