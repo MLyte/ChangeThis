@@ -13,6 +13,26 @@ type OrganizationRow = {
   name: string;
 };
 
+type SupabaseAuthTokenResponse = {
+  access_token?: unknown;
+  refresh_token?: unknown;
+  expires_in?: unknown;
+  error?: unknown;
+  error_description?: unknown;
+};
+
+export type SupabasePasswordSignInResult =
+  | {
+      ok: true;
+      accessToken: string;
+      refreshToken?: string;
+      expiresIn?: number;
+    }
+  | {
+      ok: false;
+      error: "invalid" | "unavailable" | "missing";
+    };
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -51,6 +71,66 @@ export async function getSupabaseUser(accessToken: string): Promise<SupabaseUser
   return {
     id: body.id,
     email: typeof body.email === "string" ? body.email : undefined
+  };
+}
+
+export async function signInWithPassword(input: {
+  email: string;
+  password: string;
+}): Promise<SupabasePasswordSignInResult> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return {
+      ok: false,
+      error: "unavailable"
+    };
+  }
+
+  if (!input.email || !input.password) {
+    return {
+      ok: false,
+      error: "missing"
+    };
+  }
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: {
+      apikey: supabaseAnonKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email: input.email,
+      password: input.password,
+      grant_type: "password"
+    }),
+    cache: "no-store"
+  });
+
+  const body = await response.json() as SupabaseAuthTokenResponse;
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: "invalid"
+    };
+  }
+
+  if (typeof body.access_token !== "string") {
+    return {
+      ok: false,
+      error: "invalid"
+    };
+  }
+
+  const expiresIn = typeof body.expires_in === "number" && Number.isFinite(body.expires_in)
+    ? body.expires_in
+    : undefined;
+
+  return {
+    ok: true,
+    accessToken: body.access_token,
+    refreshToken: typeof body.refresh_token === "string" ? body.refresh_token : undefined,
+    expiresIn
   };
 }
 

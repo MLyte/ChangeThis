@@ -21,7 +21,7 @@
 - [x] Ajouter une garde qui refuse les project keys de fallback en production.
 
 ## 2. Auth, workspaces et rôles
-- [ ] Implémenter le login Supabase réel sur `/login` avec email/password ou magic link.
+- [x] Implémenter le login Supabase réel sur `/login` avec email/password ou magic link.
 - [ ] Créer une route callback/session Supabase qui pose un cookie serveur sécurisé.
 - [ ] Remplacer la session locale par une session Supabase obligatoire en production.
 - [ ] Lier chaque requête dashboard à un `workspaceId` issu de la session.
@@ -376,6 +376,7 @@
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-04-28] Tâche 11 complétée: implémentation du login Supabase réel sur `/login` via `signInWithPassword` et cookie serveur `changethis_access_token`.
 - [2026-04-28] Tâche 10 complétée: garde production dans `scripts/check-env.mjs` contre les project keys fallback connues.
 - [2026-04-28] Tâche 9 complétée: ajout de la validation production dans `scripts/check-env.mjs` interdisant `DATA_STORE=file`.
 - [2026-04-28] Tâche 8 complétée: ajout d'une validation production dans `scripts/check-env.mjs` interdisant `AUTH_MODE=local` en production.

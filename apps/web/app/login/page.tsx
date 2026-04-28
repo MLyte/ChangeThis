@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { getAuthMode } from "../../lib/auth";
+import { signInWithPassword } from "../../lib/supabase-server";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
 
@@ -17,9 +20,41 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const nextPath = sanitizeNextPath(params?.next ?? params?.redirect);
   const hasError = Boolean(params?.error);
   const isLocalMode = getAuthMode() === "local";
-  const loginAction = isLocalMode
-    ? nextPath
-    : `/login?error=unavailable&next=${encodeURIComponent(nextPath)}`;
+
+  async function loginAction(formData: FormData) {
+    "use server";
+
+    const authMode = getAuthMode();
+    const targetPath = sanitizeNextPath(formData.get("next")?.toString());
+    const email = formData.get("email")?.toString().trim() ?? "";
+    const password = formData.get("password")?.toString().trim() ?? "";
+
+    if (authMode === "local") {
+      redirect(targetPath);
+    }
+
+    const signInResult = await signInWithPassword({ email, password });
+
+    if (!signInResult.ok) {
+      const error = signInResult.error;
+      redirect(`/login?error=${encodeURIComponent(error)}&next=${encodeURIComponent(targetPath)}`);
+    }
+
+    const cookieStore = await cookies();
+    const cookieConfig = {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: signInResult.expiresIn && Number.isFinite(signInResult.expiresIn) && signInResult.expiresIn > 0
+        ? Math.floor(signInResult.expiresIn)
+        : 60 * 60
+    };
+
+    cookieStore.set("changethis_access_token", signInResult.accessToken, cookieConfig);
+    cookieStore.set("supabase-auth-token", signInResult.accessToken, cookieConfig);
+    redirect(targetPath);
+  }
 
   return (
     <main className="auth-shell">
@@ -46,14 +81,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </div>
           ) : null}
 
-          <form action={loginAction} className="auth-form" method="get">
+          <form action={loginAction} className="auth-form">
+            <input name="next" type="hidden" value={nextPath} />
             <label>
               <T k="login.email" />
-              <input autoComplete="email" type="email" />
+              <input autoComplete="email" name="email" required type="email" />
             </label>
             <label>
               <T k="login.password" />
-              <input autoComplete="current-password" type="password" />
+              <input autoComplete="current-password" name="password" required type="password" />
             </label>
             <p className="microcopy"><T k="login.redirectHint" /></p>
             <button className="button" type="submit">
