@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateIssueTarget } from "@changethis/shared";
+import { changeThisProjects } from "./demo-project";
 import type {
   ExternalIssueRef,
   FeedbackPayload,
@@ -59,6 +60,7 @@ export type CreateFeedbackInput = {
   payload: FeedbackPayload;
   issueDraft: IssueDraft;
   screenshotDataUrl?: string;
+  workspaceId?: string;
 };
 
 export type IssueAttemptResult =
@@ -67,7 +69,7 @@ export type IssueAttemptResult =
 
 export type FeedbackRepository = {
   create(input: CreateFeedbackInput): Promise<StoredFeedback>;
-  list(filters?: { projectKey?: string; status?: FeedbackStatus }): Promise<StoredFeedback[]>;
+  list(filters?: { projectKey?: string; status?: FeedbackStatus; workspaceId?: string }): Promise<StoredFeedback[]>;
   get(id: string): Promise<StoredFeedback | undefined>;
   markIssueCreationPending(id: string): Promise<StoredFeedback>;
   recordIssueAttempt(id: string, result: IssueAttemptResult): Promise<StoredFeedback>;
@@ -111,6 +113,7 @@ export class FileFeedbackRepository implements FeedbackRepository {
       const feedback: StoredFeedback = {
         id,
         projectKey: input.projectKey,
+        workspaceId: input.workspaceId,
         projectName: input.projectName,
         issueTarget: issueTargetValidation.value,
         payload: {
@@ -131,9 +134,20 @@ export class FileFeedbackRepository implements FeedbackRepository {
     });
   }
 
-  async list(filters: { projectKey?: string; status?: FeedbackStatus } = {}): Promise<StoredFeedback[]> {
+  async list(filters: { projectKey?: string; status?: FeedbackStatus; workspaceId?: string } = {}): Promise<StoredFeedback[]> {
     const store = await this.read();
     return store.feedbacks
+      .filter((feedback) => {
+        if (!filters.workspaceId) {
+          return true;
+        }
+
+        if (feedback.workspaceId) {
+          return feedback.workspaceId === filters.workspaceId;
+        }
+
+        return feedbackWorkspaceId(feedback.projectKey) === filters.workspaceId;
+      })
       .filter((feedback) => !filters.projectKey || feedback.projectKey === filters.projectKey)
       .filter((feedback) => !filters.status || feedback.status === filters.status)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -234,6 +248,10 @@ export class FileFeedbackRepository implements FeedbackRepository {
     fileLock = next.catch(() => undefined);
     return next;
   }
+}
+
+function feedbackWorkspaceId(projectKey: string): string | undefined {
+  return changeThisProjects.find((project) => project.publicKey === projectKey)?.workspaceId;
 }
 
 function createScreenshotAsset(feedbackId: string, dataUrl: string, now: string): StoredAsset {

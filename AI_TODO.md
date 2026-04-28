@@ -24,7 +24,7 @@
 - [x] Implémenter le login Supabase réel sur `/login` avec email/password ou magic link.
 - [x] Créer une route callback/session Supabase qui pose un cookie serveur sécurisé.
 - [x] Remplacer la session locale par une session Supabase obligatoire en production.
-- [ ] Lier chaque requête dashboard à un `workspaceId` issu de la session.
+- [x] Lier chaque requête dashboard à un `workspaceId` issu de la session.
 - [ ] Filtrer toutes les lectures de feedbacks par workspace.
 - [ ] Filtrer toutes les lectures de projets/sites par workspace.
 - [ ] Filtrer toutes les intégrations provider par workspace.
@@ -376,6 +376,7 @@
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-04-28] Tâche 14 complétée: filtrage dashboard par `workspaceId` issu de la session pour les vues `/projects`, `/settings` et `/api/projects/issue-targets`, via `getFeedbackRepository().list` et `listConfiguredProjects()`.
 - [2026-04-28] Tâche 13 complétée: restriction runtime de `getCurrentSession` en production pour interdire la session locale de fallback (`AUTH_MODE=local`).
 - [2026-04-28] Tâche 11 complétée: implémentation du login Supabase réel sur `/login` via `signInWithPassword` et cookie serveur `changethis_access_token`.
 - [2026-04-28] Tâche 12 complétée: ajout de la route `apps/web/app/api/auth/callback/route.ts` pour poser le session-cookie Supabase après redirection.

@@ -15,7 +15,15 @@ export async function GET(request: Request) {
     return authFailureResponse(session);
   }
 
-  const projects = await listConfiguredProjects();
+  if (!session.workspace) {
+    return authFailureResponse({
+      error: "Workspace access required",
+      status: 403
+    });
+  }
+
+  const workspaceId = session.workspace.id;
+  const projects = await listConfiguredProjects(workspaceId);
 
   return NextResponse.json({
     projects: projects.map((project) => ({
@@ -34,6 +42,14 @@ export async function POST(request: Request) {
     return authFailureResponse(session);
   }
 
+  if (!session.workspace) {
+    return authFailureResponse({
+      error: "Workspace access required",
+      status: 403
+    });
+  }
+
+  const workspaceId = session.workspace.id;
   const requestId = requestIdFrom(request);
   let body: unknown;
 
@@ -52,7 +68,7 @@ export async function POST(request: Request) {
       projectKey: body.projectKey,
       provider: body.provider,
       repositoryUrl: body.repositoryUrl
-    });
+    }, workspaceId);
 
     logInfo("project_issue_target_updated", {
       request_id: requestId,

@@ -22,7 +22,12 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
     forbidden();
   }
 
-  const projects = await listConfiguredProjects();
+  if (!session.workspace) {
+    forbidden();
+  }
+
+  const workspaceId = session.workspace.id;
+  const projects = await listConfiguredProjects(workspaceId);
   const providerIntegrations = listProviderIntegrations();
 
   return (

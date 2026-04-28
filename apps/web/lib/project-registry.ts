@@ -28,21 +28,27 @@ const localDataFile = path.join(localDataDir, "project-targets.json");
 
 let lock: Promise<unknown> = Promise.resolve();
 
-export async function listConfiguredProjects(): Promise<ChangeThisProject[]> {
+export async function listConfiguredProjects(workspaceId?: string): Promise<ChangeThisProject[]> {
   const store = await readStore();
+  const configuredProjects = workspaceId
+    ? changeThisProjects.filter((project) => project.workspaceId === workspaceId)
+    : changeThisProjects;
 
-  return changeThisProjects.map((project) => ({
+  return configuredProjects.map((project) => ({
     ...project,
     issueTarget: store.targets.find((target) => target.projectKey === project.publicKey)?.issueTarget ?? project.issueTarget
   }));
 }
 
-export async function findConfiguredProjectByKey(projectKey: string): Promise<ChangeThisProject | undefined> {
-  return (await listConfiguredProjects()).find((project) => project.publicKey === projectKey);
+export async function findConfiguredProjectByKey(
+  projectKey: string,
+  workspaceId?: string
+): Promise<ChangeThisProject | undefined> {
+  return (await listConfiguredProjects(workspaceId)).find((project) => project.publicKey === projectKey);
 }
 
-export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate): Promise<ChangeThisProject> {
-  const project = changeThisProjects.find((item) => item.publicKey === update.projectKey);
+export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate, workspaceId?: string): Promise<ChangeThisProject> {
+  const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === update.projectKey);
 
   if (!project) {
     throw new ProjectTargetValidationError("Unknown project", 404);

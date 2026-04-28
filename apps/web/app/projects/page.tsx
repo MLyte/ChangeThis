@@ -46,8 +46,13 @@ export default async function ProjectsPage() {
     forbidden();
   }
 
-  const projects = await listConfiguredProjects();
-  const feedbacks = await getFeedbackRepository().list();
+  if (!session.workspace) {
+    forbidden();
+  }
+
+  const workspaceId = session.workspace.id;
+  const projects = await listConfiguredProjects(workspaceId);
+  const feedbacks = await getFeedbackRepository().list({ workspaceId });
   const activeFeedbacks = feedbacks.filter((feedback) => feedback.status !== "ignored");
   const pendingFeedbacks = feedbacks.filter((feedback) => feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed");
   const queuedFeedbacks = feedbacks.filter((feedback) => feedback.status === "raw" || feedback.status === "issue_creation_pending");
