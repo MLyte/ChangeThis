@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { StoredFeedback } from "../lib/feedback-repository";
 import { getFeedbackRepository } from "../lib/feedback-repository";
 import { listConfiguredProjects } from "../lib/project-registry";
@@ -43,7 +44,10 @@ export default async function HomePage() {
       <section className="workspace-hero" aria-labelledby="product-title">
         <div className="workspace-copy">
           <p className="eyebrow"><T k="home.hero.eyebrow" /></p>
-          <h1 id="product-title">ChangeThis</h1>
+          <h1 id="product-title" className="product-title">
+            <Image src="/assets/logo.svg" alt="" aria-hidden="true" className="product-title-logo" width={132} height={132} priority />
+            <span>ChangeThis</span>
+          </h1>
           <p className="hero-statement">
             <T k="home.hero.statement" />
           </p>

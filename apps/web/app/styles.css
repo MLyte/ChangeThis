@@ -351,6 +351,18 @@ h1 {
   margin-bottom: 24px;
 }
 
+.product-title {
+  align-items: center;
+  display: flex;
+  gap: clamp(12px, 1.8vw, 22px);
+}
+
+.product-title-logo {
+  flex: 0 0 auto;
+  height: clamp(54px, 8vw, 106px);
+  width: clamp(54px, 8vw, 106px);
+}
+
 h2 {
   font-size: clamp(34px, 5vw, 62px);
   letter-spacing: 0;
