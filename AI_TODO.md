@@ -51,6 +51,12 @@
 
 
 ## Notes de résultat
+- 2026-04-28 : revue textes FR/EN effectuée avec deux agents spécialisés; accents et anglicismes visibles corrigés dans i18n et textes hardcodés des sites connectés.
+- Checks OK : `npm run typecheck --workspace @changethis/web` et `npm run lint --workspace @changethis/web`.
+- 2026-04-28 : page Issues revue en dashboard 2026 avec hero opérationnel, métriques de file, signaux opérateur, rail latéral et cartes feedback plus scannables.
+- Checks OK : `npm run typecheck --workspace @changethis/web` et `npm run lint --workspace @changethis/web`.
+- 2026-04-28 : logo image `logoChangeThis.png` utilisé dans le header et le footer, avec lien footer discret `créateur de l'app` vers `https://mathieuluyten.be`.
+- Checks OK : `npm run typecheck --workspace @changethis/web` et `npm run lint --workspace @changethis/web`.
 - 2026-04-28 : passe textes visibles effectuée sur `apps/web/app/i18n.tsx` et `apps/web/app/projects/issue-destination-setup.tsx` pour retirer les formulations exposées de type dette/prochaine étape; check OK `npm run typecheck --workspace @changethis/web`.
 - 2026-04-28 : API minimale `GET /api/integrations/[provider]/repositories` ajoutée pour lister les repositories GitHub/GitLab accessibles via credentials courants, avec réponse normalisée.
 - Checks : `npm run typecheck --workspace @changethis/web` OK; `npx eslint lib/issue-providers.ts 'app/api/integrations/[provider]/repositories/route.ts'` OK; lint workspace bloqué par un fichier UI hors périmètre (voir Blocages).

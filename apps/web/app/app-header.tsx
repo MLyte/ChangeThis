@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Inbox, LogOut, Settings, UserRound, type LucideIcon } from "lucide-react";
+import logoChangeThis from "./assets/logoChangeThis.png";
 import { LanguageSwitch, T } from "./i18n";
 
 type HeaderNavItem = {
@@ -19,7 +21,7 @@ export function AppHeader({ navItems = [], session }: AppHeaderProps) {
   return (
     <header className="topbar app-header">
       <Link className="brand" href="/">
-        <span className="brand-mark">CT</span>
+        <Image src={logoChangeThis} alt="" aria-hidden="true" className="brand-logo" priority />
         ChangeThis
       </Link>
 

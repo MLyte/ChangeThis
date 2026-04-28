@@ -84,7 +84,7 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
         if (response.status === 404) {
           setRepositoryOptions([]);
           setRepositoryLoadState("unavailable");
-          setRepositoryLoadMessage("Liste des repositories indisponible. Vous pouvez renseigner l'URL du repo cible.");
+          setRepositoryLoadMessage("Liste des dépôts indisponible. Vous pouvez renseigner l'URL du dépôt cible.");
           return;
         }
 
@@ -93,7 +93,7 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
         if (!response.ok) {
           setRepositoryOptions([]);
           setRepositoryLoadState("error");
-          setRepositoryLoadMessage(repositoryErrorMessage(body) ?? "Impossible de charger les repositories. La saisie par URL reste disponible.");
+          setRepositoryLoadMessage(repositoryErrorMessage(body) ?? "Impossible de charger les dépôts. La saisie par URL reste disponible.");
           return;
         }
 
@@ -101,7 +101,7 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
 
         setRepositoryOptions(repositories);
         setRepositoryLoadState(repositories.length > 0 ? "ready" : "empty");
-        setRepositoryLoadMessage(repositories.length > 0 ? "" : "Aucun repository accessible pour cette connexion. Utilisez l'URL du repo cible.");
+        setRepositoryLoadMessage(repositories.length > 0 ? "" : "Aucun dépôt accessible pour cette connexion. Utilisez l'URL du dépôt cible.");
       } catch (error) {
         if (abortController.signal.aborted) {
           return;
@@ -109,7 +109,7 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
 
         setRepositoryOptions([]);
         setRepositoryLoadState("error");
-        setRepositoryLoadMessage(error instanceof Error ? error.message : "Impossible de charger les repositories. La saisie par URL reste disponible.");
+        setRepositoryLoadMessage(error instanceof Error ? error.message : "Impossible de charger les dépôts. La saisie par URL reste disponible.");
       }
     }
 
@@ -348,8 +348,8 @@ function ConnectedSitesSection({
     <section className="settings-section linked-sites" aria-labelledby="linked-sites-title">
       <div className="setup-heading">
         <div>
-          <p className="eyebrow">Pages connectees</p>
-          <h2 id="linked-sites-title">Sites connectes</h2>
+          <p className="eyebrow">Pages connectées</p>
+          <h2 id="linked-sites-title">Sites connectés</h2>
         </div>
         <button className="button" onClick={() => onOpenSiteModal()} type="button">
           <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
@@ -409,7 +409,7 @@ function ConnectedSitesSection({
           <div className="settings-modal-panel">
             <div className="settings-modal-header">
               <div>
-                <p className="eyebrow">Pages connectees</p>
+                <p className="eyebrow">Pages connectées</p>
                 <h2 id="site-modal-title">Ajouter un nouveau site</h2>
               </div>
               <button className="icon-button" aria-label="Fermer" onClick={onCloseModal} type="button">
@@ -418,14 +418,14 @@ function ConnectedSitesSection({
             </div>
 
             <div className="modal-copy">
-              <strong>Script unique, cle par site.</strong>
+              <strong>Script unique, clé par site.</strong>
               <span>Le bundle reste commun. La clé publique permet à ChangeThis d&apos;identifier le site et sa destination d&apos;issues.</span>
             </div>
 
             <div className="repo-linker in-modal" id="site-repos">
               <div>
                 <h3>Choisir la destination des issues</h3>
-                <p>Sélectionnez un repository connecté quand la liste est disponible, ou renseignez directement l&apos;URL du repo cible.</p>
+                <p>Sélectionnez un dépôt connecté quand la liste est disponible, ou renseignez directement l&apos;URL du dépôt cible.</p>
               </div>
               {shouldShowRepositoryStatus ? (
                 <div className={`repository-loader ${repositoryLoadState}`} role="status">
@@ -455,7 +455,7 @@ function ConnectedSitesSection({
                   <label className="repo-select-field">
                     Repository connecté
                     <select name="repositorySelect" value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)}>
-                      <option value="">Choisir un repository</option>
+                      <option value="">Choisir un dépôt</option>
                       {repositoryOptions.map((repository) => (
                         <option key={repository.id} value={repository.webUrl}>
                           {repository.label}
@@ -465,7 +465,7 @@ function ConnectedSitesSection({
                   </label>
                 ) : null}
                 <label className="repo-url-field">
-                  {shouldShowRepositorySelect ? "URL du repo sélectionné" : "URL du repo d'issues"}
+                  {shouldShowRepositorySelect ? "URL du dépôt sélectionné" : "URL du dépôt d'issues"}
                   <input
                     name="repo"
                     onChange={(event) => setRepoUrl(event.target.value)}
@@ -517,15 +517,15 @@ function providerLocalHelpKey(provider: IssueProvider): string {
 
 function repositoryStatusTitle(state: RepositoryLoadState): string {
   if (state === "loading") {
-    return "Chargement des repositories";
+    return "Chargement des dépôts";
   }
 
   if (state === "ready") {
-    return "Repositories disponibles";
+    return "Dépôts disponibles";
   }
 
   if (state === "empty") {
-    return "Aucun repository trouve";
+    return "Aucun dépôt trouvé";
   }
 
   if (state === "unavailable") {
@@ -536,7 +536,7 @@ function repositoryStatusTitle(state: RepositoryLoadState): string {
     return "Chargement impossible";
   }
 
-  return "Repositories";
+    return "Dépôts";
 }
 
 function repositoryStatusText(state: RepositoryLoadState, message: string): string {
@@ -545,11 +545,11 @@ function repositoryStatusText(state: RepositoryLoadState, message: string): stri
   }
 
   if (state === "loading") {
-    return "Recherche des repositories accessibles pour cette connexion Git.";
+    return "Recherche des dépôts accessibles pour cette connexion Git.";
   }
 
   if (state === "ready") {
-    return "Choisissez un repo dans la liste ou ajustez l'URL manuellement.";
+    return "Choisissez un dépôt dans la liste ou ajustez l'URL manuellement.";
   }
 
   return "Le champ URL reste disponible.";

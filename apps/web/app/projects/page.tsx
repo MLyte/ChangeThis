@@ -50,12 +50,14 @@ export default async function ProjectsPage() {
   const feedbacks = await getFeedbackRepository().list();
   const activeFeedbacks = feedbacks.filter((feedback) => feedback.status !== "ignored");
   const pendingFeedbacks = feedbacks.filter((feedback) => feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed");
+  const queuedFeedbacks = feedbacks.filter((feedback) => feedback.status === "raw" || feedback.status === "issue_creation_pending");
   const retryFeedbacks = feedbacks.filter((feedback) => feedback.status === "retrying");
   const failedFeedbacks = feedbacks.filter((feedback) => feedback.status === "failed");
   const sentFeedbacks = feedbacks.filter((feedback) => feedback.status === "sent_to_provider");
   const ignoredFeedbacks = feedbacks.filter((feedback) => feedback.status === "ignored");
   const githubProjects = projects.filter((project) => project.issueTarget.provider === "github").length;
   const gitlabProjects = projects.filter((project) => project.issueTarget.provider === "gitlab").length;
+  const latestFeedback = feedbacks.at(0);
 
   return (
     <main className="shell">
@@ -76,7 +78,12 @@ export default async function ProjectsPage() {
               <T k="projects.lede" />
             </p>
           </div>
-          <Link className="button" href="/demo"><T k="projects.testFeedback" /></Link>
+          <div className="dashboard-actions">
+            <span className="dashboard-timestamp">
+              <T k="projects.dashboard.updated" /> {latestFeedback ? formatDate(latestFeedback.createdAt) : "-"}
+            </span>
+            <Link className="button light-button" href="/demo"><T k="projects.testFeedback" /></Link>
+          </div>
         </div>
 
         <section className="ops-strip" aria-label="État production">
@@ -99,11 +106,44 @@ export default async function ProjectsPage() {
         </section>
 
         <div className="metric-grid" aria-label="Synthèse de l'inbox">
-          <MetricCard labelKey="projects.metric.pending" value={pendingFeedbacks.length} tone="warning" />
+          <MetricCard labelKey="projects.metric.pending" value={pendingFeedbacks.length} tone={pendingFeedbacks.length > 0 ? "warning" : "ok"} />
+          <MetricCard labelKey="projects.metric.queued" value={queuedFeedbacks.length} tone="warning" />
           <MetricCard labelKey="projects.metric.retries" value={retryFeedbacks.length} tone="warning" />
           <MetricCard labelKey="projects.metric.failed" value={failedFeedbacks.length} tone="danger" />
           <MetricCard labelKey="projects.metric.sent" value={sentFeedbacks.length} tone="ok" />
         </div>
+
+        <div className="dashboard-workbench">
+          <section className="operations-panel" aria-labelledby="signals-title">
+            <div className="setup-heading">
+              <div>
+                <p className="eyebrow"><T k="projects.signals.eyebrow" /></p>
+                <h2 id="signals-title"><T k="projects.signals.title" /></h2>
+              </div>
+            </div>
+            <div className="ops-grid">
+              <SignalCard
+                labelKey="projects.signals.queue"
+                value={activeFeedbacks.length}
+                detailKey="projects.signals.queue.copy"
+              />
+              <SignalCard
+                labelKey="projects.signals.latest"
+                value={latestFeedback ? formatDate(latestFeedback.createdAt) : "—"}
+                detailKey={latestFeedback ? "projects.signals.latest.copy" : "projects.signals.latest.empty"}
+              />
+              <SignalCard
+                labelKey="projects.signals.routing"
+                value={`${githubProjects}/${gitlabProjects}`}
+                detailKey="projects.signals.routing.copy"
+              />
+              <SignalCard
+                labelKey="projects.signals.archive"
+                value={ignoredFeedbacks.length}
+                detailKey="projects.signals.archive.copy"
+              />
+            </div>
+          </section>
 
         <section className="inbox-panel" id="issues" aria-labelledby="local-inbox-title">
           <div className="inbox-hero">
@@ -136,7 +176,23 @@ export default async function ProjectsPage() {
               <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
             </div>
           ) : (
-            activeFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)
+            <>
+              <div className="queue-strip">
+                <div className="ops-card">
+                  <h3><T k="projects.queue.new" /></h3>
+                  <p>{queuedFeedbacks.length} <T k="projects.queue.new.copy" /></p>
+                </div>
+                <div className="ops-card">
+                  <h3><T k="projects.queue.recovery" /></h3>
+                  <p>{retryFeedbacks.length + failedFeedbacks.length} <T k="projects.queue.recovery.copy" /></p>
+                </div>
+                <div className="ops-card">
+                  <h3><T k="projects.queue.done" /></h3>
+                  <p>{sentFeedbacks.length} <T k="projects.queue.done.copy" /></p>
+                </div>
+              </div>
+              {activeFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
+            </>
           )}
         </section>
 
@@ -162,6 +218,7 @@ export default async function ProjectsPage() {
             </article>
           </div>
         </section>
+        </div>
       </section>
       <AppFooter />
     </main>
@@ -173,6 +230,16 @@ function MetricCard({ labelKey, value, tone }: { labelKey: string; value: number
     <article className={`metric-card ${tone}`}>
       <span><T k={labelKey} /></span>
       <strong>{value}</strong>
+    </article>
+  );
+}
+
+function SignalCard({ detailKey, labelKey, value }: { detailKey: string; labelKey: string; value: number | string }) {
+  return (
+    <article className="ops-card">
+      <h3><T k={labelKey} /></h3>
+      <strong>{value}</strong>
+      <p><T k={detailKey} /></p>
     </article>
   );
 }
@@ -190,6 +257,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           <span className={`status-badge ${statusClasses[feedback.status]}`}>
             <T k={statusLabelKeys[feedback.status]} />
           </span>
+          <span className="status-badge muted">{feedback.issueTarget.provider}</span>
         </div>
         <h2>{feedback.issueDraft.title}</h2>
         <p>{feedback.payload.message || <T k="projects.feedback.noMessage" />}</p>
