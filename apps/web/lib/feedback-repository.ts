@@ -92,7 +92,7 @@ export function getFeedbackRepository(): FeedbackRepository {
   return repository;
 }
 
-class FileFeedbackRepository implements FeedbackRepository {
+export class FileFeedbackRepository implements FeedbackRepository {
   constructor(private readonly filePath: string) {}
 
   async create(input: CreateFeedbackInput): Promise<StoredFeedback> {
