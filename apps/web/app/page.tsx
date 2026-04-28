@@ -50,7 +50,10 @@ export default async function HomePage() {
       <section className="workspace-hero" aria-labelledby="product-title">
         <div className="workspace-copy">
           <p className="eyebrow">Console feedback</p>
-          <h1 id="product-title">ChangeThis</h1>
+          <h1 id="product-title" className="product-title">
+            <img src="/assets/logo.svg" alt="" aria-hidden="true" className="product-title-logo" />
+            <span>ChangeThis</span>
+          </h1>
           <p className="hero-statement">
             Une inbox produit pour transformer les retours clients en issues GitHub ou GitLab exploitables.
           </p>
