@@ -66,6 +66,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <p className="eyebrow"><T k="login.eyebrow" /></p>
           <h1><T k="login.title" /></h1>
           <p className="lede"><T k="login.lede" /></p>
+          {!publicSignupEnabled ? (
+            <div className="local-mode-callout">
+              <strong><T k="login.privateBeta.title" /></strong>
+              <span><T k="login.privateBeta.copy" /></span>
+            </div>
+          ) : null}
         </div>
 
         <div className="auth-panel">

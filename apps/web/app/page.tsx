@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { Camera, GitPullRequestCreate, Inbox, MapPin, MessageSquare, MousePointerClick, RefreshCw, Send, Settings2, Webhook, Workflow, type LucideIcon } from "lucide-react";
+import { isPublicSignupEnabled } from "../lib/auth";
 import { listConfiguredProjects } from "../lib/project-registry";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
@@ -25,6 +26,7 @@ const productBlocks: Array<{ titleKey: string; copyKey: string; emphasisKey: str
 ];
 
 export default async function HomePage() {
+  const publicSignupEnabled = isPublicSignupEnabled();
   const projects = await listConfiguredProjects();
   const siteRows = projects.map((project) => ({
     name: project.name,
@@ -54,6 +56,12 @@ export default async function HomePage() {
           <p className="lede">
             <T k="home.hero.lede" />
           </p>
+          {!publicSignupEnabled ? (
+            <div className="local-mode-callout">
+              <strong><T k="login.privateBeta.title" /></strong>
+              <span><T k="home.hero.privateBeta" /></span>
+            </div>
+          ) : null}
           <div className="hero-actions">
             <Link className="button" href="/projects"><T k="home.hero.primary" /></Link>
             <Link className="button secondary-button" href="/demo"><T k="home.hero.secondary" /></Link>
