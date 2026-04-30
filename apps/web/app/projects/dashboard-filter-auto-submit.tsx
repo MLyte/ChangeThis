@@ -14,7 +14,7 @@ export function DashboardFilterAutoSubmit() {
 
     const formElement = form;
 
-    let searchTimer: ReturnType<typeof window.setTimeout> | undefined;
+    let searchTimer: number | undefined;
 
     function submitFilters() {
       if (searchTimer) {
