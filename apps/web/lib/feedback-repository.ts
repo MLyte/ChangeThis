@@ -14,6 +14,7 @@ import type {
 export type StoredFeedback = {
   id: string;
   projectKey: string;
+  workspaceId?: string;
   projectName: string;
   issueTarget: IssueTarget;
   payload: FeedbackPayload;
