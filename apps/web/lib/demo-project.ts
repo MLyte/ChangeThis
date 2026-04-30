@@ -39,10 +39,7 @@ export const demoProject: ChangeThisProject = {
   workspaceId: localWorkspace.id,
   publicKey: projectKey("NEXT_PUBLIC_DEMO_PROJECT_KEY", "demo_project_key"),
   name: "Demo ChangeThis",
-  allowedOrigins: [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000"
-  ],
+  allowedOrigins: demoAllowedOrigins(),
   widgetLocale: "fr",
   widgetButtonPosition: "bottom-right",
   widgetButtonVariant: "default",
@@ -70,9 +67,32 @@ export const demoAppEnvironment: Required<FeedbackAppEnvironment> = {
 
 validateDemoProject();
 
+function demoAllowedOrigins(): string[] {
+  const origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    parseHttpOrigin(process.env.NEXT_PUBLIC_APP_URL)
+  ].filter((value): value is string => Boolean(value));
+
+  return [...new Set(origins)];
+}
+
 function validateDemoProject(): void {
   const validation = validateIssueTarget(demoProject.issueTarget);
   if (!validation.ok) {
     throw new Error(`Invalid demo issue target: ${validation.error}`);
+  }
+}
+
+function parseHttpOrigin(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.origin : undefined;
+  } catch {
+    return undefined;
   }
 }
