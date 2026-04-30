@@ -65,6 +65,15 @@ export type SupabaseSignUpResult =
       error: "invalid" | "unavailable" | "missing";
     };
 
+export type SupabaseEmailSignUpResult =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      error: "invalid" | "unavailable" | "missing";
+    };
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -222,15 +231,103 @@ export async function signUpWithPassword(input: {
   };
 }
 
+export async function requestSignUpEmail(input: {
+  email: string;
+  redirectTo: string;
+}): Promise<SupabaseEmailSignUpResult> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return {
+      ok: false,
+      error: "unavailable"
+    };
+  }
+
+  if (!input.email) {
+    return {
+      ok: false,
+      error: "missing"
+    };
+  }
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/otp`, {
+    method: "POST",
+    headers: {
+      apikey: supabaseAnonKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email: input.email,
+      should_create_user: true,
+      email_redirect_to: input.redirectTo
+    }),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: "invalid"
+    };
+  }
+
+  return {
+    ok: true
+  };
+}
+
+export async function updateSupabasePassword(input: {
+  accessToken: string;
+  password: string;
+}): Promise<SupabaseEmailSignUpResult> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return {
+      ok: false,
+      error: "unavailable"
+    };
+  }
+
+  if (!input.accessToken || input.password.length < 8) {
+    return {
+      ok: false,
+      error: "missing"
+    };
+  }
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${input.accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      password: input.password
+    }),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: "invalid"
+    };
+  }
+
+  return {
+    ok: true
+  };
+}
+
 export async function createWorkspaceForUser(input: {
   userId: string;
-  organizationName: string;
+  organizationName?: string;
+  email?: string;
 }): Promise<{ id: string; name: string } | null> {
   if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(input.userId)) {
     return null;
   }
 
-  const name = input.organizationName.trim() || "Workspace ChangeThis";
+  const name = input.organizationName?.trim() || workspaceNameFromEmail(input.email);
   const organizations = await supabaseRest<OrganizationRow[]>("/rest/v1/organizations?select=id,name", {
     method: "POST",
     headers: {
@@ -263,6 +360,16 @@ export async function createWorkspaceForUser(input: {
   });
 
   return organization;
+}
+
+function workspaceNameFromEmail(email?: string): string {
+  const domain = email?.split("@")[1]?.trim().toLowerCase();
+
+  if (!domain) {
+    return "Workspace ChangeThis";
+  }
+
+  return `Espace ${domain}`;
 }
 
 export async function getFirstWorkspaceForUser(userId: string): Promise<{ id: string; name: string; role: string } | null> {

@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode } from "../../lib/auth";
-import { createWorkspaceForUser, signUpWithPassword } from "../../lib/supabase-server";
+import { requestSignUpEmail } from "../../lib/supabase-server";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
 
@@ -10,12 +9,14 @@ export const dynamic = "force-dynamic";
 type SignUpPageProps = {
   searchParams?: Promise<{
     error?: string;
+    sent?: string;
   }>;
 };
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const params = await searchParams;
   const hasError = Boolean(params?.error);
+  const isSent = params?.sent === "1";
   const isLocalMode = getAuthMode() === "local";
 
   async function signUpAction(formData: FormData) {
@@ -23,46 +24,22 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 
     const authMode = getAuthMode();
     const email = formData.get("email")?.toString().trim() ?? "";
-    const password = formData.get("password")?.toString().trim() ?? "";
-    const organizationName = formData.get("organizationName")?.toString().trim() ?? "";
 
     if (authMode === "local") {
       redirect("/settings/connected-sites");
     }
 
-    const signUpResult = await signUpWithPassword({ email, password });
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const signUpResult = await requestSignUpEmail({
+      email,
+      redirectTo: `${appUrl}/auth/confirm?next=${encodeURIComponent("/signup/set-password")}`
+    });
 
     if (!signUpResult.ok) {
       redirect(`/signup?error=${encodeURIComponent(signUpResult.error)}`);
     }
 
-    const workspace = await createWorkspaceForUser({
-      userId: signUpResult.userId,
-      organizationName
-    });
-
-    if (!workspace) {
-      redirect("/signup?error=workspace");
-    }
-
-    if (signUpResult.accessToken) {
-      const cookieStore = await cookies();
-      const cookieConfig = {
-        httpOnly: true,
-        path: "/",
-        sameSite: "lax" as const,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: signUpResult.expiresIn && Number.isFinite(signUpResult.expiresIn) && signUpResult.expiresIn > 0
-          ? Math.floor(signUpResult.expiresIn)
-          : 60 * 60
-      };
-
-      cookieStore.set("changethis_access_token", signUpResult.accessToken, cookieConfig);
-      cookieStore.set("supabase-auth-token", signUpResult.accessToken, cookieConfig);
-      redirect("/settings/connected-sites");
-    }
-
-    redirect("/login?next=/settings/connected-sites");
+    redirect(`/signup?sent=1&email=${encodeURIComponent(email)}`);
   }
 
   return (
@@ -88,6 +65,13 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             </div>
           ) : null}
 
+          {isSent ? (
+            <div className="local-mode-callout" role="status">
+              <strong><T k="signup.sent.title" /></strong>
+              <span><T k="signup.sent.copy" /></span>
+            </div>
+          ) : null}
+
           {isLocalMode ? (
             <div className="local-mode-callout">
               <strong><T k="login.localMode.title" /></strong>
@@ -97,16 +81,8 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 
           <form action={signUpAction} className="auth-form">
             <label>
-              <T k="signup.organization" />
-              <input autoComplete="organization" name="organizationName" placeholder="Studio, produit, équipe..." required />
-            </label>
-            <label>
               <T k="login.email" />
               <input autoComplete="email" name="email" required type="email" />
-            </label>
-            <label>
-              <T k="login.password" />
-              <input autoComplete="new-password" minLength={8} name="password" required type="password" />
             </label>
             <p className="microcopy"><T k="signup.redirectHint" /></p>
             <button className="button" type="submit">

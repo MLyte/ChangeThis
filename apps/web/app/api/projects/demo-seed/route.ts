@@ -8,7 +8,7 @@ import { enableProviderIntegration } from "../../../../lib/provider-integration-
 import { getProviderIntegration } from "../../../../lib/provider-integrations";
 import { createConnectedSite, listConfiguredProjects } from "../../../../lib/project-registry";
 
-const seedRunId = "realistic-demo-seed-v2-20-pending";
+const seedRunId = "realistic-demo-seed-v3-status-showcase";
 
 type SeedSite = {
   name: string;
@@ -59,7 +59,7 @@ const seedFeedbacks = [
     scenario: "appointment-booking-blocker",
     viewport: [1440, 900],
     pin: { x: 972, y: 612, selector: "button[type='submit']", text: "Confirmer" },
-    status: "raw"
+    status: "failed"
   },
   {
     siteName: "Atelier Nova - Portail client",
@@ -80,7 +80,7 @@ const seedFeedbacks = [
     scenario: "visual-affordance",
     viewport: [1366, 768],
     pin: { x: 1040, y: 356, selector: ".document-row button", text: "Télécharger" },
-    status: "raw"
+    status: "issue_creation_pending"
   },
   {
     siteName: "Atelier Nova - Portail client",
@@ -91,7 +91,7 @@ const seedFeedbacks = [
     scenario: "login-error-toast",
     viewport: [1440, 900],
     captureArea: { x: 420, y: 220, width: 520, height: 360 },
-    status: "raw"
+    status: "retrying"
   },
   {
     siteName: "Atelier Nova - Portail client",
@@ -101,7 +101,7 @@ const seedFeedbacks = [
     message: "Laura: je ne comprends pas si le rappel part par e-mail ou par SMS.",
     scenario: "notification-channel-copy",
     viewport: [1280, 800],
-    status: "raw"
+    status: "sent_to_provider"
   },
   {
     siteName: "Atelier Nova - Portail client",
@@ -112,7 +112,7 @@ const seedFeedbacks = [
     scenario: "calendar-availability-contrast",
     viewport: [1536, 864],
     pin: { x: 716, y: 402, selector: ".calendar-slot.disabled", text: "15:00" },
-    status: "raw"
+    status: "kept"
   },
   {
     siteName: "Studio Lumen - Shop vitrine",
@@ -134,7 +134,7 @@ const seedFeedbacks = [
     scenario: "checkout-layout-shift",
     viewport: [412, 915],
     captureArea: { x: 0, y: 190, width: 412, height: 520 },
-    status: "raw"
+    status: "retrying"
   },
   {
     siteName: "Studio Lumen - Shop vitrine",
@@ -144,7 +144,7 @@ const seedFeedbacks = [
     message: "Claire: le hero donne envie, mais on ne comprend pas assez vite la livraison offerte.",
     scenario: "homepage-value-prop",
     viewport: [1440, 900],
-    status: "raw"
+    status: "sent_to_provider"
   },
   {
     siteName: "Studio Lumen - Shop vitrine",
@@ -155,7 +155,7 @@ const seedFeedbacks = [
     scenario: "coupon-field-hidden",
     viewport: [1366, 768],
     pin: { x: 982, y: 312, selector: ".discount-toggle", text: "Code promo" },
-    status: "raw"
+    status: "failed"
   },
   {
     siteName: "Studio Lumen - Shop vitrine",
@@ -166,7 +166,7 @@ const seedFeedbacks = [
     scenario: "shipping-pickup-tablet-overflow",
     viewport: [834, 1112],
     captureArea: { x: 80, y: 260, width: 680, height: 620 },
-    status: "raw"
+    status: "issue_creation_pending"
   },
   {
     siteName: "Studio Lumen - Shop vitrine",
@@ -176,7 +176,7 @@ const seedFeedbacks = [
     message: "Sophie: je ne vois pas clairement si le produit est disponible en boutique.",
     scenario: "store-availability-missing",
     viewport: [1440, 900],
-    status: "raw"
+    status: "resolved"
   },
   {
     siteName: "Studio Lumen - Shop vitrine",
@@ -187,7 +187,7 @@ const seedFeedbacks = [
     scenario: "tracking-link-affordance",
     viewport: [1440, 900],
     pin: { x: 1120, y: 428, selector: ".order-tracking-link", text: "Suivre" },
-    status: "raw"
+    status: "ignored"
   },
   {
     siteName: "Cabinet Orion - Espace rendez-vous",
@@ -208,7 +208,7 @@ const seedFeedbacks = [
     message: "Nadia: après trois essais, je ne sais pas comment récupérer mon accès.",
     scenario: "resolved-login-copy",
     viewport: [1440, 900],
-    status: "raw"
+    status: "resolved"
   },
   {
     siteName: "Cabinet Orion - Espace rendez-vous",
@@ -230,7 +230,7 @@ const seedFeedbacks = [
     scenario: "invoice-paid-status-contrast",
     viewport: [1280, 800],
     pin: { x: 864, y: 286, selector: ".invoice-status-paid", text: "Payée" },
-    status: "raw"
+    status: "sent_to_provider"
   },
   {
     siteName: "Cabinet Orion - Espace rendez-vous",
@@ -240,7 +240,7 @@ const seedFeedbacks = [
     message: "Elise: je ne sais pas si mon message au secrétariat a bien été envoyé.",
     scenario: "message-sent-confirmation",
     viewport: [1366, 768],
-    status: "raw"
+    status: "kept"
   },
   {
     siteName: "Cabinet Orion - Espace rendez-vous",
@@ -251,7 +251,7 @@ const seedFeedbacks = [
     scenario: "reschedule-mobile-button-spacing",
     viewport: [390, 844],
     captureArea: { x: 0, y: 560, width: 390, height: 220 },
-    status: "raw"
+    status: "ignored"
   },
   {
     siteName: "Cabinet Orion - Espace rendez-vous",
@@ -261,7 +261,7 @@ const seedFeedbacks = [
     message: "Claire: la page d'aide répond aux questions générales, mais pas au changement de rendez-vous.",
     scenario: "help-content-gap",
     viewport: [1440, 900],
-    status: "raw"
+    status: "sent_to_provider"
   }
 ] as const;
 

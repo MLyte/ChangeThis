@@ -447,3 +447,13 @@
 - [2026-04-30] Micro-amélioration UI homepage hors checklist: remplacement des pictogrammes abstraits du flux produit par des répliques de composants ChangeThis pour la capture complète, l'inbox exploitable et l'issue prête. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 
 - [2026-04-30] Micro-amélioration copy homepage hors checklist: reformulation du deuxième bloc du flux produit pour vendre la décision rapide, le tri des retours, le commentaire et la réponse dans GitHub/GitLab plutôt que l'historique des relances. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+- [2026-04-30] Micro-amélioration signup production hors checklist: passage du signup en email-first, suppression organisation/password du premier écran, envoi d'un lien sécurisé Supabase OTP, ajout d'une page cliente de confirmation du lien et d'une étape de choix du mot de passe qui crée automatiquement l'espace depuis l'e-mail. Blocage restant: une vraie prod sur base OVH seule exige encore une auth applicative, un mailer SMTP et une persistance DB hors Supabase. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+- [2026-04-30] Micro-correction démo dashboard hors checklist: la simulation réaliste répartit désormais les feedbacks sur tous les statuts utiles et le filtre Statut affiche les compteurs par état, pour démontrer que les vues et filtres fonctionnent réellement. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+- [2026-04-30] Documentation pilotage prod OVH hors checklist: ajout de docs/ovh-production-auth-decisions.md pour figer les décisions déjà prises, l'ordre d'implémentation auth OVH native et les questions restantes à poser une par une. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+- [2026-04-30] Documentation OVH hors checklist: ajout de docs/ovh-zero-to-prod-guide.md pour guider un depart de zero OVH vers une prod ChangeThis avec recommandation PostgreSQL, VPS/Public Cloud, SMTP et auth native applicative. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+- [2026-04-30] Documentation décisions prod hors checklist: mise à jour de docs/ovh-production-auth-decisions.md avec la décision Railway + PostgreSQL + Brevo, budget beta en euros, domaine possible chez OVH et questions restantes réordonnées. Validation non lancée automatiquement conformément à la consigne utilisateur active.

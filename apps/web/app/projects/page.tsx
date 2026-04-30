@@ -90,6 +90,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const filteredFeedbacks = feedbacks.filter((feedback) => matchesDashboardFilters(feedback, filters));
   const activeFeedbacks = feedbacks.filter(isActiveFeedback);
   const historyFeedbacks = feedbacks.filter(isHistoryFeedback);
+  const feedbackStatusCounts = countFeedbackStatuses(feedbacks);
+  const priorityCount = feedbacks.filter(isPriorityFeedback).length;
   const priorityFeedbacks = filteredFeedbacks.filter(isPriorityFeedback);
   const queuedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "issue_creation_pending");
   const retryFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "retrying");
@@ -139,7 +141,9 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               hasActiveFilters={hasActiveFilters}
               historyCount={historyFeedbacks.length}
               activeCount={activeFeedbacks.length}
+              priorityCount={priorityCount}
               projects={projects}
+              statusCounts={feedbackStatusCounts}
               totalCount={feedbacks.length}
             />
 
@@ -261,7 +265,9 @@ function DashboardFilterBar({
   filters,
   hasActiveFilters,
   historyCount,
+  priorityCount,
   projects,
+  statusCounts,
   totalCount
 }: {
   activeCount: number;
@@ -269,7 +275,9 @@ function DashboardFilterBar({
   filters: DashboardFilters;
   hasActiveFilters: boolean;
   historyCount: number;
+  priorityCount: number;
   projects: ChangeThisProject[];
+  statusCounts: Record<FeedbackStatus, number>;
   totalCount: number;
 }) {
   return (
@@ -291,15 +299,15 @@ function DashboardFilterBar({
           <option value="active">File active ({activeCount})</option>
           <option value="history">Historique ({historyCount})</option>
           <option value="all">Tous ({totalCount})</option>
-          <option value="priority">Action requise</option>
-          <option value="raw">Nouveaux</option>
-          <option value="issue_creation_pending">En file</option>
-          <option value="retrying">Relances</option>
-          <option value="failed">Échecs</option>
-          <option value="sent_to_provider">Issues créées</option>
-          <option value="resolved">Résolus</option>
-          <option value="kept">Conservés</option>
-          <option value="ignored">Ignorés</option>
+          <option value="priority">Action requise ({priorityCount})</option>
+          <option value="raw">Nouveaux ({statusCounts.raw})</option>
+          <option value="issue_creation_pending">En file ({statusCounts.issue_creation_pending})</option>
+          <option value="retrying">À réenvoyer ({statusCounts.retrying})</option>
+          <option value="failed">Échecs ({statusCounts.failed})</option>
+          <option value="sent_to_provider">Issues créées ({statusCounts.sent_to_provider})</option>
+          <option value="resolved">Résolus ({statusCounts.resolved})</option>
+          <option value="kept">Conservés ({statusCounts.kept})</option>
+          <option value="ignored">Ignorés ({statusCounts.ignored})</option>
         </select>
       </div>
 
@@ -581,6 +589,22 @@ function matchesDashboardFilters(feedback: StoredFeedback, filters: DashboardFil
 
 function isPriorityFeedback(feedback: StoredFeedback): boolean {
   return feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
+}
+
+function countFeedbackStatuses(feedbacks: StoredFeedback[]): Record<FeedbackStatus, number> {
+  return feedbacks.reduce<Record<FeedbackStatus, number>>((counts, feedback) => {
+    counts[feedback.status] += 1;
+    return counts;
+  }, {
+    raw: 0,
+    issue_creation_pending: 0,
+    retrying: 0,
+    sent_to_provider: 0,
+    failed: 0,
+    kept: 0,
+    resolved: 0,
+    ignored: 0
+  });
 }
 
 function isSeedDemoFeedback(feedback: StoredFeedback): boolean {
