@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
+import { resolveFeedbackForAction } from "../../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
 import { IssueProviderError } from "../../../../../../lib/issue-providers";
 import { syncFeedbackIssueState } from "../../../../../../lib/issue-workflow";
@@ -25,14 +26,15 @@ export async function POST(request: Request, context: RouteContext) {
 
   const requestId = requestIdFrom(request);
   const { id } = await context.params;
-  const feedback = await getFeedbackRepository().get(id, { workspaceId });
+  const actionScope = await resolveFeedbackForAction(getFeedbackRepository(), id, workspaceId);
+  const feedback = actionScope?.feedback;
 
   if (!feedback || !feedback.externalIssue) {
     return NextResponse.json({ error: "Feedback issue not found" }, { status: 404 });
   }
 
   try {
-    const updated = await syncFeedbackIssueState(feedback, requestId, { workspaceId });
+    const updated = await syncFeedbackIssueState(feedback, requestId, { workspaceId: actionScope.workspaceId });
 
     return NextResponse.json({
       id: updated.id,

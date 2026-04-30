@@ -376,6 +376,11 @@
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-04-30] Micro-amélioration UI capture hors checklist: adaptation de la modale screenshot aux captures mobiles avec panneau plus étroit, image mobile centrée et grille dédiée. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UX copy hors checklist: remplacement du libellé bouton `Rejouer` par `Réenvoyer` et ajustement du texte d'aide associé. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-correction demo hors checklist: ajout d'une vraie `screenshotDataUrl` synthétique aux feedbacks de type screenshot du seed réaliste, pour éviter l'incohérence tag `screenshot` + `Sans capture`. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UI dashboard hors checklist: correction du menu `Plus` des actions feedback en panneau superposé pour éviter qu'il casse l'espacement des lignes. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UX dashboard hors checklist: masquage du bouton de réessai sauf s'il y a plusieurs feedbacks à retenter, couleur warning dédiée, seed demo ajusté avec deux retries dus, et ajout d'un bouton non-prod `Vider la démo`. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Micro-amélioration UX dashboard hors checklist: ajout d'une création d'issues par lot via sélection de feedbacks, et remplacement de `Prochain essai automatique` par un libellé non trompeur. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Micro-amélioration UX dashboard hors checklist: remplacement du titre redondant issu du brouillon d'issue par un titre de carte structurel `Type sur /page`, pour laisser le message utilisateur porter le contenu. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Micro-amélioration UX dashboard hors checklist: extraction visuelle du reporter depuis les messages `Nom: ...` pour afficher `Envoyé par ...` hors de la ligne de texte du feedback. Validation non lancée automatiquement conformément à la consigne utilisateur active.
@@ -408,3 +413,37 @@
 - [2026-04-28] Tâche 2 complétée: ajout d'une checklist Go/No-Go commerciale dans `docs/production-readiness-plan.fr.md` (critères bloquants de lancement commercial).
 - [2026-04-28] Tâche 1 complétée: création de `docs/commercial-readiness-map.md` avec une matrice structurée des blocs manquants (produit, architecture, intégrations, conformité, opérations, commercial) pour passer au mode SaaS.
 
+
+- 2026-04-30: Micro-amélioration UX dashboard hors checklist: le bouton local `Réenvoyer` réutilise le style warning existant `retry-batch-button` pour éviter un CTA primaire sur un échec d'envoi. Validation non lancée, non demandée.
+
+- 2026-04-30: Micro-amélioration UX Connexions Git hors checklist: le tutoriel rapide n'apparaît plus que sans connexion Git active/configurée et contient les CTA GitHub/GitLab. Validation non lancée, non demandée.
+
+- 2026-04-30: Simulation réaliste étendue hors checklist: le seed crée aussi des connexions Git locales de démo, les dépôts simulés alimentent Paramètres > Comptes Git et Sites connectés, et les boutons simulation/reset sont visibles sur ces écrans. Le reset ne supprime que les credentials marqués démo. Validation non lancée, non demandée.
+
+- 2026-04-30: Micro-amélioration SaaS Header hors checklist: ajout de badges Auth/Stockage pour distinguer local vs Supabase/DB et affichage du CTA d'inscription en session locale pour préparer le portage base de données. Nouveaux agents non lancés: limite de threads atteinte. Validation non lancée, non demandée.
+
+- 2026-04-30: Simulation réaliste mise à jour hors checklist: le seed démo crée désormais 20 feedbacks distincts en attente, répartis sur les sites GitHub/GitLab afin que Issues et Paramètres > Sites connectés affichent les mêmes données de simulation. Validation non lancée, non demandée.
+
+- 2026-04-30: Micro-amélioration UX Header hors checklist: les états actifs de navigation et du sélecteur de langue passent en slate/soft discret pour réserver le bleu aux CTA primaires. Agent UX Jason consulté. Validation non lancée, non demandée.
+
+- 2026-04-30: Micro-amélioration UX démo hors checklist: le bouton de simulation est désormais exclusif selon l'état réel du seed; création affichée sans démo live, reset affiché quand une simulation réaliste existe. Validation non lancée, non demandée.
+
+- 2026-04-30: Micro-amélioration communication homepage hors checklist: ajout de balises strong ciblées sur les bénéfices clés du hero, des cartes produit, du workflow et de l'installation. Agent communication non lancé: limite de threads atteinte. Validation non lancée, non demandée.
+
+- 2026-04-30: Refonte UX /demo hors checklist: transformation de la page démo en faux site client Atelier Nova avec style éditorial distinct, lorem ipsum, guide explicite et panneau fixe indiquant le bouton Feedback en bas à droite. Un agent UI lancé; deux autres agents refusés par limite de threads. Validation non lancée, non demandée.
+
+- 2026-04-30: Amélioration crédibilité /demo hors checklist: ajout d'un historique Atelier Nova avec timeline depuis 2018, avis clients datés et retours fictifs pour rendre le faux site client plus vivant. Validation non lancée, non demandée.
+
+- 2026-04-30: UX dashboard hors checklist: suppression du bouton Filtrer au profit d'une mise à jour automatique des filtres; selects soumis au changement, recherche débouncée, compteur explicite et reset renommé Effacer les filtres. 5 agents UX/UI consultés: consensus pour inbox dense hybride plutôt qu'un tableau pur immédiat. Validation non lancée, non demandée.
+
+- 2026-04-30: Déploiement palette Material hors checklist: 5 agents UX/UI consultés, adoption des tokens primary indigo #3f51b5 et secondary amber #ffb300, mapping des CTA/actifs/focus/badges, conservation des couleurs GitHub/GitLab et de la démo Atelier Nova. Validation non lancée, non demandée.
+
+- 2026-04-30: Correction démo actions hors checklist: les feedbacks marqués manual-demo-* ou realistic-demo-seed-* peuvent être créés en issue, synchronisés, conservés, ignorés et traités en bulk sans dépendre d'un provider Git réel ni échouer sur un scope local de workspace. Validation non lancée, non demandée.
+
+- 2026-04-30: Intégration synthèse UX dashboard hors checklist: les feedbacks passent progressivement en grille de colonnes desktop Feedback / Site-page / Statut / Issue / Reçu / Actions, tout en conservant un rendu empilé mobile. Validation non lancée, non demandée.
+
+- [2026-04-30] Micro-amélioration widget hors checklist: affichage d'une miniature cliquable des captures déjà envoyées dans la modale Manage feedback, en conservant la data URL de capture côté historique local quand disponible. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+- [2026-04-30] Micro-amélioration UI homepage hors checklist: remplacement des pictogrammes abstraits du flux produit par des répliques de composants ChangeThis pour la capture complète, l'inbox exploitable et l'issue prête. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+- [2026-04-30] Micro-amélioration copy homepage hors checklist: reformulation du deuxième bloc du flux produit pour vendre la décision rapide, le tri des retours, le commentaire et la réponse dans GitHub/GitLab plutôt que l'historique des relances. Validation non lancée automatiquement conformément à la consigne utilisateur active.

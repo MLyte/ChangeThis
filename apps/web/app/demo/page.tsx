@@ -1,7 +1,6 @@
 import { demoAppEnvironment, demoProject } from "../../lib/demo-project";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
-import { T } from "../i18n";
 
 export default function DemoPage() {
   return (
@@ -14,71 +13,126 @@ export default function DemoPage() {
       />
 
       <section className="demo-page">
-        <div className="demo-copy">
-          <p className="eyebrow"><T k="demo.eyebrow" /></p>
-          <h1><T k="demo.title" /></h1>
-          <p className="hero-statement">
-            <T k="demo.statement" />
-          </p>
-          <p className="lede">
-            <T k="demo.lede" />
-          </p>
-          <code className="demo-project-key">{demoProject.publicKey}</code>
+        <nav className="demo-client-nav" aria-label="Navigation Atelier Nova">
+          <strong>Atelier Nova</strong>
+          <div>
+            <a href="#collection">Objets</a>
+            <a href="#journal">Journal</a>
+            <a href="#contact">Contact</a>
+          </div>
+          <a className="demo-client-cta" href="#collection">Voir la collection</a>
+        </nav>
+
+        <div className="demo-client-hero">
+          <div className="demo-client-copy">
+            <p className="demo-kicker">Maison fictive · staging client</p>
+            <h1>Des objets calmes pour les maisons vivantes.</h1>
+            <p>
+              Bienvenue sur un faux site client. Explorez la page comme un visiteur normal:
+              si quelque chose vous semble confus, cassé ou mal placé, utilisez le bouton <strong>Feedback</strong> en bas à droite.
+            </p>
+            <div className="demo-client-actions">
+              <a href="#collection">Découvrir les pièces</a>
+              <a href="#feedback-guide">Comment tester ?</a>
+            </div>
+          </div>
+
+          <div className="demo-visual-card" aria-label="Produit fictif Atelier Nova">
+            <span>Nouvelle série</span>
+            <div className="demo-object-shape" />
+            <strong>Lampe Silex</strong>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat sans urgence.</p>
+          </div>
         </div>
 
-        <div className="demo-layout">
-          <section className="demo-content">
-            <span className="status-badge needs_setup"><T k="demo.badge" /></span>
-            <h2><T k="demo.content.title" /></h2>
-            <p>
-              <T k="demo.content.copy" />
-            </p>
-            <div className="demo-actions">
-              <button><T k="demo.cta.primary" /></button>
-              <button className="quiet"><T k="demo.cta.secondary" /></button>
-            </div>
-          </section>
+        <section className="demo-feedback-guide" id="feedback-guide" aria-labelledby="demo-feedback-title">
+          <div>
+            <p className="demo-kicker">Mode d'emploi</p>
+            <h2 id="demo-feedback-title">Vous jouez le rôle d'un client qui remarque un problème.</h2>
+          </div>
+          <ol>
+            <li><strong>Repérez</strong> un texte flou, un bouton ambigu, un espace étrange ou une information manquante.</li>
+            <li><strong>Cliquez sur “Feedback”</strong>, le bouton flottant en bas à droite de l'écran.</li>
+            <li><strong>Ajoutez une note, une épingle ou une capture</strong>. Le retour arrivera ensuite dans Issues.</li>
+          </ol>
+        </section>
 
-          <aside className="demo-sidebar">
-            <h3><T k="demo.scenarios.title" /></h3>
-            <ul className="check-list">
-              <li><T k="demo.scenarios.1" /></li>
-              <li><T k="demo.scenarios.2" /></li>
-              <li><T k="demo.scenarios.3" /></li>
-            </ul>
-            <div className="demo-environment-card" aria-label="Environnement client simulé">
-              <p className="eyebrow">Simulation client</p>
-              <strong>Atelier Nova - portail staging</strong>
-              <span>Client fictif, sans données sensibles.</span>
-              <dl>
-                <div>
-                  <dt>Environnement</dt>
-                  <dd>{demoAppEnvironment.environment}</dd>
-                </div>
-                <div>
-                  <dt>Release</dt>
-                  <dd>{demoAppEnvironment.release}</dd>
-                </div>
-                <div>
-                  <dt>Scenario</dt>
-                  <dd>{demoAppEnvironment.scenario}</dd>
-                </div>
-                <div>
-                  <dt>Test run</dt>
-                  <dd>{demoAppEnvironment.testRunId}</dd>
-                </div>
-              </dl>
-            </div>
+        <section className="demo-product-grid" id="collection" aria-label="Collection fictive">
+          {[
+            ["Lampe Silex", "Lumière douce en grès chamotté, pensée pour les bureaux calmes."],
+            ["Vase Brume", "Silhouette irrégulière, émail laiteux, fleurs du marché et branches sèches."],
+            ["Table Orme", "Petite table basse en bois huilé, dessinée pour les salons compacts."]
+          ].map(([title, copy]) => (
+            <article className="demo-product-card" key={title}>
+              <div className="demo-product-image" />
+              <span>Atelier Nova</span>
+              <h3>{title}</h3>
+              <p>{copy} Lorem ipsum dolor sit amet, sed do eiusmod tempor.</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="demo-editorial-band" id="journal">
+          <p>“Nous dessinons des pièces qui vieillissent bien, pas des tendances. Si cette page vous semble imprécise, signalez-le avec le bouton Feedback.”</p>
+        </section>
+
+        <section className="demo-history-section" aria-labelledby="demo-history-title">
+          <div>
+            <p className="demo-kicker">Depuis 2018</p>
+            <h2 id="demo-history-title">Une maison fictive avec un passé visible.</h2>
+            <p>
+              Atelier Nova a commencé dans un petit atelier partagé à Namur. Depuis, la marque publie ses collections par saisons,
+              garde les retours clients et améliore ses pages avant chaque lancement.
+            </p>
+          </div>
+          <ol className="demo-timeline">
+            <li><span>2018</span><strong>Premier atelier</strong><p>Trois prototypes, une newsletter artisanale et beaucoup de café.</p></li>
+            <li><span>2021</span><strong>Collection Brume</strong><p>Les premières pièces en grès rejoignent les boutiques partenaires.</p></li>
+            <li><span>2024</span><strong>Portail client</strong><p>Le site ajoute les demandes de devis, le suivi et les retours après livraison.</p></li>
+          </ol>
+        </section>
+
+        <section className="demo-proof-grid" aria-label="Historique client fictif">
+          {[
+            ["12 février 2026", "Claire M.", "La lampe est parfaite, mais le choix de finition n'était pas clair sur mobile."],
+            ["03 mars 2026", "Patrick D.", "Très beau site. J'ai eu un doute sur les délais de livraison avant de commander."],
+            ["18 avril 2026", "Nadia P.", "Le formulaire contact fonctionne, mais je ne savais pas si ma demande était bien envoyée."]
+          ].map(([date, name, quote]) => (
+            <article className="demo-proof-card" key={`${date}-${name}`}>
+              <span>{date}</span>
+              <strong>{name}</strong>
+              <p>“{quote}”</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="demo-client-content" id="contact">
+          <div>
+            <p className="demo-kicker">Page volontairement imparfaite</p>
+            <h2>Quelques zones sont là pour provoquer des retours.</h2>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi cursus, lectus sed consequat fermentum,
+              laisse volontairement quelques formulations vagues pour tester les commentaires.
+            </p>
+          </div>
+          <form className="demo-contact-card">
             <label>
-              <T k="demo.email" />
+              Votre e-mail
               <input type="email" defaultValue="nadia.petit@example.test" />
             </label>
             <label>
-              <T k="demo.privateComment" />
-              <textarea />
+              Message privé
+              <textarea defaultValue="Ce champ sert à tester le masquage pendant une capture." />
             </label>
-          </aside>
-        </div>
+            <button type="button">Envoyer la demande</button>
+          </form>
+        </section>
+
+        <aside className="demo-test-panel" aria-label="Aide test Feedback">
+          <strong>Testez ChangeThis ici</strong>
+          <span>Le bouton Feedback est en bas à droite. Cliquez dessus pour signaler cette page.</span>
+          <code>{demoProject.publicKey}</code>
+        </aside>
       </section>
 
       <AppFooter />

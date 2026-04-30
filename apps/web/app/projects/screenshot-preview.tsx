@@ -33,6 +33,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
   const titleId = useId();
   const sizeKo = Math.round(asset.bytes / 1024);
   const viewport = `${metadata.viewport.width} x ${metadata.viewport.height}`;
+  const isMobileCapture = metadata.viewport.width < 700 && metadata.viewport.height > metadata.viewport.width;
   const pinPositions = (pins?.length ? pins : pin ? [pin] : []).map((item) => pinImagePosition(item, metadata));
 
   return (
@@ -75,7 +76,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
             onClick={() => setIsOpen(false)}
             type="button"
           />
-          <div className="screenshot-modal-panel">
+          <div className={`screenshot-modal-panel${isMobileCapture ? " mobile-capture" : ""}`}>
             <div className="screenshot-modal-header">
               <h2 id={titleId}><T k="projects.feedback.capture" /></h2>
               <button

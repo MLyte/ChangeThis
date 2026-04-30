@@ -1,6 +1,7 @@
 import { createSign } from "node:crypto";
 import { validateIssueTarget, type ExternalIssueRef, type IssueDraft, type IssueProvider, type IssueTarget } from "@changethis/shared";
 import { getProviderCredentialSecret } from "./credential-store";
+import { createDemoExternalIssueRef, demoRepositoriesForProvider, isDemoProviderToken } from "./demo-provider-data";
 import { getProviderIntegrationToken } from "./provider-integrations";
 
 export type IssueProviderErrorCode =
@@ -97,6 +98,11 @@ function createGitHubClient(resolveToken: TokenResolver): IssueProviderClient {
     async createIssue(target, draft, options) {
       const validatedTarget = requireValidIssueTarget("github", target);
       const token = await requireProviderToken("github", resolveToken);
+
+      if (isDemoProviderToken("github", token)) {
+        return createDemoExternalIssueRef("github", validatedTarget, draft.title);
+      }
+
       const response = await fetch(`https://api.github.com/repos/${validatedTarget.namespace}/${validatedTarget.project}/issues`, {
         method: "POST",
         headers: {
@@ -135,6 +141,11 @@ function createGitHubClient(resolveToken: TokenResolver): IssueProviderClient {
     async getIssue(target, ref) {
       const validatedTarget = requireValidIssueTarget("github", target);
       const token = await requireProviderToken("github", resolveToken);
+
+      if (isDemoProviderToken("github", token)) {
+        return { ...ref, provider: "github", state: ref.state ?? "open" };
+      }
+
       const issueNumber = ref.number ?? parseGitHubIssueNumber(ref.url);
 
       if (!issueNumber) {
@@ -177,6 +188,11 @@ function createGitLabClient(resolveToken: TokenResolver): IssueProviderClient {
     async createIssue(target, draft, options) {
       const validatedTarget = requireValidIssueTarget("gitlab", target);
       const token = await requireProviderToken("gitlab", resolveToken);
+
+      if (isDemoProviderToken("gitlab", token)) {
+        return createDemoExternalIssueRef("gitlab", validatedTarget, draft.title);
+      }
+
       const projectId = validatedTarget.externalProjectId ?? encodeURIComponent(`${validatedTarget.namespace}/${validatedTarget.project}`);
       const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
       const response = await fetch(`${baseUrl}/api/v4/projects/${projectId}/issues`, {
@@ -214,6 +230,11 @@ function createGitLabClient(resolveToken: TokenResolver): IssueProviderClient {
     async getIssue(target, ref) {
       const validatedTarget = requireValidIssueTarget("gitlab", target);
       const token = await requireProviderToken("gitlab", resolveToken);
+
+      if (isDemoProviderToken("gitlab", token)) {
+        return { ...ref, provider: "gitlab", state: ref.state ?? "open" };
+      }
+
       const projectId = validatedTarget.externalProjectId ?? encodeURIComponent(`${validatedTarget.namespace}/${validatedTarget.project}`);
       const issueIid = ref.iid ?? parseGitLabIssueIid(ref.url);
 
@@ -341,6 +362,10 @@ async function listGitHubRepositories(options: IssueProviderClientOptions): Prom
     throw new IssueProviderError("github", "auth_failed", "github credentials are not configured.");
   }
 
+  if (isDemoProviderToken("github", access.token)) {
+    return demoRepositoriesForProvider("github");
+  }
+
   const endpoint = access.kind === "installation"
     ? "https://api.github.com/installation/repositories?per_page=100"
     : "https://api.github.com/user/repos?affiliation=owner,collaborator,organization_member&sort=full_name&per_page=100";
@@ -377,6 +402,11 @@ async function getGitHubRepositoryAccess(options: IssueProviderClientOptions): P
 
 async function listGitLabRepositories(options: IssueProviderClientOptions): Promise<ProviderRepository[]> {
   const token = await requireProviderToken("gitlab", () => getIssueProviderToken("gitlab", options));
+
+  if (isDemoProviderToken("gitlab", token)) {
+    return demoRepositoriesForProvider("gitlab");
+  }
+
   const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
   const projectsUrl = new URL("/api/v4/projects", baseUrl);
   projectsUrl.searchParams.set("membership", "true");

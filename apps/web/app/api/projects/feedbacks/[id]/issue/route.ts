@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { IssueDraft } from "@changethis/shared";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
+import { resolveFeedbackForAction } from "../../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../../lib/logger";
@@ -27,9 +28,9 @@ export async function POST(request: Request, context: RouteContext) {
   const draftOverride = await readIssueDraftOverride(request);
   const { id } = await context.params;
   const repository = getFeedbackRepository();
-  const feedback = await repository.get(id, { workspaceId });
+  const actionScope = await resolveFeedbackForAction(repository, id, workspaceId);
 
-  if (!feedback) {
+  if (!actionScope) {
     return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
   }
 
@@ -37,9 +38,9 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: draftOverride.error }, { status: 422 });
   }
 
-  const updated = await createIssueForFeedback(feedback, requestId, {
+  const updated = await createIssueForFeedback(actionScope.feedback, requestId, {
     issueDraft: draftOverride?.value,
-    workspaceId
+    workspaceId: actionScope.workspaceId
   });
 
   return NextResponse.json({

@@ -80,6 +80,7 @@ export type FeedbackRepository = {
   markIgnored(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   dueForRetry(filters?: Date | { workspaceId?: string; now?: Date }): Promise<StoredFeedback[]>;
   events(feedbackId: string): Promise<FeedbackEvent[]>;
+  clearWorkspace(workspaceId: string): Promise<{ feedbacks: number; events: number }>;
 };
 
 const defaultStore: DataStore = {
@@ -282,6 +283,19 @@ export class FileFeedbackRepository implements FeedbackRepository {
   async events(feedbackId: string): Promise<FeedbackEvent[]> {
     const store = await this.read();
     return store.events.filter((event) => event.feedbackId === feedbackId);
+  }
+
+  async clearWorkspace(workspaceId: string): Promise<{ feedbacks: number; events: number }> {
+    return this.update((store) => {
+      const feedbackIds = new Set(store.feedbacks.filter((feedback) => feedback.workspaceId === workspaceId).map((feedback) => feedback.id));
+      const feedbacks = feedbackIds.size;
+      const events = store.events.filter((event) => feedbackIds.has(event.feedbackId)).length;
+
+      store.feedbacks = store.feedbacks.filter((feedback) => feedback.workspaceId !== workspaceId);
+      store.events = store.events.filter((event) => !feedbackIds.has(event.feedbackId));
+
+      return { feedbacks, events };
+    });
   }
 
   private async read(): Promise<DataStore> {

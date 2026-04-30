@@ -1,5 +1,7 @@
 import { validateIssueTarget } from "@changethis/shared";
 import type { IssueDraft } from "@changethis/shared";
+import { createDemoExternalIssueRef } from "./demo-provider-data";
+import { isDemoFeedback } from "./demo-feedback-actions";
 import type { StoredFeedback } from "./feedback-repository";
 import { getFeedbackRepository } from "./feedback-repository";
 import { getIssueProviderClient, IssueProviderError } from "./issue-providers";
@@ -36,6 +38,27 @@ export async function createIssueForFeedback(
       project_id: feedback.projectKey,
       feedback_id: feedback.id,
       error: issueTargetValidation.error
+    });
+
+    return updated;
+  }
+
+  if (isDemoFeedback(feedback) && process.env.VERCEL_ENV !== "production") {
+    const updatedDraft = options.issueDraft ?? feedback.issueDraft;
+
+    if (options.issueDraft) {
+      await repository.updateIssueDraft(feedback.id, options.issueDraft, options);
+    }
+
+    const externalIssue = createDemoExternalIssueRef(feedback.issueTarget.provider, issueTargetValidation.value, updatedDraft.title);
+    const updated = await repository.recordIssueAttempt(feedback.id, { ok: true, externalIssue }, options);
+
+    logInfo("provider_issue_create_demo_succeeded", {
+      request_id: requestId,
+      project_id: feedback.projectKey,
+      feedback_id: feedback.id,
+      provider: externalIssue.provider,
+      external_url: externalIssue.url
     });
 
     return updated;
@@ -112,6 +135,23 @@ export async function syncFeedbackIssueState(
 ): Promise<StoredFeedback> {
   if (!feedback.externalIssue) {
     return feedback;
+  }
+
+  if (isDemoFeedback(feedback) && process.env.VERCEL_ENV !== "production") {
+    const updated = await getFeedbackRepository().recordExternalIssueState(feedback.id, {
+      ...feedback.externalIssue,
+      state: feedback.externalIssue.state ?? "open"
+    }, options);
+
+    logInfo("provider_issue_state_demo_synced", {
+      request_id: requestId,
+      project_id: updated.projectKey,
+      feedback_id: updated.id,
+      provider: updated.externalIssue?.provider,
+      state: updated.externalIssue?.state
+    });
+
+    return updated;
   }
 
   const client = getIssueProviderClient(feedback.issueTarget.provider, {

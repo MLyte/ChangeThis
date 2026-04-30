@@ -12,6 +12,7 @@ import { T } from "../i18n";
 import { ProviderBadge } from "../provider-badge";
 import { FeedbackActions } from "./feedback-actions";
 import { BulkIssueForm } from "./bulk-issue-form";
+import { DashboardFilterAutoSubmit } from "./dashboard-filter-auto-submit";
 import { DemoSeedButton } from "./demo-seed-button";
 import { RetryDueButton } from "./retry-due-button";
 import { ScreenshotPreview } from "./screenshot-preview";
@@ -85,6 +86,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const filters = parseDashboardFilters(params);
   const projects = await listConfiguredProjects(workspaceId);
   const feedbacks = await getFeedbackRepository().list({ workspaceId });
+  const hasLiveDemo = feedbacks.some(isSeedDemoFeedback);
   const filteredFeedbacks = feedbacks.filter((feedback) => matchesDashboardFilters(feedback, filters));
   const activeFeedbacks = feedbacks.filter(isActiveFeedback);
   const historyFeedbacks = feedbacks.filter(isHistoryFeedback);
@@ -116,10 +118,10 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               <div>
                 <p className="eyebrow"><T k="projects.inbox.eyebrow" /></p>
                 <h2 id="local-inbox-title"><T k="projects.inbox.title" /></h2>
-              </div>
+            </div>
             <div className="inbox-toolbar">
-              <DemoSeedButton />
-              <RetryDueButton />
+              <DemoSeedButton hasLiveDemo={hasLiveDemo} />
+              {retryFeedbacks.length > 1 ? <RetryDueButton count={retryFeedbacks.length} /> : null}
               <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
             </div>
           </div>
@@ -153,6 +155,15 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               </div>
             ) : (
               <BulkIssueForm>
+                <div className="feedback-table-head" aria-hidden="true">
+                  <span />
+                  <span>Feedback</span>
+                  <span>Site / page</span>
+                  <span>Statut</span>
+                  <span>Issue</span>
+                  <span>Reçu</span>
+                  <span>Actions</span>
+                </div>
                 <div className="feedback-list" role="list" aria-label="Retours à traiter">
                   {filteredFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
                 </div>
@@ -322,9 +333,9 @@ function DashboardFilterBar({
       </div>
 
       <div className="filter-actions">
-        <span>{filteredCount}/{totalCount} retours</span>
-        <button className="button" type="submit">Filtrer</button>
-        {hasActiveFilters ? <Link className="button secondary-button" href="/projects">Réinitialiser</Link> : null}
+        <span>{filteredCount} retours affichés sur {totalCount}</span>
+        <DashboardFilterAutoSubmit />
+        {hasActiveFilters ? <Link className="button secondary-button" href="/projects">Effacer les filtres</Link> : null}
       </div>
     </form>
   );
@@ -379,12 +390,10 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const cardTitle = formatFeedbackCardTitle(feedback);
   const canBulkCreateIssue = feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
+  const issueLabel = feedback.externalIssue?.url ? "Créée" : feedback.status === "issue_creation_pending" ? "En cours" : "Non créée";
 
   return (
     <article className={`feedback-card compact-feedback-row ${feedback.status}`} role="listitem">
-      <div className="feedback-status-rail">
-        <span className={`status-dot ${feedback.status}`} aria-hidden="true" />
-      </div>
       <label className="feedback-select">
         <input
           aria-label={`Sélectionner ${cardTitle}`}
@@ -395,7 +404,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
         />
       </label>
       <div className="feedback-main">
-        <div className="feedback-tags" aria-label="Métadonnées du feedback">
+        <div className="feedback-tags mobile-feedback-tags" aria-label="Métadonnées du feedback">
           <span className="status-badge connected">{feedback.payload.type}</span>
           <span className={`status-badge ${statusClasses[feedback.status]}`}>
             <T k={statusLabelKeys[feedback.status]} />
@@ -447,7 +456,19 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           </div>
         </details>
       </div>
-      <div className="compact-preview-cell">
+      <div className="feedback-site-cell">
+        <strong>{feedback.projectName}</strong>
+        <span>{feedback.payload.metadata.path}</span>
+      </div>
+      <div className="feedback-status-cell">
+        <span className={`status-dot ${feedback.status}`} aria-hidden="true" />
+        <span className={`status-badge ${statusClasses[feedback.status]}`}>
+          <T k={statusLabelKeys[feedback.status]} />
+        </span>
+      </div>
+      <div className="feedback-issue-cell">
+        <ProviderBadge provider={feedback.issueTarget.provider} />
+        <span>{issueLabel}</span>
         {feedback.screenshotAsset ? (
           <ScreenshotPreview
             asset={feedback.screenshotAsset}
@@ -463,9 +484,10 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
             pin={feedback.payload.pin}
             pins={feedback.payload.pins}
           />
-        ) : (
-          <span className="no-preview">Sans capture</span>
-        )}
+        ) : null}
+      </div>
+      <div className="feedback-received-cell">
+        <span>{formatDate(feedback.createdAt)}</span>
       </div>
       <FeedbackActions
         externalIssueUrl={feedback.externalIssue?.url}
@@ -559,6 +581,10 @@ function matchesDashboardFilters(feedback: StoredFeedback, filters: DashboardFil
 
 function isPriorityFeedback(feedback: StoredFeedback): boolean {
   return feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
+}
+
+function isSeedDemoFeedback(feedback: StoredFeedback): boolean {
+  return feedback.payload.metadata.app?.testRunId?.startsWith("realistic-demo-seed-") === true;
 }
 
 function isActiveFeedback(feedback: StoredFeedback): boolean {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { FeedbackStatus } from "@changethis/shared";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
+import { resolveFeedbackForAction } from "../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../lib/logger";
@@ -46,14 +47,14 @@ export async function POST(request: Request) {
   let skipped = 0;
 
   for (const id of feedbackIds) {
-    const feedback = await repository.get(id, { workspaceId });
+    const actionScope = await resolveFeedbackForAction(repository, id, workspaceId);
 
-    if (!feedback || !actionableStatuses.includes(feedback.status)) {
+    if (!actionScope || !actionableStatuses.includes(actionScope.feedback.status)) {
       skipped += 1;
       continue;
     }
 
-    const updated = await createIssueForFeedback(feedback, requestId, { workspaceId });
+    const updated = await createIssueForFeedback(actionScope.feedback, requestId, { workspaceId: actionScope.workspaceId });
 
     if (updated.status === "sent_to_provider") {
       created += 1;

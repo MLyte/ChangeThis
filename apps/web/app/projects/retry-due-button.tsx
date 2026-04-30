@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { T } from "../i18n";
 
-export function RetryDueButton() {
+export function RetryDueButton({ count }: { count: number }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -43,8 +43,8 @@ export function RetryDueButton() {
   }
 
   return (
-    <button className="button secondary-button" disabled={isPending} onClick={retryDueFeedbacks} type="button">
-      {isPending ? <T k="actions.processing" /> : <T k="projects.inbox.retryDue" />}
+    <button className="button retry-batch-button" disabled={isPending} onClick={retryDueFeedbacks} type="button">
+      {isPending ? <T k="actions.processing" /> : <><T k="projects.inbox.retryDue" /> ({count})</>}
     </button>
   );
 }

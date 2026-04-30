@@ -23,10 +23,12 @@ import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
 import { ProviderBadge } from "../provider-badge";
+import { DemoSeedButton } from "./demo-seed-button";
 
 type Props = {
   projects: ChangeThisProject[];
   integrations: ProviderIntegrationSummary[];
+  hasLiveDemo?: boolean;
   section: SettingsSection;
   users?: WorkspaceUserView[];
   workspaceName?: string;
@@ -90,7 +92,7 @@ type InstallCheckResult = {
   message: string;
 };
 
-export function IssueDestinationSetup({ projects, integrations, section, users = [], workspaceName }: Props) {
+export function IssueDestinationSetup({ projects, integrations, hasLiveDemo = false, section, users = [], workspaceName }: Props) {
   const { t } = useLanguage();
   const [projectViews, setProjectViews] = useState<ProjectView[]>(projects);
   const firstConnectedProvider = integrations.find((integration) => integration.status === "connected")?.provider ?? "github";
@@ -391,6 +393,11 @@ export function IssueDestinationSetup({ projects, integrations, section, users =
         <div>
           <h2 id="destinations-title"><T k="settings.title" /></h2>
         </div>
+        {section === "git-connections" || section === "connected-sites" ? (
+          <div className="settings-demo-actions">
+            <DemoSeedButton hasLiveDemo={hasLiveDemo} />
+          </div>
+        ) : null}
       </div>
 
       <div className="settings-layout">
@@ -748,6 +755,11 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
     return () => abortController.abort();
   }, [disabledProviders, integrations, refreshConnection]);
 
+  const connectedGitCount = integrations.filter((integration) => (
+    integration.credentialConfigured && !disabledProviders.has(integration.provider)
+  )).length;
+  const showGitTutorial = connectedGitCount === 0;
+
   return (
     <section className="settings-section" aria-labelledby="git-connections-title">
       <div className="setup-heading">
@@ -760,44 +772,75 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
         </div>
       </div>
 
-      <div className="git-tutorial" aria-label="Tutoriel Connexions Git">
-        <div className="git-tutorial-intro">
-          <p className="eyebrow">Tutoriel rapide</p>
-          <h4>Connectez votre outil Git en 2 minutes</h4>
-          <p>
-            Choisissez votre outil Git, sélectionnez le dépôt du projet, puis envoyez vos feedbacks clients vers des issues exploitables.
-          </p>
+      {showGitTutorial ? (
+        <div className="git-tutorial" aria-label="Tutoriel Connexions Git">
+          <div className="git-tutorial-intro">
+            <p className="eyebrow">Tutoriel rapide</p>
+            <h4>Connectez votre outil Git en 2 minutes</h4>
+            <p>
+              Choisissez votre outil Git, sélectionnez le dépôt du projet, puis envoyez vos feedbacks clients vers des issues exploitables.
+            </p>
+            <div className="git-tutorial-actions">
+              {integrations.map((integration) => {
+                const isLocallyDisabled = disabledProviders.has(integration.provider);
+
+                if (isLocallyDisabled && integration.environmentCredentialConfigured) {
+                  return (
+                    <button className="button" key={integration.provider} onClick={() => void enableConnection(integration)} type="button">
+                      <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                      Réactiver {integration.name}
+                    </button>
+                  );
+                }
+
+                if (integration.connectConfigured && !isLocallyDisabled) {
+                  return (
+                    <a className="button" href={`${integration.connectPath}?returnTo=/settings/git-connections`} key={integration.provider}>
+                      <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                      Connecter {integration.name}
+                    </a>
+                  );
+                }
+
+                return (
+                  <span className="button disabled-button" aria-disabled="true" key={integration.provider}>
+                    {integration.name} indisponible
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          <ol className="git-tutorial-steps">
+            <li>
+              <span>1</span>
+              <div>
+                <strong>Connecter un compte</strong>
+                <p>Autorisez ChangeThis à lire vos dépôts GitHub ou GitLab disponibles.</p>
+              </div>
+            </li>
+            <li>
+              <span>2</span>
+              <div>
+                <strong>Choisir un dépôt</strong>
+                <p>Dans Sites connectés, associez chaque site au repository qui recevra ses issues.</p>
+              </div>
+            </li>
+            <li>
+              <span>3</span>
+              <div>
+                <strong>Créer l’issue</strong>
+                <p>Depuis l’inbox, validez un feedback et envoyez-le avec son contexte, son URL et sa capture.</p>
+              </div>
+            </li>
+          </ol>
+          <div className="git-tutorial-safety">
+            <ShieldCheck aria-hidden="true" className="ui-icon" size={18} strokeWidth={2.2} />
+            <p>
+              ChangeThis peut créer des issues dans les dépôts choisis, mais ne modifie pas votre code et ne publie rien dans un dépôt non sélectionné.
+            </p>
+          </div>
         </div>
-        <ol className="git-tutorial-steps">
-          <li>
-            <span>1</span>
-            <div>
-              <strong>Connecter un compte</strong>
-              <p>Autorisez ChangeThis à lire vos dépôts GitHub ou GitLab disponibles.</p>
-            </div>
-          </li>
-          <li>
-            <span>2</span>
-            <div>
-              <strong>Choisir un dépôt</strong>
-              <p>Dans Sites connectés, associez chaque site au repository qui recevra ses issues.</p>
-            </div>
-          </li>
-          <li>
-            <span>3</span>
-            <div>
-              <strong>Créer l’issue</strong>
-              <p>Depuis l’inbox, validez un feedback et envoyez-le avec son contexte, son URL et sa capture.</p>
-            </div>
-          </li>
-        </ol>
-        <div className="git-tutorial-safety">
-          <ShieldCheck aria-hidden="true" className="ui-icon" size={18} strokeWidth={2.2} />
-          <p>
-            ChangeThis peut créer des issues dans les dépôts choisis, mais ne modifie pas votre code et ne publie rien dans un dépôt non sélectionné.
-          </p>
-        </div>
-      </div>
+      ) : null}
 
       <div className="integration-grid">
         {integrations.map((integration) => {

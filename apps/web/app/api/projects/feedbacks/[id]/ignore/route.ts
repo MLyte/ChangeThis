@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
+import { resolveFeedbackForAction } from "../../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
 import { logInfo, requestIdFrom } from "../../../../../../lib/logger";
 
@@ -26,7 +27,13 @@ export async function POST(request: Request, context: RouteContext) {
   const repository = getFeedbackRepository();
 
   try {
-    const feedback = await repository.markIgnored(id, { workspaceId });
+    const actionScope = await resolveFeedbackForAction(repository, id, workspaceId);
+
+    if (!actionScope) {
+      return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+    }
+
+    const feedback = await repository.markIgnored(id, { workspaceId: actionScope.workspaceId });
     logInfo("feedback_ignored", {
       request_id: requestId,
       project_id: feedback.projectKey,

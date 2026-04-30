@@ -165,6 +165,25 @@ export async function deleteConnectedSite(projectKey: string, workspaceId?: stri
   return deleted;
 }
 
+export async function clearConnectedSites(workspaceId: string): Promise<number> {
+  let deleted = 0;
+
+  await updateStore((store) => {
+    const nextSites = store.sites.filter((site) => {
+      if (site.workspaceId === workspaceId) {
+        deleted += 1;
+        return false;
+      }
+
+      return true;
+    });
+
+    store.sites = nextSites;
+  });
+
+  return deleted;
+}
+
 export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate, workspaceId?: string): Promise<ChangeThisProject> {
   const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === update.projectKey);
 

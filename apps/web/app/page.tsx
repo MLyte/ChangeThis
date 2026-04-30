@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { Camera, GitPullRequestCreate, Inbox, MousePointerClick, RefreshCw, Settings2, Webhook, Workflow, type LucideIcon } from "lucide-react";
+import { Camera, GitPullRequestCreate, Inbox, MapPin, MessageSquare, MousePointerClick, RefreshCw, Send, Settings2, Webhook, Workflow, type LucideIcon } from "lucide-react";
 import { listConfiguredProjects } from "../lib/project-registry";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
@@ -11,17 +11,17 @@ import { ProviderIcon } from "./provider-badge";
 
 export const dynamic = "force-dynamic";
 
-const workflowSteps: Array<{ key: string; Icon: LucideIcon }> = [
-  { key: "home.workflow.1", Icon: MousePointerClick },
-  { key: "home.workflow.2", Icon: Inbox },
-  { key: "home.workflow.3", Icon: GitPullRequestCreate }
+const workflowSteps: Array<{ key: string; emphasisKey: string; Icon: LucideIcon }> = [
+  { key: "home.workflow.1", emphasisKey: "home.workflow.1.strong", Icon: MousePointerClick },
+  { key: "home.workflow.2", emphasisKey: "home.workflow.2.strong", Icon: Inbox },
+  { key: "home.workflow.3", emphasisKey: "home.workflow.3.strong", Icon: GitPullRequestCreate }
 ];
 
-const productBlocks: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
-  { titleKey: "home.product.inbox.title", copyKey: "home.product.inbox.copy", Icon: Inbox },
-  { titleKey: "home.product.config.title", copyKey: "home.product.config.copy", Icon: Settings2 },
-  { titleKey: "home.product.draft.title", copyKey: "home.product.draft.copy", Icon: GitPullRequestCreate },
-  { titleKey: "home.product.retry.title", copyKey: "home.product.retry.copy", Icon: RefreshCw }
+const productBlocks: Array<{ titleKey: string; copyKey: string; emphasisKey: string; Icon: LucideIcon }> = [
+  { titleKey: "home.product.inbox.title", copyKey: "home.product.inbox.copy", emphasisKey: "home.product.inbox.strong", Icon: Inbox },
+  { titleKey: "home.product.config.title", copyKey: "home.product.config.copy", emphasisKey: "home.product.config.strong", Icon: Settings2 },
+  { titleKey: "home.product.draft.title", copyKey: "home.product.draft.copy", emphasisKey: "home.product.draft.strong", Icon: GitPullRequestCreate },
+  { titleKey: "home.product.retry.title", copyKey: "home.product.retry.copy", emphasisKey: "home.product.retry.strong", Icon: RefreshCw }
 ];
 
 export default async function HomePage() {
@@ -69,13 +69,13 @@ export default async function HomePage() {
           <h2><T k="home.product.title" /></h2>
         </div>
         <div className="product-grid">
-          {productBlocks.map(({ titleKey, copyKey, Icon }) => (
+          {productBlocks.map(({ titleKey, copyKey, emphasisKey, Icon }) => (
             <article className="product-block" key={titleKey}>
               <span className="product-icon" aria-hidden="true">
                 <Icon size={22} strokeWidth={2.2} />
               </span>
               <h3><T k={titleKey} /></h3>
-              <p><T k={copyKey} /></p>
+              <p><strong><T k={emphasisKey} /></strong> <T k={copyKey} /></p>
             </article>
           ))}
         </div>
@@ -87,13 +87,11 @@ export default async function HomePage() {
           <h2><T k="home.workflow.title" /></h2>
         </div>
         <div className="steps">
-          {workflowSteps.map(({ key, Icon }, index) => (
+          {workflowSteps.map(({ key, emphasisKey }, index) => (
             <article className="step" key={key}>
               <span className="step-index">{String(index + 1).padStart(2, "0")}</span>
-              <span className="step-icon" aria-hidden="true">
-                <Icon size={24} strokeWidth={2.2} />
-              </span>
-              <p><T k={key} /></p>
+              <WorkflowReplica index={index} />
+              <p><strong><T k={emphasisKey} /></strong> <T k={key} /></p>
             </article>
           ))}
         </div>
@@ -104,7 +102,7 @@ export default async function HomePage() {
           <p className="eyebrow"><T k="home.install.eyebrow" /></p>
           <h2><T k="home.install.title" /></h2>
           <p className="lede">
-            <T k="home.install.copy" />
+            <strong><T k="home.install.strong" /></strong> <T k="home.install.copy" />
           </p>
         </div>
         <pre className="code-block"><code>{`<script
@@ -131,8 +129,70 @@ function HeroStatement() {
         <ProviderIcon provider="gitlab" className="hero-provider-icon" />
         <span>GitLab</span>
       </span>{" "}
-      <T k="home.hero.statement.suffix" />
+      <strong><T k="home.hero.statement.suffix" /></strong>
     </p>
+  );
+}
+
+function WorkflowReplica({ index }: { index: number }) {
+  if (index === 0) {
+    return (
+      <div className="workflow-replica capture-replica" aria-hidden="true">
+        <div className="replica-widget">
+          <div className="replica-widget-header">
+            <strong>Feedback</strong>
+            <span>Capture</span>
+          </div>
+          <div className="replica-tabs">
+            <span><MessageSquare size={12} /> Note</span>
+            <span><MapPin size={12} /> Pin</span>
+            <span className="active"><Camera size={12} /> Capture</span>
+          </div>
+          <div className="replica-textarea">Le bouton valider sort de l'écran mobile.</div>
+          <div className="replica-meta">
+            <span>/checkout</span>
+            <span>390 x 844</span>
+          </div>
+          <div className="replica-capture-frame">
+            <span className="replica-pin">1</span>
+          </div>
+          <button type="button"><Send size={13} /> Envoyer</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (index === 1) {
+    return (
+      <div className="workflow-replica inbox-replica" aria-hidden="true">
+        <div className="replica-inbox-row">
+          <span className="replica-status-dot" />
+          <div>
+            <strong>Capture sur /checkout</strong>
+            <p>Envoyé par Jean-Pierre · Atelier Nova</p>
+          </div>
+          <span className="replica-tag">À créer</span>
+        </div>
+        <div className="replica-draft-line">
+          <span>Brouillon, destination et contexte</span>
+          <strong>GitHub</strong>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="workflow-replica issue-replica" aria-hidden="true">
+      <div className="replica-issue-card">
+        <span className="replica-tag primary">Issue prête</span>
+        <strong>[Feedback] /checkout - bouton caché sur iPhone</strong>
+        <p>message · page · viewport · capture · pin</p>
+      </div>
+      <div className="replica-provider-row">
+        <ProviderIcon provider="github" className="replica-provider-icon" />
+        <span>atelier-nova/portal-staging</span>
+      </div>
+    </div>
   );
 }
 

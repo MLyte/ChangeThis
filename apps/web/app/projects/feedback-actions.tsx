@@ -168,17 +168,18 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
   }
 
   const createLabelKey = status === "retrying" || status === "failed" ? "actions.replay" : "actions.create";
+  const isReplayAction = createLabelKey === "actions.replay";
   const canCreateIssue = draftTitle.trim().length > 0 && draftDescription.trim().length > 0;
 
   return (
     <div className="feedback-actions">
       <button
-        className="button"
+        className={isReplayAction ? "button retry-batch-button" : "button"}
         disabled={isPending}
         onClick={() => setIsComposerOpen(true)}
         type="button"
       >
-        {isPending ? null : createLabelKey === "actions.replay" ? (
+        {isPending ? null : isReplayAction ? (
           <RotateCcw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
         ) : (
           <Send aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />

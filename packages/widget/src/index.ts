@@ -48,6 +48,7 @@ type StoredSentFeedback = {
   message: string;
   sentAt: string;
   captureArea?: CaptureArea;
+  screenshotDataUrl?: string;
 };
 
 const rootId = "changethis-widget-root";
@@ -838,6 +839,36 @@ export function initChangeThis(options: WidgetOptions): void {
           color: #6b7280;
           font-weight: 700;
         }
+        .manager-capture-preview {
+          align-items: center;
+          border: 1px solid #d1d5db;
+          border-radius: 7px;
+          background: #f8fafc;
+          color: #111827;
+          cursor: zoom-in;
+          display: inline-grid;
+          gap: 7px;
+          grid-template-columns: 72px minmax(0, 1fr);
+          margin-top: 6px;
+          max-width: 280px;
+          padding: 6px;
+          text-decoration: none;
+        }
+        .manager-capture-preview img {
+          border: 1px solid #e5e7eb;
+          border-radius: 5px;
+          height: 48px;
+          object-fit: cover;
+          width: 72px;
+        }
+        .manager-capture-preview span {
+          color: #111827;
+          font-size: 12px;
+          font-weight: 850;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
         .manager-actions {
           display: flex;
           gap: 6px;
@@ -1078,6 +1109,7 @@ export function initChangeThis(options: WidgetOptions): void {
                     <div class="manager-copy">
                       <strong>${escapeHtml(copy.sentPin)}</strong>
                       <span>${escapeHtml(feedback.message || feedbackMeta({ captureArea: feedback.captureArea }, copy.screenshot))}</span>
+                      ${capturePreviewMarkup(feedback, copy.screenshot)}
                     </div>
                     <div class="manager-actions">
                       <button class="manager-button danger" data-action="cancel-sent-feedback" data-feedback-id="${escapeHtml(feedback.feedbackId)}" data-feedback-kind="capture" ${state.sending ? "disabled" : ""}>${lucideIcons.undo}${escapeHtml(copy.cancelFeedback)}</button>
@@ -1400,7 +1432,8 @@ export function initChangeThis(options: WidgetOptions): void {
               type: "screenshot",
               message: pendingCapture.message,
               sentAt: new Date().toISOString(),
-              captureArea: pendingCapture.captureArea
+              captureArea: pendingCapture.captureArea,
+              screenshotDataUrl: submitted.screenshotDataUrl
             };
             state.sentFeedbacks = [sentFeedback, ...state.sentFeedbacks].slice(0, 120);
             persistSentFeedback(sentFeedbacksStorageKey, state.viewKey, sentFeedback);
@@ -1453,7 +1486,7 @@ async function submitFeedback(params: {
   pins?: PinTarget[];
   captureArea?: CaptureArea;
   appEnvironment?: FeedbackAppEnvironment;
-}): Promise<{ id?: string }> {
+}): Promise<{ id?: string; screenshotDataUrl?: string }> {
   const screenshotDataUrl = params.type === "screenshot" && params.captureArea
     ? await captureViewport(params.captureArea)
     : params.type === "pin"
@@ -1512,7 +1545,7 @@ async function submitFeedback(params: {
   }
 
   const body = await response.json().catch(() => undefined) as unknown;
-  return isRecord(body) && typeof body.id === "string" ? { id: body.id } : {};
+  return isRecord(body) && typeof body.id === "string" ? { id: body.id, screenshotDataUrl } : { screenshotDataUrl };
 }
 
 async function cancelFeedback(params: {
@@ -1937,7 +1970,8 @@ function parseStoredSentFeedback(value: unknown): StoredSentFeedback[] {
     type: value.type,
     message: value.message,
     sentAt: value.sentAt,
-    captureArea: isRecord(value.captureArea) ? parseCaptureArea(value.captureArea) : undefined
+    captureArea: isRecord(value.captureArea) ? parseCaptureArea(value.captureArea) : undefined,
+    screenshotDataUrl: isSafeImageDataUrl(value.screenshotDataUrl) ? value.screenshotDataUrl : undefined
   }];
 }
 
@@ -2025,6 +2059,25 @@ function feedbackMeta(
   }
 
   return escapeHtml(fallback);
+}
+
+function capturePreviewMarkup(feedback: StoredSentFeedback, label: string): string {
+  if (!isSafeImageDataUrl(feedback.screenshotDataUrl)) {
+    return "";
+  }
+
+  const safeDataUrl = escapeHtml(feedback.screenshotDataUrl);
+  const safeLabel = escapeHtml(label);
+  return `
+    <a class="manager-capture-preview" href="${safeDataUrl}" target="_blank" rel="noopener noreferrer">
+      <img src="${safeDataUrl}" alt="${safeLabel}" />
+      <span>${safeLabel}</span>
+    </a>
+  `;
+}
+
+function isSafeImageDataUrl(value: unknown): value is string {
+  return typeof value === "string" && /^data:image\/(?:png|jpeg|jpg|webp|svg\+xml);base64,/i.test(value);
 }
 
 function draftPinLabel(pin: DraftPin, index: number, missingText = "Texte manquant"): string {
