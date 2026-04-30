@@ -12,6 +12,8 @@ export function DashboardFilterAutoSubmit() {
       return;
     }
 
+    const formElement = form;
+
     let searchTimer: ReturnType<typeof window.setTimeout> | undefined;
 
     function submitFilters() {
@@ -19,12 +21,12 @@ export function DashboardFilterAutoSubmit() {
         window.clearTimeout(searchTimer);
       }
 
-      if (typeof form.requestSubmit === "function") {
-        form.requestSubmit();
+      if (typeof formElement.requestSubmit === "function") {
+        formElement.requestSubmit();
         return;
       }
 
-      form.submit();
+      formElement.submit();
     }
 
     function onChange(event: Event) {
@@ -53,16 +55,16 @@ export function DashboardFilterAutoSubmit() {
       }, 450);
     }
 
-    form.addEventListener("change", onChange);
-    form.addEventListener("input", onInput);
+    formElement.addEventListener("change", onChange);
+    formElement.addEventListener("input", onInput);
 
     return () => {
       if (searchTimer) {
         window.clearTimeout(searchTimer);
       }
 
-      form.removeEventListener("change", onChange);
-      form.removeEventListener("input", onInput);
+      formElement.removeEventListener("change", onChange);
+      formElement.removeEventListener("input", onInput);
     };
   }, []);
 
