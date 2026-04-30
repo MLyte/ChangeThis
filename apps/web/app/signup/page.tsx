@@ -14,8 +14,32 @@ type SignUpPageProps = {
 };
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
-  if (!isPublicSignupEnabled()) {
-    redirect("/login");
+  const publicSignupEnabled = isPublicSignupEnabled();
+
+  if (!publicSignupEnabled) {
+    return (
+      <main className="auth-shell">
+        <AppHeader showAuthLinks />
+
+        <section className="auth-layout signup-layout">
+          <div className="auth-copy">
+            <p className="eyebrow"><T k="login.privateBeta.title" /></p>
+            <h1><T k="signup.title" /></h1>
+            <p className="lede"><T k="login.privateBeta.copy" /></p>
+          </div>
+
+          <div className="auth-panel">
+            <div className="local-mode-callout" role="status">
+              <strong><T k="login.privateBeta.title" /></strong>
+              <span><T k="home.hero.privateBeta" /></span>
+            </div>
+            <p className="microcopy">
+              <T k="signup.loginHint" /> <a className="inline-link" href="/login"><T k="nav.login" /></a>
+            </p>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   const params = await searchParams;

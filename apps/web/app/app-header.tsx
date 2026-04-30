@@ -25,6 +25,8 @@ export async function AppHeader({ navItems = [], showAuthLinks = false, session 
   const dataStore = process.env.DATA_STORE === "supabase" ? "supabase" : "local";
   const publicSignupEnabled = isPublicSignupEnabled();
   const resolvedSession = session ?? await loadHeaderSession();
+  const showPrimaryNav = resolvedSession && navItems.length > 0;
+  const showPublicAuthActions = !resolvedSession && (showAuthLinks || navItems.length > 0);
 
   return (
     <header className="topbar app-header">
@@ -34,7 +36,7 @@ export async function AppHeader({ navItems = [], showAuthLinks = false, session 
       </Link>
 
       <div className="topbar-actions">
-        {navItems.length > 0 ? (
+        {showPrimaryNav ? (
           <nav className="primary-nav" aria-label="Application">
             {navItems.map((item) => (
               <AppNavLink href={item.href} key={item.href}>
@@ -60,7 +62,7 @@ export async function AppHeader({ navItems = [], showAuthLinks = false, session 
           </div>
         ) : null}
 
-        {!resolvedSession && showAuthLinks ? (
+        {showPublicAuthActions ? (
           <div className="public-auth-actions">
             <Link className="link" href="/login">
               <T k="nav.login" />
