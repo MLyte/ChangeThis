@@ -8,14 +8,21 @@ Date: 2026-04-30
 - Signup public: les inscriptions peuvent etre ouvertes au lancement.
 - UX signup cible: e-mail d'abord.
 - Premier ecran signup: pas de nom d'organisation, pas de mot de passe.
-- Activation: l'utilisateur recoit un e-mail avec lien ou code.
+- Activation: l'utilisateur recoit un e-mail avec lien securise, avec code court possible en fallback.
 - Premiere connexion: l'utilisateur choisit son mot de passe.
 - Hebergement hors OVH accepte si c'est plus simple, moins risque et peu couteux.
 - Stack recommandee pour la beta: Railway + PostgreSQL + Brevo.
+- Moteur de base de donnees valide: PostgreSQL.
+- Fournisseur PostgreSQL beta: Railway integre.
+- Domaine principal retenu: `changethis.dev`.
+- Domaine applicatif cible: `app.changethis.dev`.
 - Devise de pilotage: euros.
 - Budget beta vise: environ 5 a 15 EUR par mois, hors nom de domaine.
 - OVH peut rester le registrar du nom de domaine.
 - Eviter l'hebergement web OVH classique pour l'application Next.js.
+- Workspace initial: mono-workspace cree automatiquement par compte au lancement.
+- Creation d'issue: validation manuelle par defaut depuis l'inbox, avec action par lot pour les feedbacks selectionnes.
+- Regle de decision IA: si un choix est raisonnablement evident pour la beta avec environ 70% de confiance, l'agent tranche et documente au lieu de demander validation.
 
 ## Consequence technique
 
@@ -35,7 +42,7 @@ Il faut remplacer progressivement la dependance Supabase Auth par une auth appli
 ## Ordre d'implementation recommande
 
 1. Creer le projet Railway.
-2. Ajouter PostgreSQL sur Railway ou connecter Neon Postgres.
+2. Ajouter une base PostgreSQL integree a Railway.
 3. Ajouter les migrations auth minimales.
 4. Ajouter le provider e-mail Brevo.
 5. Implementer le signup e-mail-first natif applicatif.
@@ -49,19 +56,14 @@ Il faut remplacer progressivement la dependance Supabase Auth par une auth appli
 
 ## Questions restantes a poser une par une
 
-1. PostgreSQL Railway integre, ou Neon Postgres separe ?
-2. Le lien e-mail suffit-il, ou veux-tu aussi un code a 6 chiffres saisissable manuellement ?
-3. Le workspace initial doit-il etre mono-organisation par compte, ou l'app doit-elle permettre plusieurs workspaces par utilisateur des le lancement ?
-4. La creation d'issue doit-elle rester manuelle par defaut, ou devenir automatique apres reception d'un feedback ?
-5. Ou stocke-t-on les screenshots en production: Cloudflare R2, Railway volume temporaire, base de donnees, ou autre ?
-6. Quel domaine public sera utilise pour les URLs de callback, le widget et les e-mails ?
-7. Quelle duree de session souhaites-tu: 1 jour, 7 jours, 30 jours ?
-8. Faut-il limiter le signup public par domaine e-mail ou captcha anti-abus au lancement ?
-9. Veux-tu garder OVH comme registrar du domaine, ou migrer aussi le DNS vers Cloudflare ?
+1. Ou stocke-t-on les screenshots en production: Cloudflare R2, Railway volume temporaire, base de donnees, ou autre ?
+2. Quelle duree de session souhaites-tu: 1 jour, 7 jours, 30 jours ?
+3. Faut-il limiter le signup public par domaine e-mail ou captcha anti-abus au lancement ?
+4. Veux-tu garder OVH comme registrar du domaine, ou migrer aussi le DNS vers Cloudflare ?
 
 ## Premiere question active
 
-PostgreSQL Railway integre, ou Neon Postgres separe ?
+Ou stocke-t-on les screenshots en production: Cloudflare R2, Railway volume temporaire, base de donnees, ou autre ?
 
 ## Notes de prudence
 

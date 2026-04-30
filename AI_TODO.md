@@ -457,3 +457,11 @@
 - [2026-04-30] Documentation OVH hors checklist: ajout de docs/ovh-zero-to-prod-guide.md pour guider un depart de zero OVH vers une prod ChangeThis avec recommandation PostgreSQL, VPS/Public Cloud, SMTP et auth native applicative. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 
 - [2026-04-30] Documentation décisions prod hors checklist: mise à jour de docs/ovh-production-auth-decisions.md avec la décision Railway + PostgreSQL + Brevo, budget beta en euros, domaine possible chez OVH et questions restantes réordonnées. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+- [2026-04-30] Documentation décisions prod hors checklist: PostgreSQL ajouté comme moteur DB validé dans docs/ovh-production-auth-decisions.md; le choix restant porte sur Railway intégré vs Neon séparé. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+
+- [2026-04-30] Documentation décisions prod hors checklist: Railway intégré retenu pour PostgreSQL beta; décisions par défaut ajoutées pour activation e-mail avec fallback code, mono-workspace initial, création d'issue manuelle avec lot, et règle IA de décision à 70%. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
+- [2026-04-30] Documentation déploiement prod hors checklist: ajout de `docs/deploy-railway-ovh-changethis-dev.md` avec le chemin concret OVH domaine -> Railway app -> PostgreSQL Railway -> DNS `app.changethis.dev`, et mise à jour des décisions avec le domaine retenu `changethis.dev`. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+
