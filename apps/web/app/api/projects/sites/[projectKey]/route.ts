@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
 import { deleteConnectedSite } from "../../../../../lib/project-registry";
 
 export async function DELETE(
   request: Request,
   context: { params: Promise<{ projectKey: string }> }
 ) {
-  const session = await requireWorkspaceSession(request);
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
-import { createIssueForFeedback } from "../../../../../../lib/issue-workflow";
+import { IssueProviderError } from "../../../../../../lib/issue-providers";
+import { syncFeedbackIssueState } from "../../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../../lib/logger";
 
 type RouteContext = {
@@ -24,20 +25,25 @@ export async function POST(request: Request, context: RouteContext) {
 
   const requestId = requestIdFrom(request);
   const { id } = await context.params;
-  const repository = getFeedbackRepository();
-  const feedback = await repository.get(id, { workspaceId });
+  const feedback = await getFeedbackRepository().get(id, { workspaceId });
 
-  if (!feedback) {
-    return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+  if (!feedback || !feedback.externalIssue) {
+    return NextResponse.json({ error: "Feedback issue not found" }, { status: 404 });
   }
 
-  const updated = await createIssueForFeedback(feedback, requestId, { workspaceId });
+  try {
+    const updated = await syncFeedbackIssueState(feedback, requestId, { workspaceId });
 
-  return NextResponse.json({
-    id: updated.id,
-    status: updated.status,
-    externalIssue: updated.externalIssue,
-    lastError: updated.lastError,
-    nextRetryAt: updated.nextRetryAt
-  });
+    return NextResponse.json({
+      id: updated.id,
+      status: updated.status,
+      externalIssue: updated.externalIssue
+    });
+  } catch (error) {
+    if (error instanceof IssueProviderError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status ?? 502 });
+    }
+
+    throw error;
+  }
 }

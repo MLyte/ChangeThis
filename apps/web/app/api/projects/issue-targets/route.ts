@@ -5,12 +5,12 @@ import {
   ProjectTargetValidationError,
   saveProjectIssueTarget
 } from "../../../../lib/project-registry";
-import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { getProviderIntegration } from "../../../../lib/provider-integrations";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
 
 export async function GET(request: Request) {
-  const session = await requireWorkspaceSession(request);
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);

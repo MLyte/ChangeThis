@@ -84,6 +84,21 @@ export function getProviderCredentialSecret(provider: IssueProvider, integration
   ]).toString("utf8");
 }
 
+export function deleteProviderCredentialSecrets(provider: IssueProvider, integrationId: string): number {
+  const store = readStore();
+  const initialCount = store.credentials.length;
+
+  store.credentials = store.credentials.filter((credential) =>
+    credential.provider !== provider || credential.integrationId !== integrationId
+  );
+
+  if (store.credentials.length !== initialCount) {
+    writeStore(store);
+  }
+
+  return initialCount - store.credentials.length;
+}
+
 function readStore(): CredentialStore {
   try {
     return sanitizeStore(JSON.parse(readFileSync(credentialStorePath, "utf8")));

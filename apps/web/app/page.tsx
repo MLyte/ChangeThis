@@ -21,6 +21,7 @@ export default async function HomePage() {
   return (
     <main className="shell app-home">
       <AppHeader
+        showAuthLinks
         navItems={[
           { href: "/projects", labelKey: "nav.issues" },
           { href: "/settings", labelKey: "nav.settings" }
@@ -41,9 +42,11 @@ export default async function HomePage() {
             <T k="home.hero.lede" />
           </p>
           <div className="hero-actions">
-            <Link className="button" href="/projects"><T k="home.hero.primary" /></Link>
+            <Link className="button" href="/signup"><T k="home.hero.signup" /></Link>
+            <Link className="button secondary-button" href="/login"><T k="home.hero.login" /></Link>
             <Link className="button secondary-button" href="/demo"><T k="home.hero.secondary" /></Link>
           </div>
+          <p className="hero-trust"><T k="home.hero.trust" /></p>
         </div>
 
         <ConsolePreview feedbacks={previewFeedbacks} siteRows={previewSiteRows} />
@@ -95,6 +98,18 @@ export default async function HomePage() {
               <p><T k={item} /></p>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="signup-band" aria-labelledby="signup-band-title">
+        <div>
+          <p className="eyebrow"><T k="home.signup.eyebrow" /></p>
+          <h2 id="signup-band-title"><T k="home.signup.title" /></h2>
+          <p><T k="home.signup.copy" /></p>
+        </div>
+        <div className="signup-band-actions">
+          <Link className="button" href="/signup"><T k="home.signup.primary" /></Link>
+          <Link className="button secondary-button" href="/demo"><T k="home.signup.secondary" /></Link>
         </div>
       </section>
 

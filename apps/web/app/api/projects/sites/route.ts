@@ -1,6 +1,6 @@
 import type { IssueProvider } from "@changethis/shared";
 import { NextResponse } from "next/server";
-import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { IssueProviderError, listIssueProviderRepositories } from "../../../../lib/issue-providers";
 import { getProviderIntegration } from "../../../../lib/provider-integrations";
@@ -12,7 +12,7 @@ import {
 } from "../../../../lib/project-registry";
 
 export async function GET(request: Request) {
-  const session = await requireWorkspaceSession(request);
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);

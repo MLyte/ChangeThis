@@ -1,19 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
-  CheckCircle2,
   Copy,
   ExternalLink,
   GitBranch,
   Globe2,
+  Info,
   Link2,
+  Mail,
   Plus,
   RefreshCw,
+  ShieldCheck,
   Trash2,
-  TriangleAlert,
+  UserRound,
   X,
-  type LucideIcon
 } from "lucide-react";
 import type { IssueProvider } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
@@ -25,6 +27,8 @@ type Props = {
   projects: ChangeThisProject[];
   integrations: ProviderIntegrationSummary[];
   section: SettingsSection;
+  users?: WorkspaceUserView[];
+  workspaceName?: string;
 };
 
 type ProjectView = ChangeThisProject & {
@@ -36,7 +40,14 @@ type ProjectView = ChangeThisProject & {
     lastFeedbackAt?: string;
   };
 };
-export type SettingsSection = "git-connections" | "connected-sites";
+export type SettingsSection = "git-connections" | "connected-sites" | "users";
+export type WorkspaceUserView = {
+  userId: string;
+  email: string;
+  role: "viewer" | "member" | "admin" | "owner" | string;
+  status: string;
+  joinedAt?: string;
+};
 
 type RepositoryOption = {
   id: string;
@@ -56,7 +67,12 @@ type ConnectionTestResult = {
   checkedAt?: Date;
 };
 
-export function IssueDestinationSetup({ projects, integrations, section }: Props) {
+type InstallCheckResult = {
+  ok: boolean;
+  message: string;
+};
+
+export function IssueDestinationSetup({ projects, integrations, section, users = [], workspaceName }: Props) {
   const { t } = useLanguage();
   const [projectViews, setProjectViews] = useState<ProjectView[]>(projects);
   const firstConnectedProvider = integrations.find((integration) => integration.status === "connected")?.provider ?? "github";
@@ -70,7 +86,7 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
   const [siteOrigin, setSiteOrigin] = useState("");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
-  const [installChecks, setInstallChecks] = useState<Record<string, string>>({});
+  const [installChecks, setInstallChecks] = useState<Record<string, InstallCheckResult>>({});
 
   const connectedProviders = useMemo(
     () => new Set(integrations.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
@@ -150,78 +166,148 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
   }
 
   function copyInstallSnippet(project: ProjectView) {
-    void navigator.clipboard?.writeText(installSnippet(project.publicKey));
+    void navigator.clipboard?.writeText(installSnippet(project.publicKey))
+      .then(() => {
+        toast.success("Script copié", {
+          description: `${project.name} est prêt à être installé.`
+        });
+      })
+      .catch(() => {
+        toast.error("Copie impossible", {
+          description: "Sélectionnez le script manuellement."
+        });
+      });
   }
 
   function createSite() {
     startTransition(async () => {
       if (!selectedIntegration?.credentialConfigured || !selectedRepository) {
-        setMessage("Choisissez une connexion Git active et un dépôt accessible.");
+        const errorMessage = "Choisissez une connexion Git active et un dépôt accessible.";
+        setMessage(errorMessage);
+        toast.error("Site non créé", {
+          description: errorMessage
+        });
         return;
       }
 
-      const response = await fetch("/api/projects/sites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: siteName,
-          allowedOrigin: siteOrigin,
-          provider: selectedProvider,
-          integrationId: selectedIntegration.id,
-          repositoryId: selectedRepository.id
-        })
-      });
+      try {
+        const response = await fetch("/api/projects/sites", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: siteName,
+            allowedOrigin: siteOrigin,
+            provider: selectedProvider,
+            integrationId: selectedIntegration.id,
+            repositoryId: selectedRepository.id
+          })
+        });
 
-      const body = (await response.json()) as { site?: ProjectView; installSnippet?: string; metrics?: ProjectView["metrics"]; error?: string };
+        const body = (await response.json()) as { site?: ProjectView; installSnippet?: string; metrics?: ProjectView["metrics"]; error?: string };
 
-      if (!response.ok || !body.site) {
-        setMessage(body.error ?? t("destinations.message.error"));
-        return;
+        if (!response.ok || !body.site) {
+          const errorMessage = body.error ?? t("destinations.message.error");
+          setMessage(errorMessage);
+          toast.error("Site non créé", {
+            description: errorMessage
+          });
+          return;
+        }
+
+        const nextSite = {
+          ...body.site,
+          installSnippet: body.installSnippet,
+          metrics: body.metrics
+        };
+
+        setProjectViews((current) => [nextSite, ...current]);
+        setMessage(`${body.site.name} est prêt. Placez le script sur ${body.site.allowedOrigins[0]}.`);
+        setSelectedRepositoryId("");
+        setSiteName("");
+        setSiteOrigin("");
+        setIsSiteModalOpen(false);
+        toast.success("Site connecté", {
+          description: `${body.site.name} est prêt. Copiez le script depuis la liste des sites.`
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
+        setMessage(errorMessage);
+        toast.error("Site non créé", {
+          description: errorMessage
+        });
       }
-
-      const nextSite = {
-        ...body.site,
-        installSnippet: body.installSnippet,
-        metrics: body.metrics
-      };
-
-      setProjectViews((current) => [nextSite, ...current]);
-      setMessage(`${body.site.name} est prêt. Placez le script sur ${body.site.allowedOrigins[0]}.`);
-      setSelectedRepositoryId("");
-      setSiteName("");
-      setSiteOrigin("");
-      setIsSiteModalOpen(false);
     });
   }
 
   function deleteSite(projectKey: string) {
     startTransition(async () => {
-      const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}`, {
-        method: "DELETE"
-      });
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}`, {
+          method: "DELETE"
+        });
 
-      if (!response.ok) {
-        setMessage("Impossible de supprimer ce site.");
-        return;
+        if (!response.ok) {
+          const errorMessage = "Impossible de supprimer ce site.";
+          setMessage(errorMessage);
+          toast.error("Suppression impossible", {
+            description: errorMessage
+          });
+          return;
+        }
+
+        setProjectViews((current) => current.filter((project) => project.publicKey !== projectKey));
+        setMessage("Site supprimé. Les issues déjà créées dans GitHub ou GitLab ne sont pas modifiées.");
+        toast.success("Site supprimé", {
+          description: "Les issues déjà créées dans GitHub ou GitLab ne sont pas modifiées."
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
+        setMessage(errorMessage);
+        toast.error("Suppression impossible", {
+          description: errorMessage
+        });
       }
-
-      setProjectViews((current) => current.filter((project) => project.publicKey !== projectKey));
-      setMessage("Site supprimé. Les issues déjà créées dans GitHub ou GitLab ne sont pas modifiées.");
     });
   }
 
   function testScript(projectKey: string) {
     startTransition(async () => {
-      const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/script-test`, {
-        method: "POST"
-      });
-      const body = (await response.json()) as { message?: string; error?: string };
-      setInstallChecks((current) => ({
-        ...current,
-        [projectKey]: body.message ?? body.error ?? "Test terminé."
-      }));
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/script-test`, {
+          method: "POST"
+        });
+        const body = (await response.json()) as { message?: string; error?: string };
+        setInstallChecks((current) => ({
+          ...current,
+          [projectKey]: {
+            ok: response.ok,
+            message: body.message ?? body.error ?? "Test terminé."
+          }
+        }));
+        if (response.ok) {
+          toast.success("Script détecté", {
+            description: body.message ?? "Le widget est installé sur l'URL du site."
+          });
+        } else {
+          toast.error("Script non détecté", {
+            description: body.message ?? body.error ?? "Vérifiez que le snippet est installé sur l'URL du site."
+          });
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
+        setInstallChecks((current) => ({
+          ...current,
+          [projectKey]: {
+            ok: false,
+            message: errorMessage
+          }
+        }));
+        toast.error("Test impossible", {
+          description: errorMessage
+        });
+      }
     });
   }
 
@@ -229,7 +315,6 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
     <section className="setup-panel" id="settings" aria-labelledby="destinations-title">
       <div className="setup-heading">
         <div>
-          <p className="eyebrow"><T k="settings.eyebrow" /></p>
           <h2 id="destinations-title"><T k="settings.title" /></h2>
         </div>
       </div>
@@ -243,6 +328,10 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
           <a className={section === "connected-sites" ? "is-active" : ""} href="/settings/connected-sites">
             <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
             <T k="settings.sidebar.connectedSites" />
+          </a>
+          <a className={section === "users" ? "is-active" : ""} href="/settings/users">
+            <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            <T k="settings.sidebar.users" />
           </a>
         </aside>
 
@@ -278,6 +367,84 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
               siteOrigin={siteOrigin}
             />
           ) : null}
+
+          {section === "users" ? (
+            <UsersSection users={users} workspaceName={workspaceName} />
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function UsersSection({ users, workspaceName }: { users: WorkspaceUserView[]; workspaceName?: string }) {
+  const activeUsers = users.filter((user) => user.status === "active").length;
+  const adminUsers = users.filter((user) => user.role === "owner" || user.role === "admin").length;
+
+  return (
+    <section className="settings-section users-settings" aria-labelledby="users-settings-title">
+      <div className="setup-heading">
+        <div>
+          <p className="eyebrow">Application</p>
+          <h3 id="users-settings-title"><T k="settings.users.title" /></h3>
+          <p className="section-lede">
+            <T k="settings.users.copy" />
+          </p>
+        </div>
+      </div>
+
+      <div className="users-summary-grid">
+        <div className="summary-tile">
+          <span>{users.length}</span>
+          <small>Utilisateurs</small>
+        </div>
+        <div className="summary-tile">
+          <span>{activeUsers}</span>
+          <small>Actifs</small>
+        </div>
+        <div className="summary-tile">
+          <span>{adminUsers}</span>
+          <small>Admins</small>
+        </div>
+      </div>
+
+      <div className="user-management-panel">
+        <div className="user-management-heading">
+          <div>
+            <strong>{workspaceName ?? "Workspace ChangeThis"}</strong>
+            <span>Les feedbacks publics restent ouverts. Cette liste ne concerne que l&apos;accès à la console.</span>
+          </div>
+          <button className="button secondary-button" disabled type="button">
+            <Mail aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            Inviter
+          </button>
+        </div>
+
+        <div className="users-table" role="table" aria-label="Utilisateurs du workspace">
+          <div className="users-table-row users-table-head" role="row">
+            <span role="columnheader">Utilisateur</span>
+            <span role="columnheader">Rôle</span>
+            <span role="columnheader">Statut</span>
+            <span role="columnheader">Arrivée</span>
+          </div>
+          {users.map((user) => (
+            <div className="users-table-row" role="row" key={user.userId}>
+              <span role="cell">
+                <span className="user-avatar" aria-hidden="true">{user.email.slice(0, 1).toUpperCase()}</span>
+                <strong>{user.email}</strong>
+              </span>
+              <span role="cell">
+                <ShieldCheck aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+                {roleLabel(user.role)}
+              </span>
+              <span role="cell">
+                <span className={`status-badge ${user.status === "active" ? "connected" : "inactive"}`}>
+                  {user.status === "active" ? "Actif" : user.status}
+                </span>
+              </span>
+              <span role="cell">{user.joinedAt ? formatMemberDate(user.joinedAt) : "Session locale"}</span>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -285,10 +452,13 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
 }
 
 function GitConnectionsSection({ integrations }: { integrations: ProviderIntegrationSummary[] }) {
+  const [disabledProviders, setDisabledProviders] = useState<Set<IssueProvider>>(
+    () => new Set(integrations.filter((integration) => integration.disabled).map((integration) => integration.provider))
+  );
   const [connectionStates, setConnectionStates] = useState<Partial<Record<IssueProvider, ConnectionTestResult>>>(() => (
     Object.fromEntries(integrations.map((integration) => [
       integration.provider,
-      integration.credentialConfigured
+      integration.credentialConfigured && !integration.disabled
         ? {
             state: "checking",
             message: "Vérification de la connexion active..."
@@ -300,8 +470,8 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
     ])) as Partial<Record<IssueProvider, ConnectionTestResult>>
   ));
 
-  const refreshConnection = useCallback(async (integration: ProviderIntegrationSummary, signal?: AbortSignal) => {
-    if (!integration.credentialConfigured) {
+  const refreshConnection = useCallback(async (integration: ProviderIntegrationSummary, signal?: AbortSignal, forceEnabled = false) => {
+    if ((!integration.credentialConfigured && !forceEnabled) || (!forceEnabled && disabledProviders.has(integration.provider))) {
       setConnectionStates((current) => ({
         ...current,
         [integration.provider]: {
@@ -368,19 +538,140 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
         }
       }));
     }
+  }, [disabledProviders]);
+
+  const disconnectConnection = useCallback(async (integration: ProviderIntegrationSummary) => {
+    setConnectionStates((current) => ({
+      ...current,
+      [integration.provider]: {
+        state: "checking",
+        message: `Déconnexion de ${integration.name}...`
+      }
+    }));
+
+    try {
+      const response = await fetch(`/api/integrations/${integration.provider}/connection?integrationId=${encodeURIComponent(integration.id)}`, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json"
+        }
+      });
+      const body = await response.json().catch(() => undefined) as { error?: string } | undefined;
+
+      if (!response.ok) {
+        const errorMessage = body?.error ?? `Impossible de déconnecter ${integration.name}.`;
+        setConnectionStates((current) => ({
+          ...current,
+          [integration.provider]: {
+            state: "error",
+            message: errorMessage,
+            checkedAt: new Date()
+          }
+        }));
+        toast.error("Déconnexion impossible", {
+          description: errorMessage
+        });
+        return;
+      }
+
+      setDisabledProviders((current) => new Set(current).add(integration.provider));
+      setConnectionStates((current) => ({
+        ...current,
+        [integration.provider]: {
+          state: "inactive",
+          message: `${integration.name} est déconnecté dans ChangeThis.`,
+          checkedAt: new Date()
+        }
+      }));
+      toast.success(`${integration.name} déconnecté`, {
+        description: "ChangeThis n'utilise plus cette connexion Git."
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : `Impossible de déconnecter ${integration.name}.`;
+      setConnectionStates((current) => ({
+        ...current,
+        [integration.provider]: {
+          state: "error",
+          message: errorMessage,
+          checkedAt: new Date()
+        }
+      }));
+      toast.error("Déconnexion impossible", {
+        description: errorMessage
+      });
+    }
   }, []);
+
+  const enableConnection = useCallback(async (integration: ProviderIntegrationSummary) => {
+    setConnectionStates((current) => ({
+      ...current,
+      [integration.provider]: {
+        state: "checking",
+        message: `Réactivation de ${integration.name}...`
+      }
+    }));
+
+    try {
+      const response = await fetch(`/api/integrations/${integration.provider}/connection?integrationId=${encodeURIComponent(integration.id)}`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json"
+        }
+      });
+      const body = await response.json().catch(() => undefined) as { error?: string } | undefined;
+
+      if (!response.ok) {
+        const errorMessage = body?.error ?? `Impossible de réactiver ${integration.name}.`;
+        setConnectionStates((current) => ({
+          ...current,
+          [integration.provider]: {
+            state: "error",
+            message: errorMessage,
+            checkedAt: new Date()
+          }
+        }));
+        toast.error("Réactivation impossible", {
+          description: errorMessage
+        });
+        return;
+      }
+
+      setDisabledProviders((current) => {
+        const next = new Set(current);
+        next.delete(integration.provider);
+        return next;
+      });
+      await refreshConnection(integration, undefined, true);
+      toast.success(`${integration.name} réactivé`, {
+        description: "La connexion Git peut à nouveau être utilisée."
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : `Impossible de réactiver ${integration.name}.`;
+      setConnectionStates((current) => ({
+        ...current,
+        [integration.provider]: {
+          state: "error",
+          message: errorMessage,
+          checkedAt: new Date()
+        }
+      }));
+      toast.error("Réactivation impossible", {
+        description: errorMessage
+      });
+    }
+  }, [refreshConnection]);
 
   useEffect(() => {
     const abortController = new AbortController();
 
     integrations.forEach((integration) => {
-      if (integration.credentialConfigured) {
+      if (integration.credentialConfigured && !disabledProviders.has(integration.provider)) {
         void refreshConnection(integration, abortController.signal);
       }
     });
 
     return () => abortController.abort();
-  }, [integrations, refreshConnection]);
+  }, [disabledProviders, integrations, refreshConnection]);
 
   return (
     <section className="settings-section" aria-labelledby="git-connections-title">
@@ -393,9 +684,11 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
 
       <div className="integration-grid">
         {integrations.map((integration) => {
+          const isLocallyDisabled = disabledProviders.has(integration.provider);
+          const credentialConfigured = integration.credentialConfigured && !isLocallyDisabled;
           const connectionState = connectionStates[integration.provider] ?? {
-            state: integration.credentialConfigured ? "checking" : "inactive",
-            message: integration.credentialConfigured ? "Vérification de la connexion active..." : "Ajoutez un token serveur pour activer cette connexion."
+            state: credentialConfigured ? "checking" : "inactive",
+            message: credentialConfigured ? "Vérification de la connexion active..." : "Ajoutez un token serveur pour activer cette connexion."
           };
           const isConnectionActive = connectionState.state === "active" || connectionState.state === "checking";
 
@@ -424,38 +717,24 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               {connectionState.checkedAt ? (
                 <p className="connection-last-check">Dernier contrôle: {formatConnectionCheckDate(connectionState.checkedAt)}</p>
               ) : null}
-              <div className="integration-checklist" aria-label={`${integration.name} setup`}>
-                {!integration.credentialConfigured ? (
-                  <IntegrationCheck
-                    isReady={integration.connectConfigured}
-                    labelKey="destinations.integration.connectFlow"
-                    value={integration.connectConfigured ? "destinations.integration.ready" : providerConnectionHelpKey(integration.provider)}
-                  />
-                ) : null}
-                <IntegrationCheck
-                  isReady={integration.credentialConfigured}
-                  labelKey="destinations.integration.credentials"
-                  value={integration.credentialConfigured ? "destinations.integration.ready" : providerCredentialHelpKey(integration.provider)}
-                />
-              </div>
-              <div className="integration-config">
-                <strong><T k="destinations.integration.localTest" /></strong>
-                <code>{integration.credentialConfigKeys.join(" / ")}</code>
-                <span><T k={providerLocalHelpKey(integration.provider)} /></span>
-              </div>
               <div className="integration-actions">
-                {integration.credentialConfigured ? (
-                  <button className="button" disabled={connectionState.state === "checking"} onClick={() => void refreshConnection(integration)} type="button">
-                    <RefreshCw aria-hidden="true" className={`ui-icon ${connectionState.state === "checking" ? "spin-icon" : ""}`} size={16} strokeWidth={2.2} />
-                    {connectionState.state === "checking" ? "Vérification..." : "Actualiser"}
+                {credentialConfigured ? (
+                  <button className="button danger-button" disabled={connectionState.state === "checking"} onClick={() => void disconnectConnection(integration)} type="button">
+                    <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    Déconnecter
+                  </button>
+                ) : isLocallyDisabled && integration.environmentCredentialConfigured ? (
+                  <button className="button" disabled={connectionState.state === "checking"} onClick={() => void enableConnection(integration)} type="button">
+                    <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    Réactiver
                   </button>
                 ) : null}
-                {integration.connectConfigured ? (
+                {integration.connectConfigured && !credentialConfigured ? (
                   <a className="button" href={`${integration.connectPath}?returnTo=/settings/git-connections`}>
                     <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                     {integration.status === "connected" ? <T k="destinations.verify" /> : <><T k="destinations.connect" /> {integration.name}</>}
                   </a>
-                ) : !integration.credentialConfigured ? (
+                ) : !credentialConfigured && !isLocallyDisabled ? (
                   <span className="button disabled-button" aria-disabled="true">
                     <T k="destinations.integration.connectUnavailable" />
                   </span>
@@ -523,6 +802,34 @@ function formatConnectionCheckDate(date: Date): string {
   }).format(date);
 }
 
+function formatMemberDate(value: string): string {
+  return new Intl.DateTimeFormat("fr-BE", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(new Date(value));
+}
+
+function roleLabel(role: WorkspaceUserView["role"]): string {
+  if (role === "owner") {
+    return "Propriétaire";
+  }
+
+  if (role === "admin") {
+    return "Admin";
+  }
+
+  if (role === "member") {
+    return "Membre";
+  }
+
+  if (role === "viewer") {
+    return "Lecture seule";
+  }
+
+  return role;
+}
+
 function ConnectedSitesSection({
   connectedProviders,
   isPending,
@@ -551,7 +858,7 @@ function ConnectedSitesSection({
   connectedProviders: Set<IssueProvider>;
   isPending: boolean;
   isSiteModalOpen: boolean;
-  installChecks: Record<string, string>;
+  installChecks: Record<string, InstallCheckResult>;
   message: string;
   onCloseModal: () => void;
   onCreateSite: () => void;
@@ -573,8 +880,8 @@ function ConnectedSitesSection({
   siteOrigin: string;
 }) {
   const isSelectedProviderConnected = connectedProviders.has(selectedProvider);
-  const shouldShowRepositorySelect = isSelectedProviderConnected && repositoryLoadState === "ready" && repositoryOptions.length > 0;
   const shouldShowRepositoryStatus = isSelectedProviderConnected && repositoryLoadState !== "idle";
+  const isRepositorySelectDisabled = !isSelectedProviderConnected || repositoryLoadState === "loading" || repositoryOptions.length === 0;
   const connectedIntegrations = Array.from(connectedProviders);
 
   return (
@@ -608,49 +915,64 @@ function ConnectedSitesSection({
 
             return (
               <article className="site-repo-row connected-site-row" key={project.publicKey}>
-                <div>
-                  <h3>{project.name}</h3>
-                  <p>{project.allowedOrigins.join(", ")}</p>
-                  <span className={`status-badge ${isReady ? "connected" : "failed"}`}>
-                    {isReady ? "Actif" : "Git déconnecté"}
-                  </span>
-                </div>
-                <div className="repo-destination">
-                  <ProviderBadge provider={issueTarget.provider} />
-                  <div>
-                    <strong>{issueTarget.namespace}/{issueTarget.project}</strong>
-                    <span>{issueTarget.webUrl}</span>
+                <div className="site-row-main">
+                  <div className="site-identity">
+                    <div className="site-title-row">
+                      <h3>{project.name}</h3>
+                      <span className={`status-badge ${isReady ? "connected" : "failed"}`}>
+                        {isReady ? "Actif" : "Git déconnecté"}
+                      </span>
+                    </div>
+                    <p>{project.allowedOrigins.join(", ")}</p>
+                  </div>
+                  <div className="repo-destination">
+                    <ProviderBadge provider={issueTarget.provider} />
+                    <div>
+                      <span>Destination issue</span>
+                      <strong>{issueTarget.namespace}/{issueTarget.project}</strong>
+                      {issueTarget.webUrl ? (
+                        <a href={issueTarget.webUrl}>{issueTarget.webUrl}</a>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="site-row-actions">
+                    {issueTarget.webUrl ? (
+                      <a className="button secondary-button" href={issueTarget.webUrl}>
+                        <ExternalLink aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                        <T k="destinations.open" />
+                      </a>
+                    ) : null}
+                    <button className="button secondary-button" onClick={() => onTestScript(project.publicKey)} type="button">
+                      <RefreshCw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                      Tester le script
+                    </button>
+                    <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
+                      <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                      Supprimer
+                    </button>
                   </div>
                 </div>
-                <div className="site-metrics">
-                  <span><strong>{project.metrics?.feedbacksReceived ?? 0}</strong> retours</span>
-                  <span><strong>{project.metrics?.issuesCreated ?? 0}</strong> issues créées</span>
-                  <span><strong>{project.metrics?.failedIssues ?? 0}</strong> échecs</span>
-                </div>
-                <div className="site-script">
-                  <strong>Script</strong>
-                  <code>{project.installSnippet ?? installSnippet(project.publicKey)}</code>
-                  <button className="inline-action" onClick={() => onCopyInstallSnippet(project)} type="button">
-                    <Copy aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-                    Copier
-                  </button>
-                  {installChecks[project.publicKey] ? <span className="script-check-result">{installChecks[project.publicKey]}</span> : null}
-                </div>
-                <div className="site-row-actions">
-                  {issueTarget.webUrl ? (
-                    <a className="button secondary-button" href={issueTarget.webUrl}>
-                      <ExternalLink aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                      <T k="destinations.open" />
-                    </a>
-                  ) : null}
-                  <button className="button secondary-button" onClick={() => onTestScript(project.publicKey)} type="button">
-                    <RefreshCw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                    Tester le script
-                  </button>
-                  <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
-                    <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                    Supprimer
-                  </button>
+                <div className="site-row-meta">
+                  <div className="site-metrics">
+                    <span><strong>{project.metrics?.feedbacksReceived ?? 0}</strong><small>Retours</small></span>
+                    <span><strong>{project.metrics?.issuesCreated ?? 0}</strong><small>Issues</small></span>
+                    <span><strong>{project.metrics?.failedIssues ?? 0}</strong><small>Échecs</small></span>
+                  </div>
+                  <div className="site-script">
+                    <strong>Script widget</strong>
+                    <code>{project.installSnippet ?? installSnippet(project.publicKey)}</code>
+                    <div className="site-script-actions">
+                      <button className="inline-action" onClick={() => onCopyInstallSnippet(project)} type="button">
+                        <Copy aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
+                        Copier
+                      </button>
+                      {installChecks[project.publicKey] ? (
+                        <span className={`script-check-result ${installChecks[project.publicKey].ok ? "success" : "error"}`}>
+                          {installChecks[project.publicKey].message}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               </article>
             );
@@ -700,7 +1022,18 @@ function ConnectedSitesSection({
                   <input name="siteName" onChange={(event) => setSiteName(event.target.value)} placeholder="Site vitrine" value={siteName} />
                 </label>
                 <label>
-                  Domaine autorisé
+                  <span className="field-label">
+                    URL du site
+                    <span
+                      className="tooltip-icon"
+                      role="img"
+                      aria-label="Cette URL limite l'envoi de feedbacks aux pages de ce domaine. Si quelqu'un récupère la clé publique du widget, l'API refusera les retours venant d'un autre site."
+                      data-tooltip="Cette URL limite l'envoi de feedbacks aux pages de ce domaine. Si quelqu'un récupère la clé publique du widget, l'API refusera les retours venant d'un autre site."
+                      tabIndex={0}
+                    >
+                      <Info aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.3} />
+                    </span>
+                  </span>
                   <input name="siteOrigin" onChange={(event) => setSiteOrigin(event.target.value)} placeholder="https://www.exemple.be" value={siteOrigin} />
                 </label>
                 <label>
@@ -710,19 +1043,22 @@ function ConnectedSitesSection({
                     <option disabled={!connectedProviders.has("gitlab")} value="gitlab">GitLab</option>
                   </select>
                 </label>
-                {shouldShowRepositorySelect ? (
-                  <label className="repo-select-field">
-                    Repository connecté
-                    <select name="repositorySelect" value={selectedRepositoryId} onChange={(event) => setSelectedRepositoryId(event.target.value)}>
-                      <option value="">Choisir un dépôt</option>
-                      {repositoryOptions.map((repository) => (
-                        <option key={repository.id} value={repository.id}>
-                          {repository.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
+                <label className="repo-select-field">
+                  Repository connecté
+                  <select
+                    disabled={isRepositorySelectDisabled}
+                    name="repositorySelect"
+                    value={selectedRepositoryId}
+                    onChange={(event) => setSelectedRepositoryId(event.target.value)}
+                  >
+                    <option value="">{repositorySelectPlaceholder(repositoryLoadState, isSelectedProviderConnected)}</option>
+                    {repositoryOptions.map((repository) => (
+                      <option key={repository.id} value={repository.id}>
+                        {repository.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button className="button" disabled={isPending || !siteOrigin || !selectedRepositoryId || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
                   <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                   {isPending ? "Création..." : "Créer le site"}
@@ -737,32 +1073,6 @@ function ConnectedSitesSection({
       ) : null}
     </section>
   );
-}
-
-function IntegrationCheck({ isReady, labelKey, value }: { isReady: boolean; labelKey: string; value: string }) {
-  const Icon: LucideIcon = isReady ? CheckCircle2 : TriangleAlert;
-
-  return (
-    <div className="integration-check">
-      <Icon aria-hidden="true" className={`ui-icon status-icon ${isReady ? "connected" : "needs_setup"}`} size={16} strokeWidth={2.4} />
-      <div>
-        <strong><T k={labelKey} /></strong>
-        <span><T k={value} /></span>
-      </div>
-    </div>
-  );
-}
-
-function providerConnectionHelpKey(provider: IssueProvider): string {
-  return provider === "github" ? "destinations.integration.githubConnectionHelp" : "destinations.integration.gitlabConnectionHelp";
-}
-
-function providerCredentialHelpKey(provider: IssueProvider): string {
-  return provider === "github" ? "destinations.integration.githubCredentialHelp" : "destinations.integration.gitlabCredentialHelp";
-}
-
-function providerLocalHelpKey(provider: IssueProvider): string {
-  return provider === "github" ? "destinations.integration.githubLocalHelp" : "destinations.integration.gitlabLocalHelp";
 }
 
 function repositoryStatusTitle(state: RepositoryLoadState): string {
@@ -803,6 +1113,26 @@ function repositoryStatusText(state: RepositoryLoadState, message: string): stri
   }
 
   return "Le champ URL reste disponible.";
+}
+
+function repositorySelectPlaceholder(state: RepositoryLoadState, isProviderConnected: boolean): string {
+  if (!isProviderConnected) {
+    return "Connexion Git requise";
+  }
+
+  if (state === "loading") {
+    return "Chargement des dépôts...";
+  }
+
+  if (state === "empty") {
+    return "Aucun dépôt accessible";
+  }
+
+  if (state === "error" || state === "unavailable") {
+    return "Liste indisponible";
+  }
+
+  return "Choisir un dépôt";
 }
 
 function parseRepositoryOptions(value: unknown, provider: IssueProvider): RepositoryOption[] {

@@ -3,6 +3,7 @@ import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import { getFeedbackRepository } from "../../lib/feedback-repository";
 import { listProviderIntegrations } from "../../lib/provider-integrations";
 import { installSnippet, listConfiguredProjects } from "../../lib/project-registry";
+import { listWorkspaceMembers, type WorkspaceMemberSummary } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { IssueDestinationSetup, type SettingsSection } from "../projects/issue-destination-setup";
@@ -44,6 +45,11 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
     };
   });
   const providerIntegrations = listProviderIntegrations();
+  const workspaceUsers = await loadWorkspaceUsers(session.workspace.id, {
+    userId: session.user.id,
+    email: session.user.email,
+    role: session.workspace.role
+  });
 
   return (
     <main className="shell">
@@ -55,9 +61,33 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
         }}
       />
       <section className="dashboard">
-        <IssueDestinationSetup integrations={providerIntegrations} projects={projectViews} section={section} />
+        <IssueDestinationSetup
+          integrations={providerIntegrations}
+          projects={projectViews}
+          section={section}
+          users={workspaceUsers}
+          workspaceName={session.workspace.name}
+        />
       </section>
       <AppFooter />
     </main>
   );
+}
+
+async function loadWorkspaceUsers(
+  workspaceId: string,
+  currentUser: { userId: string; email: string; role: string }
+): Promise<WorkspaceMemberSummary[]> {
+  const users = await listWorkspaceMembers(workspaceId);
+
+  if (users.length > 0) {
+    return users;
+  }
+
+  return [{
+    userId: currentUser.userId,
+    email: currentUser.email,
+    role: currentUser.role,
+    status: "active"
+  }];
 }

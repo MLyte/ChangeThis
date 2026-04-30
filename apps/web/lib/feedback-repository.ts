@@ -70,11 +70,14 @@ export type IssueAttemptResult =
 export type FeedbackRepository = {
   create(input: CreateFeedbackInput): Promise<StoredFeedback>;
   list(filters?: { projectKey?: string; status?: FeedbackStatus; workspaceId?: string }): Promise<StoredFeedback[]>;
-  get(id: string): Promise<StoredFeedback | undefined>;
-  markIssueCreationPending(id: string): Promise<StoredFeedback>;
-  recordIssueAttempt(id: string, result: IssueAttemptResult): Promise<StoredFeedback>;
-  markIgnored(id: string): Promise<StoredFeedback>;
-  dueForRetry(now?: Date): Promise<StoredFeedback[]>;
+  get(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback | undefined>;
+  markIssueCreationPending(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
+  recordIssueAttempt(id: string, result: IssueAttemptResult, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
+  recordExternalIssueState(id: string, externalIssue: ExternalIssueRef, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
+  markKept(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
+  markResolved(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
+  markIgnored(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
+  dueForRetry(filters?: Date | { workspaceId?: string; now?: Date }): Promise<StoredFeedback[]>;
   events(feedbackId: string): Promise<FeedbackEvent[]>;
 };
 
@@ -142,21 +145,21 @@ export class FileFeedbackRepository implements FeedbackRepository {
           return true;
         }
 
-        return false;
+        return feedback.workspaceId === filters.workspaceId;
       })
       .filter((feedback) => !filters.projectKey || feedback.projectKey === filters.projectKey)
       .filter((feedback) => !filters.status || feedback.status === filters.status)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
-  async get(id: string): Promise<StoredFeedback | undefined> {
+  async get(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback | undefined> {
     const store = await this.read();
-    return store.feedbacks.find((feedback) => feedback.id === id);
+    return store.feedbacks.find((feedback) => feedback.id === id && belongsToWorkspace(feedback, filters.workspaceId));
   }
 
-  async markIssueCreationPending(id: string): Promise<StoredFeedback> {
+  async markIssueCreationPending(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
     return this.update((store) => {
-      const feedback = findFeedback(store, id);
+      const feedback = findFeedback(store, id, filters.workspaceId);
       const now = new Date().toISOString();
       const fromStatus = feedback.status;
 
@@ -167,9 +170,9 @@ export class FileFeedbackRepository implements FeedbackRepository {
     });
   }
 
-  async recordIssueAttempt(id: string, result: IssueAttemptResult): Promise<StoredFeedback> {
+  async recordIssueAttempt(id: string, result: IssueAttemptResult, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
     return this.update((store) => {
-      const feedback = findFeedback(store, id);
+      const feedback = findFeedback(store, id, filters.workspaceId);
       const now = new Date().toISOString();
       const fromStatus = feedback.status;
 
@@ -195,9 +198,51 @@ export class FileFeedbackRepository implements FeedbackRepository {
     });
   }
 
-  async markIgnored(id: string): Promise<StoredFeedback> {
+  async recordExternalIssueState(id: string, externalIssue: ExternalIssueRef, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
     return this.update((store) => {
-      const feedback = findFeedback(store, id);
+      const feedback = findFeedback(store, id, filters.workspaceId);
+      const now = new Date().toISOString();
+      const fromStatus = feedback.status;
+
+      feedback.externalIssue = externalIssue;
+      feedback.status = externalIssue.state === "closed" ? "resolved" : "sent_to_provider";
+      feedback.updatedAt = now;
+      store.events.unshift(
+        createEvent(id, fromStatus, feedback.status, "provider_issue_state_synced", externalIssue.provider, externalIssue.url, now)
+      );
+      return feedback;
+    });
+  }
+
+  async markKept(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.update((store) => {
+      const feedback = findFeedback(store, id, filters.workspaceId);
+      const now = new Date().toISOString();
+      const fromStatus = feedback.status;
+
+      feedback.status = "kept";
+      feedback.updatedAt = now;
+      store.events.unshift(createEvent(id, fromStatus, "kept", "kept_without_issue", undefined, undefined, now));
+      return feedback;
+    });
+  }
+
+  async markResolved(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.update((store) => {
+      const feedback = findFeedback(store, id, filters.workspaceId);
+      const now = new Date().toISOString();
+      const fromStatus = feedback.status;
+
+      feedback.status = "resolved";
+      feedback.updatedAt = now;
+      store.events.unshift(createEvent(id, fromStatus, "resolved", "provider_issue_closed", feedback.issueTarget.provider, feedback.externalIssue?.url, now));
+      return feedback;
+    });
+  }
+
+  async markIgnored(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.update((store) => {
+      const feedback = findFeedback(store, id, filters.workspaceId);
       const now = new Date().toISOString();
       const fromStatus = feedback.status;
 
@@ -208,10 +253,15 @@ export class FileFeedbackRepository implements FeedbackRepository {
     });
   }
 
-  async dueForRetry(now = new Date()): Promise<StoredFeedback[]> {
+  async dueForRetry(filters: Date | { workspaceId?: string; now?: Date } = {}): Promise<StoredFeedback[]> {
     const store = await this.read();
+    const normalizedFilters = filters instanceof Date ? { now: filters } : filters;
+    const now = normalizedFilters.now ?? new Date();
     return store.feedbacks.filter((feedback) => {
-      return feedback.status === "retrying" && feedback.nextRetryAt !== undefined && Date.parse(feedback.nextRetryAt) <= now.getTime();
+      return belongsToWorkspace(feedback, normalizedFilters.workspaceId)
+        && feedback.status === "retrying"
+        && feedback.nextRetryAt !== undefined
+        && Date.parse(feedback.nextRetryAt) <= now.getTime();
     });
   }
 
@@ -285,14 +335,18 @@ async function writeStore(filePath: string, store: DataStore): Promise<void> {
   await rename(tempPath, filePath);
 }
 
-function findFeedback(store: DataStore, id: string): StoredFeedback {
-  const feedback = store.feedbacks.find((item) => item.id === id);
+function findFeedback(store: DataStore, id: string, workspaceId?: string): StoredFeedback {
+  const feedback = store.feedbacks.find((item) => item.id === id && belongsToWorkspace(item, workspaceId));
 
   if (!feedback) {
     throw new Error(`Feedback ${id} was not found`);
   }
 
   return feedback;
+}
+
+function belongsToWorkspace(feedback: StoredFeedback, workspaceId?: string): boolean {
+  return !workspaceId || feedback.workspaceId === workspaceId;
 }
 
 function parseDataUrlMimeType(value: string): string {

@@ -12,17 +12,12 @@ const rateLimitMaxRequests = 20;
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function corsHeaders(origin: string | null): HeadersInit {
-  if (!isKnownOrigin(origin)) {
-    return {};
-  }
-
-  const allowedOrigin = origin;
-  if (!allowedOrigin) {
+  if (!origin) {
     return {};
   }
 
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",

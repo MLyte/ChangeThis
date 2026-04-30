@@ -1,5 +1,6 @@
 import type { IssueProvider } from "@changethis/shared";
 import { getProviderCredentialSecret } from "./credential-store";
+import { isProviderIntegrationDisabled } from "./provider-integration-state";
 
 export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";
 
@@ -11,7 +12,10 @@ export type ProviderIntegrationSummary = {
   status: ProviderIntegrationStatus;
   connectPath: string;
   connectConfigured: boolean;
+  credentialAvailable: boolean;
   credentialConfigured: boolean;
+  environmentCredentialConfigured: boolean;
+  disabled: boolean;
   connectionConfigKeys: string[];
   credentialConfigKeys: string[];
   managePath?: string;
@@ -48,7 +52,10 @@ export function listProviderIntegrations(): ProviderIntegrationSummary[] {
     status: integration.status,
     connectPath: integration.connectPath,
     connectConfigured: integration.connectConfigured,
+    credentialAvailable: integration.credentialAvailable,
     credentialConfigured: integration.credentialConfigured,
+    environmentCredentialConfigured: integration.environmentCredentialConfigured,
+    disabled: integration.disabled,
     connectionConfigKeys: integration.connectionConfigKeys,
     credentialConfigKeys: integration.credentialConfigKeys,
     managePath: integration.managePath
@@ -98,45 +105,57 @@ function getRuntimeProviderIntegrations(): RuntimeProviderIntegration[] {
   const storedGitlabToken = getProviderCredentialSecret("gitlab", gitlabIntegrationId, "access_token");
   const githubInstallationId = getProviderCredentialSecret("github", githubIntegrationId, "installation_id") ?? process.env.GITHUB_INSTALLATION_ID;
   const githubAppConfigured = Boolean(process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY && githubInstallationId);
-  const githubCredentialConfigured = Boolean(storedGithubToken || githubToken || githubAppConfigured);
+  const githubDisabled = isProviderIntegrationDisabled("github", githubIntegrationId);
+  const gitlabDisabled = isProviderIntegrationDisabled("gitlab", gitlabIntegrationId);
+  const githubEnvironmentCredentialConfigured = Boolean(githubToken || githubAppConfigured);
+  const gitlabEnvironmentCredentialConfigured = Boolean(gitlabToken);
+  const githubCredentialAvailable = Boolean(storedGithubToken || githubToken || githubAppConfigured);
+  const gitlabCredentialAvailable = Boolean(storedGitlabToken || gitlabToken);
+  const githubCredentialConfigured = githubCredentialAvailable && !githubDisabled;
   const githubConnectConfigured = Boolean(process.env.GITHUB_APP_SLUG);
   const gitlabConnectConfigured = Boolean(process.env.GITLAB_OAUTH_APP_ID && process.env.GITLAB_OAUTH_APP_SECRET);
-  const gitlabCredentialConfigured = Boolean(storedGitlabToken || gitlabToken);
+  const gitlabCredentialConfigured = gitlabCredentialAvailable && !gitlabDisabled;
 
   return [
     {
       id: githubIntegrationId,
       provider: "github",
       name: "GitHub",
-      accountLabel: process.env.GITHUB_ACCOUNT_LABEL ?? (githubCredentialConfigured ? "GitHub connected" : "No account linked"),
+      accountLabel: githubDisabled ? "Connexion désactivée dans ChangeThis" : process.env.GITHUB_ACCOUNT_LABEL ?? (githubCredentialConfigured ? "GitHub connected" : "No account linked"),
       status: githubCredentialConfigured ? "connected" : "needs_setup",
       connectPath: "/api/integrations/github/connect",
       connectConfigured: githubConnectConfigured,
+      credentialAvailable: githubCredentialAvailable,
       credentialConfigured: githubCredentialConfigured,
+      environmentCredentialConfigured: githubEnvironmentCredentialConfigured,
+      disabled: githubDisabled,
       connectionConfigKeys: ["GITHUB_APP_SLUG", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"],
       credentialConfigKeys: ["GITHUB_TOKEN", "GITHUB_INSTALLATION_ID"],
       managePath: process.env.GITHUB_MANAGE_URL ?? "https://github.com/settings/installations",
       baseUrl: "https://github.com",
       callbackPath: "/api/integrations/github/callback",
       oauthScopes: [],
-      token: storedGithubToken ?? githubToken
+      token: githubDisabled ? undefined : storedGithubToken ?? githubToken
     },
     {
       id: gitlabIntegrationId,
       provider: "gitlab",
       name: "GitLab",
-      accountLabel: process.env.GITLAB_ACCOUNT_LABEL ?? (gitlabCredentialConfigured ? "GitLab connected" : "No account linked"),
+      accountLabel: gitlabDisabled ? "Connexion désactivée dans ChangeThis" : process.env.GITLAB_ACCOUNT_LABEL ?? (gitlabCredentialConfigured ? "GitLab connected" : "No account linked"),
       status: gitlabCredentialConfigured ? "connected" : "needs_setup",
       connectPath: "/api/integrations/gitlab/connect",
       connectConfigured: gitlabConnectConfigured,
+      credentialAvailable: gitlabCredentialAvailable,
       credentialConfigured: gitlabCredentialConfigured,
+      environmentCredentialConfigured: gitlabEnvironmentCredentialConfigured,
+      disabled: gitlabDisabled,
       connectionConfigKeys: ["GITLAB_OAUTH_APP_ID", "GITLAB_OAUTH_APP_SECRET"],
       credentialConfigKeys: ["GITLAB_TOKEN"],
       managePath: process.env.GITLAB_MANAGE_URL,
       baseUrl: gitlabBaseUrl,
       callbackPath: "/api/integrations/gitlab/callback",
       oauthScopes: ["api", "read_user"],
-      token: storedGitlabToken ?? gitlabToken
+      token: gitlabDisabled ? undefined : storedGitlabToken ?? gitlabToken
     }
   ];
 }

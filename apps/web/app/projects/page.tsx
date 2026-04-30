@@ -11,9 +11,30 @@ import { AppHeader } from "../app-header";
 import { T } from "../i18n";
 import { ProviderBadge } from "../provider-badge";
 import { FeedbackActions } from "./feedback-actions";
+import { RetryDueButton } from "./retry-due-button";
 import { ScreenshotPreview } from "./screenshot-preview";
 
 export const dynamic = "force-dynamic";
+
+type ProjectsPageProps = {
+  searchParams?: Promise<{
+    provider?: string;
+    q?: string;
+    site?: string;
+    status?: string;
+    type?: string;
+  }>;
+};
+
+type DashboardStatusFilter = "all" | "priority" | FeedbackStatus;
+
+type DashboardFilters = {
+  provider: "all" | "github" | "gitlab";
+  query: string;
+  site: string;
+  status: DashboardStatusFilter;
+  type: "all" | "comment" | "pin" | "screenshot";
+};
 
 const statusLabelKeys: Record<FeedbackStatus, string> = {
   raw: "status.raw.long",
@@ -21,6 +42,8 @@ const statusLabelKeys: Record<FeedbackStatus, string> = {
   retrying: "status.retrying.long",
   sent_to_provider: "status.sent_to_provider.long",
   failed: "status.failed.long",
+  kept: "status.kept.long",
+  resolved: "status.resolved.long",
   ignored: "status.ignored.long"
 };
 
@@ -30,6 +53,8 @@ const statusClasses: Record<FeedbackStatus, string> = {
   retrying: "needs_setup",
   sent_to_provider: "connected",
   failed: "failed",
+  kept: "muted",
+  resolved: "connected",
   ignored: "muted"
 };
 
@@ -38,7 +63,7 @@ const projectNavItems = [
   { href: "/settings", labelKey: "nav.settings" }
 ];
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
   const session = await requireWorkspaceSession();
 
   if (isAuthFailure(session)) {
@@ -54,19 +79,23 @@ export default async function ProjectsPage() {
   }
 
   const workspaceId = session.workspace.id;
+  const params = await searchParams;
+  const filters = parseDashboardFilters(params);
   const projects = await listConfiguredProjects(workspaceId);
   const feedbacks = await getFeedbackRepository().list({ workspaceId });
-  const activeFeedbacks = feedbacks.filter((feedback) => feedback.status !== "ignored");
-  const pendingFeedbacks = feedbacks.filter((feedback) => feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed");
-  const queuedFeedbacks = feedbacks.filter((feedback) => feedback.status === "raw" || feedback.status === "issue_creation_pending");
-  const retryFeedbacks = feedbacks.filter((feedback) => feedback.status === "retrying");
-  const failedFeedbacks = feedbacks.filter((feedback) => feedback.status === "failed");
-  const sentFeedbacks = feedbacks.filter((feedback) => feedback.status === "sent_to_provider");
-  const ignoredFeedbacks = feedbacks.filter((feedback) => feedback.status === "ignored");
+  const filteredFeedbacks = feedbacks.filter((feedback) => matchesDashboardFilters(feedback, filters));
+  const priorityFeedbacks = filteredFeedbacks.filter(isPriorityFeedback);
+  const queuedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "issue_creation_pending");
+  const retryFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "retrying");
+  const failedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "failed");
+  const sentFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "sent_to_provider");
+  const keptFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "kept");
+  const resolvedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "resolved");
   const githubProjects = projects.filter((project) => project.issueTarget.provider === "github").length;
   const gitlabProjects = projects.filter((project) => project.issueTarget.provider === "gitlab").length;
   const latestFeedback = feedbacks.at(0);
   const readyProjects = projects.filter((project) => project.issueTarget.namespace && project.issueTarget.project).length;
+  const hasActiveFilters = isFilteringDashboard(filters);
 
   return (
     <main className="shell">
@@ -97,11 +126,11 @@ export default async function ProjectsPage() {
         </div>
 
         <div className="dashboard-status-grid" aria-label="Synthèse opérationnelle">
-          <StatusMetric icon={Inbox} label="À traiter" value={pendingFeedbacks.length} tone={pendingFeedbacks.length > 0 ? "warning" : "ok"} />
+          <StatusMetric icon={Inbox} label="À traiter" value={priorityFeedbacks.length} tone={priorityFeedbacks.length > 0 ? "warning" : "ok"} />
           <StatusMetric icon={Clock3} label="En file" value={queuedFeedbacks.length} tone="warning" />
           <StatusMetric icon={RotateCcw} label="Relances" value={retryFeedbacks.length} tone="warning" />
           <StatusMetric icon={AlertTriangle} label="Échecs" value={failedFeedbacks.length} tone="danger" />
-          <StatusMetric icon={CheckCircle2} label="Créées" value={sentFeedbacks.length} tone="ok" />
+          <StatusMetric icon={CheckCircle2} label="Résolus" value={resolvedFeedbacks.length} tone="ok" />
         </div>
 
         <div className="dashboard-workbench compact-workbench">
@@ -111,25 +140,51 @@ export default async function ProjectsPage() {
                 <p className="eyebrow"><T k="projects.inbox.eyebrow" /></p>
                 <h2 id="local-inbox-title"><T k="projects.inbox.title" /></h2>
               </div>
-              <div className="inbox-toolbar">
-                <form action="/api/projects/retries" method="post">
-                  <button className="button secondary-button" type="submit"><T k="projects.inbox.retryDue" /></button>
-                </form>
-                <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
-              </div>
+            <div className="inbox-toolbar">
+              <RetryDueButton />
+              <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
             </div>
+          </div>
 
-            {activeFeedbacks.length === 0 ? (
+            <DashboardFilterBar
+              filteredCount={filteredFeedbacks.length}
+              filters={filters}
+              hasActiveFilters={hasActiveFilters}
+              projects={projects}
+              totalCount={feedbacks.length}
+            />
+
+            {priorityFeedbacks.length === 0 ? (
               <div className="empty-state compact-empty-state">
-                <h2><T k="projects.empty.title" /></h2>
-                <p><T k="projects.empty.copy" /></p>
-                <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
+                <h2>{hasActiveFilters ? "Aucun retour pour ces filtres" : <T k="projects.empty.title" />}</h2>
+                <p>{hasActiveFilters ? "Ajustez les filtres ou revenez à la vue complète." : <T k="projects.empty.copy" />}</p>
+                {hasActiveFilters ? (
+                  <Link className="button secondary-button" href="/projects">Réinitialiser les filtres</Link>
+                ) : (
+                  <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
+                )}
               </div>
             ) : (
-              <div className="feedback-list" role="list" aria-label="Retours actifs">
-                {activeFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
+              <div className="feedback-list" role="list" aria-label="Retours à traiter">
+                {priorityFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
               </div>
             )}
+
+            <FeedbackGroup
+              description="Feedbacks liés à une issue Git encore ouverte ou à vérifier."
+              feedbacks={sentFeedbacks}
+              title="Issues créées"
+            />
+            <FeedbackGroup
+              description="Feedbacks dont l'issue Git correspondante est fermée."
+              feedbacks={resolvedFeedbacks}
+              title="Résolus"
+            />
+            <FeedbackGroup
+              description="Feedbacks conservés dans ChangeThis sans création d'issue."
+              feedbacks={keptFeedbacks}
+              title="Conservés sans issue"
+            />
           </section>
 
           <aside className="dashboard-side-panel" aria-label="Contexte ChangeThis">
@@ -161,7 +216,9 @@ export default async function ProjectsPage() {
               </div>
               <div className="activity-stack">
                 <ActivityItem label="Dernier retour" value={latestFeedback ? formatDate(latestFeedback.createdAt) : "—"} />
-                <ActivityItem label="Archivés" value={ignoredFeedbacks.length} />
+                <ActivityItem label="Affichés" value={`${filteredFeedbacks.length}/${feedbacks.length}`} />
+                <ActivityItem label="Conservés" value={feedbacks.filter((feedback) => feedback.status === "kept").length} />
+                <ActivityItem label="Archivés" value={feedbacks.filter((feedback) => feedback.status === "ignored").length} />
                 <ActivityItem label="Total reçus" value={feedbacks.length} />
               </div>
             </section>
@@ -170,6 +227,85 @@ export default async function ProjectsPage() {
       </section>
       <AppFooter />
     </main>
+  );
+}
+
+function DashboardFilterBar({
+  filteredCount,
+  filters,
+  hasActiveFilters,
+  projects,
+  totalCount
+}: {
+  filteredCount: number;
+  filters: DashboardFilters;
+  hasActiveFilters: boolean;
+  projects: ChangeThisProject[];
+  totalCount: number;
+}) {
+  return (
+    <form action="/projects" className="dashboard-filters">
+      <div className="filter-field search-field">
+        <label htmlFor="dashboard-filter-q">Recherche</label>
+        <input
+          defaultValue={filters.query}
+          id="dashboard-filter-q"
+          name="q"
+          placeholder="Titre, texte, page, dépôt..."
+          type="search"
+        />
+      </div>
+
+      <div className="filter-field">
+        <label htmlFor="dashboard-filter-status">Statut</label>
+        <select defaultValue={filters.status} id="dashboard-filter-status" name="status">
+          <option value="all">Tous</option>
+          <option value="priority">À traiter</option>
+          <option value="raw">Nouveaux</option>
+          <option value="retrying">Relances</option>
+          <option value="failed">Échecs</option>
+          <option value="sent_to_provider">Issues créées</option>
+          <option value="resolved">Résolus</option>
+          <option value="kept">Conservés</option>
+          <option value="ignored">Ignorés</option>
+        </select>
+      </div>
+
+      <div className="filter-field">
+        <label htmlFor="dashboard-filter-site">Site</label>
+        <select defaultValue={filters.site} id="dashboard-filter-site" name="site">
+          <option value="all">Tous les sites</option>
+          {projects.map((project) => (
+            <option key={project.publicKey} value={project.publicKey}>{project.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="filter-field">
+        <label htmlFor="dashboard-filter-type">Type</label>
+        <select defaultValue={filters.type} id="dashboard-filter-type" name="type">
+          <option value="all">Tous</option>
+          <option value="comment">Note</option>
+          <option value="pin">Pin</option>
+          <option value="screenshot">Capture</option>
+        </select>
+      </div>
+
+      <div className="filter-field">
+        <label htmlFor="dashboard-filter-provider">Git</label>
+        <select defaultValue={filters.provider} id="dashboard-filter-provider" name="provider">
+          <option value="all">Tous</option>
+          <option value="github">GitHub</option>
+          <option value="gitlab">GitLab</option>
+        </select>
+      </div>
+
+      <div className="filter-actions">
+        <span>{filteredCount}/{totalCount} retours</span>
+        <button className="button" type="submit">Filtrer</button>
+        {hasActiveFilters ? <Link className="button secondary-button" href="/projects">Réinitialiser</Link> : null}
+      </div>
+    </form>
   );
 }
 
@@ -210,6 +346,27 @@ function ActivityItem({ label, value }: { label: string; value: number | string 
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function FeedbackGroup({ description, feedbacks, title }: { description: string; feedbacks: StoredFeedback[]; title: string }) {
+  if (feedbacks.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="feedback-group" aria-labelledby={`feedback-group-${slugify(title)}`}>
+      <div className="feedback-group-heading">
+        <div>
+          <h3 id={`feedback-group-${slugify(title)}`}>{title}</h3>
+          <p>{description}</p>
+        </div>
+        <span className="status-badge muted">{feedbacks.length}</span>
+      </div>
+      <div className="feedback-list" role="list" aria-label={title}>
+        {feedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
+      </div>
+    </section>
   );
 }
 
@@ -285,6 +442,96 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
       />
     </article>
   );
+}
+
+function slugify(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function parseDashboardFilters(params?: {
+  provider?: string;
+  q?: string;
+  site?: string;
+  status?: string;
+  type?: string;
+}): DashboardFilters {
+  return {
+    provider: params?.provider === "github" || params?.provider === "gitlab" ? params.provider : "all",
+    query: params?.q?.trim() ?? "",
+    site: params?.site?.trim() || "all",
+    status: parseStatusFilter(params?.status),
+    type: params?.type === "comment" || params?.type === "pin" || params?.type === "screenshot" ? params.type : "all"
+  };
+}
+
+function parseStatusFilter(value?: string): DashboardStatusFilter {
+  if (value === "priority" || isFeedbackStatus(value)) {
+    return value;
+  }
+
+  return "all";
+}
+
+function matchesDashboardFilters(feedback: StoredFeedback, filters: DashboardFilters): boolean {
+  if (filters.provider !== "all" && feedback.issueTarget.provider !== filters.provider) {
+    return false;
+  }
+
+  if (filters.type !== "all" && feedback.payload.type !== filters.type) {
+    return false;
+  }
+
+  if (filters.status === "priority" && !isPriorityFeedback(feedback)) {
+    return false;
+  }
+
+  if (filters.status !== "all" && filters.status !== "priority" && feedback.status !== filters.status) {
+    return false;
+  }
+
+  if (filters.site !== "all" && feedback.projectKey !== filters.site) {
+    return false;
+  }
+
+  if (!filters.query) {
+    return true;
+  }
+
+  const haystack = [
+    feedback.issueDraft.title,
+    feedback.payload.message,
+    feedback.payload.metadata.path,
+    feedback.payload.metadata.title,
+    feedback.projectName,
+    feedback.issueTarget.namespace,
+    feedback.issueTarget.project,
+    feedback.externalIssue?.url
+  ].join(" ").toLowerCase();
+
+  return haystack.includes(filters.query.toLowerCase());
+}
+
+function isPriorityFeedback(feedback: StoredFeedback): boolean {
+  return feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
+}
+
+function isFilteringDashboard(filters: DashboardFilters): boolean {
+  return filters.provider !== "all"
+    || filters.query !== ""
+    || filters.site !== "all"
+    || filters.status !== "all"
+    || filters.type !== "all";
+}
+
+function isFeedbackStatus(value?: string): value is FeedbackStatus {
+  return value === "raw"
+    || value === "issue_creation_pending"
+    || value === "retrying"
+    || value === "sent_to_provider"
+    || value === "failed"
+    || value === "kept"
+    || value === "resolved"
+    || value === "ignored";
 }
 
 function formatDate(value: string): string {

@@ -131,6 +131,42 @@ function createGitHubClient(resolveToken: TokenResolver): IssueProviderClient {
         url: body.html_url,
         state: body.state === "closed" ? "closed" : "open"
       };
+    },
+    async getIssue(target, ref) {
+      const validatedTarget = requireValidIssueTarget("github", target);
+      const token = await requireProviderToken("github", resolveToken);
+      const issueNumber = ref.number ?? parseGitHubIssueNumber(ref.url);
+
+      if (!issueNumber) {
+        throw new IssueProviderError("github", "validation_failed", "GitHub issue number is missing.");
+      }
+
+      const response = await fetch(`https://api.github.com/repos/${validatedTarget.namespace}/${validatedTarget.project}/issues/${issueNumber}`, {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${token}`,
+          "User-Agent": "ChangeThis",
+          "X-GitHub-Api-Version": "2022-11-28"
+        }
+      });
+      const body = await parseResponseBody(response);
+
+      if (!response.ok) {
+        throw providerError("github", response.status, body, "issue lookup");
+      }
+
+      if (!isRecord(body) || typeof body.html_url !== "string") {
+        throw new IssueProviderError("github", "validation_failed", "GitHub returned an unexpected issue payload.");
+      }
+
+      return {
+        ...ref,
+        provider: "github",
+        id: typeof body.id === "number" ? String(body.id) : ref.id,
+        number: typeof body.number === "number" ? body.number : issueNumber,
+        url: body.html_url,
+        state: body.state === "closed" ? "closed" : "open"
+      };
     }
   };
 }
@@ -174,8 +210,54 @@ function createGitLabClient(resolveToken: TokenResolver): IssueProviderClient {
         url: body.web_url,
         state: body.state === "closed" ? "closed" : "open"
       };
+    },
+    async getIssue(target, ref) {
+      const validatedTarget = requireValidIssueTarget("gitlab", target);
+      const token = await requireProviderToken("gitlab", resolveToken);
+      const projectId = validatedTarget.externalProjectId ?? encodeURIComponent(`${validatedTarget.namespace}/${validatedTarget.project}`);
+      const issueIid = ref.iid ?? parseGitLabIssueIid(ref.url);
+
+      if (!issueIid) {
+        throw new IssueProviderError("gitlab", "validation_failed", "GitLab issue IID is missing.");
+      }
+
+      const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
+      const response = await fetch(`${baseUrl}/api/v4/projects/${projectId}/issues/${issueIid}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "PRIVATE-TOKEN": token
+        }
+      });
+      const body = await parseResponseBody(response);
+
+      if (!response.ok) {
+        throw providerError("gitlab", response.status, body, "issue lookup");
+      }
+
+      if (!isRecord(body) || typeof body.web_url !== "string") {
+        throw new IssueProviderError("gitlab", "validation_failed", "GitLab returned an unexpected issue payload.");
+      }
+
+      return {
+        ...ref,
+        provider: "gitlab",
+        id: typeof body.id === "number" ? String(body.id) : ref.id,
+        iid: typeof body.iid === "number" ? body.iid : issueIid,
+        url: body.web_url,
+        state: body.state === "closed" ? "closed" : "open"
+      };
     }
   };
+}
+
+function parseGitHubIssueNumber(url: string): number | undefined {
+  const value = /\/issues\/(\d+)(?:$|[?#])/.exec(url)?.[1];
+  return value ? Number(value) : undefined;
+}
+
+function parseGitLabIssueIid(url: string): number | undefined {
+  const value = /\/-\/issues\/(\d+)(?:$|[?#])/.exec(url)?.[1] ?? /\/issues\/(\d+)(?:$|[?#])/.exec(url)?.[1];
+  return value ? Number(value) : undefined;
 }
 
 function providerError(provider: IssueProvider, status: number, body: unknown, action = "issue creation"): IssueProviderError {

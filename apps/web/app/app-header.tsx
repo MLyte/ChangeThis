@@ -11,13 +11,14 @@ type HeaderNavItem = {
 
 type AppHeaderProps = {
   navItems?: HeaderNavItem[];
+  showAuthLinks?: boolean;
   session?: {
     email: string;
     isLocalMode: boolean;
   };
 };
 
-export function AppHeader({ navItems = [], session }: AppHeaderProps) {
+export function AppHeader({ navItems = [], showAuthLinks = false, session }: AppHeaderProps) {
   return (
     <header className="topbar app-header">
       <Link className="brand" href="/">
@@ -38,6 +39,17 @@ export function AppHeader({ navItems = [], session }: AppHeaderProps) {
         ) : null}
 
         <LanguageSwitch />
+
+        {!session && showAuthLinks ? (
+          <div className="public-auth-actions">
+            <Link className="link" href="/login">
+              <T k="nav.login" />
+            </Link>
+            <Link className="button" href="/signup">
+              <T k="nav.signup" />
+            </Link>
+          </div>
+        ) : null}
 
         {session ? (
           <div className="session-menu" aria-label="Session">

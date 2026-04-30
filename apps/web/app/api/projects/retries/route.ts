@@ -1,17 +1,22 @@
 import { NextResponse } from "next/server";
-import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { processDueIssueRetries } from "../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../lib/logger";
 
 export async function POST(request: Request) {
-  const session = await requireWorkspaceSession(request);
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);
   }
 
+  const workspaceId = session.workspace?.id;
+  if (!workspaceId) {
+    return authFailureResponse({ error: "Workspace access required", status: 403 });
+  }
+
   const requestId = requestIdFrom(request);
-  const results = await processDueIssueRetries(requestId);
+  const results = await processDueIssueRetries(requestId, { workspaceId });
 
   return NextResponse.json({
     processed: results.length,

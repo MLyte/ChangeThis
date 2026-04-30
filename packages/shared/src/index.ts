@@ -1,6 +1,6 @@
 export type FeedbackType = "comment" | "pin" | "screenshot";
 
-export type FeedbackStatus = "raw" | "issue_creation_pending" | "retrying" | "sent_to_provider" | "failed" | "ignored";
+export type FeedbackStatus = "raw" | "issue_creation_pending" | "retrying" | "sent_to_provider" | "failed" | "kept" | "resolved" | "ignored";
 export type IssueProvider = "github" | "gitlab";
 export type WorkspaceMemberRole = "owner" | "admin" | "member" | "viewer";
 export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";

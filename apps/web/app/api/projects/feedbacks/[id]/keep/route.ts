@@ -26,8 +26,8 @@ export async function POST(request: Request, context: RouteContext) {
   const repository = getFeedbackRepository();
 
   try {
-    const feedback = await repository.markIgnored(id, { workspaceId });
-    logInfo("feedback_ignored", {
+    const feedback = await repository.markKept(id, { workspaceId });
+    logInfo("feedback_kept_without_issue", {
       request_id: requestId,
       project_id: feedback.projectKey,
       feedback_id: feedback.id

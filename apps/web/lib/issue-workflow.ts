@@ -7,7 +7,11 @@ import { logError, logInfo, logWarn } from "./logger";
 const retryBaseDelayMs = 30_000;
 const retryMaxDelayMs = 15 * 60_000;
 
-export async function createIssueForFeedback(feedback: StoredFeedback, requestId: string): Promise<StoredFeedback> {
+export async function createIssueForFeedback(
+  feedback: StoredFeedback,
+  requestId: string,
+  options: { workspaceId?: string } = {}
+): Promise<StoredFeedback> {
   if (feedback.externalIssue && feedback.status === "sent_to_provider") {
     return feedback;
   }
@@ -20,7 +24,7 @@ export async function createIssueForFeedback(feedback: StoredFeedback, requestId
       ok: false,
       error: `Issue destination is invalid: ${issueTargetValidation.error}`,
       retryable: false
-    });
+    }, options);
 
     logWarn("provider_issue_create_rejected_invalid_target", {
       request_id: requestId,
@@ -32,7 +36,7 @@ export async function createIssueForFeedback(feedback: StoredFeedback, requestId
     return updated;
   }
 
-  const pendingFeedback = await repository.markIssueCreationPending(feedback.id);
+  const pendingFeedback = await repository.markIssueCreationPending(feedback.id, options);
   const client = getIssueProviderClient(feedback.issueTarget.provider, {
     integrationId: feedback.issueTarget.integrationId
   });
@@ -47,7 +51,7 @@ export async function createIssueForFeedback(feedback: StoredFeedback, requestId
 
   try {
     const externalIssue = await client.createIssue(pendingFeedback.issueTarget, pendingFeedback.issueDraft, { idempotencyKey });
-    const updated = await repository.recordIssueAttempt(pendingFeedback.id, { ok: true, externalIssue });
+    const updated = await repository.recordIssueAttempt(pendingFeedback.id, { ok: true, externalIssue }, options);
 
     logInfo("provider_issue_create_succeeded", {
       request_id: requestId,
@@ -67,7 +71,7 @@ export async function createIssueForFeedback(feedback: StoredFeedback, requestId
       error: message,
       retryable,
       nextRetryAt
-    });
+    }, options);
 
     const log = retryable ? logWarn : logError;
     log("provider_issue_create_failed", {
@@ -84,16 +88,47 @@ export async function createIssueForFeedback(feedback: StoredFeedback, requestId
   }
 }
 
-export async function processDueIssueRetries(requestId: string): Promise<StoredFeedback[]> {
+export async function processDueIssueRetries(requestId: string, options: { workspaceId?: string } = {}): Promise<StoredFeedback[]> {
   const repository = getFeedbackRepository();
-  const dueFeedbacks = await repository.dueForRetry();
+  const dueFeedbacks = await repository.dueForRetry(options);
   const results: StoredFeedback[] = [];
 
   for (const feedback of dueFeedbacks) {
-    results.push(await createIssueForFeedback(feedback, requestId));
+    results.push(await createIssueForFeedback(feedback, requestId, options));
   }
 
   return results;
+}
+
+export async function syncFeedbackIssueState(
+  feedback: StoredFeedback,
+  requestId: string,
+  options: { workspaceId?: string } = {}
+): Promise<StoredFeedback> {
+  if (!feedback.externalIssue) {
+    return feedback;
+  }
+
+  const client = getIssueProviderClient(feedback.issueTarget.provider, {
+    integrationId: feedback.issueTarget.integrationId
+  });
+
+  if (!client.getIssue) {
+    return feedback;
+  }
+
+  const externalIssue = await client.getIssue(feedback.issueTarget, feedback.externalIssue);
+  const updated = await getFeedbackRepository().recordExternalIssueState(feedback.id, externalIssue, options);
+
+  logInfo("provider_issue_state_synced", {
+    request_id: requestId,
+    project_id: updated.projectKey,
+    feedback_id: updated.id,
+    provider: externalIssue.provider,
+    state: externalIssue.state
+  });
+
+  return updated;
 }
 
 function isRetryable(error: unknown): boolean {
