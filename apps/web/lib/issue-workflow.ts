@@ -33,7 +33,9 @@ export async function createIssueForFeedback(feedback: StoredFeedback, requestId
   }
 
   const pendingFeedback = await repository.markIssueCreationPending(feedback.id);
-  const client = getIssueProviderClient(feedback.issueTarget.provider);
+  const client = getIssueProviderClient(feedback.issueTarget.provider, {
+    integrationId: feedback.issueTarget.integrationId
+  });
   const idempotencyKey = `changethis:${pendingFeedback.id}`;
 
   logInfo("provider_issue_create_started", {

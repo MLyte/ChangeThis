@@ -6,6 +6,7 @@ import {
   saveProjectIssueTarget
 } from "../../../../lib/project-registry";
 import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../lib/auth";
+import { getProviderIntegration } from "../../../../lib/provider-integrations";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
 
 export async function GET(request: Request) {
@@ -63,11 +64,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "projectKey, provider, and repositoryUrl are required" }, { status: 422 });
   }
 
+  const integrationId = typeof body.integrationId === "string" ? body.integrationId : undefined;
+
+  if (integrationId && !getProviderIntegration(body.provider, integrationId)) {
+    return NextResponse.json({ error: "Unknown provider integration" }, { status: 422 });
+  }
+
   try {
     const project = await saveProjectIssueTarget({
       projectKey: body.projectKey,
       provider: body.provider,
-      repositoryUrl: body.repositoryUrl
+      repositoryUrl: body.repositoryUrl,
+      integrationId,
+      externalProjectId: typeof body.externalProjectId === "string" ? body.externalProjectId : undefined
     }, workspaceId);
 
     logInfo("project_issue_target_updated", {

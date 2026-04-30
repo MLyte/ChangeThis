@@ -27,8 +27,9 @@ const widgetCopy = {
     close: "Fermer",
     sending: "Envoi...",
     send: "Envoyer",
-    selectArea: "Trace la zone a capturer",
-    sent: "Feedback envoye. Merci.",
+    selectArea: "Trace la zone à capturer",
+    removePin: "Supprimer la pin",
+    sent: "Feedback envoyé. Merci.",
     alertError: "Impossible d'envoyer le feedback. Réessaie dans un instant."
   },
   en: {
@@ -43,6 +44,7 @@ const widgetCopy = {
     sending: "Sending...",
     send: "Send",
     selectArea: "Drag the area to capture",
+    removePin: "Remove pin",
     sent: "Feedback sent. Thank you.",
     alertError: "Unable to send feedback. Try again in a moment."
   }
@@ -167,6 +169,37 @@ export function initChangeThis(options: WidgetOptions): void {
           line-height: 1.4;
           margin: 8px 0 0;
         }
+        .selection-summary {
+          align-items: center;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
+          margin-top: 8px;
+          padding: 8px 10px;
+        }
+        .selection-summary span {
+          color: #374151;
+          font-size: 12px;
+          font-weight: 700;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .clear-selection {
+          border: 0;
+          border-radius: 5px;
+          background: #fee2e2;
+          color: #991b1b;
+          cursor: pointer;
+          flex: 0 0 auto;
+          font-size: 12px;
+          font-weight: 800;
+          min-height: 28px;
+          padding: 5px 8px;
+        }
         .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
         .send { background: #0f766e; border-color: #0f766e; color: #fff; }
         .send:disabled { cursor: wait; opacity: .65; }
@@ -216,7 +249,13 @@ export function initChangeThis(options: WidgetOptions): void {
             <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${escapeHtml(copy.screenshot)}</button>
           </div>
           <textarea placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.message)}</textarea>
-          <p class="meta">${feedbackMeta(state, copy.metaDefault)}</p>
+          ${state.pin ? "" : `<p class="meta">${feedbackMeta(state, copy.metaDefault)}</p>`}
+          ${state.pin ? `
+            <div class="selection-summary">
+              <span>${feedbackMeta(state, copy.metaDefault)}</span>
+              <button class="clear-selection" data-action="clear-pin">${escapeHtml(copy.removePin)}</button>
+            </div>
+          ` : ""}
           <div class="actions">
             <button class="cancel" data-action="close">${escapeHtml(copy.close)}</button>
             <button class="send" data-action="send" ${state.sending ? "disabled" : ""}>${state.sending ? escapeHtml(copy.sending) : escapeHtml(copy.send)}</button>
@@ -232,6 +271,12 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLButtonElement>("[data-action='close']")?.addEventListener("click", () => {
       state.open = false;
+      render();
+    });
+
+    shadow.querySelector<HTMLButtonElement>("[data-action='clear-pin']")?.addEventListener("click", () => {
+      state.pin = undefined;
+      state.type = "comment";
       render();
     });
 
@@ -253,6 +298,11 @@ export function initChangeThis(options: WidgetOptions): void {
           render();
           startCaptureSelection(copy.selectArea, (area) => {
             state.captureArea = area;
+            state.open = true;
+            render();
+          }, () => {
+            state.type = "comment";
+            state.captureArea = undefined;
             state.open = true;
             render();
           });
@@ -360,7 +410,7 @@ async function submitFeedback(params: {
   }
 }
 
-function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => void): void {
+function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => void, onCancel?: () => void): void {
   const layer = document.createElement("div");
   layer.innerHTML = `
     <style>
@@ -405,6 +455,18 @@ function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => v
   let latestX = 0;
   let latestY = 0;
   let dragging = false;
+  let isFinished = false;
+
+  const finish = (callback?: () => void) => {
+    if (isFinished) {
+      return;
+    }
+
+    isFinished = true;
+    document.removeEventListener("keydown", handleKeydown, true);
+    layer.remove();
+    callback?.();
+  };
 
   const updateBox = () => {
     if (!box) return;
@@ -445,19 +507,31 @@ function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => v
     const y = Math.min(startY, latestY);
     const width = Math.abs(latestX - startX);
     const height = Math.abs(latestY - startY);
-    layer.remove();
 
     if (width < 8 || height < 8) {
+      finish(onCancel);
       return;
     }
 
-    onSelect({
+    finish(() => onSelect({
       x: Math.round(x),
       y: Math.round(y),
       width: Math.round(width),
       height: Math.round(height)
-    });
+    }));
   });
+
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    finish(onCancel);
+  };
+
+  document.addEventListener("keydown", handleKeydown, true);
 }
 
 function startPinMode(onSelect: (pin: PinTarget) => void): void {

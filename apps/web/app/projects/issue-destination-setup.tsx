@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import {
   CheckCircle2,
   Copy,
@@ -9,6 +9,7 @@ import {
   Globe2,
   Link2,
   Plus,
+  RefreshCw,
   Save,
   Settings2,
   TriangleAlert,
@@ -19,6 +20,7 @@ import type { IssueProvider, IssueTarget } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
+import { ProviderBadge } from "../provider-badge";
 
 type Props = {
   projects: ChangeThisProject[];
@@ -37,9 +39,17 @@ type RepositoryOption = {
   namespace: string;
   project: string;
   webUrl: string;
+  externalProjectId?: string;
 };
 
 type RepositoryLoadState = "idle" | "loading" | "ready" | "empty" | "unavailable" | "error";
+type ConnectionHealthState = "inactive" | "checking" | "active" | "error";
+type ConnectionTestResult = {
+  state: ConnectionHealthState;
+  message?: string;
+  repositoryCount?: number;
+  checkedAt?: Date;
+};
 
 export function IssueDestinationSetup({ projects, integrations, section }: Props) {
   const { t } = useLanguage();
@@ -61,6 +71,8 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
 
   const selectedProject = projectViews.find((project) => project.publicKey === selectedProjectKey);
   const missingDestinations = projectViews.filter((project) => !project.issueTarget.namespace || !project.issueTarget.project);
+  const selectedIntegration = integrations.find((integration) => integration.provider === selectedProvider);
+  const selectedRepository = repositoryOptions.find((repository) => repository.webUrl === repoUrl);
 
   useEffect(() => {
     if (!isSiteModalOpen || !connectedProviders.has(selectedProvider)) {
@@ -158,7 +170,9 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
         body: JSON.stringify({
           projectKey: selectedProjectKey,
           provider: selectedProvider,
-          repositoryUrl: repoUrl
+          repositoryUrl: repoUrl,
+          integrationId: selectedIntegration?.credentialConfigured ? selectedIntegration.id : undefined,
+          externalProjectId: selectedRepository?.externalProjectId
         })
       });
 
@@ -232,6 +246,103 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
 }
 
 function GitConnectionsSection({ integrations }: { integrations: ProviderIntegrationSummary[] }) {
+  const [connectionStates, setConnectionStates] = useState<Partial<Record<IssueProvider, ConnectionTestResult>>>(() => (
+    Object.fromEntries(integrations.map((integration) => [
+      integration.provider,
+      integration.credentialConfigured
+        ? {
+            state: "checking",
+            message: "Vérification de la connexion active..."
+          }
+        : {
+            state: "inactive",
+            message: "Ajoutez un token serveur pour activer cette connexion."
+          }
+    ])) as Partial<Record<IssueProvider, ConnectionTestResult>>
+  ));
+
+  const refreshConnection = useCallback(async (integration: ProviderIntegrationSummary, signal?: AbortSignal) => {
+    if (!integration.credentialConfigured) {
+      setConnectionStates((current) => ({
+        ...current,
+        [integration.provider]: {
+          state: "inactive",
+          message: "Ajoutez un token serveur pour activer cette connexion."
+        }
+      }));
+      return;
+    }
+
+    setConnectionStates((current) => ({
+      ...current,
+      [integration.provider]: {
+        ...current[integration.provider],
+        state: "checking",
+        message: "Vérification de la connexion active..."
+      }
+    }));
+
+    try {
+      const response = await fetch(`/api/integrations/${integration.provider}/repositories?integrationId=${encodeURIComponent(integration.id)}`, {
+        headers: {
+          Accept: "application/json"
+        },
+        signal
+      });
+      const body = await response.json() as unknown;
+
+      if (!response.ok) {
+        setConnectionStates((current) => ({
+          ...current,
+          [integration.provider]: {
+            state: "error",
+            message: repositoryErrorMessage(body) ?? "Connexion impossible. Vérifiez le token ou les permissions.",
+            checkedAt: new Date()
+          }
+        }));
+        return;
+      }
+
+      const repositories = parseRepositoryOptions(body, integration.provider);
+      setConnectionStates((current) => ({
+        ...current,
+        [integration.provider]: {
+          state: "active",
+          repositoryCount: repositories.length,
+          checkedAt: new Date(),
+          message: repositories.length > 0
+            ? `${repositories.length} dépôt(s) accessible(s).`
+            : "Connexion active, mais aucun dépôt accessible avec ce token."
+        }
+      }));
+    } catch (error) {
+      if (signal?.aborted) {
+        return;
+      }
+
+      setConnectionStates((current) => ({
+        ...current,
+        [integration.provider]: {
+          state: "error",
+          message: error instanceof Error ? error.message : "Connexion impossible.",
+          checkedAt: new Date()
+        }
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    integrations.forEach((integration) => {
+      if (integration.credentialConfigured) {
+        void refreshConnection(integration, abortController.signal);
+      }
+    });
+
+    return () => abortController.abort();
+  }, [integrations, refreshConnection]);
+
   return (
     <section className="settings-section" aria-labelledby="git-connections-title">
       <div className="setup-heading">
@@ -242,58 +353,135 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
       </div>
 
       <div className="integration-grid">
-        {integrations.map((integration) => (
-          <article className="integration-card" key={integration.provider}>
-            <div className="integration-topline">
-              <span className={`provider-badge ${integration.provider}`}>
-                {integration.provider === "github" ? "GH" : "GL"}
-              </span>
-              <span className={`status-badge ${integration.status}`}>
-                <T k={integration.status === "connected" ? "destinations.connected" : "destinations.toConnect"} />
-              </span>
-            </div>
-            <h3>{integration.name}</h3>
-            <p>{integration.accountLabel}</p>
-            <div className="integration-checklist" aria-label={`${integration.name} setup`}>
-              <IntegrationCheck
-                isReady={integration.connectConfigured}
-                labelKey="destinations.integration.connectFlow"
-                value={integration.connectConfigured ? "destinations.integration.ready" : providerConnectionHelpKey(integration.provider)}
-              />
-              <IntegrationCheck
-                isReady={integration.credentialConfigured}
-                labelKey="destinations.integration.credentials"
-                value={integration.credentialConfigured ? "destinations.integration.ready" : providerCredentialHelpKey(integration.provider)}
-              />
-            </div>
-            <div className="integration-config">
-              <strong><T k="destinations.integration.localTest" /></strong>
-              <code>{integration.credentialConfigKeys.join(" / ")}</code>
-              <span><T k={providerLocalHelpKey(integration.provider)} /></span>
-            </div>
-            <div className="integration-actions">
-              {integration.connectConfigured ? (
-                <a className="button" href={`${integration.connectPath}?returnTo=/settings/git-connections`}>
-                  <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                  {integration.status === "connected" ? <T k="destinations.verify" /> : <><T k="destinations.connect" /> {integration.name}</>}
-                </a>
-              ) : (
-                <span className="button disabled-button" aria-disabled="true">
-                  <T k="destinations.integration.connectUnavailable" />
+        {integrations.map((integration) => {
+          const connectionState = connectionStates[integration.provider] ?? {
+            state: integration.credentialConfigured ? "checking" : "inactive",
+            message: integration.credentialConfigured ? "Vérification de la connexion active..." : "Ajoutez un token serveur pour activer cette connexion."
+          };
+          const isConnectionActive = connectionState.state === "active" || connectionState.state === "checking";
+
+          return (
+            <article className={`integration-card ${isConnectionActive ? "is-active" : ""}`} key={integration.provider}>
+              <div className="integration-topline">
+                <ProviderBadge provider={integration.provider} />
+                <span className={`status-badge ${connectionState.state}`}>
+                  {connectionBadgeLabel(connectionState.state)}
                 </span>
-              )}
-              {integration.managePath ? (
-                <a className="button secondary-button" href={integration.managePath}>
-                  <ExternalLink aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                  <T k="destinations.manage" />
-                </a>
+              </div>
+              <h3>{integration.name}</h3>
+              <p>{connectionAccountLabel(integration)}</p>
+              <div className={`connection-health ${connectionState.state}`} role="status">
+                <div>
+                  <strong>{connectionHealthTitle(connectionState.state)}</strong>
+                  <span>{connectionState.message}</span>
+                </div>
+                {typeof connectionState.repositoryCount === "number" ? (
+                  <span className="connection-metric">
+                    {connectionState.repositoryCount}
+                    <small>dépôts</small>
+                  </span>
+                ) : null}
+              </div>
+              {connectionState.checkedAt ? (
+                <p className="connection-last-check">Dernier contrôle: {formatConnectionCheckDate(connectionState.checkedAt)}</p>
               ) : null}
-            </div>
-          </article>
-        ))}
+              <div className="integration-checklist" aria-label={`${integration.name} setup`}>
+                {!integration.credentialConfigured ? (
+                  <IntegrationCheck
+                    isReady={integration.connectConfigured}
+                    labelKey="destinations.integration.connectFlow"
+                    value={integration.connectConfigured ? "destinations.integration.ready" : providerConnectionHelpKey(integration.provider)}
+                  />
+                ) : null}
+                <IntegrationCheck
+                  isReady={integration.credentialConfigured}
+                  labelKey="destinations.integration.credentials"
+                  value={integration.credentialConfigured ? "destinations.integration.ready" : providerCredentialHelpKey(integration.provider)}
+                />
+              </div>
+              <div className="integration-config">
+                <strong><T k="destinations.integration.localTest" /></strong>
+                <code>{integration.credentialConfigKeys.join(" / ")}</code>
+                <span><T k={providerLocalHelpKey(integration.provider)} /></span>
+              </div>
+              <div className="integration-actions">
+                {integration.credentialConfigured ? (
+                  <button className="button" disabled={connectionState.state === "checking"} onClick={() => void refreshConnection(integration)} type="button">
+                    <RefreshCw aria-hidden="true" className={`ui-icon ${connectionState.state === "checking" ? "spin-icon" : ""}`} size={16} strokeWidth={2.2} />
+                    {connectionState.state === "checking" ? "Vérification..." : "Actualiser"}
+                  </button>
+                ) : null}
+                {integration.connectConfigured ? (
+                  <a className="button" href={`${integration.connectPath}?returnTo=/settings/git-connections`}>
+                    <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    {integration.status === "connected" ? <T k="destinations.verify" /> : <><T k="destinations.connect" /> {integration.name}</>}
+                  </a>
+                ) : !integration.credentialConfigured ? (
+                  <span className="button disabled-button" aria-disabled="true">
+                    <T k="destinations.integration.connectUnavailable" />
+                  </span>
+                ) : null}
+                {integration.managePath ? (
+                  <a className="button secondary-button" href={integration.managePath}>
+                    <ExternalLink aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    <T k="destinations.manage" />
+                  </a>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
+}
+
+function connectionBadgeLabel(state: ConnectionHealthState): string {
+  if (state === "active") {
+    return "Actif";
+  }
+
+  if (state === "checking") {
+    return "Vérification";
+  }
+
+  if (state === "error") {
+    return "À vérifier";
+  }
+
+  return "À connecter";
+}
+
+function connectionHealthTitle(state: ConnectionHealthState): string {
+  if (state === "active") {
+    return "Connexion active";
+  }
+
+  if (state === "checking") {
+    return "Connexion active";
+  }
+
+  if (state === "error") {
+    return "Connexion non validée";
+  }
+
+  return "Connexion inactive";
+}
+
+function connectionAccountLabel(integration: ProviderIntegrationSummary): string {
+  if (integration.credentialConfigured) {
+    return `${integration.name} est prêt à l'emploi pour lister les dépôts et créer des issues.`;
+  }
+
+  return integration.accountLabel;
+}
+
+function formatConnectionCheckDate(date: Date): string {
+  return new Intl.DateTimeFormat("fr-BE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(date);
 }
 
 function ConnectedSitesSection({
@@ -378,9 +566,7 @@ function ConnectedSitesSection({
                 </button>
               </div>
               <div className="repo-destination">
-                <span className={`provider-badge ${issueTarget.provider}`}>
-                  {issueTarget.provider === "github" ? "GH" : "GL"}
-                </span>
+                <ProviderBadge provider={issueTarget.provider} />
                 <div>
                   <strong>{issueTarget.namespace}/{issueTarget.project}</strong>
                   <span><T k={isReady ? "destinations.ready" : "destinations.required"} /></span>
@@ -586,7 +772,8 @@ function parseRepositoryOption(value: unknown, provider: IssueProvider): Reposit
     label: fullName ?? `${namespace}/${project}`,
     namespace,
     project,
-    webUrl
+    webUrl,
+    externalProjectId: stringValue(value.externalProjectId) ?? stringValue(value.external_project_id)
   }];
 }
 

@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { forbidden, unauthorized } from "next/navigation";
+import { AlertTriangle, CheckCircle2, Clock3, Inbox, RotateCcw, Send, Settings2, type LucideIcon } from "lucide-react";
 import type { FeedbackStatus } from "@changethis/shared";
 import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
+import type { ChangeThisProject } from "../../lib/demo-project";
 import { getFeedbackRepository, type StoredFeedback } from "../../lib/feedback-repository";
 import { listConfiguredProjects } from "../../lib/project-registry";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
+import { ProviderBadge } from "../provider-badge";
 import { FeedbackActions } from "./feedback-actions";
 import { ScreenshotPreview } from "./screenshot-preview";
 
@@ -63,6 +66,7 @@ export default async function ProjectsPage() {
   const githubProjects = projects.filter((project) => project.issueTarget.provider === "github").length;
   const gitlabProjects = projects.filter((project) => project.issueTarget.provider === "gitlab").length;
   const latestFeedback = feedbacks.at(0);
+  const readyProjects = projects.filter((project) => project.issueTarget.namespace && project.issueTarget.project).length;
 
   return (
     <main className="shell">
@@ -74,155 +78,94 @@ export default async function ProjectsPage() {
         }}
       />
 
-      <section className="dashboard">
-        <div className="dashboard-header">
-          <div>
+      <section className="dashboard dashboard-compact">
+        <div className="dashboard-header dashboard-header-compact">
+          <div className="dashboard-title-block">
             <p className="eyebrow"><T k="projects.eyebrow" /></p>
             <h1><T k="projects.title" /></h1>
-            <p className="lede">
-              <T k="projects.lede" />
-            </p>
           </div>
           <div className="dashboard-actions">
             <span className="dashboard-timestamp">
               <T k="projects.dashboard.updated" /> {latestFeedback ? formatDate(latestFeedback.createdAt) : "-"}
             </span>
+            <Link className="button secondary-button" href="/settings/connected-sites">
+              <Settings2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+              Sites
+            </Link>
             <Link className="button light-button" href="/demo"><T k="projects.testFeedback" /></Link>
           </div>
         </div>
 
-        <section className="ops-strip" aria-label="État production">
-          <div>
-            <span>{projects.length}</span>
-            <strong><T k="projects.ops.sites" /></strong>
-          </div>
-          <div>
-            <span>{githubProjects}</span>
-            <strong><T k="projects.ops.github" /></strong>
-          </div>
-          <div>
-            <span>{gitlabProjects}</span>
-            <strong><T k="projects.ops.gitlab" /></strong>
-          </div>
-          <div>
-            <span>{feedbacks.length}</span>
-            <strong><T k="projects.ops.feedbacks" /></strong>
-          </div>
-        </section>
-
-        <div className="metric-grid" aria-label="Synthèse de l'inbox">
-          <MetricCard labelKey="projects.metric.pending" value={pendingFeedbacks.length} tone={pendingFeedbacks.length > 0 ? "warning" : "ok"} />
-          <MetricCard labelKey="projects.metric.queued" value={queuedFeedbacks.length} tone="warning" />
-          <MetricCard labelKey="projects.metric.retries" value={retryFeedbacks.length} tone="warning" />
-          <MetricCard labelKey="projects.metric.failed" value={failedFeedbacks.length} tone="danger" />
-          <MetricCard labelKey="projects.metric.sent" value={sentFeedbacks.length} tone="ok" />
+        <div className="dashboard-status-grid" aria-label="Synthèse opérationnelle">
+          <StatusMetric icon={Inbox} label="À traiter" value={pendingFeedbacks.length} tone={pendingFeedbacks.length > 0 ? "warning" : "ok"} />
+          <StatusMetric icon={Clock3} label="En file" value={queuedFeedbacks.length} tone="warning" />
+          <StatusMetric icon={RotateCcw} label="Relances" value={retryFeedbacks.length} tone="warning" />
+          <StatusMetric icon={AlertTriangle} label="Échecs" value={failedFeedbacks.length} tone="danger" />
+          <StatusMetric icon={CheckCircle2} label="Créées" value={sentFeedbacks.length} tone="ok" />
         </div>
 
-        <div className="dashboard-workbench">
-          <section className="operations-panel" aria-labelledby="signals-title">
-            <div className="setup-heading">
+        <div className="dashboard-workbench compact-workbench">
+          <section className="inbox-panel compact-inbox" id="issues" aria-labelledby="local-inbox-title">
+            <div className="inbox-hero compact-inbox-header">
               <div>
-                <p className="eyebrow"><T k="projects.signals.eyebrow" /></p>
-                <h2 id="signals-title"><T k="projects.signals.title" /></h2>
+                <p className="eyebrow"><T k="projects.inbox.eyebrow" /></p>
+                <h2 id="local-inbox-title"><T k="projects.inbox.title" /></h2>
+              </div>
+              <div className="inbox-toolbar">
+                <form action="/api/projects/retries" method="post">
+                  <button className="button secondary-button" type="submit"><T k="projects.inbox.retryDue" /></button>
+                </form>
+                <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
               </div>
             </div>
-            <div className="ops-grid">
-              <SignalCard
-                labelKey="projects.signals.queue"
-                value={activeFeedbacks.length}
-                detailKey="projects.signals.queue.copy"
-              />
-              <SignalCard
-                labelKey="projects.signals.latest"
-                value={latestFeedback ? formatDate(latestFeedback.createdAt) : "—"}
-                detailKey={latestFeedback ? "projects.signals.latest.copy" : "projects.signals.latest.empty"}
-              />
-              <SignalCard
-                labelKey="projects.signals.routing"
-                value={`${githubProjects}/${gitlabProjects}`}
-                detailKey="projects.signals.routing.copy"
-              />
-              <SignalCard
-                labelKey="projects.signals.archive"
-                value={ignoredFeedbacks.length}
-                detailKey="projects.signals.archive.copy"
-              />
-            </div>
+
+            {activeFeedbacks.length === 0 ? (
+              <div className="empty-state compact-empty-state">
+                <h2><T k="projects.empty.title" /></h2>
+                <p><T k="projects.empty.copy" /></p>
+                <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
+              </div>
+            ) : (
+              <div className="feedback-list" role="list" aria-label="Retours actifs">
+                {activeFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
+              </div>
+            )}
           </section>
 
-        <section className="inbox-panel" id="issues" aria-labelledby="local-inbox-title">
-          <div className="inbox-hero">
-            <div>
-              <p className="eyebrow"><T k="projects.inbox.eyebrow" /></p>
-              <h2 id="local-inbox-title"><T k="projects.inbox.title" /></h2>
-              <p className="lede">
-                <T k="projects.inbox.copy" />
-              </p>
-            </div>
-            <div className="inbox-summary" aria-label="État de l'inbox">
-              <strong>{pendingFeedbacks.length}</strong>
-              <span><T k="projects.inbox.pending" /></span>
-            </div>
-          </div>
-
-          <div className="inbox-toolbar">
-            <a className="button" href="/demo"><T k="projects.inbox.test" /></a>
-            <form action="/api/projects/retries" method="post">
-              <button className="button secondary-button" type="submit"><T k="projects.inbox.retryDue" /></button>
-            </form>
-          </div>
-
-          {activeFeedbacks.length === 0 ? (
-            <div className="empty-state">
-              <h2><T k="projects.empty.title" /></h2>
-              <p>
-                <T k="projects.empty.copy" />
-              </p>
-              <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
-            </div>
-          ) : (
-            <>
-              <div className="queue-strip">
-                <div className="ops-card">
-                  <h3><T k="projects.queue.new" /></h3>
-                  <p>{queuedFeedbacks.length} <T k="projects.queue.new.copy" /></p>
-                </div>
-                <div className="ops-card">
-                  <h3><T k="projects.queue.recovery" /></h3>
-                  <p>{retryFeedbacks.length + failedFeedbacks.length} <T k="projects.queue.recovery.copy" /></p>
-                </div>
-                <div className="ops-card">
-                  <h3><T k="projects.queue.done" /></h3>
-                  <p>{sentFeedbacks.length} <T k="projects.queue.done.copy" /></p>
-                </div>
+          <aside className="dashboard-side-panel" aria-label="Contexte ChangeThis">
+            <section className="side-panel-section">
+              <div className="side-panel-heading">
+                <p className="eyebrow">Routage</p>
+                <h2>Sites connectés</h2>
               </div>
-              {activeFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
-            </>
-          )}
-        </section>
+              <div className="route-summary">
+                <strong>{readyProjects}/{projects.length}</strong>
+                <span>sites prêts à créer des issues</span>
+              </div>
+              <div className="provider-split">
+                <ProviderCount provider="github" count={githubProjects} />
+                <ProviderCount provider="gitlab" count={gitlabProjects} />
+              </div>
+              <div className="site-route-list">
+                {projects.map((project) => <ProjectRouteRow key={project.publicKey} project={project} />)}
+              </div>
+              <Link className="button secondary-button full-width-button" href="/settings/connected-sites">
+                Configurer les sites
+              </Link>
+            </section>
 
-        <section className="operations-panel" aria-labelledby="ops-title">
-          <div className="setup-heading">
-            <div>
-              <p className="eyebrow"><T k="projects.ops.eyebrow" /></p>
-              <h2 id="ops-title"><T k="projects.ops.title" /></h2>
-            </div>
-          </div>
-          <div className="ops-grid">
-            <article className="ops-card">
-              <h3><T k="projects.ops.provider.title" /></h3>
-              <p><T k="projects.ops.provider.copy" /></p>
-            </article>
-            <article className="ops-card">
-              <h3><T k="projects.ops.manual.title" /></h3>
-              <p><T k="projects.ops.manual.copy" /></p>
-            </article>
-            <article className="ops-card">
-              <h3><T k="projects.ops.archive.title" /></h3>
-              <p>{ignoredFeedbacks.length} <T k="projects.ops.archive.copy" /></p>
-            </article>
-          </div>
-        </section>
+            <section className="side-panel-section">
+              <div className="side-panel-heading">
+                <p className="eyebrow">Signal</p>
+                <h2>Activité</h2>
+              </div>
+              <div className="activity-stack">
+                <ActivityItem label="Dernier retour" value={latestFeedback ? formatDate(latestFeedback.createdAt) : "—"} />
+                <ActivityItem label="Archivés" value={ignoredFeedbacks.length} />
+                <ActivityItem label="Total reçus" value={feedbacks.length} />
+              </div>
+            </section>
+          </aside>
         </div>
       </section>
       <AppFooter />
@@ -230,22 +173,43 @@ export default async function ProjectsPage() {
   );
 }
 
-function MetricCard({ labelKey, value, tone }: { labelKey: string; value: number; tone: "ok" | "warning" | "danger" }) {
+function StatusMetric({ icon: Icon, label, tone, value }: { icon: LucideIcon; label: string; tone: "ok" | "warning" | "danger"; value: number }) {
   return (
-    <article className={`metric-card ${tone}`}>
-      <span><T k={labelKey} /></span>
+    <article className={`status-metric ${tone}`}>
+      <Icon aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+      <span>{label}</span>
       <strong>{value}</strong>
     </article>
   );
 }
 
-function SignalCard({ detailKey, labelKey, value }: { detailKey: string; labelKey: string; value: number | string }) {
+function ProviderCount({ count, provider }: { count: number; provider: "github" | "gitlab" }) {
   return (
-    <article className="ops-card">
-      <h3><T k={labelKey} /></h3>
-      <strong>{value}</strong>
-      <p><T k={detailKey} /></p>
+    <div>
+      <ProviderBadge provider={provider} />
+      <strong>{count}</strong>
+    </div>
+  );
+}
+
+function ProjectRouteRow({ project }: { project: ChangeThisProject }) {
+  return (
+    <article className="site-route-row">
+      <div>
+        <strong>{project.name}</strong>
+        <span>{project.issueTarget.namespace}/{project.issueTarget.project}</span>
+      </div>
+      <ProviderBadge provider={project.issueTarget.provider} />
     </article>
+  );
+}
+
+function ActivityItem({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="activity-item">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
@@ -255,25 +219,28 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
 
   return (
-    <article className={`feedback-card ${feedback.status}`}>
+    <article className={`feedback-card compact-feedback-row ${feedback.status}`} role="listitem">
+      <div className="feedback-status-rail">
+        <span className={`status-dot ${feedback.status}`} aria-hidden="true" />
+      </div>
       <div className="feedback-main">
         <div className="feedback-tags" aria-label="Métadonnées du feedback">
           <span className="status-badge connected">{feedback.payload.type}</span>
           <span className={`status-badge ${statusClasses[feedback.status]}`}>
             <T k={statusLabelKeys[feedback.status]} />
           </span>
-          <span className="status-badge muted">{feedback.issueTarget.provider}</span>
+          <ProviderBadge provider={feedback.issueTarget.provider} />
         </div>
         <h2>{feedback.issueDraft.title}</h2>
         <p>{feedback.payload.message || <T k="projects.feedback.noMessage" />}</p>
         {feedback.lastError ? (
-          <div className="error-callout">
+          <div className="error-callout compact-callout">
             <strong><T k="projects.feedback.issueError" /></strong>
             <span>{feedback.lastError}</span>
           </div>
         ) : null}
         {hasRetry ? (
-          <div className="retry-callout">
+          <div className="retry-callout compact-callout">
             <T k="projects.feedback.nextRetry" />: {formatDate(feedback.nextRetryAt as string)}
           </div>
         ) : null}
@@ -284,19 +251,27 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           <span>{formatDate(feedback.createdAt)}</span>
         </div>
       </div>
-      <div className="issue-draft">
-        <p className="eyebrow"><T k="projects.feedback.draft" /></p>
-        <strong>{feedback.issueTarget.namespace}/{feedback.issueTarget.project}</strong>
+      <div className="issue-draft compact-issue-draft">
+        <div>
+          <p className="eyebrow"><T k="projects.feedback.draft" /></p>
+          <strong>{feedback.issueTarget.namespace}/{feedback.issueTarget.project}</strong>
+        </div>
         <span>{draftLabels}</span>
         {feedback.payload.pin ? <span>Pin: {Math.round(feedback.payload.pin.x)}, {Math.round(feedback.payload.pin.y)}</span> : null}
+        <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}>
+          <T k="projects.feedback.destination" />
+        </a>
+      </div>
+      <div className="compact-preview-cell">
         {feedback.screenshotAsset ? (
           <ScreenshotPreview
             asset={feedback.screenshotAsset}
             metadata={feedback.payload.metadata}
             pin={feedback.payload.pin}
           />
-        ) : null}
-        <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}><T k="projects.feedback.destination" /> {feedback.issueTarget.provider}</a>
+        ) : (
+          <span className="no-preview">Sans capture</span>
+        )}
       </div>
       <FeedbackActions
         externalIssueUrl={feedback.externalIssue?.url}

@@ -17,6 +17,8 @@ export type ProjectIssueTargetUpdate = {
   projectKey: string;
   provider: IssueProvider;
   repositoryUrl: string;
+  integrationId?: string;
+  externalProjectId?: string;
 };
 
 const defaultStore: ProjectTargetStore = {
@@ -54,7 +56,10 @@ export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate, w
     throw new ProjectTargetValidationError("Unknown project", 404);
   }
 
-  const issueTarget = parseRepositoryUrl(update.repositoryUrl, update.provider);
+  const issueTarget = parseRepositoryUrl(update.repositoryUrl, update.provider, {
+    externalProjectId: update.externalProjectId,
+    integrationId: update.integrationId
+  });
 
   if (!issueTarget) {
     throw new ProjectTargetValidationError("Repository URL must match the selected provider", 422);
@@ -99,7 +104,11 @@ export class ProjectTargetValidationError extends Error {
   }
 }
 
-function parseRepositoryUrl(value: string, provider: IssueProvider): IssueTarget | undefined {
+function parseRepositoryUrl(
+  value: string,
+  provider: IssueProvider,
+  options: { externalProjectId?: string; integrationId?: string } = {}
+): IssueTarget | undefined {
   try {
     const url = new URL(value.trim());
     const parts = url.pathname.split("/").filter(Boolean);
@@ -109,6 +118,7 @@ function parseRepositoryUrl(value: string, provider: IssueProvider): IssueTarget
         provider,
         namespace: parts[0],
         project: parts[1],
+        integrationId: options.integrationId,
         webUrl: `https://github.com/${parts[0]}/${parts[1]}`
       });
     }
@@ -125,7 +135,8 @@ function parseRepositoryUrl(value: string, provider: IssueProvider): IssueTarget
         provider,
         namespace,
         project,
-        externalProjectId: encodeURIComponent(`${namespace}/${project}`),
+        externalProjectId: options.externalProjectId ?? encodeURIComponent(`${namespace}/${project}`),
+        integrationId: options.integrationId,
         webUrl: `${url.origin}/${parts.join("/")}`
       });
     }

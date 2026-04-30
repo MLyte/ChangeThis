@@ -21,8 +21,8 @@ export function AppHeader({ navItems = [], session }: AppHeaderProps) {
   return (
     <header className="topbar app-header">
       <Link className="brand" href="/">
+        <span>ChangeThis</span>
         <Image src={logoChangeThis} alt="" aria-hidden="true" className="brand-logo" priority />
-        ChangeThis
       </Link>
 
       <div className="topbar-actions">

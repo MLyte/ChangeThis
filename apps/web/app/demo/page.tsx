@@ -1,21 +1,16 @@
-import Link from "next/link";
 import { demoProject } from "../../lib/demo-project";
-import { LanguageSwitch, T } from "../i18n";
+import { AppHeader } from "../app-header";
+import { T } from "../i18n";
 
 export default function DemoPage() {
   return (
     <main className="shell demo-shell">
-      <header className="topbar">
-        <Link className="brand" href="/">
-          <span className="brand-mark">CT</span>
-          ChangeThis
-        </Link>
-        <nav className="nav" aria-label="Navigation démo">
-          <Link className="link" href="/projects"><T k="nav.inbox" /></Link>
-          <code>{demoProject.publicKey}</code>
-          <LanguageSwitch />
-        </nav>
-      </header>
+      <AppHeader
+        navItems={[
+          { href: "/projects", labelKey: "nav.issues" },
+          { href: "/settings", labelKey: "nav.settings" }
+        ]}
+      />
 
       <section className="demo-page">
         <div className="demo-copy">
@@ -27,6 +22,7 @@ export default function DemoPage() {
           <p className="lede">
             <T k="demo.lede" />
           </p>
+          <code className="demo-project-key">{demoProject.publicKey}</code>
         </div>
 
         <div className="demo-layout">

@@ -4,6 +4,7 @@ import { getProviderCredentialSecret } from "./credential-store";
 export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";
 
 export type ProviderIntegrationSummary = {
+  id: string;
   provider: IssueProvider;
   name: string;
   accountLabel: string;
@@ -40,6 +41,7 @@ export function isIssueProvider(value: unknown): value is IssueProvider {
 
 export function listProviderIntegrations(): ProviderIntegrationSummary[] {
   return getRuntimeProviderIntegrations().map((integration) => ({
+    id: integration.id,
     provider: integration.provider,
     name: integration.name,
     accountLabel: integration.accountLabel,

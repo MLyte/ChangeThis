@@ -1,36 +1,21 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { StoredFeedback } from "../lib/feedback-repository";
-import { getFeedbackRepository } from "../lib/feedback-repository";
-import { listConfiguredProjects } from "../lib/project-registry";
+import type { FeedbackStatus, IssueProvider } from "@changethis/shared";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
+import { ProviderBadge } from "./provider-badge";
 
 export const dynamic = "force-dynamic";
 
 const workflowKeys = ["home.workflow.1", "home.workflow.2", "home.workflow.3"];
 
 export default async function HomePage() {
-  const [projects, feedbacks] = await Promise.all([
-    listConfiguredProjects(),
-    getFeedbackRepository().list()
-  ]);
-  const actionableFeedbacks = feedbacks.filter((feedback) => feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed");
-  const retryCount = feedbacks.filter((feedback) => feedback.status === "retrying").length;
-  const latestFeedbacks = feedbacks.slice(0, 3);
-  const siteRows = projects.map((project) => ({
-    name: project.name,
-    origin: project.allowedOrigins.find((origin) => !origin.includes("localhost") && !origin.includes("127.0.0.1")) ?? "local demo",
-    provider: project.issueTarget.provider,
-    repo: `${project.issueTarget.namespace}/${project.issueTarget.project}`,
-    stateKey: project.issueTarget.webUrl ? "home.siteState.ready" : "home.siteState.configure"
-  }));
   const liveSignals = [
-    { labelKey: "home.metric.actionable", value: String(actionableFeedbacks.length), tone: actionableFeedbacks.length > 0 ? "warning" : "ok" },
-    { labelKey: "home.metric.sites", value: String(projects.length), tone: "ok" },
-    { labelKey: "home.metric.retries", value: String(retryCount), tone: retryCount > 0 ? "danger" : "ok" }
+    { labelKey: "home.metric.actionable", value: "3", tone: "warning" },
+    { labelKey: "home.metric.sites", value: "4", tone: "ok" },
+    { labelKey: "home.metric.retries", value: "1", tone: "danger" }
   ];
 
   return (
@@ -46,8 +31,8 @@ export default async function HomePage() {
         <div className="workspace-copy">
           <p className="eyebrow"><T k="home.hero.eyebrow" /></p>
           <h1 id="product-title" className="product-title">
-            <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
             <span>ChangeThis</span>
+            <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
           </h1>
           <p className="hero-statement">
             <T k="home.hero.statement" />
@@ -61,7 +46,7 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <ConsolePreview feedbacks={latestFeedbacks} siteRows={siteRows} />
+        <ConsolePreview feedbacks={previewFeedbacks} siteRows={previewSiteRows} />
       </section>
 
       <section className="ops-strip" aria-label="État opérationnel">
@@ -136,11 +121,11 @@ function ConsolePreview({
   feedbacks,
   siteRows
 }: {
-  feedbacks: StoredFeedback[];
+  feedbacks: PreviewFeedback[];
   siteRows: Array<{
     name: string;
     origin: string;
-    provider: string;
+    provider: IssueProvider;
     repo: string;
     stateKey: string;
   }>;
@@ -176,8 +161,8 @@ function ConsolePreview({
               feedbacks.map((feedback) => (
                 <article className="preview-feedback" key={feedback.id}>
                   <div>
-                    <h3>{feedback.issueDraft.title}</h3>
-                    <p>{feedback.projectName} - {feedback.payload.type} - {feedback.payload.metadata.viewport.width} x {feedback.payload.metadata.viewport.height}</p>
+                    <h3>{feedback.title}</h3>
+                    <p>{feedback.details}</p>
                   </div>
                   <span>{formatStatus(feedback.status)}</span>
                 </article>
@@ -198,7 +183,7 @@ function ConsolePreview({
               <div className="preview-site-row" key={site.name}>
                 <strong>{site.name}</strong>
                 <span>{site.origin}</span>
-                <span>{site.provider}</span>
+                <ProviderBadge provider={site.provider} />
                 <span>{site.repo}</span>
                 <em><T k={site.stateKey} /></em>
               </div>
@@ -210,6 +195,66 @@ function ConsolePreview({
   );
 }
 
-function formatStatus(status: StoredFeedback["status"]) {
+type PreviewFeedback = {
+  id: string;
+  title: string;
+  details: string;
+  status: FeedbackStatus;
+};
+
+type PreviewSiteRow = {
+  name: string;
+  origin: string;
+  provider: IssueProvider;
+  repo: string;
+  stateKey: string;
+};
+
+const previewFeedbacks: PreviewFeedback[] = [
+  {
+    id: "preview-feedback-hero-cta",
+    title: "[Feedback] /pricing - Clarifier le bouton principal",
+    details: "Site vitrine A - pin - 1440 x 900",
+    status: "raw"
+  },
+  {
+    id: "preview-feedback-mobile-menu",
+    title: "[Feedback] /contact - Menu mobile trop bas",
+    details: "Site vitrine B - screenshot - 390 x 844",
+    status: "retrying"
+  },
+  {
+    id: "preview-feedback-copy",
+    title: "[Feedback] /services - Reformuler le titre",
+    details: "Site vitrine C - comment - 1280 x 720",
+    status: "sent_to_provider"
+  }
+];
+
+const previewSiteRows: PreviewSiteRow[] = [
+  {
+    name: "Site vitrine A",
+    origin: "client-a.example",
+    provider: "github",
+    repo: "agency/client-a",
+    stateKey: "home.siteState.ready"
+  },
+  {
+    name: "Site vitrine B",
+    origin: "client-b.example",
+    provider: "gitlab",
+    repo: "studio/client-b",
+    stateKey: "home.siteState.ready"
+  },
+  {
+    name: "Site vitrine C",
+    origin: "client-c.example",
+    provider: "github",
+    repo: "team/client-c",
+    stateKey: "home.siteState.configure"
+  }
+];
+
+function formatStatus(status: FeedbackStatus) {
   return <T k={`status.${status}`} />;
 }
