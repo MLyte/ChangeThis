@@ -4,7 +4,7 @@ import { Database, Inbox, LogOut, Settings, ShieldCheck, UserRound, type LucideI
 import { AppNavLink } from "./app-nav-link";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { LanguageSwitch, T } from "./i18n";
-import { isPublicSignupEnabled } from "../lib/auth";
+import { getCurrentSession, isPublicSignupEnabled } from "../lib/auth";
 
 type HeaderNavItem = {
   href: string;
@@ -20,10 +20,11 @@ type AppHeaderProps = {
   };
 };
 
-export function AppHeader({ navItems = [], showAuthLinks = false, session }: AppHeaderProps) {
+export async function AppHeader({ navItems = [], showAuthLinks = false, session }: AppHeaderProps) {
   const authMode = process.env.AUTH_MODE === "supabase" ? "supabase" : "local";
   const dataStore = process.env.DATA_STORE === "supabase" ? "supabase" : "local";
   const publicSignupEnabled = isPublicSignupEnabled();
+  const resolvedSession = session ?? await loadHeaderSession();
 
   return (
     <header className="topbar app-header">
@@ -46,7 +47,7 @@ export function AppHeader({ navItems = [], showAuthLinks = false, session }: App
 
         <LanguageSwitch />
 
-        {session ? (
+        {resolvedSession ? (
           <div className="runtime-status" aria-label="Environnement">
             <span className={`runtime-pill ${authMode === "supabase" ? "is-ready" : "is-local"}`}>
               <ShieldCheck aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
@@ -59,7 +60,7 @@ export function AppHeader({ navItems = [], showAuthLinks = false, session }: App
           </div>
         ) : null}
 
-        {!session && showAuthLinks ? (
+        {!resolvedSession && showAuthLinks ? (
           <div className="public-auth-actions">
             <Link className="link" href="/login">
               <T k="nav.login" />
@@ -72,17 +73,17 @@ export function AppHeader({ navItems = [], showAuthLinks = false, session }: App
           </div>
         ) : null}
 
-        {session ? (
+        {resolvedSession ? (
           <>
-          {session.isLocalMode ? (
+          {resolvedSession.isLocalMode ? (
             <Link className="button secondary-button local-signup-cta" href="/signup">
               <T k="nav.signup" />
             </Link>
           ) : null}
           <div className="session-menu" aria-label="Session">
             <UserRound aria-hidden="true" className="ui-icon muted-icon" size={16} strokeWidth={2.2} />
-            <span>{session.email}</span>
-            {session.isLocalMode ? <strong><T k="nav.localMode" /></strong> : null}
+            <span>{resolvedSession.email}</span>
+            {resolvedSession.isLocalMode ? <strong><T k="nav.localMode" /></strong> : null}
             <form action="/logout" method="post">
               <button className="link session-link" type="submit">
                 <LogOut aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
@@ -95,6 +96,19 @@ export function AppHeader({ navItems = [], showAuthLinks = false, session }: App
       </div>
     </header>
   );
+}
+
+async function loadHeaderSession(): Promise<AppHeaderProps["session"] | undefined> {
+  const session = await getCurrentSession();
+
+  if (!session) {
+    return undefined;
+  }
+
+  return {
+    email: session.user.email,
+    isLocalMode: session.user.id === "local-dev-user"
+  };
 }
 
 function NavIcon({ labelKey }: { labelKey: string }) {
