@@ -175,7 +175,7 @@ function WorkflowReplica({ index }: { index: number }) {
             <span><MapPin size={12} /> Pin</span>
             <span className="active"><Camera size={12} /> Capture</span>
           </div>
-          <div className="replica-textarea">Le bouton valider sort de l'écran mobile.</div>
+          <div className="replica-textarea">Le bouton valider sort de l&apos;écran mobile.</div>
           <div className="replica-meta">
             <span>/checkout</span>
             <span>390 x 844</span>

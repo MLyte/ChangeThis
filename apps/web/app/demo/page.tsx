@@ -47,12 +47,12 @@ export default function DemoPage() {
 
         <section className="demo-feedback-guide" id="feedback-guide" aria-labelledby="demo-feedback-title">
           <div>
-            <p className="demo-kicker">Mode d'emploi</p>
-            <h2 id="demo-feedback-title">Vous jouez le rôle d'un client qui remarque un problème.</h2>
+            <p className="demo-kicker">Mode d&apos;emploi</p>
+            <h2 id="demo-feedback-title">Vous jouez le rôle d&apos;un client qui remarque un problème.</h2>
           </div>
           <ol>
             <li><strong>Repérez</strong> un texte flou, un bouton ambigu, un espace étrange ou une information manquante.</li>
-            <li><strong>Cliquez sur “Feedback”</strong>, le bouton flottant en bas à droite de l'écran.</li>
+            <li><strong>Cliquez sur “Feedback”</strong>, le bouton flottant en bas à droite de l&apos;écran.</li>
             <li><strong>Ajoutez une note, une épingle ou une capture</strong>. Le retour arrivera ensuite dans Issues.</li>
           </ol>
         </section>

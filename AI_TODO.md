@@ -376,6 +376,7 @@
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-01] Correctif CI hors checklist: correction des erreurs `npm run lint` qui faisaient échouer GitHub Actions avant `test`, `typecheck` et `build` depuis le commit suivant `cacbd62`; la prod expose déjà `/api/health` et les headers sécurité du commit `6a69c12`, mais le pipeline restait rouge. Validation exécutée: `npm run lint`, `npm test`, `npm run typecheck`, `npm run build` OK.
 - [2026-05-01] Documentation priorisation hors checklist: ajout de `docs/ai-task-priority-triage.md` avec classement des taches `AI_TODO.md` en 3 categories (`Urgent`, `A faire d'ici 7 jours maximum`, `Bonus`) et ordre d'importance dans chaque categorie. Validation locale non lancee automatiquement conformement a la consigne utilisateur active.
 - [2026-05-01] Documentation prod hors checklist: OVH retenu pour le registrar et le DNS a ce stade; `docs/ovh-production-auth-decisions.md` ne contient plus de question ouverte immediate. Validation locale non lancee automatiquement conformement a la consigne utilisateur active.
 - [2026-05-01] Documentation prod hors checklist: beta privee confirmee avec signup public ferme; pour la reouverture, la decision retenue est lien e-mail obligatoire + captcha anti-abus + rate limit. `docs/ovh-production-auth-decisions.md` mis a jour et la derniere question active porte maintenant sur le maintien d'OVH ou une future migration DNS vers Cloudflare. Validation locale non lancee automatiquement conformement a la consigne utilisateur active.

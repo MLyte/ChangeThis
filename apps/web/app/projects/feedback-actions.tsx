@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Archive, ExternalLink, RotateCcw, Send, BookmarkCheck } from "lucide-react";
 import type { FeedbackStatus, IssueDraft } from "@changethis/shared";
@@ -24,11 +24,12 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
   const [draftDescription, setDraftDescription] = useState(issueDraft.description);
   const [draftLabels, setDraftLabels] = useState(issueDraft.labels.join(", "));
 
-  useEffect(() => {
+  function openComposer() {
     setDraftTitle(issueDraft.title);
     setDraftDescription(issueDraft.description);
     setDraftLabels(issueDraft.labels.join(", "));
-  }, [issueDraft]);
+    setIsComposerOpen(true);
+  }
 
   function run(
     path: string,
@@ -176,7 +177,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
       <button
         className={isReplayAction ? "button retry-batch-button" : "button"}
         disabled={isPending}
-        onClick={() => setIsComposerOpen(true)}
+        onClick={openComposer}
         type="button"
       >
         {isPending ? null : isReplayAction ? (
