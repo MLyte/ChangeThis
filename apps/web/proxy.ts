@@ -5,7 +5,7 @@ const protectedPathPrefixes = [
   "/settings"
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (!protectedPathPrefixes.some((prefix) => request.nextUrl.pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
