@@ -10,13 +10,12 @@ import {
   Link2,
   Plus,
   RefreshCw,
-  Save,
-  Settings2,
+  Trash2,
   TriangleAlert,
   X,
   type LucideIcon
 } from "lucide-react";
-import type { IssueProvider, IssueTarget } from "@changethis/shared";
+import type { IssueProvider } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
@@ -28,10 +27,16 @@ type Props = {
   section: SettingsSection;
 };
 
-type ProjectView = ChangeThisProject;
+type ProjectView = ChangeThisProject & {
+  installSnippet?: string;
+  metrics?: {
+    feedbacksReceived: number;
+    issuesCreated: number;
+    failedIssues: number;
+    lastFeedbackAt?: string;
+  };
+};
 export type SettingsSection = "git-connections" | "connected-sites";
-
-const emptyRepository = "";
 
 type RepositoryOption = {
   id: string;
@@ -54,25 +59,26 @@ type ConnectionTestResult = {
 export function IssueDestinationSetup({ projects, integrations, section }: Props) {
   const { t } = useLanguage();
   const [projectViews, setProjectViews] = useState<ProjectView[]>(projects);
-  const [selectedProjectKey, setSelectedProjectKey] = useState(projects[0]?.publicKey ?? "");
-  const [selectedProvider, setSelectedProvider] = useState<IssueProvider>(projects[0]?.issueTarget.provider ?? "github");
-  const [repoUrl, setRepoUrl] = useState(repositoryUrl(projects[0]?.issueTarget));
+  const firstConnectedProvider = integrations.find((integration) => integration.status === "connected")?.provider ?? "github";
+  const [selectedProvider, setSelectedProvider] = useState<IssueProvider>(firstConnectedProvider);
   const [message, setMessage] = useState(t("destinations.message.initial"));
   const [isPending, startTransition] = useTransition();
   const [isSiteModalOpen, setIsSiteModalOpen] = useState(false);
   const [repositoryOptions, setRepositoryOptions] = useState<RepositoryOption[]>([]);
+  const [selectedRepositoryId, setSelectedRepositoryId] = useState("");
+  const [siteName, setSiteName] = useState("");
+  const [siteOrigin, setSiteOrigin] = useState("");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
+  const [installChecks, setInstallChecks] = useState<Record<string, string>>({});
 
   const connectedProviders = useMemo(
     () => new Set(integrations.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
     [integrations]
   );
 
-  const selectedProject = projectViews.find((project) => project.publicKey === selectedProjectKey);
-  const missingDestinations = projectViews.filter((project) => !project.issueTarget.namespace || !project.issueTarget.project);
   const selectedIntegration = integrations.find((integration) => integration.provider === selectedProvider);
-  const selectedRepository = repositoryOptions.find((repository) => repository.webUrl === repoUrl);
+  const selectedRepository = repositoryOptions.find((repository) => repository.id === selectedRepositoryId);
 
   useEffect(() => {
     if (!isSiteModalOpen || !connectedProviders.has(selectedProvider)) {
@@ -86,7 +92,8 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
       setRepositoryLoadMessage("");
 
       try {
-        const response = await fetch(`/api/integrations/${selectedProvider}/repositories`, {
+        const integrationId = selectedIntegration?.id;
+        const response = await fetch(`/api/integrations/${selectedProvider}/repositories${integrationId ? `?integrationId=${encodeURIComponent(integrationId)}` : ""}`, {
           headers: {
             Accept: "application/json"
           },
@@ -128,31 +135,17 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
     void loadRepositories();
 
     return () => abortController.abort();
-  }, [connectedProviders, isSiteModalOpen, selectedProvider]);
-
-  function selectProject(projectKey: string) {
-    const project = projectViews.find((item) => item.publicKey === projectKey);
-    setSelectedProjectKey(projectKey);
-    setSelectedProvider(project?.issueTarget.provider ?? "github");
-    setRepoUrl(repositoryUrl(project?.issueTarget));
-    setRepositoryOptions([]);
-    setRepositoryLoadState("idle");
-    setRepositoryLoadMessage("");
-  }
+  }, [connectedProviders, isSiteModalOpen, selectedIntegration?.id, selectedProvider]);
 
   function selectProvider(provider: IssueProvider) {
     setSelectedProvider(provider);
-    setRepoUrl(emptyRepository);
+    setSelectedRepositoryId("");
     setRepositoryOptions([]);
     setRepositoryLoadState("idle");
     setRepositoryLoadMessage("");
   }
 
-  function openSiteModal(projectKey?: string) {
-    if (projectKey) {
-      selectProject(projectKey);
-    }
-
+  function openSiteModal() {
     setIsSiteModalOpen(true);
   }
 
@@ -160,32 +153,75 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
     void navigator.clipboard?.writeText(installSnippet(project.publicKey));
   }
 
-  function linkRepo() {
+  function createSite() {
     startTransition(async () => {
-      const response = await fetch("/api/projects/issue-targets", {
+      if (!selectedIntegration?.credentialConfigured || !selectedRepository) {
+        setMessage("Choisissez une connexion Git active et un dépôt accessible.");
+        return;
+      }
+
+      const response = await fetch("/api/projects/sites", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          projectKey: selectedProjectKey,
+          name: siteName,
+          allowedOrigin: siteOrigin,
           provider: selectedProvider,
-          repositoryUrl: repoUrl,
-          integrationId: selectedIntegration?.credentialConfigured ? selectedIntegration.id : undefined,
-          externalProjectId: selectedRepository?.externalProjectId
+          integrationId: selectedIntegration.id,
+          repositoryId: selectedRepository.id
         })
       });
 
-      const body = (await response.json()) as { project?: ChangeThisProject; error?: string };
+      const body = (await response.json()) as { site?: ProjectView; installSnippet?: string; metrics?: ProjectView["metrics"]; error?: string };
 
-      if (!response.ok || !body.project) {
+      if (!response.ok || !body.site) {
         setMessage(body.error ?? t("destinations.message.error"));
         return;
       }
 
-      setProjectViews((current) => current.map((project) => project.publicKey === body.project?.publicKey ? body.project : project));
-      setMessage(`${body.project.name} enverra ses issues vers ${body.project.issueTarget.provider.toUpperCase()} ${body.project.issueTarget.namespace}/${body.project.issueTarget.project}.`);
+      const nextSite = {
+        ...body.site,
+        installSnippet: body.installSnippet,
+        metrics: body.metrics
+      };
+
+      setProjectViews((current) => [nextSite, ...current]);
+      setMessage(`${body.site.name} est prêt. Placez le script sur ${body.site.allowedOrigins[0]}.`);
+      setSelectedRepositoryId("");
+      setSiteName("");
+      setSiteOrigin("");
       setIsSiteModalOpen(false);
+    });
+  }
+
+  function deleteSite(projectKey: string) {
+    startTransition(async () => {
+      const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}`, {
+        method: "DELETE"
+      });
+
+      if (!response.ok) {
+        setMessage("Impossible de supprimer ce site.");
+        return;
+      }
+
+      setProjectViews((current) => current.filter((project) => project.publicKey !== projectKey));
+      setMessage("Site supprimé. Les issues déjà créées dans GitHub ou GitLab ne sont pas modifiées.");
+    });
+  }
+
+  function testScript(projectKey: string) {
+    startTransition(async () => {
+      const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/script-test`, {
+        method: "POST"
+      });
+      const body = (await response.json()) as { message?: string; error?: string };
+      setInstallChecks((current) => ({
+        ...current,
+        [projectKey]: body.message ?? body.error ?? "Test terminé."
+      }));
     });
   }
 
@@ -220,23 +256,26 @@ export function IssueDestinationSetup({ projects, integrations, section }: Props
               connectedProviders={connectedProviders}
               isPending={isPending}
               isSiteModalOpen={isSiteModalOpen}
+              installChecks={installChecks}
               message={message}
-              missingDestinations={missingDestinations}
               onCloseModal={() => setIsSiteModalOpen(false)}
+              onCreateSite={createSite}
+              onDeleteSite={deleteSite}
+              onTestScript={testScript}
               onCopyInstallSnippet={copyInstallSnippet}
-              onLinkRepo={linkRepo}
               onOpenSiteModal={openSiteModal}
-              onSelectProject={selectProject}
               onSelectProvider={selectProvider}
               projects={projectViews}
-              repoUrl={repoUrl}
               repositoryLoadMessage={repositoryLoadMessage}
               repositoryLoadState={repositoryLoadState}
               repositoryOptions={repositoryOptions}
-              selectedProject={selectedProject}
-              selectedProjectKey={selectedProjectKey}
               selectedProvider={selectedProvider}
-              setRepoUrl={setRepoUrl}
+              selectedRepositoryId={selectedRepositoryId}
+              setSelectedRepositoryId={setSelectedRepositoryId}
+              setSiteName={setSiteName}
+              setSiteOrigin={setSiteOrigin}
+              siteName={siteName}
+              siteOrigin={siteOrigin}
             />
           ) : null}
         </div>
@@ -488,49 +527,55 @@ function ConnectedSitesSection({
   connectedProviders,
   isPending,
   isSiteModalOpen,
+  installChecks,
   message,
-  missingDestinations,
   onCloseModal,
+  onCreateSite,
+  onDeleteSite,
+  onTestScript,
   onCopyInstallSnippet,
-  onLinkRepo,
   onOpenSiteModal,
-  onSelectProject,
   onSelectProvider,
   projects,
-  repoUrl,
   repositoryLoadMessage,
   repositoryLoadState,
   repositoryOptions,
-  selectedProject,
-  selectedProjectKey,
   selectedProvider,
-  setRepoUrl
+  selectedRepositoryId,
+  setSelectedRepositoryId,
+  setSiteName,
+  setSiteOrigin,
+  siteName,
+  siteOrigin
 }: {
   connectedProviders: Set<IssueProvider>;
   isPending: boolean;
   isSiteModalOpen: boolean;
+  installChecks: Record<string, string>;
   message: string;
-  missingDestinations: ProjectView[];
   onCloseModal: () => void;
+  onCreateSite: () => void;
+  onDeleteSite: (projectKey: string) => void;
+  onTestScript: (projectKey: string) => void;
   onCopyInstallSnippet: (project: ProjectView) => void;
-  onLinkRepo: () => void;
-  onOpenSiteModal: (projectKey?: string) => void;
-  onSelectProject: (projectKey: string) => void;
+  onOpenSiteModal: () => void;
   onSelectProvider: (provider: IssueProvider) => void;
   projects: ProjectView[];
-  repoUrl: string;
   repositoryLoadMessage: string;
   repositoryLoadState: RepositoryLoadState;
   repositoryOptions: RepositoryOption[];
-  selectedProject?: ProjectView;
-  selectedProjectKey: string;
   selectedProvider: IssueProvider;
-  setRepoUrl: (repoUrl: string) => void;
+  selectedRepositoryId: string;
+  setSelectedRepositoryId: (repositoryId: string) => void;
+  setSiteName: (name: string) => void;
+  setSiteOrigin: (origin: string) => void;
+  siteName: string;
+  siteOrigin: string;
 }) {
-  const { t } = useLanguage();
   const isSelectedProviderConnected = connectedProviders.has(selectedProvider);
   const shouldShowRepositorySelect = isSelectedProviderConnected && repositoryLoadState === "ready" && repositoryOptions.length > 0;
   const shouldShowRepositoryStatus = isSelectedProviderConnected && repositoryLoadState !== "idle";
+  const connectedIntegrations = Array.from(connectedProviders);
 
   return (
     <section className="settings-section linked-sites" aria-labelledby="linked-sites-title">
@@ -545,49 +590,73 @@ function ConnectedSitesSection({
         </button>
       </div>
 
-      <div className="site-repo-list">
-        {projects.map((project) => {
-          const issueTarget = project.issueTarget;
-          const providerConnected = connectedProviders.has(issueTarget.provider);
-          const isReady = providerConnected && issueTarget.namespace && issueTarget.project;
+      {projects.length === 0 ? (
+        <div className="empty-state connected-sites-empty">
+          <h2>Aucun site connecté</h2>
+          <p>Ajoutez un site pour générer sa clé publique, installer le widget et router les retours vers un dépôt Git réel.</p>
+          <button className="button" onClick={() => onOpenSiteModal()} type="button">
+            <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            Ajouter un nouveau site
+          </button>
+        </div>
+      ) : (
+        <div className="site-repo-list">
+          {projects.map((project) => {
+            const issueTarget = project.issueTarget;
+            const providerConnected = connectedProviders.has(issueTarget.provider);
+            const isReady = providerConnected && issueTarget.namespace && issueTarget.project;
 
-          return (
-            <article className="site-repo-row" key={project.publicKey}>
-              <div>
-                <h3>{project.name}</h3>
-                <p>{publicOrigins(project).join(", ") || "Origines locales uniquement"}</p>
-              </div>
-              <div className="site-script">
-                <strong>Script d&apos;installation</strong>
-                <code>{installSnippet(project.publicKey)}</code>
-                <button className="inline-action" onClick={() => onCopyInstallSnippet(project)} type="button">
-                  <Copy aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-                  Copier
-                </button>
-              </div>
-              <div className="repo-destination">
-                <ProviderBadge provider={issueTarget.provider} />
+            return (
+              <article className="site-repo-row connected-site-row" key={project.publicKey}>
                 <div>
-                  <strong>{issueTarget.namespace}/{issueTarget.project}</strong>
-                  <span><T k={isReady ? "destinations.ready" : "destinations.required"} /></span>
+                  <h3>{project.name}</h3>
+                  <p>{project.allowedOrigins.join(", ")}</p>
+                  <span className={`status-badge ${isReady ? "connected" : "failed"}`}>
+                    {isReady ? "Actif" : "Git déconnecté"}
+                  </span>
                 </div>
-              </div>
-              <div className="site-row-actions">
-                {issueTarget.webUrl ? (
-                  <a className="button secondary-button" href={issueTarget.webUrl}>
-                    <ExternalLink aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                    <T k="destinations.open" />
-                  </a>
-                ) : null}
-                <button className="button secondary-button" onClick={() => onOpenSiteModal(project.publicKey)} type="button">
-                  <Settings2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                  Modifier
-                </button>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+                <div className="repo-destination">
+                  <ProviderBadge provider={issueTarget.provider} />
+                  <div>
+                    <strong>{issueTarget.namespace}/{issueTarget.project}</strong>
+                    <span>{issueTarget.webUrl}</span>
+                  </div>
+                </div>
+                <div className="site-metrics">
+                  <span><strong>{project.metrics?.feedbacksReceived ?? 0}</strong> retours</span>
+                  <span><strong>{project.metrics?.issuesCreated ?? 0}</strong> issues créées</span>
+                  <span><strong>{project.metrics?.failedIssues ?? 0}</strong> échecs</span>
+                </div>
+                <div className="site-script">
+                  <strong>Script</strong>
+                  <code>{project.installSnippet ?? installSnippet(project.publicKey)}</code>
+                  <button className="inline-action" onClick={() => onCopyInstallSnippet(project)} type="button">
+                    <Copy aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
+                    Copier
+                  </button>
+                  {installChecks[project.publicKey] ? <span className="script-check-result">{installChecks[project.publicKey]}</span> : null}
+                </div>
+                <div className="site-row-actions">
+                  {issueTarget.webUrl ? (
+                    <a className="button secondary-button" href={issueTarget.webUrl}>
+                      <ExternalLink aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                      <T k="destinations.open" />
+                    </a>
+                  ) : null}
+                  <button className="button secondary-button" onClick={() => onTestScript(project.publicKey)} type="button">
+                    <RefreshCw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    Tester le script
+                  </button>
+                  <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
+                    <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    Supprimer
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
 
       {isSiteModalOpen ? (
         <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="site-modal-title">
@@ -604,15 +673,21 @@ function ConnectedSitesSection({
             </div>
 
             <div className="modal-copy">
-              <strong>Script unique, clé par site.</strong>
-              <span>Le bundle reste commun. La clé publique permet à ChangeThis d&apos;identifier le site et sa destination d&apos;issues.</span>
+              <strong>Un site, une clé publique, un dépôt Git.</strong>
+              <span>Choisissez un provider actif, sélectionnez un dépôt accessible, puis placez le script généré sur le domaine autorisé.</span>
             </div>
 
             <div className="repo-linker in-modal" id="site-repos">
               <div>
                 <h3>Choisir la destination des issues</h3>
-                <p>Sélectionnez un dépôt connecté quand la liste est disponible, ou renseignez directement l&apos;URL du dépôt cible.</p>
+                <p>Seuls les providers connectés et les dépôts accessibles par le token sont proposés.</p>
               </div>
+              {connectedIntegrations.length === 0 ? (
+                <div className="repository-loader unavailable" role="status">
+                  <strong>Aucune connexion Git active</strong>
+                  <span>Connectez GitHub ou GitLab avant d&apos;ajouter un site.</span>
+                </div>
+              ) : null}
               {shouldShowRepositoryStatus ? (
                 <div className={`repository-loader ${repositoryLoadState}`} role="status">
                   <strong>{repositoryStatusTitle(repositoryLoadState)}</strong>
@@ -621,51 +696,40 @@ function ConnectedSitesSection({
               ) : null}
               <form className="repo-form" onSubmit={(event) => event.preventDefault()}>
                 <label>
-                  Site
-                  <select name="project" value={selectedProjectKey} onChange={(event) => onSelectProject(event.target.value)}>
-                    {projects.map((project) => (
-                      <option key={project.publicKey} value={project.publicKey}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
+                  Nom du site
+                  <input name="siteName" onChange={(event) => setSiteName(event.target.value)} placeholder="Site vitrine" value={siteName} />
+                </label>
+                <label>
+                  Domaine autorisé
+                  <input name="siteOrigin" onChange={(event) => setSiteOrigin(event.target.value)} placeholder="https://www.exemple.be" value={siteOrigin} />
                 </label>
                 <label>
                   Service Git
                   <select name="provider" value={selectedProvider} onChange={(event) => onSelectProvider(event.target.value as IssueProvider)}>
-                    <option value="github">GitHub</option>
-                    <option value="gitlab">GitLab</option>
+                    <option disabled={!connectedProviders.has("github")} value="github">GitHub</option>
+                    <option disabled={!connectedProviders.has("gitlab")} value="gitlab">GitLab</option>
                   </select>
                 </label>
                 {shouldShowRepositorySelect ? (
                   <label className="repo-select-field">
                     Repository connecté
-                    <select name="repositorySelect" value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)}>
+                    <select name="repositorySelect" value={selectedRepositoryId} onChange={(event) => setSelectedRepositoryId(event.target.value)}>
                       <option value="">Choisir un dépôt</option>
                       {repositoryOptions.map((repository) => (
-                        <option key={repository.id} value={repository.webUrl}>
+                        <option key={repository.id} value={repository.id}>
                           {repository.label}
                         </option>
                       ))}
                     </select>
                   </label>
                 ) : null}
-                <label className="repo-url-field">
-                  {shouldShowRepositorySelect ? "URL du dépôt sélectionné" : "URL du dépôt d'issues"}
-                  <input
-                    name="repo"
-                    onChange={(event) => setRepoUrl(event.target.value)}
-                    placeholder={selectedProvider === "github" ? "https://github.com/org/repo" : "https://gitlab.com/group/project"}
-                    value={repoUrl}
-                  />
-                </label>
-                <button className="button" disabled={isPending || !selectedProject} onClick={onLinkRepo} type="button">
-                  <Save aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                  {isPending ? <T k="destinations.linking" /> : <T k="destinations.save" />}
+                <button className="button" disabled={isPending || !siteOrigin || !selectedRepositoryId || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
+                  <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                  {isPending ? "Création..." : "Créer le site"}
                 </button>
               </form>
               <p className="form-status" role="status">
-                {missingDestinations.length > 0 ? `${missingDestinations.length} ${t("destinations.message.missing")}` : message}
+                {message}
               </p>
             </div>
           </div>
@@ -822,14 +886,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function publicOrigins(project: ProjectView): string[] {
-  return project.allowedOrigins.filter((origin) => !origin.includes("localhost") && !origin.includes("127.0.0.1"));
-}
-
 function installSnippet(projectKey: string): string {
-  return `<script src="https://app.changethis.dev/widget.js" data-project="${projectKey}"></script>`;
-}
-
-function repositoryUrl(issueTarget?: IssueTarget): string {
-  return issueTarget?.webUrl ?? emptyRepository;
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  return `<script src="${origin}/widget.js" data-project="${projectKey}"></script>`;
 }

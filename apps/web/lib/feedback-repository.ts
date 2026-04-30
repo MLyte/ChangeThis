@@ -1,7 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateIssueTarget } from "@changethis/shared";
-import { changeThisProjects } from "./demo-project";
 import type {
   ExternalIssueRef,
   FeedbackPayload,
@@ -143,11 +142,7 @@ export class FileFeedbackRepository implements FeedbackRepository {
           return true;
         }
 
-        if (feedback.workspaceId) {
-          return feedback.workspaceId === filters.workspaceId;
-        }
-
-        return feedbackWorkspaceId(feedback.projectKey) === filters.workspaceId;
+        return false;
       })
       .filter((feedback) => !filters.projectKey || feedback.projectKey === filters.projectKey)
       .filter((feedback) => !filters.status || feedback.status === filters.status)
@@ -249,10 +244,6 @@ export class FileFeedbackRepository implements FeedbackRepository {
     fileLock = next.catch(() => undefined);
     return next;
   }
-}
-
-function feedbackWorkspaceId(projectKey: string): string | undefined {
-  return changeThisProjects.find((project) => project.publicKey === projectKey)?.workspaceId;
 }
 
 function createScreenshotAsset(feedbackId: string, dataUrl: string, now: string): StoredAsset {

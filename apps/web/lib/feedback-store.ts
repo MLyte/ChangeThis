@@ -62,7 +62,8 @@ export function listFeedbacks(projectKey?: string): StoredFeedback[] {
         ...feedback.payload.metadata,
         viewport: { ...feedback.payload.metadata.viewport }
       },
-      pin: feedback.payload.pin ? { ...feedback.payload.pin } : undefined
+      pin: feedback.payload.pin ? { ...feedback.payload.pin } : undefined,
+      pins: feedback.payload.pins?.map((pin) => ({ ...pin }))
     },
     issueDraft: {
       ...feedback.issueDraft,

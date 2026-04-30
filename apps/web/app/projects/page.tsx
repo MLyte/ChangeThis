@@ -257,7 +257,11 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           <strong>{feedback.issueTarget.namespace}/{feedback.issueTarget.project}</strong>
         </div>
         <span>{draftLabels}</span>
-        {feedback.payload.pin ? <span>Pin: {Math.round(feedback.payload.pin.x)}, {Math.round(feedback.payload.pin.y)}</span> : null}
+        {feedback.payload.pins?.length ? (
+          <span>{feedback.payload.pins.length} pin{feedback.payload.pins.length > 1 ? "s" : ""}</span>
+        ) : feedback.payload.pin ? (
+          <span>Pin: {Math.round(feedback.payload.pin.x)}, {Math.round(feedback.payload.pin.y)}</span>
+        ) : null}
         <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}>
           <T k="projects.feedback.destination" />
         </a>
@@ -268,6 +272,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
             asset={feedback.screenshotAsset}
             metadata={feedback.payload.metadata}
             pin={feedback.payload.pin}
+            pins={feedback.payload.pins}
           />
         ) : (
           <span className="no-preview">Sans capture</span>

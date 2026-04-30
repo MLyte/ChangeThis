@@ -1,16 +1,24 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { validateIssueTarget, type IssueProvider, type IssueTarget } from "@changethis/shared";
-import { changeThisProjects, type ChangeThisProject } from "./demo-project";
+import { validateIssueTarget, type IssueProvider, type IssueTarget, type Site } from "@changethis/shared";
+import { demoProject, localWorkspace, type ChangeThisProject } from "./demo-project";
 
-type StoredProjectTarget = {
-  projectKey: string;
+type StoredConnectedSite = Site & {
   issueTarget: IssueTarget;
-  updatedAt: string;
 };
 
-type ProjectTargetStore = {
-  targets: StoredProjectTarget[];
+type SiteRegistryStore = {
+  sites: StoredConnectedSite[];
+};
+
+export type CreateConnectedSiteInput = {
+  name?: string;
+  allowedOrigin: string;
+  provider: IssueProvider;
+  repositoryUrl: string;
+  integrationId?: string;
+  externalProjectId?: string;
+  workspaceId?: string;
 };
 
 export type ProjectIssueTargetUpdate = {
@@ -21,32 +29,86 @@ export type ProjectIssueTargetUpdate = {
   externalProjectId?: string;
 };
 
-const defaultStore: ProjectTargetStore = {
-  targets: []
+const defaultStore: SiteRegistryStore = {
+  sites: []
 };
 
 const localDataDir = process.env.CHANGETHIS_DATA_DIR ?? path.join(process.cwd(), ".changethis-data");
-const localDataFile = path.join(localDataDir, "project-targets.json");
+const localDataFile = path.join(localDataDir, "connected-sites.json");
 
 let lock: Promise<unknown> = Promise.resolve();
 
 export async function listConfiguredProjects(workspaceId?: string): Promise<ChangeThisProject[]> {
   const store = await readStore();
-  const configuredProjects = workspaceId
-    ? changeThisProjects.filter((project) => project.workspaceId === workspaceId)
-    : changeThisProjects;
-
-  return configuredProjects.map((project) => ({
-    ...project,
-    issueTarget: store.targets.find((target) => target.projectKey === project.publicKey)?.issueTarget ?? project.issueTarget
-  }));
+  return store.sites
+    .filter((site) => !workspaceId || site.workspaceId === workspaceId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((site) => ({ ...site }));
 }
 
 export async function findConfiguredProjectByKey(
   projectKey: string,
   workspaceId?: string
 ): Promise<ChangeThisProject | undefined> {
-  return (await listConfiguredProjects(workspaceId)).find((project) => project.publicKey === projectKey);
+  const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === projectKey);
+  if (project) {
+    return project;
+  }
+
+  return !workspaceId && projectKey === demoProject.publicKey ? demoProject : undefined;
+}
+
+export async function createConnectedSite(input: CreateConnectedSiteInput): Promise<ChangeThisProject> {
+  const issueTarget = parseRepositoryUrl(input.repositoryUrl, input.provider, {
+    externalProjectId: input.externalProjectId,
+    integrationId: input.integrationId
+  });
+
+  if (!issueTarget) {
+    throw new ProjectTargetValidationError("Repository URL must match the selected provider", 422);
+  }
+
+  const allowedOrigin = normalizeAllowedOrigin(input.allowedOrigin);
+  if (!allowedOrigin) {
+    throw new ProjectTargetValidationError("Site URL must be a valid HTTP origin", 422);
+  }
+
+  const workspaceId = input.workspaceId ?? localWorkspace.id;
+  const now = new Date().toISOString();
+  const site: StoredConnectedSite = {
+    id: `site_${crypto.randomUUID()}`,
+    workspaceId,
+    publicKey: `ct_${crypto.randomUUID().replaceAll("-", "")}`,
+    name: normalizeSiteName(input.name) ?? issueTarget.project,
+    allowedOrigins: [allowedOrigin],
+    issueTarget,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  await updateStore((store) => {
+    store.sites = [site, ...store.sites];
+  });
+
+  return { ...site };
+}
+
+export async function deleteConnectedSite(projectKey: string, workspaceId?: string): Promise<boolean> {
+  let deleted = false;
+
+  await updateStore((store) => {
+    const nextSites = store.sites.filter((site) => {
+      const shouldDelete = site.publicKey === projectKey && (!workspaceId || site.workspaceId === workspaceId);
+      if (shouldDelete) {
+        deleted = true;
+      }
+      return !shouldDelete;
+    });
+
+    store.sites = nextSites;
+  });
+
+  return deleted;
 }
 
 export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate, workspaceId?: string): Promise<ChangeThisProject> {
@@ -66,22 +128,32 @@ export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate, w
   }
 
   await updateStore((store) => {
-    const nextTarget: StoredProjectTarget = {
-      projectKey: update.projectKey,
-      issueTarget,
-      updatedAt: new Date().toISOString()
-    };
+    store.sites = store.sites.map((site) => {
+      if (site.publicKey !== update.projectKey || (workspaceId && site.workspaceId !== workspaceId)) {
+        return site;
+      }
 
-    store.targets = [
-      ...store.targets.filter((target) => target.projectKey !== update.projectKey),
-      nextTarget
-    ];
+      return {
+        ...site,
+        issueTarget,
+        updatedAt: new Date().toISOString()
+      };
+    });
   });
 
   return {
     ...project,
     issueTarget
   };
+}
+
+export async function isKnownOrigin(origin: string | null): Promise<boolean> {
+  if (!origin) {
+    return false;
+  }
+
+  const store = await readStore();
+  return demoProject.allowedOrigins.includes(origin) || store.sites.some((site) => site.allowedOrigins.includes(origin));
 }
 
 export function ensureIssueTargetConfigured(project: ChangeThisProject): IssueTarget {
@@ -92,6 +164,10 @@ export function ensureIssueTargetConfigured(project: ChangeThisProject): IssueTa
   }
 
   return validation.value;
+}
+
+export function installSnippet(projectKey: string): string {
+  return `<script src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget.js" data-project="${projectKey}"></script>`;
 }
 
 export class ProjectTargetValidationError extends Error {
@@ -123,7 +199,7 @@ function parseRepositoryUrl(
       });
     }
 
-    if (provider === "gitlab" && url.hostname.includes("gitlab") && parts.length >= 2) {
+    if (provider === "gitlab" && parts.length >= 2 && isAllowedGitLabRepositoryOrigin(url)) {
       const namespace = parts.slice(0, -1).join("/");
       const project = parts.at(-1);
 
@@ -147,7 +223,38 @@ function parseRepositoryUrl(
   return undefined;
 }
 
-async function readStore(): Promise<ProjectTargetStore> {
+function isAllowedGitLabRepositoryOrigin(url: URL): boolean {
+  const gitlabBaseUrl = process.env.GITLAB_BASE_URL;
+
+  if (gitlabBaseUrl) {
+    try {
+      return url.origin === new URL(gitlabBaseUrl).origin;
+    } catch {
+      return false;
+    }
+  }
+
+  return url.hostname.includes("gitlab");
+}
+
+function normalizeAllowedOrigin(value: string): string | undefined {
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return undefined;
+    }
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeSiteName(value: string | undefined): string | undefined {
+  const name = value?.trim();
+  return name ? name.slice(0, 120) : undefined;
+}
+
+async function readStore(): Promise<SiteRegistryStore> {
   try {
     const raw = await readFile(localDataFile, "utf8");
     return sanitizeStore(JSON.parse(raw));
@@ -160,7 +267,7 @@ async function readStore(): Promise<ProjectTargetStore> {
   }
 }
 
-async function updateStore(mutator: (store: ProjectTargetStore) => void): Promise<void> {
+async function updateStore(mutator: (store: SiteRegistryStore) => void): Promise<void> {
   const next = lock.then(async () => {
     const store = await readStore();
     mutator(store);
@@ -179,33 +286,48 @@ function validIssueTarget(value: IssueTarget): IssueTarget | undefined {
   return validation.ok ? validation.value : undefined;
 }
 
-function sanitizeStore(value: unknown): ProjectTargetStore {
-  if (!isRecord(value) || !Array.isArray(value.targets)) {
+function sanitizeStore(value: unknown): SiteRegistryStore {
+  if (!isRecord(value) || !Array.isArray(value.sites)) {
     return structuredClone(defaultStore);
   }
 
   return {
-    targets: value.targets.flatMap((target) => {
-      if (!isRecord(target) || typeof target.projectKey !== "string" || typeof target.updatedAt !== "string") {
+    sites: value.sites.flatMap((site) => {
+      if (
+        !isRecord(site)
+        || typeof site.id !== "string"
+        || typeof site.workspaceId !== "string"
+        || typeof site.publicKey !== "string"
+        || typeof site.name !== "string"
+        || !Array.isArray(site.allowedOrigins)
+        || typeof site.createdAt !== "string"
+        || typeof site.updatedAt !== "string"
+      ) {
         return [];
       }
 
-      const validation = validateIssueTarget(target.issueTarget);
-      if (!validation.ok || !changeThisProjects.some((project) => project.publicKey === target.projectKey)) {
+      const issueTarget = validateIssueTarget(site.issueTarget);
+      if (!issueTarget.ok) {
+        return [];
+      }
+
+      const allowedOrigins = site.allowedOrigins.filter((origin) => typeof origin === "string" && normalizeAllowedOrigin(origin) === origin);
+      if (allowedOrigins.length === 0) {
         return [];
       }
 
       return [{
-        projectKey: target.projectKey,
-        issueTarget: validation.value,
-        updatedAt: target.updatedAt
+        id: site.id,
+        workspaceId: site.workspaceId,
+        publicKey: site.publicKey,
+        name: site.name,
+        allowedOrigins,
+        issueTarget: issueTarget.value,
+        createdAt: site.createdAt,
+        updatedAt: site.updatedAt
       }];
     })
   };
-}
-
-function isIssueProvider(value: unknown): value is IssueProvider {
-  return value === "github" || value === "gitlab";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

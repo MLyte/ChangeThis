@@ -2554,8 +2554,34 @@ dd {
   align-items: start;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(0, 0.9fr) minmax(220px, 1fr) minmax(220px, 0.8fr) auto;
+  grid-template-columns: minmax(0, 0.8fr) minmax(220px, 0.9fr) minmax(140px, 0.45fr) minmax(240px, 1fr) auto;
   padding: 16px;
+}
+
+.connected-sites-empty {
+  margin-top: 12px;
+}
+
+.connected-site-row h3 {
+  font-size: 17px;
+  margin-bottom: 4px;
+}
+
+.site-metrics {
+  align-content: start;
+  display: grid;
+  gap: 6px;
+}
+
+.site-metrics span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.site-metrics strong {
+  color: var(--ink);
+  font-size: 15px;
 }
 
 .site-script {
@@ -2580,6 +2606,13 @@ dd {
   line-height: 1.4;
   overflow-wrap: anywhere;
   padding: 8px;
+}
+
+.script-check-result {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.35;
 }
 
 .inline-action {
@@ -2610,6 +2643,12 @@ dd {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.danger-button {
+  background: rgba(242, 107, 79, 0.12);
+  border-color: rgba(242, 107, 79, 0.24);
+  color: #9c341f;
 }
 
 .settings-modal {

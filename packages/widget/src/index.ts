@@ -28,6 +28,8 @@ const widgetCopy = {
     sending: "Envoi...",
     send: "Envoyer",
     selectArea: "Trace la zone à capturer",
+    addPin: "Ajouter une pin",
+    pins: "Pins",
     removePin: "Supprimer la pin",
     sent: "Feedback envoyé. Merci.",
     alertError: "Impossible d'envoyer le feedback. Réessaie dans un instant."
@@ -44,6 +46,8 @@ const widgetCopy = {
     sending: "Sending...",
     send: "Send",
     selectArea: "Drag the area to capture",
+    addPin: "Add pin",
+    pins: "Pins",
     removePin: "Remove pin",
     sent: "Feedback sent. Thank you.",
     alertError: "Unable to send feedback. Try again in a moment."
@@ -68,27 +72,76 @@ export function initChangeThis(options: WidgetOptions): void {
   const state = {
     open: false,
     type: "comment" as FeedbackType,
-    pin: undefined as PinTarget | undefined,
+    pins: [] as PinTarget[],
+    draftViewKey: undefined as string | undefined,
     captureArea: undefined as CaptureArea | undefined,
     sending: false,
     message: "",
     notice: ""
   };
 
-  const updatePinnedMarker = () => {
-    const marker = root.shadowRoot?.querySelector<HTMLElement>(".pin");
-    if (!marker || !state.pin) return;
+  const clearViewBoundDraft = () => {
+    state.pins = [];
+    state.captureArea = undefined;
+    state.draftViewKey = undefined;
+    if (state.type === "pin" || state.type === "screenshot") {
+      state.type = "comment";
+    }
+  };
 
-    const position = pinViewportPosition(state.pin);
-    marker.style.left = `${position.x}px`;
-    marker.style.top = `${position.y}px`;
+  const syncDraftView = (): boolean => {
+    if (!state.draftViewKey || state.draftViewKey === currentViewKey()) {
+      return false;
+    }
+
+    clearViewBoundDraft();
+    return true;
+  };
+
+  const updatePinnedMarkers = () => {
+    root.shadowRoot?.querySelectorAll<HTMLElement>(".pin").forEach((marker) => {
+      const index = Number(marker.dataset.pinIndex);
+      const pin = state.pins[index];
+      if (!pin) return;
+
+      const position = pinViewportPosition(pin);
+      marker.style.left = `${position.x}px`;
+      marker.style.top = `${position.y}px`;
+    });
+  };
+
+  const requestPin = () => {
+    syncDraftView();
+    const viewKey = currentViewKey();
+    state.type = "pin";
+    state.draftViewKey = viewKey;
+    state.captureArea = undefined;
+    state.notice = "";
+    state.open = false;
+    render();
+    startPinMode((pin) => {
+      if (currentViewKey() !== viewKey) {
+        clearViewBoundDraft();
+        render();
+        return;
+      }
+
+      state.pins = [...state.pins, pin];
+      state.open = true;
+      render();
+    });
   };
 
   const render = () => {
     const shadow = root.shadowRoot;
     if (!shadow) return;
 
-    const pinPosition = state.pin ? pinViewportPosition(state.pin) : undefined;
+    syncDraftView();
+    const pinMarkers = state.pins.map((pin, index) => {
+      const position = pinViewportPosition(pin);
+      return `<div class="pin" data-pin-index="${index}" style="left:${position.x}px;top:${position.y}px">${index + 1}</div>`;
+    }).join("");
+    const hasPins = state.pins.length > 0;
 
     shadow.innerHTML = `
       <style>
@@ -170,17 +223,53 @@ export function initChangeThis(options: WidgetOptions): void {
           margin: 8px 0 0;
         }
         .selection-summary {
-          align-items: center;
           border: 1px solid #e5e7eb;
           border-radius: 6px;
-          display: flex;
-          gap: 8px;
-          justify-content: space-between;
           margin-top: 8px;
           padding: 8px 10px;
         }
-        .selection-summary span {
+        .selection-header {
+          align-items: center;
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
+          margin-bottom: 6px;
+        }
+        .selection-header span {
           color: #374151;
+          font-size: 12px;
+          font-weight: 700;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .pin-list {
+          display: grid;
+          gap: 6px;
+          margin: 0;
+          padding: 0;
+        }
+        .pin-item {
+          align-items: center;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          list-style: none;
+        }
+        .pin-index {
+          border-radius: 999px;
+          background: #e11d48;
+          color: #fff;
+          display: grid;
+          font-size: 11px;
+          font-weight: 800;
+          height: 22px;
+          place-items: center;
+          width: 22px;
+        }
+        .pin-label {
+          color: #4b5563;
           font-size: 12px;
           font-weight: 700;
           min-width: 0;
@@ -195,6 +284,17 @@ export function initChangeThis(options: WidgetOptions): void {
           color: #991b1b;
           cursor: pointer;
           flex: 0 0 auto;
+          font-size: 12px;
+          font-weight: 800;
+          min-height: 28px;
+          padding: 5px 8px;
+        }
+        .add-pin {
+          border: 1px solid #d1d5db;
+          border-radius: 5px;
+          background: #fff;
+          color: #111827;
+          cursor: pointer;
           font-size: 12px;
           font-weight: 800;
           min-height: 28px;
@@ -234,7 +334,7 @@ export function initChangeThis(options: WidgetOptions): void {
           box-shadow: 0 14px 34px rgba(22, 101, 52, 0.16);
         }
       </style>
-      ${state.pin && pinPosition ? `<div class="pin" style="left:${pinPosition.x}px;top:${pinPosition.y}px">1</div>` : ""}
+      ${pinMarkers}
       ${state.notice ? `<div class="notice" role="status">${escapeHtml(state.notice)}</div>` : ""}
       <button class="button" data-action="toggle" data-variant="${buttonVariant}">
         <span>${escapeHtml(buttonLabel)}</span>
@@ -249,11 +349,22 @@ export function initChangeThis(options: WidgetOptions): void {
             <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${escapeHtml(copy.screenshot)}</button>
           </div>
           <textarea placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.message)}</textarea>
-          ${state.pin ? "" : `<p class="meta">${feedbackMeta(state, copy.metaDefault)}</p>`}
-          ${state.pin ? `
+          ${hasPins ? "" : `<p class="meta">${feedbackMeta(state, copy.metaDefault)}</p>`}
+          ${hasPins ? `
             <div class="selection-summary">
-              <span>${feedbackMeta(state, copy.metaDefault)}</span>
-              <button class="clear-selection" data-action="clear-pin">${escapeHtml(copy.removePin)}</button>
+              <div class="selection-header">
+                <span>${escapeHtml(copy.pins)} (${state.pins.length})</span>
+                <button class="add-pin" data-action="add-pin">${escapeHtml(copy.addPin)}</button>
+              </div>
+              <ul class="pin-list">
+                ${state.pins.map((pin, index) => `
+                  <li class="pin-item">
+                    <span class="pin-index">${index + 1}</span>
+                    <span class="pin-label">${escapeHtml(pinLabel(pin))}</span>
+                    <button class="clear-selection" data-action="remove-pin" data-pin-index="${index}" aria-label="${escapeHtml(`${copy.removePin} #${index + 1}`)}">${index + 1}</button>
+                  </li>
+                `).join("")}
+              </ul>
             </div>
           ` : ""}
           <div class="actions">
@@ -274,10 +385,18 @@ export function initChangeThis(options: WidgetOptions): void {
       render();
     });
 
-    shadow.querySelector<HTMLButtonElement>("[data-action='clear-pin']")?.addEventListener("click", () => {
-      state.pin = undefined;
-      state.type = "comment";
-      render();
+    shadow.querySelector<HTMLButtonElement>("[data-action='add-pin']")?.addEventListener("click", requestPin);
+
+    shadow.querySelectorAll<HTMLButtonElement>("[data-action='remove-pin']").forEach((button) => {
+      button.addEventListener("click", () => {
+        const index = Number(button.dataset.pinIndex);
+        state.pins = state.pins.filter((_, pinIndex) => pinIndex !== index);
+        if (state.pins.length === 0 && state.type === "pin") {
+          state.type = "comment";
+          state.draftViewKey = undefined;
+        }
+        render();
+      });
     });
 
     shadow.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => {
@@ -285,18 +404,19 @@ export function initChangeThis(options: WidgetOptions): void {
         state.type = button.dataset.mode as FeedbackType;
         state.notice = "";
         if (state.type === "pin") {
-          state.captureArea = undefined;
-          startPinMode((pin) => {
-            state.pin = pin;
-            state.open = true;
-            render();
-          });
-          state.open = false;
+          requestPin();
         } else if (state.type === "screenshot") {
-          state.pin = undefined;
+          const viewKey = currentViewKey();
+          state.draftViewKey = viewKey;
           state.open = false;
           render();
           startCaptureSelection(copy.selectArea, (area) => {
+            if (currentViewKey() !== viewKey) {
+              clearViewBoundDraft();
+              render();
+              return;
+            }
+
             state.captureArea = area;
             state.open = true;
             render();
@@ -308,7 +428,6 @@ export function initChangeThis(options: WidgetOptions): void {
           });
           return;
         } else {
-          state.pin = undefined;
           state.captureArea = undefined;
         }
         render();
@@ -320,6 +439,7 @@ export function initChangeThis(options: WidgetOptions): void {
     });
 
     shadow.querySelector<HTMLButtonElement>("[data-action='send']")?.addEventListener("click", async () => {
+      syncDraftView();
       state.sending = true;
       render();
       try {
@@ -328,11 +448,12 @@ export function initChangeThis(options: WidgetOptions): void {
           projectKey: options.projectKey,
           type: state.type,
           message: state.message,
-          pin: state.pin,
+          pins: state.pins,
           captureArea: state.captureArea
         });
         state.message = "";
-        state.pin = undefined;
+        state.pins = [];
+        state.draftViewKey = undefined;
         state.captureArea = undefined;
         state.type = "comment";
         state.open = false;
@@ -351,8 +472,13 @@ export function initChangeThis(options: WidgetOptions): void {
     });
   };
 
-  window.addEventListener("scroll", updatePinnedMarker, { passive: true });
-  window.addEventListener("resize", updatePinnedMarker);
+  window.addEventListener("scroll", updatePinnedMarkers, { passive: true });
+  window.addEventListener("resize", updatePinnedMarkers);
+  installNavigationListener(() => {
+    if (syncDraftView()) {
+      render();
+    }
+  });
 
   render();
 }
@@ -362,7 +488,7 @@ async function submitFeedback(params: {
   projectKey: string;
   type: FeedbackType;
   message: string;
-  pin?: PinTarget;
+  pins?: PinTarget[];
   captureArea?: CaptureArea;
 }) {
   const screenshotDataUrl = params.type === "screenshot" && params.captureArea
@@ -375,7 +501,8 @@ async function submitFeedback(params: {
     projectKey: params.projectKey,
     type: params.type,
     message: params.message,
-    pin: params.pin,
+    pin: params.pins?.[0],
+    pins: params.pins?.length ? params.pins : undefined,
     captureArea: params.captureArea,
     screenshotDataUrl,
     metadata: {
@@ -538,11 +665,16 @@ function startPinMode(onSelect: (pin: PinTarget) => void): void {
   const previousCursor = document.documentElement.style.cursor;
   document.documentElement.style.cursor = "crosshair";
 
+  const cleanup = () => {
+    document.documentElement.style.cursor = previousCursor;
+    document.removeEventListener("click", handleClick, true);
+    document.removeEventListener("keydown", handleKeydown, true);
+  };
+
   const handleClick = (event: MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    document.documentElement.style.cursor = previousCursor;
-    document.removeEventListener("click", handleClick, true);
+    cleanup();
 
     const target = event.target instanceof Element ? event.target : undefined;
     onSelect({
@@ -553,7 +685,18 @@ function startPinMode(onSelect: (pin: PinTarget) => void): void {
     });
   };
 
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    cleanup();
+  };
+
   document.addEventListener("click", handleClick, true);
+  document.addEventListener("keydown", handleKeydown, true);
 }
 
 async function captureViewport(area?: CaptureArea): Promise<string | undefined> {
@@ -619,12 +762,50 @@ function pinViewportPosition(pin: PinTarget): { x: number; y: number } {
   };
 }
 
+function currentViewKey(): string {
+  return `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+function installNavigationListener(onChange: () => void): void {
+  let previousViewKey = currentViewKey();
+  const notifyIfChanged = () => {
+    window.queueMicrotask(() => {
+      const nextViewKey = currentViewKey();
+      if (nextViewKey === previousViewKey) {
+        return;
+      }
+
+      previousViewKey = nextViewKey;
+      onChange();
+    });
+  };
+
+  const originalPushState = window.history.pushState.bind(window.history);
+  window.history.pushState = (...args: Parameters<History["pushState"]>) => {
+    const result = originalPushState(...args);
+    notifyIfChanged();
+    return result;
+  };
+
+  const originalReplaceState = window.history.replaceState.bind(window.history);
+  window.history.replaceState = (...args: Parameters<History["replaceState"]>) => {
+    const result = originalReplaceState(...args);
+    notifyIfChanged();
+    return result;
+  };
+
+  window.addEventListener("popstate", notifyIfChanged);
+  window.addEventListener("hashchange", notifyIfChanged);
+}
+
 function feedbackMeta(
-  state: { pin?: PinTarget; captureArea?: CaptureArea },
+  state: { pins?: PinTarget[]; captureArea?: CaptureArea },
   fallback: string
 ): string {
-  if (state.pin) {
-    return `Pin: x=${Math.round(state.pin.x)}, y=${Math.round(state.pin.y)}`;
+  if (state.pins?.length) {
+    return state.pins.length === 1
+      ? `Pin #1: x=${Math.round(state.pins[0].x)}, y=${Math.round(state.pins[0].y)}`
+      : `${state.pins.length} pins`;
   }
 
   if (state.captureArea) {
@@ -632,6 +813,12 @@ function feedbackMeta(
   }
 
   return escapeHtml(fallback);
+}
+
+function pinLabel(pin: PinTarget): string {
+  const target = pin.text || pin.selector;
+  const position = `x=${Math.round(pin.x)}, y=${Math.round(pin.y)}`;
+  return target ? `${target} - ${position}` : position;
 }
 
 function buildSelector(element: Element): string {

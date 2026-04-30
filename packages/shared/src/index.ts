@@ -84,6 +84,7 @@ export type FeedbackPayload = {
   message: string;
   metadata: FeedbackMetadata;
   pin?: PinTarget;
+  pins?: PinTarget[];
   captureArea?: CaptureArea;
   screenshotDataUrl?: string;
 };
@@ -136,6 +137,10 @@ type PinValidationResult =
   | { ok: true; value?: PinTarget }
   | { ok: false; error: string };
 
+type PinsValidationResult =
+  | { ok: true; value?: PinTarget[] }
+  | { ok: false; error: string };
+
 type CaptureAreaValidationResult =
   | { ok: true; value?: CaptureArea }
   | { ok: false; error: string };
@@ -144,6 +149,7 @@ const feedbackTypes = ["comment", "pin", "screenshot"] as const;
 const issueProviders = ["github", "gitlab"] as const;
 const defaultMaxMessageLength = 5000;
 const defaultMaxScreenshotBytes = 2_000_000;
+const maxPins = 20;
 
 const labelByType: Record<FeedbackType, string> = {
   comment: "mode:comment",
@@ -184,6 +190,13 @@ export function validateFeedbackPayload(
     return pin;
   }
 
+  const pins = validatePins(value.pins);
+  if (!pins.ok) {
+    return pins;
+  }
+  const normalizedPins = pins.value ?? (pin.value ? [pin.value] : undefined);
+  const normalizedPin = pin.value ?? normalizedPins?.[0];
+
   const captureArea = validateCaptureArea(value.captureArea);
   if (!captureArea.ok) {
     return captureArea;
@@ -206,7 +219,8 @@ export function validateFeedbackPayload(
       type: value.type,
       message: value.message,
       metadata: metadata.value,
-      pin: pin.value,
+      pin: normalizedPin,
+      pins: normalizedPins,
       captureArea: captureArea.value,
       screenshotDataUrl: value.screenshotDataUrl
     }
@@ -282,6 +296,7 @@ export function validateIssueTarget(value: unknown): IssueTargetValidationResult
 }
 
 function buildIssueDescription(feedback: FeedbackPayload): string {
+  const pins = getFeedbackPins(feedback);
   const lines = [
     "## Feedback client",
     "",
@@ -300,11 +315,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     "",
     "## Localisation",
     "",
-    feedback.pin
-      ? `- Position: x=${feedback.pin.x}, y=${feedback.pin.y}`
-      : "- Position: Non applicable",
-    feedback.pin?.selector ? `- Element probable: \`${feedback.pin.selector}\`` : "- Element probable: Non disponible",
-    feedback.pin?.text ? `- Texte visible: ${feedback.pin.text}` : "- Texte visible: Non disponible",
+    ...formatPinsForIssue(pins),
     "",
     "## Donnees techniques",
     "",
@@ -315,6 +326,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
         type: feedback.type,
         metadata: feedback.metadata,
         pin: feedback.pin ?? null,
+        pins,
         captureArea: feedback.captureArea ?? null,
         hasScreenshot: Boolean(feedback.screenshotDataUrl)
       },
@@ -341,6 +353,30 @@ function summarize(message: string, fallback?: string): string {
   const source = message.trim() || fallback?.trim() || "Retour client";
   const firstLine = source.split(/\r?\n/)[0] ?? "Retour client";
   return firstLine.length > 72 ? `${firstLine.slice(0, 69)}...` : firstLine;
+}
+
+function getFeedbackPins(feedback: FeedbackPayload): PinTarget[] {
+  if (feedback.pins?.length) {
+    return feedback.pins;
+  }
+
+  return feedback.pin ? [feedback.pin] : [];
+}
+
+function formatPinsForIssue(pins: PinTarget[]): string[] {
+  if (pins.length === 0) {
+    return [
+      "- Position: Non applicable",
+      "- Element probable: Non disponible",
+      "- Texte visible: Non disponible"
+    ];
+  }
+
+  return pins.flatMap((pin, index) => [
+    `- Pin #${index + 1}: x=${pin.x}, y=${pin.y}`,
+    pin.selector ? `  - Element probable: \`${pin.selector}\`` : "  - Element probable: Non disponible",
+    pin.text ? `  - Texte visible: ${pin.text}` : "  - Texte visible: Non disponible"
+  ]);
 }
 
 function validateMetadata(value: unknown): MetadataValidationResult {
@@ -440,6 +476,37 @@ function validatePin(value: unknown): PinValidationResult {
       selector: value.selector,
       text: value.text
     }
+  };
+}
+
+function validatePins(value: unknown): PinsValidationResult {
+  if (value === undefined) {
+    return { ok: true };
+  }
+
+  if (!Array.isArray(value)) {
+    return invalid("pins must be an array");
+  }
+
+  if (value.length > maxPins) {
+    return invalid(`pins must contain at most ${maxPins} items`);
+  }
+
+  const pins: PinTarget[] = [];
+  for (const item of value) {
+    const pin = validatePin(item);
+    if (!pin.ok) {
+      return pin;
+    }
+
+    if (pin.value) {
+      pins.push(pin.value);
+    }
+  }
+
+  return {
+    ok: true,
+    value: pins.length ? pins : undefined
   };
 }
 

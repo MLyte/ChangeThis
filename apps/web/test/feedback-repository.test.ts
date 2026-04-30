@@ -128,3 +128,63 @@ test("file repository records retryable and successful issue attempts", async ()
     assert.equal(sent.externalIssue?.url, "https://github.com/MLyte/ChangeThis/issues/42");
   });
 });
+
+test("file repository exposes sent issue counts for connected site metrics", async () => {
+  await withRepository(async (repository) => {
+    const first = await repository.create({
+      projectKey: "demo_project_key",
+      projectName: "Demo Project",
+      issueTarget,
+      payload: feedbackPayload(),
+      issueDraft: buildIssueDraft(feedbackPayload())
+    });
+    const second = await repository.create({
+      projectKey: "demo_project_key",
+      projectName: "Demo Project",
+      issueTarget,
+      payload: feedbackPayload({ message: "The pricing copy is unclear" }),
+      issueDraft: buildIssueDraft(feedbackPayload({ message: "The pricing copy is unclear" }))
+    });
+    const other = await repository.create({
+      projectKey: "other_project_key",
+      projectName: "Other Project",
+      issueTarget,
+      payload: feedbackPayload({ projectKey: "other_project_key" }),
+      issueDraft: buildIssueDraft(feedbackPayload({ projectKey: "other_project_key" }))
+    });
+
+    await repository.recordIssueAttempt(first.id, {
+      ok: true,
+      externalIssue: {
+        provider: "github",
+        number: 1,
+        url: "https://github.com/MLyte/ChangeThis/issues/1",
+        state: "open"
+      }
+    });
+    await repository.recordIssueAttempt(second.id, {
+      ok: true,
+      externalIssue: {
+        provider: "github",
+        number: 2,
+        url: "https://github.com/MLyte/ChangeThis/issues/2",
+        state: "open"
+      }
+    });
+    await repository.recordIssueAttempt(other.id, {
+      ok: true,
+      externalIssue: {
+        provider: "github",
+        number: 3,
+        url: "https://github.com/MLyte/ChangeThis/issues/3",
+        state: "open"
+      }
+    });
+
+    const createdIssuesForSite = (await repository.list({ projectKey: "demo_project_key" }))
+      .filter((feedback) => feedback.status === "sent_to_provider" && feedback.externalIssue);
+
+    assert.equal(createdIssuesForSite.length, 2);
+    assert.deepEqual(createdIssuesForSite.map((feedback) => feedback.externalIssue?.number).sort(), [1, 2]);
+  });
+});

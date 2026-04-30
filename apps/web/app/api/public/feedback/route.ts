@@ -2,8 +2,7 @@ import { buildIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
-import { ensureIssueTargetConfigured, findConfiguredProjectByKey } from "../../../../lib/project-registry";
-import { isKnownOrigin } from "../../../../lib/demo-project";
+import { ensureIssueTargetConfigured, findConfiguredProjectByKey, isKnownOrigin } from "../../../../lib/project-registry";
 
 const maxBodyBytes = 2_500_000;
 const maxScreenshotBytes = 2_000_000;
@@ -33,16 +32,18 @@ function corsHeaders(origin: string | null): HeadersInit {
 
 export async function OPTIONS(request: Request) {
   const origin = request.headers.get("origin");
+  const knownOrigin = await isKnownOrigin(origin);
   return new NextResponse(null, {
-    status: isKnownOrigin(origin) ? 204 : 403,
-    headers: corsHeaders(origin)
+    status: knownOrigin ? 204 : 403,
+    headers: knownOrigin ? corsHeaders(origin) : {}
   });
 }
 
 export async function POST(request: Request) {
   const requestId = requestIdFrom(request);
   const origin = request.headers.get("origin");
-  const headers = corsHeaders(origin);
+  const knownOrigin = await isKnownOrigin(origin);
+  const headers = knownOrigin ? corsHeaders(origin) : {};
   const contentLength = request.headers.get("content-length");
 
   if (contentLength && Number(contentLength) > maxBodyBytes) {
@@ -110,7 +111,8 @@ export async function POST(request: Request) {
     issueTarget,
     payload,
     issueDraft,
-    screenshotDataUrl: payload.screenshotDataUrl
+    screenshotDataUrl: payload.screenshotDataUrl,
+    workspaceId: project.workspaceId
   });
 
   logInfo("feedback_received", {

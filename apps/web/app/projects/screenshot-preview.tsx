@@ -11,13 +11,14 @@ type Props = {
   asset: StoredAsset;
   metadata: FeedbackMetadata;
   pin?: PinTarget;
+  pins?: PinTarget[];
 };
 
-export function ScreenshotPreview({ asset, metadata, pin }: Props) {
+export function ScreenshotPreview({ asset, metadata, pin, pins }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const titleId = useId();
   const sizeKo = Math.round(asset.bytes / 1024);
-  const pinPosition = pin ? pinImagePosition(pin, metadata) : undefined;
+  const pinPositions = (pins?.length ? pins : pin ? [pin] : []).map((item) => pinImagePosition(item, metadata));
 
   return (
     <>
@@ -34,7 +35,9 @@ export function ScreenshotPreview({ asset, metadata, pin }: Props) {
             unoptimized
             width={112}
           />
-          {pinPosition ? <span className="screenshot-pin" style={pinPosition}>1</span> : null}
+          {pinPositions.map((position, index) => (
+            <span className="screenshot-pin" key={index} style={position}>{index + 1}</span>
+          ))}
         </span>
         <span className="screenshot-thumb-overlay" aria-hidden="true">
           <Eye className="ui-icon" size={20} strokeWidth={2.4} />
@@ -78,7 +81,9 @@ export function ScreenshotPreview({ asset, metadata, pin }: Props) {
                 unoptimized
                 width={1920}
               />
-              {pinPosition ? <span className="screenshot-pin large" style={pinPosition}>1</span> : null}
+              {pinPositions.map((position, index) => (
+                <span className="screenshot-pin large" key={index} style={position}>{index + 1}</span>
+              ))}
             </div>
             <p>{asset.mimeType} - {sizeKo} Ko</p>
           </div>

@@ -38,6 +38,20 @@ test("validateFeedbackPayload accepts a complete feedback payload", () => {
   assert.equal(result.value.metadata.path, "/contact");
 });
 
+test("validateFeedbackPayload accepts multiple pins and keeps first pin compatibility", () => {
+  const result = validateFeedbackPayload(validPayload({
+    pin: undefined,
+    pins: [
+      { x: 42, y: 128, selector: ".hero-cta", text: "Demander un devis" },
+      { x: 210, y: 360, selector: ".pricing", text: "Tarifs" }
+    ]
+  }));
+
+  assert.equal(result.ok, true);
+  assert.equal(result.value.pin.x, 42);
+  assert.equal(result.value.pins.length, 2);
+});
+
 test("validateFeedbackPayload rejects malformed payloads", () => {
   const result = validateFeedbackPayload(validPayload({ metadata: undefined }));
 
@@ -64,6 +78,21 @@ test("buildIssueDraft creates a concise provider-neutral issue draft", () => {
   assert.equal(draft.title, "[Feedback] /contact - Make the call to action more visible");
   assert.deepEqual(draft.labels, ["source:client-feedback", "status:raw", "type:feedback", "mode:pin"]);
   assert.match(draft.description, /Element probable: `\.hero-cta`/);
+});
+
+test("buildIssueDraft numbers multiple pins in the issue description", () => {
+  const validation = validateFeedbackPayload(validPayload({
+    pins: [
+      { x: 42, y: 128, selector: ".hero-cta", text: "Demander un devis" },
+      { x: 210, y: 360, selector: ".pricing", text: "Tarifs" }
+    ]
+  }));
+  assert.equal(validation.ok, true);
+
+  const draft = buildIssueDraft(validation.value);
+
+  assert.match(draft.description, /Pin #1: x=42, y=128/);
+  assert.match(draft.description, /Pin #2: x=210, y=360/);
 });
 
 test("buildGitHubIssueDraft remains as a compatibility alias", () => {
