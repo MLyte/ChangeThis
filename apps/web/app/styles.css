@@ -2057,6 +2057,47 @@ dd {
   padding: 12px 16px;
 }
 
+.dashboard-view-tabs {
+  align-items: center;
+  background: white;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+.view-tab {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.view-tab.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: white;
+}
+
+.view-tab span {
+  background: var(--soft);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 12px;
+  padding: 2px 7px;
+}
+
+.view-tab.active span {
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+}
+
 .filter-field {
   display: grid;
   gap: 5px;
@@ -2143,7 +2184,7 @@ dd {
   border-left: 0;
   display: grid;
   gap: 12px;
-  grid-template-columns: 10px minmax(280px, 0.95fr) minmax(260px, 0.75fr) 112px minmax(176px, 190px);
+  grid-template-columns: 10px 28px minmax(320px, 1fr) 104px minmax(132px, 150px);
   padding: 12px 16px;
 }
 
@@ -2162,6 +2203,58 @@ dd {
   display: grid;
   justify-items: center;
   padding-top: 6px;
+}
+
+.feedback-select {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.feedback-select input {
+  accent-color: var(--accent);
+  height: 16px;
+  width: 16px;
+}
+
+.feedback-select input:disabled {
+  cursor: not-allowed;
+  opacity: 0.28;
+}
+
+.bulk-issue-form {
+  display: grid;
+}
+
+.bulk-issue-toolbar {
+  align-items: center;
+  background: white;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 10px 16px;
+}
+
+.bulk-issue-toolbar div {
+  display: grid;
+  gap: 2px;
+}
+
+.bulk-issue-toolbar strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.bulk-issue-toolbar span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bulk-issue-toolbar .button {
+  min-height: 34px;
+  padding: 8px 11px;
 }
 
 .status-dot {
@@ -2199,7 +2292,6 @@ dd {
 .compact-feedback-row .feedback-main {
   gap: 6px;
   min-width: 0;
-  max-width: 620px;
 }
 
 .compact-feedback-row .feedback-main h2 {
@@ -2236,10 +2328,9 @@ dd {
 .compact-issue-draft {
   background: transparent;
   border: 0;
-  border-left: 1px solid var(--line);
   border-radius: 0;
   gap: 5px;
-  padding: 0 0 0 12px;
+  padding: 0;
 }
 
 .compact-issue-draft strong,
@@ -2265,15 +2356,87 @@ dd {
 }
 
 .compact-feedback-row .feedback-actions {
-  min-width: 176px;
+  gap: 6px;
+  min-width: 132px;
   width: 100%;
 }
 
 .compact-feedback-row .feedback-actions .button {
   justify-content: center;
-  min-height: 32px;
-  padding: 7px 10px;
+  min-height: 30px;
+  padding: 6px 9px;
   width: 100%;
+}
+
+.feedback-disclosure {
+  margin-top: 4px;
+}
+
+.feedback-disclosure summary {
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  list-style: none;
+}
+
+.feedback-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.feedback-disclosure summary::before {
+  content: "+";
+  display: inline-block;
+  font-weight: 950;
+  margin-right: 5px;
+}
+
+.feedback-disclosure[open] summary::before {
+  content: "-";
+}
+
+.feedback-disclosure-grid {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.feedback-technical-summary {
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  font-weight: 750;
+  gap: 4px;
+  min-width: 0;
+}
+
+.feedback-technical-summary span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feedback-action-menu {
+  position: relative;
+  width: 100%;
+}
+
+.feedback-action-menu summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.feedback-action-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.feedback-action-menu-panel {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .compact-callout {

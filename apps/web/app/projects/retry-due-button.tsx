@@ -21,17 +21,17 @@ export function RetryDueButton() {
         const body = await response.json().catch(() => undefined) as { processed?: number; error?: string } | undefined;
 
         if (!response.ok) {
-          toast.error("Relance impossible", {
-            description: body?.error ?? "Les relances dues n'ont pas pu être rejouées."
+          toast.error("Réessai impossible", {
+            description: body?.error ?? "Les créations d'issues en attente n'ont pas pu être réessayées."
           });
           return;
         }
 
         const processed = body?.processed ?? 0;
-        toast.success(processed > 0 ? "Relances rejouées" : "Aucune relance due", {
+        toast.success(processed > 0 ? "Créations d'issues réessayées" : "Aucune issue à réessayer", {
           description: processed > 0
             ? `${processed} retour${processed > 1 ? "s" : ""} traité${processed > 1 ? "s" : ""}.`
-            : "Aucun retour n'était prêt à être relancé."
+            : "Aucun feedback en échec n'était prêt pour une nouvelle tentative."
         });
         router.refresh();
       } catch (error) {

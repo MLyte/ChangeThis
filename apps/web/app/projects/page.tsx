@@ -11,6 +11,7 @@ import { AppHeader } from "../app-header";
 import { T } from "../i18n";
 import { ProviderBadge } from "../provider-badge";
 import { FeedbackActions } from "./feedback-actions";
+import { BulkIssueForm } from "./bulk-issue-form";
 import { DemoSeedButton } from "./demo-seed-button";
 import { RetryDueButton } from "./retry-due-button";
 import { ScreenshotPreview } from "./screenshot-preview";
@@ -27,7 +28,7 @@ type ProjectsPageProps = {
   }>;
 };
 
-type DashboardStatusFilter = "all" | "priority" | FeedbackStatus;
+type DashboardStatusFilter = "active" | "history" | "all" | "priority" | FeedbackStatus;
 
 type DashboardFilters = {
   provider: "all" | "github" | "gitlab";
@@ -85,12 +86,12 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const projects = await listConfiguredProjects(workspaceId);
   const feedbacks = await getFeedbackRepository().list({ workspaceId });
   const filteredFeedbacks = feedbacks.filter((feedback) => matchesDashboardFilters(feedback, filters));
+  const activeFeedbacks = feedbacks.filter(isActiveFeedback);
+  const historyFeedbacks = feedbacks.filter(isHistoryFeedback);
   const priorityFeedbacks = filteredFeedbacks.filter(isPriorityFeedback);
   const queuedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "issue_creation_pending");
   const retryFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "retrying");
   const failedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "failed");
-  const sentFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "sent_to_provider");
-  const keptFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "kept");
   const resolvedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "resolved");
   const githubProjects = projects.filter((project) => project.issueTarget.provider === "github").length;
   const gitlabProjects = projects.filter((project) => project.issueTarget.provider === "gitlab").length;
@@ -123,18 +124,27 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             </div>
           </div>
 
+            <DashboardViewTabs
+              activeCount={activeFeedbacks.length}
+              historyCount={historyFeedbacks.length}
+              status={filters.status}
+              totalCount={feedbacks.length}
+            />
+
             <DashboardFilterBar
               filteredCount={filteredFeedbacks.length}
               filters={filters}
               hasActiveFilters={hasActiveFilters}
+              historyCount={historyFeedbacks.length}
+              activeCount={activeFeedbacks.length}
               projects={projects}
               totalCount={feedbacks.length}
             />
 
-            {priorityFeedbacks.length === 0 ? (
+            {filteredFeedbacks.length === 0 ? (
               <div className="empty-state compact-empty-state">
-                <h2>{hasActiveFilters ? "Aucun retour pour ces filtres" : <T k="projects.empty.title" />}</h2>
-                <p>{hasActiveFilters ? "Ajustez les filtres ou revenez à la vue complète." : <T k="projects.empty.copy" />}</p>
+                <h2>{hasActiveFilters ? "Aucun retour pour cette vue" : <T k="projects.empty.title" />}</h2>
+                <p>{hasActiveFilters ? "Ajustez les filtres, passez en Historique, ou revenez à la File active." : <T k="projects.empty.copy" />}</p>
                 {hasActiveFilters ? (
                   <Link className="button secondary-button" href="/projects">Réinitialiser les filtres</Link>
                 ) : (
@@ -142,26 +152,12 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 )}
               </div>
             ) : (
-              <div className="feedback-list" role="list" aria-label="Retours à traiter">
-                {priorityFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
-              </div>
+              <BulkIssueForm>
+                <div className="feedback-list" role="list" aria-label="Retours à traiter">
+                  {filteredFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
+                </div>
+              </BulkIssueForm>
             )}
-
-            <FeedbackGroup
-              description="Feedbacks liés à une issue Git encore ouverte ou à vérifier."
-              feedbacks={sentFeedbacks}
-              title="Issues créées"
-            />
-            <FeedbackGroup
-              description="Feedbacks dont l'issue Git correspondante est fermée."
-              feedbacks={resolvedFeedbacks}
-              title="Résolus"
-            />
-            <FeedbackGroup
-              description="Feedbacks conservés dans ChangeThis sans création d'issue."
-              feedbacks={keptFeedbacks}
-              title="Conservés sans issue"
-            />
           </section>
 
           <aside className="dashboard-side-panel" aria-label="Contexte ChangeThis">
@@ -222,16 +218,46 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   );
 }
 
+function DashboardViewTabs({
+  activeCount,
+  historyCount,
+  status,
+  totalCount
+}: {
+  activeCount: number;
+  historyCount: number;
+  status: DashboardStatusFilter;
+  totalCount: number;
+}) {
+  return (
+    <nav className="dashboard-view-tabs" aria-label="Vue des retours">
+      <Link className={`view-tab${status === "active" ? " active" : ""}`} href="/projects">
+        File active <span>{activeCount}</span>
+      </Link>
+      <Link className={`view-tab${status === "history" ? " active" : ""}`} href="/projects?status=history">
+        Historique <span>{historyCount}</span>
+      </Link>
+      <Link className={`view-tab${status === "all" ? " active" : ""}`} href="/projects?status=all">
+        Tous <span>{totalCount}</span>
+      </Link>
+    </nav>
+  );
+}
+
 function DashboardFilterBar({
+  activeCount,
   filteredCount,
   filters,
   hasActiveFilters,
+  historyCount,
   projects,
   totalCount
 }: {
+  activeCount: number;
   filteredCount: number;
   filters: DashboardFilters;
   hasActiveFilters: boolean;
+  historyCount: number;
   projects: ChangeThisProject[];
   totalCount: number;
 }) {
@@ -251,9 +277,12 @@ function DashboardFilterBar({
       <div className="filter-field">
         <label htmlFor="dashboard-filter-status">Statut</label>
         <select defaultValue={filters.status} id="dashboard-filter-status" name="status">
-          <option value="all">Tous</option>
-          <option value="priority">À traiter</option>
+          <option value="active">File active ({activeCount})</option>
+          <option value="history">Historique ({historyCount})</option>
+          <option value="all">Tous ({totalCount})</option>
+          <option value="priority">Action requise</option>
           <option value="raw">Nouveaux</option>
+          <option value="issue_creation_pending">En file</option>
           <option value="retrying">Relances</option>
           <option value="failed">Échecs</option>
           <option value="sent_to_provider">Issues créées</option>
@@ -341,32 +370,14 @@ function ActivityItem({ label, value }: { label: string; value: number | string 
   );
 }
 
-function FeedbackGroup({ description, feedbacks, title }: { description: string; feedbacks: StoredFeedback[]; title: string }) {
-  if (feedbacks.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="feedback-group" aria-labelledby={`feedback-group-${slugify(title)}`}>
-      <div className="feedback-group-heading">
-        <div>
-          <h3 id={`feedback-group-${slugify(title)}`}>{title}</h3>
-          <p>{description}</p>
-        </div>
-        <span className="status-badge muted">{feedbacks.length}</span>
-      </div>
-      <div className="feedback-list" role="list" aria-label={title}>
-        {feedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
-      </div>
-    </section>
-  );
-}
-
 function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const draftLabels = feedback.issueDraft.labels.join(" / ");
   const viewport = `${feedback.payload.metadata.viewport.width} x ${feedback.payload.metadata.viewport.height}`;
   const appEnvironment = feedback.payload.metadata.app;
   const appEnvironmentSummary = formatAppEnvironmentSummary(appEnvironment);
+  const displayMessage = formatFeedbackMessage(feedback.payload.message);
+  const cardTitle = formatFeedbackCardTitle(feedback);
+  const canBulkCreateIssue = feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
 
   return (
@@ -374,6 +385,15 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
       <div className="feedback-status-rail">
         <span className={`status-dot ${feedback.status}`} aria-hidden="true" />
       </div>
+      <label className="feedback-select">
+        <input
+          aria-label={`Sélectionner ${cardTitle}`}
+          disabled={!canBulkCreateIssue}
+          name="feedbackId"
+          type="checkbox"
+          value={feedback.id}
+        />
+      </label>
       <div className="feedback-main">
         <div className="feedback-tags" aria-label="Métadonnées du feedback">
           <span className="status-badge connected">{feedback.payload.type}</span>
@@ -382,8 +402,8 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           </span>
           <ProviderBadge provider={feedback.issueTarget.provider} />
         </div>
-        <h2>{feedback.issueDraft.title}</h2>
-        <p>{feedback.payload.message || <T k="projects.feedback.noMessage" />}</p>
+        <h2>{cardTitle}</h2>
+        <p>{displayMessage.message || <T k="projects.feedback.noMessage" />}</p>
         {feedback.lastError ? (
           <div className="error-callout compact-callout">
             <strong><T k="projects.feedback.issueError" /></strong>
@@ -396,27 +416,36 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           </div>
         ) : null}
         <div className="feedback-meta">
+          {displayMessage.reporter ? <span>Envoyé par {displayMessage.reporter}</span> : null}
           <span>{feedback.projectName}</span>
           <span>{feedback.payload.metadata.path}</span>
-          <span>{viewport}</span>
-          {appEnvironmentSummary ? <span>{appEnvironmentSummary}</span> : null}
           <span>{formatDate(feedback.createdAt)}</span>
         </div>
-      </div>
-      <div className="issue-draft compact-issue-draft">
-        <div>
-          <p className="eyebrow"><T k="projects.feedback.draft" /></p>
-          <strong>{feedback.issueTarget.namespace}/{feedback.issueTarget.project}</strong>
-        </div>
-        <span>{draftLabels}</span>
-        {feedback.payload.pins?.length ? (
-          <span>{feedback.payload.pins.length} pin{feedback.payload.pins.length > 1 ? "s" : ""}</span>
-        ) : feedback.payload.pin ? (
-          <span>Pin: {Math.round(feedback.payload.pin.x)}, {Math.round(feedback.payload.pin.y)}</span>
-        ) : null}
-        <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}>
-          <T k="projects.feedback.destination" />
-        </a>
+        <details className="feedback-disclosure" open={feedback.status === "failed" || feedback.status === "retrying"}>
+          <summary>Brouillon, destination et contexte</summary>
+          <div className="feedback-disclosure-grid">
+            <div className="issue-draft compact-issue-draft">
+              <div>
+                <p className="eyebrow"><T k="projects.feedback.draft" /></p>
+                <strong>{feedback.issueTarget.namespace}/{feedback.issueTarget.project}</strong>
+              </div>
+              <span>{draftLabels}</span>
+              {feedback.payload.pins?.length ? (
+                <span>{feedback.payload.pins.length} pin{feedback.payload.pins.length > 1 ? "s" : ""}</span>
+              ) : feedback.payload.pin ? (
+                <span>Pin: {Math.round(feedback.payload.pin.x)}, {Math.round(feedback.payload.pin.y)}</span>
+              ) : null}
+              <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}>
+                <T k="projects.feedback.destination" />
+              </a>
+            </div>
+            <div className="feedback-technical-summary">
+              <span>Viewport: {viewport}</span>
+              {appEnvironmentSummary ? <span>{appEnvironmentSummary}</span> : null}
+              <span>URL: {feedback.payload.metadata.url}</span>
+            </div>
+          </div>
+        </details>
       </div>
       <div className="compact-preview-cell">
         {feedback.screenshotAsset ? (
@@ -448,10 +477,6 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   );
 }
 
-function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
-
 function parseDashboardFilters(params?: {
   provider?: string;
   q?: string;
@@ -469,11 +494,11 @@ function parseDashboardFilters(params?: {
 }
 
 function parseStatusFilter(value?: string): DashboardStatusFilter {
-  if (value === "priority" || isFeedbackStatus(value)) {
+  if (value === "active" || value === "history" || value === "priority" || value === "all" || isFeedbackStatus(value)) {
     return value;
   }
 
-  return "all";
+  return "active";
 }
 
 function matchesDashboardFilters(feedback: StoredFeedback, filters: DashboardFilters): boolean {
@@ -489,7 +514,15 @@ function matchesDashboardFilters(feedback: StoredFeedback, filters: DashboardFil
     return false;
   }
 
-  if (filters.status !== "all" && filters.status !== "priority" && feedback.status !== filters.status) {
+  if (filters.status === "active" && !isActiveFeedback(feedback)) {
+    return false;
+  }
+
+  if (filters.status === "history" && !isHistoryFeedback(feedback)) {
+    return false;
+  }
+
+  if (isFeedbackStatus(filters.status) && feedback.status !== filters.status) {
     return false;
   }
 
@@ -528,11 +561,25 @@ function isPriorityFeedback(feedback: StoredFeedback): boolean {
   return feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
 }
 
+function isActiveFeedback(feedback: StoredFeedback): boolean {
+  return feedback.status === "raw"
+    || feedback.status === "issue_creation_pending"
+    || feedback.status === "retrying"
+    || feedback.status === "failed";
+}
+
+function isHistoryFeedback(feedback: StoredFeedback): boolean {
+  return feedback.status === "sent_to_provider"
+    || feedback.status === "resolved"
+    || feedback.status === "kept"
+    || feedback.status === "ignored";
+}
+
 function isFilteringDashboard(filters: DashboardFilters): boolean {
   return filters.provider !== "all"
     || filters.query !== ""
     || filters.site !== "all"
-    || filters.status !== "all"
+    || filters.status !== "active"
     || filters.type !== "all";
 }
 
@@ -545,6 +592,30 @@ function isFeedbackStatus(value?: string): value is FeedbackStatus {
     || value === "kept"
     || value === "resolved"
     || value === "ignored";
+}
+
+function formatFeedbackMessage(message: string): { message: string; reporter?: string } {
+  const match = message.match(/^([A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ' -]{1,48}):\s+(.+)$/);
+
+  if (!match) {
+    return { message };
+  }
+
+  return {
+    reporter: match[1].trim(),
+    message: match[2].trim()
+  };
+}
+
+function formatFeedbackCardTitle(feedback: StoredFeedback): string {
+  const typeLabel: Record<StoredFeedback["payload"]["type"], string> = {
+    comment: "Note",
+    pin: "Pin",
+    screenshot: "Capture"
+  };
+  const path = feedback.payload.metadata.path || "/";
+
+  return `${typeLabel[feedback.payload.type]} sur ${path}`;
 }
 
 function formatAppEnvironmentSummary(app?: StoredFeedback["payload"]["metadata"]["app"]): string | undefined {

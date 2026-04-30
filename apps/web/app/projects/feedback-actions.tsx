@@ -140,15 +140,20 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
           <T k="actions.issue.view" />
         </a>
         {status === "sent_to_provider" ? (
-          <button
-            className="button secondary-button"
-            disabled={isPending}
-            onClick={() => run(`/api/projects/feedbacks/${feedbackId}/sync`, "sync")}
-            type="button"
-          >
-            <RotateCcw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            {isPending ? <T k="actions.processing" /> : <T k="actions.issue.sync" />}
-          </button>
+          <details className="feedback-action-menu">
+            <summary className="button secondary-button">Plus</summary>
+            <div className="feedback-action-menu-panel">
+              <button
+                className="button secondary-button"
+                disabled={isPending}
+                onClick={() => run(`/api/projects/feedbacks/${feedbackId}/sync`, "sync")}
+                type="button"
+              >
+                <RotateCcw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                {isPending ? <T k="actions.processing" /> : <T k="actions.issue.sync" />}
+              </button>
+            </div>
+          </details>
         ) : null}
       </div>
     );
@@ -180,24 +185,29 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
         )}
         {isPending ? <T k="actions.processing" /> : <T k={createLabelKey} />}
       </button>
-      <button
-        className="button secondary-button"
-        disabled={isPending}
-        onClick={() => run(`/api/projects/feedbacks/${feedbackId}/keep`, "keep")}
-        type="button"
-      >
-        <BookmarkCheck aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-        <T k="actions.keepFeedback" />
-      </button>
-      <button
-        className="button danger-button"
-        disabled={isPending}
-        onClick={ignoreFeedback}
-        type="button"
-      >
-        <Archive aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-        <T k="actions.ignore" />
-      </button>
+      <details className="feedback-action-menu">
+        <summary className="button secondary-button">Plus</summary>
+        <div className="feedback-action-menu-panel">
+          <button
+            className="button secondary-button"
+            disabled={isPending}
+            onClick={() => run(`/api/projects/feedbacks/${feedbackId}/keep`, "keep")}
+            type="button"
+          >
+            <BookmarkCheck aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            <T k="actions.keepFeedback" />
+          </button>
+          <button
+            className="button danger-button"
+            disabled={isPending}
+            onClick={ignoreFeedback}
+            type="button"
+          >
+            <Archive aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            <T k="actions.ignore" />
+          </button>
+        </div>
+      </details>
       {error ? <span className="action-error" role="alert">{error}</span> : null}
       {isComposerOpen ? (
         <div className="issue-composer" role="dialog" aria-modal="true" aria-labelledby={`issue-composer-${feedbackId}`}>
