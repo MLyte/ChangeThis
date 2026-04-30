@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { FeedbackStatus } from "@changethis/shared";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
+import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { resolveFeedbackForAction } from "../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../../lib/issue-workflow";
@@ -18,6 +19,18 @@ export async function POST(request: Request) {
   const workspaceId = session.workspace?.id;
   if (!workspaceId) {
     return authFailureResponse({ error: "Workspace access required", status: 403 });
+  }
+
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
+  }
+
+  const contentTypeFailure = requireJsonRequest(request);
+
+  if (contentTypeFailure) {
+    return contentTypeFailure;
   }
 
   let body: unknown;

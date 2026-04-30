@@ -1,6 +1,7 @@
 import type { IssueProvider } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
+import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { IssueProviderError, listIssueProviderRepositories } from "../../../../lib/issue-providers";
 import { getProviderIntegration } from "../../../../lib/provider-integrations";
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await requireWorkspaceSession(request);
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), ["admin", "owner"]);
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);
@@ -53,6 +54,18 @@ export async function POST(request: Request) {
 
   if (!session.workspace) {
     return authFailureResponse({ error: "Workspace access required", status: 403 });
+  }
+
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
+  }
+
+  const contentTypeFailure = requireJsonRequest(request);
+
+  if (contentTypeFailure) {
+    return contentTypeFailure;
   }
 
   let body: unknown;
@@ -68,14 +81,14 @@ export async function POST(request: Request) {
   }
 
   const integrationId = typeof body.integrationId === "string" ? body.integrationId : undefined;
-  const integration = getProviderIntegration(body.provider, integrationId);
+  const integration = getProviderIntegration(body.provider, integrationId, session.workspace.id);
 
   if (!integration?.credentialConfigured) {
     return NextResponse.json({ error: "Provider is not connected" }, { status: 409 });
   }
 
   try {
-    const repositories = await listIssueProviderRepositories(body.provider, { integrationId: integration.id });
+    const repositories = await listIssueProviderRepositories(body.provider, { integrationId: integration.id, workspaceId: session.workspace.id });
     const repository = repositories.find((item) => item.id === body.repositoryId || item.webUrl === body.repositoryId);
 
     if (!repository) {

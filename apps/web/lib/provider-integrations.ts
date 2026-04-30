@@ -1,6 +1,8 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IssueProvider } from "@changethis/shared";
 import { getProviderCredentialSecret } from "./credential-store";
 import { isProviderIntegrationDisabled } from "./provider-integration-state";
+import { isProductionRuntime } from "./runtime";
 
 export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";
 
@@ -31,10 +33,12 @@ export type RuntimeProviderIntegration = ProviderIntegrationSummary & {
 
 export type ProviderConnectState = {
   provider: IssueProvider;
+  workspaceId: string;
   integrationId: string;
   returnTo: string;
   callbackUrl: string;
   issuedAt: string;
+  signature: string;
 };
 
 const providers: IssueProvider[] = ["github", "gitlab"];
@@ -43,8 +47,8 @@ export function isIssueProvider(value: unknown): value is IssueProvider {
   return typeof value === "string" && providers.includes(value as IssueProvider);
 }
 
-export function listProviderIntegrations(): ProviderIntegrationSummary[] {
-  return getRuntimeProviderIntegrations().map((integration) => ({
+export function listProviderIntegrations(workspaceId?: string): ProviderIntegrationSummary[] {
+  return getRuntimeProviderIntegrations(workspaceId).map((integration) => ({
     id: integration.id,
     provider: integration.provider,
     name: integration.name,
@@ -62,30 +66,35 @@ export function listProviderIntegrations(): ProviderIntegrationSummary[] {
   }));
 }
 
-export function getProviderIntegration(provider: IssueProvider, integrationId?: string): RuntimeProviderIntegration | undefined {
-  return getRuntimeProviderIntegrations().find(
+export function getProviderIntegration(provider: IssueProvider, integrationId?: string, workspaceId?: string): RuntimeProviderIntegration | undefined {
+  return getRuntimeProviderIntegrations(workspaceId).find(
     (integration) => integration.provider === provider && (!integrationId || integration.id === integrationId)
   );
 }
 
-export function getProviderIntegrationToken(provider: IssueProvider, integrationId?: string): string | undefined {
-  return getProviderIntegration(provider, integrationId)?.token;
+export function getProviderIntegrationToken(provider: IssueProvider, integrationId?: string, workspaceId?: string): string | undefined {
+  return getProviderIntegration(provider, integrationId, workspaceId)?.token;
 }
 
-export function getProviderConnectUrl(provider: IssueProvider, requestUrl: string, returnTo: string): string | undefined {
-  const integration = getProviderIntegration(provider);
+export function getProviderConnectUrl(provider: IssueProvider, requestUrl: string, returnTo: string, workspaceId: string): string | undefined {
+  const integration = getProviderIntegration(provider, undefined, workspaceId);
 
   if (!integration) {
     return undefined;
   }
 
   const callbackUrl = new URL(integration.callbackPath, requestUrl).toString();
-  const state = encodeProviderConnectState({
+  const unsignedState = {
     provider,
+    workspaceId,
     integrationId: integration.id,
     returnTo: normalizeProviderReturnTo(returnTo),
     callbackUrl,
     issuedAt: new Date().toISOString()
+  };
+  const state = encodeProviderConnectState({
+    ...unsignedState,
+    signature: signProviderConnectState(unsignedState)
   });
 
   if (provider === "github") {
@@ -95,22 +104,22 @@ export function getProviderConnectUrl(provider: IssueProvider, requestUrl: strin
   return getGitLabConnectUrl(integration, callbackUrl, state);
 }
 
-function getRuntimeProviderIntegrations(): RuntimeProviderIntegration[] {
+function getRuntimeProviderIntegrations(workspaceId?: string): RuntimeProviderIntegration[] {
   const githubToken = firstConfiguredValue("CHANGETHIS_GITHUB_TOKEN", "GITHUB_TOKEN");
   const gitlabToken = firstConfiguredValue("CHANGETHIS_GITLAB_TOKEN", "GITLAB_TOKEN");
   const gitlabBaseUrl = process.env.GITLAB_BASE_URL ?? "https://gitlab.com";
   const githubIntegrationId = process.env.GITHUB_PROVIDER_INTEGRATION_ID ?? "local-github";
   const gitlabIntegrationId = process.env.GITLAB_PROVIDER_INTEGRATION_ID ?? "local-gitlab";
-  const storedGithubToken = getProviderCredentialSecret("github", githubIntegrationId, "access_token");
-  const storedGitlabToken = getProviderCredentialSecret("gitlab", gitlabIntegrationId, "access_token");
-  const githubInstallationId = getProviderCredentialSecret("github", githubIntegrationId, "installation_id") ?? process.env.GITHUB_INSTALLATION_ID;
+  const storedGithubToken = getProviderCredentialSecret("github", githubIntegrationId, "access_token", workspaceId);
+  const storedGitlabToken = getProviderCredentialSecret("gitlab", gitlabIntegrationId, "access_token", workspaceId);
+  const githubInstallationId = getProviderCredentialSecret("github", githubIntegrationId, "installation_id", workspaceId) ?? process.env.GITHUB_INSTALLATION_ID;
   const githubAppConfigured = Boolean(process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY && githubInstallationId);
-  const githubDisabled = isProviderIntegrationDisabled("github", githubIntegrationId);
-  const gitlabDisabled = isProviderIntegrationDisabled("gitlab", gitlabIntegrationId);
-  const githubEnvironmentCredentialConfigured = Boolean(githubToken || githubAppConfigured);
-  const gitlabEnvironmentCredentialConfigured = Boolean(gitlabToken);
-  const githubCredentialAvailable = Boolean(storedGithubToken || githubToken || githubAppConfigured);
-  const gitlabCredentialAvailable = Boolean(storedGitlabToken || gitlabToken);
+  const githubDisabled = isProviderIntegrationDisabled("github", githubIntegrationId, workspaceId);
+  const gitlabDisabled = isProviderIntegrationDisabled("gitlab", gitlabIntegrationId, workspaceId);
+  const githubEnvironmentCredentialConfigured = !workspaceId && Boolean(githubToken || githubAppConfigured);
+  const gitlabEnvironmentCredentialConfigured = !workspaceId && Boolean(gitlabToken);
+  const githubCredentialAvailable = Boolean(storedGithubToken || (!workspaceId && githubToken) || (!workspaceId && githubAppConfigured));
+  const gitlabCredentialAvailable = Boolean(storedGitlabToken || (!workspaceId && gitlabToken));
   const githubCredentialConfigured = githubCredentialAvailable && !githubDisabled;
   const githubConnectConfigured = Boolean(process.env.GITHUB_APP_SLUG);
   const gitlabConnectConfigured = Boolean(process.env.GITLAB_OAUTH_APP_ID && process.env.GITLAB_OAUTH_APP_SECRET);
@@ -135,7 +144,7 @@ function getRuntimeProviderIntegrations(): RuntimeProviderIntegration[] {
       baseUrl: "https://github.com",
       callbackPath: "/api/integrations/github/callback",
       oauthScopes: [],
-      token: githubDisabled ? undefined : storedGithubToken ?? githubToken
+      token: githubDisabled ? undefined : storedGithubToken ?? (!workspaceId ? githubToken : undefined)
     },
     {
       id: gitlabIntegrationId,
@@ -155,7 +164,7 @@ function getRuntimeProviderIntegrations(): RuntimeProviderIntegration[] {
       baseUrl: gitlabBaseUrl,
       callbackPath: "/api/integrations/gitlab/callback",
       oauthScopes: ["api", "read_user"],
-      token: gitlabDisabled ? undefined : storedGitlabToken ?? gitlabToken
+      token: gitlabDisabled ? undefined : storedGitlabToken ?? (!workspaceId ? gitlabToken : undefined)
     }
   ];
 }
@@ -212,6 +221,18 @@ export function decodeProviderConnectState(value: string | null): ProviderConnec
       return undefined;
     }
 
+    const { signature, ...unsignedState } = parsed;
+
+    if (!verifyProviderConnectState(unsignedState, signature)) {
+      return undefined;
+    }
+
+    const issuedAt = Date.parse(parsed.issuedAt);
+
+    if (!Number.isFinite(issuedAt) || Date.now() - issuedAt > 15 * 60_000) {
+      return undefined;
+    }
+
     return parsed;
   } catch {
     return undefined;
@@ -236,12 +257,42 @@ function isProviderConnectState(value: unknown): value is ProviderConnectState {
   }
 
   return isIssueProvider(value.provider)
+    && typeof value.workspaceId === "string"
     && typeof value.integrationId === "string"
     && typeof value.returnTo === "string"
     && typeof value.callbackUrl === "string"
-    && typeof value.issuedAt === "string";
+    && typeof value.issuedAt === "string"
+    && typeof value.signature === "string";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function signProviderConnectState(state: Omit<ProviderConnectState, "signature">): string {
+  const secret = providerStateSecret();
+  return createHmac("sha256", secret).update(JSON.stringify(state), "utf8").digest("base64url");
+}
+
+function verifyProviderConnectState(state: Omit<ProviderConnectState, "signature">, signature: string): boolean {
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(signProviderConnectState(state));
+
+  if (actualBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function providerStateSecret(): string {
+  if (process.env.CHANGETHIS_SECRET_KEY) {
+    return process.env.CHANGETHIS_SECRET_KEY;
+  }
+
+  if (isProductionRuntime) {
+    throw new Error("CHANGETHIS_SECRET_KEY is required to sign provider state in production");
+  }
+
+  return "changethis-local-provider-state";
 }

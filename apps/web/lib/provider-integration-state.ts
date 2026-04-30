@@ -5,6 +5,7 @@ import path from "node:path";
 import type { IssueProvider } from "@changethis/shared";
 
 type DisabledProviderIntegration = {
+  workspaceId?: string;
   provider: IssueProvider;
   integrationId: string;
   disabledAt: string;
@@ -17,20 +18,21 @@ type ProviderIntegrationStateStore = {
 const localDataDir = process.env.CHANGETHIS_DATA_DIR ?? path.join(process.cwd(), ".changethis-data");
 const providerIntegrationStatePath = path.join(localDataDir, "provider-integrations.json");
 
-export function isProviderIntegrationDisabled(provider: IssueProvider, integrationId: string): boolean {
+export function isProviderIntegrationDisabled(provider: IssueProvider, integrationId: string, workspaceId?: string): boolean {
   return readStore().disabledIntegrations.some((integration) =>
-    integration.provider === provider && integration.integrationId === integrationId
+    integration.workspaceId === workspaceId && integration.provider === provider && integration.integrationId === integrationId
   );
 }
 
-export function disableProviderIntegration(provider: IssueProvider, integrationId: string): void {
+export function disableProviderIntegration(provider: IssueProvider, integrationId: string, workspaceId?: string): void {
   const store = readStore();
 
   store.disabledIntegrations = [
     ...store.disabledIntegrations.filter((integration) =>
-      integration.provider !== provider || integration.integrationId !== integrationId
+      integration.workspaceId !== workspaceId || integration.provider !== provider || integration.integrationId !== integrationId
     ),
     {
+      workspaceId,
       provider,
       integrationId,
       disabledAt: new Date().toISOString()
@@ -40,11 +42,11 @@ export function disableProviderIntegration(provider: IssueProvider, integrationI
   writeStore(store);
 }
 
-export function enableProviderIntegration(provider: IssueProvider, integrationId: string): void {
+export function enableProviderIntegration(provider: IssueProvider, integrationId: string, workspaceId?: string): void {
   const store = readStore();
 
   store.disabledIntegrations = store.disabledIntegrations.filter((integration) =>
-    integration.provider !== provider || integration.integrationId !== integrationId
+    integration.workspaceId !== workspaceId || integration.provider !== provider || integration.integrationId !== integrationId
   );
 
   writeStore(store);
@@ -80,6 +82,7 @@ function sanitizeStore(value: unknown): ProviderIntegrationStateStore {
       }
 
       return [{
+        workspaceId: typeof integration.workspaceId === "string" ? integration.workspaceId : undefined,
         provider: integration.provider,
         integrationId: integration.integrationId,
         disabledAt: integration.disabledAt

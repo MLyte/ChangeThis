@@ -27,10 +27,10 @@
 - [x] Lier chaque requête dashboard à un `workspaceId` issu de la session.
 - [ ] Filtrer toutes les lectures de feedbacks par workspace.
 - [ ] Filtrer toutes les lectures de projets/sites par workspace.
-- [ ] Filtrer toutes les intégrations provider par workspace.
+- [x] Filtrer toutes les intégrations provider par workspace.
 - [ ] Appliquer les rôles `viewer`, `member`, `admin` et `owner` sur chaque route API privée.
-- [ ] Restreindre la modification des destinations d'issues aux rôles `admin` et `owner`.
-- [ ] Restreindre les relances de retries aux rôles `admin` et `owner`.
+- [x] Restreindre la modification des destinations d'issues aux rôles `admin` et `owner`.
+- [x] Restreindre les relances de retries aux rôles `admin` et `owner`.
 - [ ] Ajouter un flux d'onboarding qui crée l'organisation, le workspace, l'owner et le premier site.
 - [ ] Ajouter une page de gestion des membres du workspace.
 - [ ] Ajouter une invitation membre avec statut `invited`.
@@ -168,23 +168,23 @@
 - [ ] Vérifier que les screenshots volumineux ne bloquent pas durablement le serveur Next.js.
 
 ## 9. Sécurité
-- [ ] Ajouter des headers de sécurité Next.js dans `next.config.ts`.
-- [ ] Ajouter une CSP compatible widget/dashboard.
-- [ ] Ajouter `X-Frame-Options` ou `frame-ancestors` adapté au dashboard.
-- [ ] Ajouter HSTS, Referrer-Policy, Permissions-Policy et X-Content-Type-Options.
+- [x] Ajouter des headers de sécurité Next.js dans `next.config.ts`.
+- [x] Ajouter une CSP compatible widget/dashboard.
+- [x] Ajouter `X-Frame-Options` ou `frame-ancestors` adapté au dashboard.
+- [x] Ajouter HSTS, Referrer-Policy, Permissions-Policy et X-Content-Type-Options.
 - [ ] Ajouter une validation stricte des méthodes HTTP sur toutes les routes API.
-- [ ] Ajouter une protection CSRF sur les POST privés du dashboard.
-- [ ] Vérifier que toutes les actions privées exigent une session workspace.
-- [ ] Ajouter une validation d'origine stricte pour `/api/widget/config`.
+- [x] Ajouter une protection CSRF sur les POST privés du dashboard.
+- [x] Vérifier que toutes les actions privées exigent une session workspace.
+- [x] Ajouter une validation d'origine stricte pour `/api/widget/config`.
 - [ ] Ne pas exposer `issueTarget` complet dans `/api/widget/config` si non nécessaire au widget.
 - [ ] Ajouter une limite de longueur sur les champs texte dans les routes privées.
 - [ ] Ajouter une validation MIME réelle des screenshots côté serveur.
 - [ ] Ajouter un scan ou une stratégie de quarantaine pour les uploads image.
-- [ ] Redacter les secrets et tokens dans tous les logs d'erreur.
+- [x] Redacter les secrets et tokens dans tous les logs d'erreur.
 - [ ] Ajouter une rotation documentée de `CHANGETHIS_SECRET_KEY`.
 - [ ] Remplacer le stockage local chiffré des credentials provider par un coffre compatible production.
-- [ ] Ajouter une vérification d'âge et d'intégrité du `state` OAuth provider.
-- [ ] Signer le `state` OAuth avec HMAC.
+- [x] Ajouter une vérification d'âge et d'intégrité du `state` OAuth provider.
+- [x] Signer le `state` OAuth avec HMAC.
 - [ ] Ajouter la vérification des webhooks GitHub avec `GITHUB_WEBHOOK_SECRET`.
 - [ ] Ajouter la vérification des webhooks GitLab avec `GITLAB_WEBHOOK_SECRET`.
 - [ ] Ajouter une politique RLS d'insertion publique contrôlée pour les feedbacks si l'API écrit directement via Supabase.
@@ -231,8 +231,8 @@
 - [ ] Tester les écrans critiques en zoom navigateur 200%.
 
 ## 11. Observabilité et support
-- [ ] Ajouter un endpoint `/api/health` sans secret.
-- [ ] Ajouter un endpoint `/api/ready` qui vérifie DB, storage et provider config.
+- [x] Ajouter un endpoint `/api/health` sans secret.
+- [x] Ajouter un endpoint `/api/ready` qui vérifie DB, storage et provider config.
 - [ ] Ajouter des métriques API: latence, taux 2xx/4xx/5xx, refus validation, refus origine et rate limit.
 - [ ] Ajouter des métriques provider: succès, échecs, rate limits, retries dus et retries bloqués.
 - [ ] Ajouter des métriques widget: erreurs d'envoi, temps de capture et version bundle.
@@ -480,4 +480,5 @@
 - [2026-04-30] Fermeture beta signup hors checklist: ajout d'une bannière explicite “bêta privée / inscriptions fermées” sur la home et `/login`, en cohérence avec le verrou existant `ENABLE_PUBLIC_SIGNUP=false` et la redirection de `/signup` vers `/login`. Validation locale non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Nettoyage copy beta privée hors checklist: suppression des formulations marketing trop ouvertes autour de “créer un compte”, ajout d'un lien direct vers `/login` sur la home quand l'inscription est fermée, et réalignement des clés marketing dormantes `home.signup.*` / `home.hero.signup` sur un positionnement invitation-only. Validation locale non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Correctif prod widget démo hors checklist: ajout de l'origine `NEXT_PUBLIC_APP_URL` aux `allowedOrigins` du `demoProject`, afin que `/demo` puisse réellement poster vers `/api/public/feedback` depuis `app.changethis.dev` et pas seulement depuis `localhost`. Validation locale non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-05-01] Passe sécurité urgente: isolation des intégrations provider par `workspaceId`, restriction `admin/owner` des destinations d'issues et relances, signature HMAC + contrôle d'âge du `state` OAuth, durcissement `CSRF`/`Origin` sur les mutations privées et `/api/widget/config`, ajout des headers de sécurité/CSP/HSTS, endpoints `/api/health` et `/api/ready`, redaction des secrets dans les logs, et suppression d'une fuite cross-workspace sur la home publique. Validation exécutée: `npm run build` OK. Blocages urgents restants documentés: stockage applicatif encore local pour feedbacks/sites/credentials, `DATA_STORE=supabase` non finalisé, rate limit public encore mémoire et file de jobs durable non implémentée.
 

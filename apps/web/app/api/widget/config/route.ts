@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { findConfiguredProjectByKey } from "../../../../lib/project-registry";
+import { requestOriginFrom } from "../../../../lib/request-origin";
+import { isProductionRuntime } from "../../../../lib/runtime";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectKey = searchParams.get("project");
   const project = projectKey ? await findConfiguredProjectByKey(projectKey) : undefined;
-  const origin = request.headers.get("origin");
+  const origin = requestOriginFrom(request);
 
   if (!project) {
     return NextResponse.json({ error: "Unknown project" }, { status: 404 });
+  }
+
+  if (!origin && isProductionRuntime) {
+    return NextResponse.json({ error: "Origin is required" }, { status: 403 });
   }
 
   if (origin && !project.allowedOrigins.includes(origin)) {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
 import { IssueProviderError, listIssueProviderRepositories } from "../../../../../lib/issue-providers";
 import { isIssueProvider } from "../../../../../lib/provider-integrations";
 
@@ -7,7 +7,7 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ provider: string }> }
 ) {
-  const session = await requireWorkspaceSession(request);
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);
@@ -22,7 +22,13 @@ export async function GET(
   try {
     const url = new URL(request.url);
     const integrationId = url.searchParams.get("integrationId") ?? undefined;
-    const repositories = await listIssueProviderRepositories(provider, { integrationId });
+    const workspaceId = session.workspace?.id;
+
+    if (!workspaceId) {
+      return authFailureResponse({ error: "Workspace access required", status: 403 });
+    }
+
+    const repositories = await listIssueProviderRepositories(provider, { integrationId, workspaceId });
 
     return NextResponse.json({
       provider,

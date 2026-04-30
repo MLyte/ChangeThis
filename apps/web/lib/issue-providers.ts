@@ -34,6 +34,7 @@ export type IssueProviderClient = {
 
 export type IssueProviderClientOptions = {
   integrationId?: string;
+  workspaceId?: string;
   token?: string;
 };
 
@@ -342,14 +343,14 @@ async function getIssueProviderToken(provider: IssueProvider, options: IssueProv
     return options.token;
   }
 
-  const integrationToken = getProviderIntegrationToken(provider, options.integrationId);
+  const integrationToken = getProviderIntegrationToken(provider, options.integrationId, options.workspaceId);
 
   if (integrationToken) {
     return integrationToken;
   }
 
   if (provider === "github") {
-    return process.env.GITHUB_TOKEN ?? await createGitHubInstallationToken(options.integrationId);
+    return process.env.GITHUB_TOKEN ?? await createGitHubInstallationToken(options.integrationId, options.workspaceId);
   }
 
   return process.env.GITLAB_TOKEN;
@@ -388,14 +389,14 @@ async function listGitHubRepositories(options: IssueProviderClientOptions): Prom
 
 async function getGitHubRepositoryAccess(options: IssueProviderClientOptions): Promise<{ token: string; kind: "token" | "installation" } | undefined> {
   const token = options.token
-    ?? getProviderIntegrationToken("github", options.integrationId)
+    ?? getProviderIntegrationToken("github", options.integrationId, options.workspaceId)
     ?? process.env.GITHUB_TOKEN;
 
   if (token) {
     return { token, kind: "token" };
   }
 
-  const installationToken = await createGitHubInstallationToken(options.integrationId);
+  const installationToken = await createGitHubInstallationToken(options.integrationId, options.workspaceId);
 
   return installationToken ? { token: installationToken, kind: "installation" } : undefined;
 }
@@ -523,10 +524,10 @@ async function requireProviderToken(provider: IssueProvider, resolveToken: Token
   return token;
 }
 
-async function createGitHubInstallationToken(integrationId?: string): Promise<string | undefined> {
+async function createGitHubInstallationToken(integrationId?: string, workspaceId?: string): Promise<string | undefined> {
   const appId = process.env.GITHUB_APP_ID;
   const privateKey = process.env.GITHUB_APP_PRIVATE_KEY?.replace(/\\n/g, "\n");
-  const installationId = getProviderCredentialSecret("github", integrationId ?? process.env.GITHUB_PROVIDER_INTEGRATION_ID ?? "local-github", "installation_id")
+  const installationId = getProviderCredentialSecret("github", integrationId ?? process.env.GITHUB_PROVIDER_INTEGRATION_ID ?? "local-github", "installation_id", workspaceId)
     ?? process.env.GITHUB_INSTALLATION_ID;
 
   if (!appId || !privateKey || !installationId) {

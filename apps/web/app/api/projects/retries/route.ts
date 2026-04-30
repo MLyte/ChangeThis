@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
+import { requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { processDueIssueRetries } from "../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../lib/logger";
 
 export async function POST(request: Request) {
-  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), ["admin", "owner"]);
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);
+  }
+
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
   }
 
   const workspaceId = session.workspace?.id;

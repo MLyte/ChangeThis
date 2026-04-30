@@ -5,6 +5,7 @@ import path from "node:path";
 import type { IssueProvider } from "@changethis/shared";
 
 type StoredCredential = {
+  workspaceId?: string;
   provider: IssueProvider;
   integrationId: string;
   kind: string;
@@ -21,6 +22,7 @@ type CredentialStore = {
 };
 
 export type ProviderCredentialSecret = {
+  workspaceId?: string;
   provider: IssueProvider;
   integrationId: string;
   kind: string;
@@ -46,8 +48,11 @@ export function saveProviderCredentialSecret(secret: ProviderCredentialSecret): 
   const reference = credentialStorageReference(secret.provider, secret.integrationId, secret.kind);
 
   store.credentials = [
-    ...store.credentials.filter((credential) => credentialStorageReference(credential.provider, credential.integrationId, credential.kind) !== reference),
+    ...store.credentials.filter((credential) =>
+      credential.workspaceId !== secret.workspaceId
+      || credentialStorageReference(credential.provider, credential.integrationId, credential.kind) !== reference),
     {
+      workspaceId: secret.workspaceId,
       provider: secret.provider,
       integrationId: secret.integrationId,
       kind: secret.kind,
@@ -64,10 +69,21 @@ export function saveProviderCredentialSecret(secret: ProviderCredentialSecret): 
   return reference;
 }
 
-export function getProviderCredentialSecret(provider: IssueProvider, integrationId: string | undefined, kind: string): string | undefined {
+export function getProviderCredentialSecret(
+  provider: IssueProvider,
+  integrationId: string | undefined,
+  kind: string,
+  workspaceId?: string
+): string | undefined {
   const store = readStore();
   const credential = store.credentials.find((item) =>
-    item.provider === provider
+    item.workspaceId === workspaceId
+    && item.provider === provider
+    && item.kind === kind
+    && (!integrationId || item.integrationId === integrationId)
+  ) ?? store.credentials.find((item) =>
+    workspaceId === undefined
+    && item.provider === provider
     && item.kind === kind
     && (!integrationId || item.integrationId === integrationId)
   );
@@ -84,12 +100,12 @@ export function getProviderCredentialSecret(provider: IssueProvider, integration
   ]).toString("utf8");
 }
 
-export function deleteProviderCredentialSecrets(provider: IssueProvider, integrationId: string): number {
+export function deleteProviderCredentialSecrets(provider: IssueProvider, integrationId: string, workspaceId?: string): number {
   const store = readStore();
   const initialCount = store.credentials.length;
 
   store.credentials = store.credentials.filter((credential) =>
-    credential.provider !== provider || credential.integrationId !== integrationId
+    credential.workspaceId !== workspaceId || credential.provider !== provider || credential.integrationId !== integrationId
   );
 
   if (store.credentials.length !== initialCount) {
@@ -133,6 +149,7 @@ function sanitizeStore(value: unknown): CredentialStore {
       }
 
       return [{
+        workspaceId: typeof credential.workspaceId === "string" ? credential.workspaceId : undefined,
         provider: credential.provider,
         integrationId: credential.integrationId,
         kind: credential.kind,

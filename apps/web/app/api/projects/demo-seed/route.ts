@@ -1,12 +1,14 @@
 import { buildIssueDraft, type FeedbackPayload, type IssueTarget } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
+import { requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { getProviderCredentialSecret, saveProviderCredentialSecret } from "../../../../lib/credential-store";
 import { demoProviderTokens } from "../../../../lib/demo-provider-data";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { enableProviderIntegration } from "../../../../lib/provider-integration-state";
 import { getProviderIntegration } from "../../../../lib/provider-integrations";
 import { createConnectedSite, listConfiguredProjects } from "../../../../lib/project-registry";
+import { isProductionRuntime } from "../../../../lib/runtime";
 
 const seedRunId = "realistic-demo-seed-v3-status-showcase";
 
@@ -266,7 +268,7 @@ const seedFeedbacks = [
 ] as const;
 
 export async function POST(request: Request) {
-  if (process.env.VERCEL_ENV === "production") {
+  if (isProductionRuntime) {
     return NextResponse.json({ error: "Demo seed is disabled in production" }, { status: 403 });
   }
 
@@ -281,8 +283,14 @@ export async function POST(request: Request) {
     return authFailureResponse({ error: "Workspace access required", status: 403 });
   }
 
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
+  }
+
   const repository = getFeedbackRepository();
-  const createdConnections = seedDemoProviderConnections();
+  const createdConnections = seedDemoProviderConnections(workspaceId);
   const existingFeedbacks = await repository.list({ workspaceId });
   if (existingFeedbacks.some((feedback) => feedback.payload.metadata.app?.testRunId === seedRunId)) {
     return NextResponse.json({ skipped: true, createdSites: 0, createdFeedbacks: 0, createdConnections });
@@ -332,20 +340,21 @@ export async function POST(request: Request) {
   return NextResponse.json({ skipped: false, createdSites, createdFeedbacks, createdConnections });
 }
 
-function seedDemoProviderConnections(): number {
+function seedDemoProviderConnections(workspaceId: string): number {
   let createdConnections = 0;
 
   for (const provider of ["github", "gitlab"] as const) {
-    const integration = getProviderIntegration(provider);
+    const integration = getProviderIntegration(provider, undefined, workspaceId);
 
     if (!integration) {
       continue;
     }
 
-    const existingToken = getProviderCredentialSecret(provider, integration.id, "access_token");
+    const existingToken = getProviderCredentialSecret(provider, integration.id, "access_token", workspaceId);
 
     if (!existingToken && !integration.environmentCredentialConfigured) {
       saveProviderCredentialSecret({
+        workspaceId,
         provider,
         integrationId: integration.id,
         kind: "access_token",
@@ -355,7 +364,7 @@ function seedDemoProviderConnections(): number {
       createdConnections += 1;
     }
 
-    enableProviderIntegration(provider, integration.id);
+    enableProviderIntegration(provider, integration.id, workspaceId);
   }
 
   return createdConnections;

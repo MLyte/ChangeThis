@@ -45,7 +45,7 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
       }
     };
   });
-  const providerIntegrations = listProviderIntegrations();
+  const providerIntegrations = listProviderIntegrations(workspaceId);
   const workspaceUsers = await loadWorkspaceUsers(session.workspace.id, {
     userId: session.user.id,
     email: session.user.email,

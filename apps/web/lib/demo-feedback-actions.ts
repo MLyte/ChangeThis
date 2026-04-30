@@ -1,4 +1,5 @@
 import type { FeedbackRepository, StoredFeedback } from "./feedback-repository";
+import { isProductionRuntime } from "./runtime";
 
 export type FeedbackActionScope = {
   feedback: StoredFeedback;
@@ -16,7 +17,7 @@ export async function resolveFeedbackForAction(
     return { feedback: scopedFeedback, workspaceId };
   }
 
-  if (process.env.VERCEL_ENV === "production") {
+  if (isProductionRuntime) {
     return undefined;
   }
 

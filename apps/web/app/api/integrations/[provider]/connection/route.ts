@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
+import { requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { deleteProviderCredentialSecrets } from "../../../../../lib/credential-store";
 import { disableProviderIntegration, enableProviderIntegration } from "../../../../../lib/provider-integration-state";
 import { getProviderIntegration, isIssueProvider } from "../../../../../lib/provider-integrations";
@@ -14,14 +15,21 @@ export async function DELETE(
     return authFailureResponse(session);
   }
 
-  const integration = await resolveIntegration(request, context);
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
+  }
+
+  const integration = await resolveIntegration(request, context, session.workspace?.id);
 
   if (!integration) {
     return NextResponse.json({ error: "Unknown provider integration" }, { status: 404 });
   }
 
-  const removedCredentials = deleteProviderCredentialSecrets(integration.provider, integration.id);
-  disableProviderIntegration(integration.provider, integration.id);
+  const workspaceId = session.workspace?.id;
+  const removedCredentials = deleteProviderCredentialSecrets(integration.provider, integration.id, workspaceId);
+  disableProviderIntegration(integration.provider, integration.id, workspaceId);
 
   return NextResponse.json({
     provider: integration.provider,
@@ -41,13 +49,19 @@ export async function POST(
     return authFailureResponse(session);
   }
 
-  const integration = await resolveIntegration(request, context);
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
+  }
+
+  const integration = await resolveIntegration(request, context, session.workspace?.id);
 
   if (!integration) {
     return NextResponse.json({ error: "Unknown provider integration" }, { status: 404 });
   }
 
-  enableProviderIntegration(integration.provider, integration.id);
+  enableProviderIntegration(integration.provider, integration.id, session.workspace?.id);
 
   return NextResponse.json({
     provider: integration.provider,
@@ -58,7 +72,8 @@ export async function POST(
 
 async function resolveIntegration(
   request: Request,
-  context: { params: Promise<{ provider: string }> }
+  context: { params: Promise<{ provider: string }> },
+  workspaceId?: string
 ) {
   const { provider } = await context.params;
 
@@ -67,5 +82,5 @@ async function resolveIntegration(
   }
 
   const url = new URL(request.url);
-  return getProviderIntegration(provider, url.searchParams.get("integrationId") ?? undefined);
+  return getProviderIntegration(provider, url.searchParams.get("integrationId") ?? undefined, workspaceId);
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
+import { requirePrivateMutationOrigin } from "../../../../../../lib/api-security";
 import { findConfiguredProjectByKey, installSnippet } from "../../../../../../lib/project-registry";
 
 const scriptFetchTimeoutMs = 8000;
@@ -8,7 +9,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ projectKey: string }> }
 ) {
-  const session = await requireWorkspaceSession(request);
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);
@@ -16,6 +17,12 @@ export async function POST(
 
   if (!session.workspace) {
     return authFailureResponse({ error: "Workspace access required", status: 403 });
+  }
+
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
   }
 
   const { projectKey } = await context.params;

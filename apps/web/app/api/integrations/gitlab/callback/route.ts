@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     }
 
     const storageReference = saveProviderCredentialSecret({
+      workspaceId: state.workspaceId,
       provider: "gitlab",
       integrationId: state.integrationId,
       kind: "access_token",
@@ -40,6 +41,7 @@ export async function GET(request: Request) {
 
     if (token.refreshToken) {
       saveProviderCredentialSecret({
+        workspaceId: state.workspaceId,
         provider: "gitlab",
         integrationId: state.integrationId,
         kind: "refresh_token",

@@ -3,7 +3,6 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { Camera, GitPullRequestCreate, Inbox, MapPin, MessageSquare, MousePointerClick, RefreshCw, Send, Settings2, Webhook, Workflow, type LucideIcon } from "lucide-react";
 import { isPublicSignupEnabled } from "../lib/auth";
-import { listConfiguredProjects } from "../lib/project-registry";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
 import logoChangeThis from "./assets/logoChangeThis.png";
@@ -27,14 +26,29 @@ const productBlocks: Array<{ titleKey: string; copyKey: string; emphasisKey: str
 
 export default async function HomePage() {
   const publicSignupEnabled = isPublicSignupEnabled();
-  const projects = await listConfiguredProjects();
-  const siteRows = projects.map((project) => ({
-    name: project.name,
-    origin: project.allowedOrigins.find((origin) => !origin.includes("localhost") && !origin.includes("127.0.0.1")) ?? "local demo",
-    provider: project.issueTarget.provider,
-    repo: `${project.issueTarget.namespace}/${project.issueTarget.project}`,
-    stateKey: project.issueTarget.webUrl ? "home.siteState.ready" : "home.siteState.configure"
-  }));
+  const siteRows = [
+    {
+      name: "Cabinet Orion - Espace rendez-vous",
+      origin: "rdv.cabinet-orion.example",
+      provider: "github",
+      repo: "cabinet-orion/booking-portal",
+      stateKey: "home.siteState.ready"
+    },
+    {
+      name: "Studio Lumen - Shop vitrine",
+      origin: "shop.studio-lumen.example",
+      provider: "gitlab",
+      repo: "studio-lumen/shopfront",
+      stateKey: "home.siteState.ready"
+    },
+    {
+      name: "Atelier Nova - Portail client",
+      origin: "staging.portal-atelier-nova.example",
+      provider: "github",
+      repo: "atelier-nova/portal-staging",
+      stateKey: "home.siteState.configure"
+    }
+  ];
 
   return (
     <main className="shell app-home">

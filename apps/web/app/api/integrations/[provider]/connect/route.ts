@@ -15,12 +15,17 @@ export async function GET(
   const { provider } = await context.params;
   const url = new URL(request.url);
   const returnTo = normalizeProviderReturnTo(url.searchParams.get("returnTo") ?? "/projects");
+  const workspaceId = session.workspace?.id;
 
   if (!isIssueProvider(provider)) {
     return NextResponse.json({ error: "Unknown issue provider" }, { status: 404 });
   }
 
-  const connectUrl = getProviderConnectUrl(provider, request.url, returnTo);
+  if (!workspaceId) {
+    return authFailureResponse({ error: "Workspace access required", status: 403 });
+  }
+
+  const connectUrl = getProviderConnectUrl(provider, request.url, returnTo, workspaceId);
 
   if (!connectUrl) {
     const fallback = new URL(returnTo, request.url);

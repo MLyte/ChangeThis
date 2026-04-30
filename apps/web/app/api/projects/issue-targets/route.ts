@@ -6,6 +6,7 @@ import {
   saveProjectIssueTarget
 } from "../../../../lib/project-registry";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
+import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { getProviderIntegration } from "../../../../lib/provider-integrations";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
 
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await requireWorkspaceSession(request);
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), ["admin", "owner"]);
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);
@@ -48,6 +49,18 @@ export async function POST(request: Request) {
       error: "Workspace access required",
       status: 403
     });
+  }
+
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
+  }
+
+  const contentTypeFailure = requireJsonRequest(request);
+
+  if (contentTypeFailure) {
+    return contentTypeFailure;
   }
 
   const workspaceId = session.workspace.id;
@@ -66,7 +79,7 @@ export async function POST(request: Request) {
 
   const integrationId = typeof body.integrationId === "string" ? body.integrationId : undefined;
 
-  if (integrationId && !getProviderIntegration(body.provider, integrationId)) {
+  if (integrationId && !getProviderIntegration(body.provider, integrationId, workspaceId)) {
     return NextResponse.json({ error: "Unknown provider integration" }, { status: 422 });
   }
 

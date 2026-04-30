@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   const installationId = url.searchParams.get("installation_id");
   if (state?.provider === "github" && installationId) {
     const storageReference = saveProviderCredentialSecret({
+      workspaceId: state.workspaceId,
       provider: "github",
       integrationId: state.integrationId,
       kind: "installation_id",

@@ -6,6 +6,7 @@ import type { StoredFeedback } from "./feedback-repository";
 import { getFeedbackRepository } from "./feedback-repository";
 import { getIssueProviderClient, IssueProviderError } from "./issue-providers";
 import { logError, logInfo, logWarn } from "./logger";
+import { isProductionRuntime } from "./runtime";
 
 const retryBaseDelayMs = 30_000;
 const retryMaxDelayMs = 15 * 60_000;
@@ -43,7 +44,7 @@ export async function createIssueForFeedback(
     return updated;
   }
 
-  if (isDemoFeedback(feedback) && process.env.VERCEL_ENV !== "production") {
+  if (isDemoFeedback(feedback) && !isProductionRuntime) {
     const updatedDraft = options.issueDraft ?? feedback.issueDraft;
 
     if (options.issueDraft) {
@@ -66,7 +67,8 @@ export async function createIssueForFeedback(
 
   const pendingFeedback = await repository.markIssueCreationPending(feedback.id, options);
   const client = getIssueProviderClient(feedback.issueTarget.provider, {
-    integrationId: feedback.issueTarget.integrationId
+    integrationId: feedback.issueTarget.integrationId,
+    workspaceId: options.workspaceId
   });
   const idempotencyKey = `changethis:${pendingFeedback.id}`;
 
@@ -137,7 +139,7 @@ export async function syncFeedbackIssueState(
     return feedback;
   }
 
-  if (isDemoFeedback(feedback) && process.env.VERCEL_ENV !== "production") {
+  if (isDemoFeedback(feedback) && !isProductionRuntime) {
     const updated = await getFeedbackRepository().recordExternalIssueState(feedback.id, {
       ...feedback.externalIssue,
       state: feedback.externalIssue.state ?? "open"
@@ -155,7 +157,8 @@ export async function syncFeedbackIssueState(
   }
 
   const client = getIssueProviderClient(feedback.issueTarget.provider, {
-    integrationId: feedback.issueTarget.integrationId
+    integrationId: feedback.issueTarget.integrationId,
+    workspaceId: options.workspaceId
   });
 
   if (!client.getIssue) {

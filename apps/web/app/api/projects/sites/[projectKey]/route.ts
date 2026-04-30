@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
+import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import {
   deleteConnectedSite,
   installSnippet,
@@ -19,6 +20,18 @@ export async function PATCH(
 
   if (!session.workspace) {
     return authFailureResponse({ error: "Workspace access required", status: 403 });
+  }
+
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
+  }
+
+  const contentTypeFailure = requireJsonRequest(request);
+
+  if (contentTypeFailure) {
+    return contentTypeFailure;
   }
 
   let body: unknown;
@@ -68,6 +81,12 @@ export async function DELETE(
 
   if (!session.workspace) {
     return authFailureResponse({ error: "Workspace access required", status: 403 });
+  }
+
+  const csrfFailure = requirePrivateMutationOrigin(request);
+
+  if (csrfFailure) {
+    return csrfFailure;
   }
 
   const { projectKey } = await context.params;
