@@ -17,7 +17,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import type { IssueProvider } from "@changethis/shared";
+import type { IssueProvider, WidgetButtonPosition, WidgetLocale } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
@@ -66,6 +66,18 @@ type ConnectionTestResult = {
   repositoryCount?: number;
   checkedAt?: Date;
 };
+
+const widgetLocaleOptions: Array<{ label: string; value: WidgetLocale }> = [
+  { label: "Français", value: "fr" },
+  { label: "English", value: "en" }
+];
+
+const widgetPositionOptions: Array<{ label: string; value: WidgetButtonPosition }> = [
+  { label: "Bas droite", value: "bottom-right" },
+  { label: "Bas gauche", value: "bottom-left" },
+  { label: "Haut droite", value: "top-right" },
+  { label: "Haut gauche", value: "top-left" }
+];
 
 type InstallCheckResult = {
   ok: boolean;
@@ -166,7 +178,7 @@ export function IssueDestinationSetup({ projects, integrations, section, users =
   }
 
   function copyInstallSnippet(project: ProjectView) {
-    void navigator.clipboard?.writeText(installSnippet(project.publicKey))
+    void navigator.clipboard?.writeText(project.installSnippet ?? installSnippet(project))
       .then(() => {
         toast.success("Script copié", {
           description: `${project.name} est prêt à être installé.`
@@ -235,6 +247,61 @@ export function IssueDestinationSetup({ projects, integrations, section, users =
         const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
         setMessage(errorMessage);
         toast.error("Site non créé", {
+          description: errorMessage
+        });
+      }
+    });
+  }
+
+  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition">>) {
+    const project = projectViews.find((item) => item.publicKey === projectKey);
+    if (!project) {
+      return;
+    }
+
+    const nextSettings = {
+      widgetLocale: update.widgetLocale ?? project.widgetLocale,
+      widgetButtonPosition: update.widgetButtonPosition ?? project.widgetButtonPosition
+    };
+
+    setProjectViews((current) => current.map((item) => item.publicKey === projectKey
+      ? {
+          ...item,
+          ...nextSettings,
+          installSnippet: installSnippet({ ...item, ...nextSettings })
+        }
+      : item));
+
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(nextSettings)
+        });
+        const body = (await response.json()) as { site?: ProjectView; installSnippet?: string; error?: string };
+
+        if (!response.ok || !body.site) {
+          throw new Error(body.error ?? "Impossible d'enregistrer la configuration widget.");
+        }
+
+        setProjectViews((current) => current.map((item) => item.publicKey === projectKey
+          ? {
+              ...item,
+              ...body.site,
+              installSnippet: body.installSnippet,
+              metrics: item.metrics
+            }
+          : item));
+        toast.success("Configuration widget enregistrée", {
+          description: "Le script affiché a été mis à jour pour ce site."
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
+        setProjectViews((current) => current.map((item) => item.publicKey === projectKey ? project : item));
+        toast.error("Configuration non enregistrée", {
           description: errorMessage
         });
       }
@@ -354,6 +421,7 @@ export function IssueDestinationSetup({ projects, integrations, section, users =
               onCopyInstallSnippet={copyInstallSnippet}
               onOpenSiteModal={openSiteModal}
               onSelectProvider={selectProvider}
+              onUpdateWidgetSettings={updateWidgetSettings}
               projects={projectViews}
               repositoryLoadMessage={repositoryLoadMessage}
               repositoryLoadState={repositoryLoadState}
@@ -843,6 +911,7 @@ function ConnectedSitesSection({
   onCopyInstallSnippet,
   onOpenSiteModal,
   onSelectProvider,
+  onUpdateWidgetSettings,
   projects,
   repositoryLoadMessage,
   repositoryLoadState,
@@ -867,6 +936,7 @@ function ConnectedSitesSection({
   onCopyInstallSnippet: (project: ProjectView) => void;
   onOpenSiteModal: () => void;
   onSelectProvider: (provider: IssueProvider) => void;
+  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition">>) => void;
   projects: ProjectView[];
   repositoryLoadMessage: string;
   repositoryLoadState: RepositoryLoadState;
@@ -958,9 +1028,35 @@ function ConnectedSitesSection({
                     <span><strong>{project.metrics?.issuesCreated ?? 0}</strong><small>Issues</small></span>
                     <span><strong>{project.metrics?.failedIssues ?? 0}</strong><small>Échecs</small></span>
                   </div>
+                  <div className="widget-settings">
+                    <label>
+                      <span>Langue widget</span>
+                      <select
+                        disabled={isPending}
+                        onChange={(event) => onUpdateWidgetSettings(project.publicKey, { widgetLocale: event.target.value as WidgetLocale })}
+                        value={project.widgetLocale}
+                      >
+                        {widgetLocaleOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Position bouton</span>
+                      <select
+                        disabled={isPending}
+                        onChange={(event) => onUpdateWidgetSettings(project.publicKey, { widgetButtonPosition: event.target.value as WidgetButtonPosition })}
+                        value={project.widgetButtonPosition}
+                      >
+                        {widgetPositionOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   <div className="site-script">
                     <strong>Script widget</strong>
-                    <code>{project.installSnippet ?? installSnippet(project.publicKey)}</code>
+                    <code>{project.installSnippet ?? installSnippet(project)}</code>
                     <div className="site-script-actions">
                       <button className="inline-action" onClick={() => onCopyInstallSnippet(project)} type="button">
                         <Copy aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
@@ -1216,7 +1312,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function installSnippet(projectKey: string): string {
+function installSnippet(project: Pick<ProjectView, "publicKey" | "widgetLocale" | "widgetButtonPosition">): string {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  return `<script src="${origin}/widget.js" data-project="${projectKey}"></script>`;
+  return `<script src="${origin}/widget.js" data-project="${project.publicKey}" data-locale="${project.widgetLocale}" data-position="${project.widgetButtonPosition}"></script>`;
 }

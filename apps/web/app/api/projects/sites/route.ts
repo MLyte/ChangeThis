@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 
       return {
         ...project,
-        installSnippet: installSnippet(project.publicKey),
+        installSnippet: installSnippet(project),
         metrics: {
           feedbacksReceived: projectFeedbacks.length,
           issuesCreated,
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       site,
-      installSnippet: installSnippet(site.publicKey),
+      installSnippet: installSnippet(site),
       metrics: {
         feedbacksReceived: 0,
         issuesCreated: 0,

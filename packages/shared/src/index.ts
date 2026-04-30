@@ -4,6 +4,8 @@ export type FeedbackStatus = "raw" | "issue_creation_pending" | "retrying" | "se
 export type IssueProvider = "github" | "gitlab";
 export type WorkspaceMemberRole = "owner" | "admin" | "member" | "viewer";
 export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";
+export type WidgetLocale = "fr" | "en";
+export type WidgetButtonPosition = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 
 export type Workspace = {
   id: string;
@@ -29,6 +31,8 @@ export type Site = {
   publicKey: string;
   name: string;
   allowedOrigins: string[];
+  widgetLocale: WidgetLocale;
+  widgetButtonPosition: WidgetButtonPosition;
   createdAt: string;
   updatedAt: string;
 };

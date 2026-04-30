@@ -2891,7 +2891,7 @@ dd {
   border-top: 1px solid var(--line);
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(190px, 0.52fr) minmax(0, 1.48fr);
+  grid-template-columns: minmax(190px, 0.44fr) minmax(220px, 0.52fr) minmax(0, 1.04fr);
   padding-top: 12px;
 }
 
@@ -2946,6 +2946,40 @@ dd {
   font-weight: 850;
   line-height: 1.1;
   text-transform: uppercase;
+}
+
+.widget-settings {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.widget-settings label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.widget-settings span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.widget-settings select {
+  appearance: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 36px;
+  min-width: 0;
+  padding: 8px 28px 8px 10px;
 }
 
 .site-script {
@@ -3375,6 +3409,10 @@ code {
   .feedback-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .widget-settings {
+    grid-template-columns: 1fr;
   }
 
   .hide-mobile {

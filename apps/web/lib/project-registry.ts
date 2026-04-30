@@ -1,6 +1,13 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { validateIssueTarget, type IssueProvider, type IssueTarget, type Site } from "@changethis/shared";
+import {
+  validateIssueTarget,
+  type IssueProvider,
+  type IssueTarget,
+  type Site,
+  type WidgetButtonPosition,
+  type WidgetLocale
+} from "@changethis/shared";
 import { demoProject, localWorkspace, type ChangeThisProject } from "./demo-project";
 
 type StoredConnectedSite = Site & {
@@ -19,6 +26,8 @@ export type CreateConnectedSiteInput = {
   integrationId?: string;
   externalProjectId?: string;
   workspaceId?: string;
+  widgetLocale?: WidgetLocale;
+  widgetButtonPosition?: WidgetButtonPosition;
 };
 
 export type ProjectIssueTargetUpdate = {
@@ -27,6 +36,12 @@ export type ProjectIssueTargetUpdate = {
   repositoryUrl: string;
   integrationId?: string;
   externalProjectId?: string;
+};
+
+export type ProjectWidgetSettingsUpdate = {
+  projectKey: string;
+  widgetLocale: WidgetLocale;
+  widgetButtonPosition: WidgetButtonPosition;
 };
 
 const defaultStore: SiteRegistryStore = {
@@ -81,6 +96,8 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
     publicKey: `ct_${crypto.randomUUID().replaceAll("-", "")}`,
     name: normalizeSiteName(input.name) ?? issueTarget.project,
     allowedOrigins: [allowedOrigin],
+    widgetLocale: input.widgetLocale ?? "fr",
+    widgetButtonPosition: input.widgetButtonPosition ?? "bottom-right",
     issueTarget,
     createdAt: now,
     updatedAt: now
@@ -91,6 +108,38 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
   });
 
   return { ...site };
+}
+
+export async function updateProjectWidgetSettings(
+  update: ProjectWidgetSettingsUpdate,
+  workspaceId?: string
+): Promise<ChangeThisProject> {
+  let updatedProject: ChangeThisProject | undefined;
+  const now = new Date().toISOString();
+
+  await updateStore((store) => {
+    store.sites = store.sites.map((site) => {
+      if (site.publicKey !== update.projectKey || (workspaceId && site.workspaceId !== workspaceId)) {
+        return site;
+      }
+
+      const updatedSite = {
+        ...site,
+        widgetLocale: update.widgetLocale,
+        widgetButtonPosition: update.widgetButtonPosition,
+        updatedAt: now
+      };
+
+      updatedProject = { ...updatedSite };
+      return updatedSite;
+    });
+  });
+
+  if (!updatedProject) {
+    throw new ProjectTargetValidationError("Unknown project", 404);
+  }
+
+  return updatedProject;
 }
 
 export async function deleteConnectedSite(projectKey: string, workspaceId?: string): Promise<boolean> {
@@ -166,8 +215,18 @@ export function ensureIssueTargetConfigured(project: ChangeThisProject): IssueTa
   return validation.value;
 }
 
-export function installSnippet(projectKey: string): string {
-  return `<script src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget.js" data-project="${projectKey}"></script>`;
+export function installSnippet(project: string | Pick<ChangeThisProject, "publicKey" | "widgetLocale" | "widgetButtonPosition">): string {
+  const projectKey = typeof project === "string" ? project : project.publicKey;
+  const locale = typeof project === "string" ? undefined : project.widgetLocale;
+  const position = typeof project === "string" ? undefined : project.widgetButtonPosition;
+  const attributes = [
+    `src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget.js"`,
+    `data-project="${projectKey}"`,
+    locale ? `data-locale="${locale}"` : undefined,
+    position ? `data-position="${position}"` : undefined
+  ].filter(Boolean).join(" ");
+
+  return `<script ${attributes}></script>`;
 }
 
 export class ProjectTargetValidationError extends Error {
@@ -249,6 +308,14 @@ function normalizeAllowedOrigin(value: string): string | undefined {
   }
 }
 
+function parseWidgetLocale(value: unknown): WidgetLocale {
+  return value === "en" ? "en" : "fr";
+}
+
+function parseWidgetButtonPosition(value: unknown): WidgetButtonPosition {
+  return value === "bottom-left" || value === "top-right" || value === "top-left" ? value : "bottom-right";
+}
+
 function normalizeSiteName(value: string | undefined): string | undefined {
   const name = value?.trim();
   return name ? name.slice(0, 120) : undefined;
@@ -322,6 +389,8 @@ function sanitizeStore(value: unknown): SiteRegistryStore {
         publicKey: site.publicKey,
         name: site.name,
         allowedOrigins,
+        widgetLocale: parseWidgetLocale(site.widgetLocale),
+        widgetButtonPosition: parseWidgetButtonPosition(site.widgetButtonPosition),
         issueTarget: issueTarget.value,
         createdAt: site.createdAt,
         updatedAt: site.updatedAt

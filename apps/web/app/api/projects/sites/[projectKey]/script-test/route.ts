@@ -36,7 +36,7 @@ export async function POST(
       ok: false,
       status: "config_error",
       message: "Configuration widget indisponible pour cette clé publique.",
-      installSnippet: installSnippet(project.publicKey),
+      installSnippet: installSnippet(project),
       checkedUrl: pageUrl
     }, { status: 409 });
   }
@@ -46,7 +46,7 @@ export async function POST(
       ok: false,
       status: "missing_site_url",
       message: "Aucune URL de site n'est configurée pour tester l'installation du script.",
-      installSnippet: installSnippet(project.publicKey)
+      installSnippet: installSnippet(project)
     }, { status: 409 });
   }
 
@@ -57,7 +57,7 @@ export async function POST(
       ok: false,
       status: pageCheck.status,
       message: pageCheck.message,
-      installSnippet: installSnippet(project.publicKey),
+      installSnippet: installSnippet(project),
       checkedUrl: pageUrl
     }, { status: 409 });
   }
@@ -68,7 +68,7 @@ export async function POST(
     ok: scriptCheck.ok,
     status: scriptCheck.status,
     message: scriptCheck.message,
-    installSnippet: installSnippet(project.publicKey),
+    installSnippet: installSnippet(project),
     checkedUrl: pageUrl
   }, { status: scriptCheck.ok ? 200 : 409 });
 }

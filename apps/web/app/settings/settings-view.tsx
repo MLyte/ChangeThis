@@ -35,7 +35,7 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
     const projectFeedbacks = feedbacks.filter((feedback) => feedback.projectKey === project.publicKey);
     return {
       ...project,
-      installSnippet: installSnippet(project.publicKey),
+      installSnippet: installSnippet(project),
       metrics: {
         feedbacksReceived: projectFeedbacks.length,
         issuesCreated: projectFeedbacks.filter((feedback) => feedback.status === "sent_to_provider" || feedback.externalIssue).length,

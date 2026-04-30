@@ -9,6 +9,7 @@ type WidgetOptions = {
   buttonLabel?: string;
   buttonStateLabel?: string;
   buttonVariant?: "default" | "dev" | "prod" | "review";
+  buttonPosition?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
   locale?: "fr" | "en";
   visible?: boolean;
 };
@@ -44,6 +45,7 @@ const rootId = "changethis-widget-root";
 const languageStorageKey = "changethis:preferredLanguage";
 const sentPinsStorageKeyPrefix = "changethis:sentPins:";
 const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
+const productWebsiteUrl = "https://app.changethis.dev";
 const lucideIcons = {
   camera: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>',
   "map-pin": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -55,16 +57,19 @@ const lucideIcons = {
   undo: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 1 1 0 11H11"/></svg>',
   x: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
 };
+const brandMark = '<svg class="brand-mark" aria-hidden="true" viewBox="0 0 28 28"><path d="M14.6 3.9c1.1.1 2 .9 2.2 2l.1.9.6-.2c1.1-.3 2.2.3 2.6 1.3.2.5.2 1 .1 1.5l-.2.7.4-.1c1.1-.1 2.1.6 2.4 1.7.2.7 0 1.4-.4 2l-5.4 7.5c-.7 1-1.8 1.6-3 1.8l-1.5.2c-1.7.2-3.4-.4-4.5-1.7l-3.7-4.2c-.7-.8-.6-2 .1-2.7.7-.7 1.8-.7 2.6-.1l1.3 1V7c0-1.2.9-2.2 2.1-2.3 1-.1 1.8.4 2.3 1.2.4-1.2 1.4-2.1 2.8-2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 6.8v7.1M16.9 6.8v6.7M20 10.1v4.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
 const widgetCopy = {
   fr: {
     button: "Feedback",
+    brandLabel: "Découvrir",
     title: "Que faut-il changer ?",
-    note: "Note",
+    note: "Retour page",
     pin: "Pin",
     screenshot: "Capture",
-    placeholder: "Décris le retour client ici",
+    placeholder: "Décris le retour global sur cette page",
     capturePlaceholder: "Décris ce qu'il faut corriger dans cette capture",
     metaDefault: "URL, navigateur et viewport seront ajoutés automatiquement.",
+    shortcutHint: "Ctrl + Entrée pour envoyer",
     close: "Fermer",
     sending: "Envoi...",
     send: "Envoyer",
@@ -79,7 +84,7 @@ const widgetCopy = {
     sentFeedbacks: "Feedbacks envoyés",
     draftFeedbacks: "À compléter",
     createdFeedbacks: "Feedbacks créés",
-    noteFeedbacks: "Notes",
+    noteFeedbacks: "Retours page",
     pinFeedbacks: "Pins",
     captureFeedbacks: "Captures",
     draftStatus: "Brouillon",
@@ -96,13 +101,15 @@ const widgetCopy = {
   },
   en: {
     button: "Feedback",
+    brandLabel: "Discover",
     title: "What should change?",
-    note: "Note",
+    note: "Page review",
     pin: "Pin",
     screenshot: "Screenshot",
-    placeholder: "Describe the client feedback here",
+    placeholder: "Describe the page-level feedback here",
     capturePlaceholder: "Describe what should change in this capture",
     metaDefault: "URL, browser and viewport will be added automatically.",
+    shortcutHint: "Ctrl + Enter to send",
     close: "Close",
     sending: "Sending...",
     send: "Send",
@@ -117,7 +124,7 @@ const widgetCopy = {
     sentFeedbacks: "Sent feedback",
     draftFeedbacks: "To complete",
     createdFeedbacks: "Created feedback",
-    noteFeedbacks: "Notes",
+    noteFeedbacks: "Page reviews",
     pinFeedbacks: "Pins",
     captureFeedbacks: "Screenshots",
     draftStatus: "Draft",
@@ -144,6 +151,7 @@ export function initChangeThis(options: WidgetOptions): void {
   const buttonLabel = options.buttonLabel ?? copy.button;
   const buttonStateLabel = options.buttonStateLabel;
   const buttonVariant = options.buttonVariant ?? "default";
+  const buttonPosition = options.buttonPosition ?? "bottom-right";
   const sentPinsStorageKey = `${sentPinsStorageKeyPrefix}${options.projectKey}`;
   const sentFeedbacksStorageKey = `${sentFeedbacksStorageKeyPrefix}${options.projectKey}`;
   const currentPins = loadSentPinsForView(sentPinsStorageKey, currentViewKey());
@@ -328,8 +336,6 @@ export function initChangeThis(options: WidgetOptions): void {
         * { box-sizing: border-box; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
         .button {
           position: fixed;
-          right: 20px;
-          bottom: 20px;
           z-index: 2147483647;
           border: 0;
           border-radius: 999px;
@@ -344,6 +350,10 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 12px 16px;
           box-shadow: 0 12px 30px rgba(17, 24, 39, 0.22);
         }
+        .button[data-position="bottom-right"] { right: 20px; bottom: 20px; }
+        .button[data-position="bottom-left"] { left: 20px; bottom: 20px; }
+        .button[data-position="top-right"] { right: 20px; top: 20px; }
+        .button[data-position="top-left"] { left: 20px; top: 20px; }
         .button[data-variant="dev"] { background: #1d4ed8; }
         .button[data-variant="prod"] { background: #0f766e; }
         .button[data-variant="review"] { background: #7c2d12; }
@@ -359,8 +369,6 @@ export function initChangeThis(options: WidgetOptions): void {
         }
         .panel {
           position: fixed;
-          right: 20px;
-          bottom: 76px;
           z-index: 2147483647;
           width: min(340px, calc(100vw - 32px));
           border: 1px solid #d1d5db;
@@ -370,12 +378,59 @@ export function initChangeThis(options: WidgetOptions): void {
           box-shadow: 0 20px 50px rgba(17, 24, 39, 0.18);
           padding: 14px;
         }
+        .panel[data-position="bottom-right"] { right: 20px; bottom: 76px; }
+        .panel[data-position="bottom-left"] { left: 20px; bottom: 76px; }
+        .panel[data-position="top-right"] { right: 20px; top: 76px; }
+        .panel[data-position="top-left"] { left: 20px; top: 76px; }
         .panel-header {
           align-items: center;
           display: flex;
           gap: 8px;
           justify-content: space-between;
           margin-bottom: 10px;
+        }
+        .panel-brand {
+          align-items: center;
+          display: inline-flex;
+          gap: 6px;
+          min-width: 0;
+          text-decoration: none;
+        }
+        .panel-brand strong {
+          color: #111827;
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 0;
+          line-height: 1;
+        }
+        .panel-brand .brand-mark {
+          color: #111827;
+          flex: 0 0 auto;
+          height: 17px;
+          width: 17px;
+        }
+        .panel-brand:hover strong {
+          text-decoration: underline;
+          text-underline-offset: 3px;
+        }
+        .panel-header-actions {
+          align-items: center;
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 8px;
+        }
+        .brand-discovery-link {
+          color: #6b7280;
+          flex: 0 0 auto;
+          font-size: 11px;
+          font-weight: 750;
+          line-height: 1;
+          text-decoration: none;
+        }
+        .brand-discovery-link:hover {
+          color: #111827;
+          text-decoration: underline;
+          text-underline-offset: 3px;
         }
         .title { font-size: 14px; font-weight: 800; margin: 0; }
         .modes {
@@ -445,6 +500,13 @@ export function initChangeThis(options: WidgetOptions): void {
           font-size: 12px;
           line-height: 1.4;
           margin: 8px 0 0;
+        }
+        .shortcut-hint {
+          color: #6b7280;
+          font-size: 11px;
+          font-weight: 750;
+          line-height: 1.3;
+          margin: 5px 0 0;
         }
         .selection-summary {
           border: 1px solid #e5e7eb;
@@ -665,19 +727,29 @@ export function initChangeThis(options: WidgetOptions): void {
           border: 1px solid #e5e7eb;
           border-radius: 8px;
           display: grid;
-          gap: 10px;
-          padding: 12px;
+          gap: 12px;
+          padding: 14px;
         }
         .manager-section-heading {
           align-items: center;
           display: flex;
-          gap: 10px;
+          gap: 12px;
           justify-content: space-between;
+          min-height: 28px;
         }
         .manager-section-heading h3 {
+          align-items: center;
           color: #111827;
+          display: inline-flex;
           font-size: 14px;
+          gap: 8px;
+          line-height: 1.2;
           margin: 0;
+        }
+        .manager-section-heading h3 .lucide-icon {
+          flex: 0 0 auto;
+          height: 16px;
+          width: 16px;
         }
         .manager-section-heading span {
           border-radius: 999px;
@@ -778,16 +850,23 @@ export function initChangeThis(options: WidgetOptions): void {
       </style>
       ${pinMarkers}
       ${state.notice ? `<div class="notice" role="status">${escapeHtml(state.notice)}</div>` : ""}
-      <button class="button" data-action="toggle" data-variant="${buttonVariant}">
+      <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}">
         <span>${escapeHtml(buttonLabel)}</span>
         ${buttonStateLabel ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
       </button>
       ${state.open ? `
-        <section class="panel" aria-label="Envoyer un feedback">
+        <section class="panel" data-position="${buttonPosition}" aria-label="Envoyer un feedback">
           <div class="panel-header">
-            <p class="title">${escapeHtml(copy.title)}</p>
-            ${totalFeedbacks ? `<button class="panel-link" data-action="open-manager">${escapeHtml(copy.manageFeedbacks)}</button>` : ""}
+            <a class="panel-brand" href="${productWebsiteUrl}" target="_blank" rel="noopener noreferrer" aria-label="ChangeThis">
+              <strong>ChangeThis</strong>
+              ${brandMark}
+            </a>
+            <div class="panel-header-actions">
+              <a class="brand-discovery-link" href="${productWebsiteUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.brandLabel)}</a>
+              ${totalFeedbacks ? `<button class="panel-link" data-action="open-manager">${escapeHtml(copy.manageFeedbacks)}</button>` : ""}
+            </div>
           </div>
+          <p class="title">${escapeHtml(copy.title)}</p>
           <div class="modes">
             <button class="mode" data-mode="comment" data-active="${state.type === "comment"}">${lucideIcons["message-square"]}${escapeHtml(copy.note)}</button>
             <button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>
@@ -795,6 +874,7 @@ export function initChangeThis(options: WidgetOptions): void {
           </div>
           ${state.type === "comment" ? `
             <textarea data-note-message placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.noteMessage)}</textarea>
+            <p class="shortcut-hint">${escapeHtml(copy.shortcutHint)}</p>
             <p class="meta">${escapeHtml(copy.metaDefault)}</p>
           ` : ""}
           ${isPinTab ? `
@@ -815,6 +895,7 @@ export function initChangeThis(options: WidgetOptions): void {
                     </div>
                     ${pin.status === "sent" ? "" : `
                       <textarea class="pin-message" data-pin-message-index="${index}" placeholder="${escapeHtml(copy.pinPlaceholder)}">${escapeHtml(pin.message)}</textarea>
+                      <p class="shortcut-hint">${escapeHtml(copy.shortcutHint)}</p>
                       <div class="pin-actions">
                         <span></span><button class="send" data-action="send-pin" data-pin-index="${index}" ${state.sending || !pin.message.trim() ? "disabled" : ""}>${lucideIcons.send}${state.sending ? escapeHtml(copy.sending) : escapeHtml(copy.send)}</button>
                       </div>
@@ -826,6 +907,7 @@ export function initChangeThis(options: WidgetOptions): void {
           ` : ""}
           ${isCaptureTab ? `
             <textarea data-capture-message placeholder="${escapeHtml(copy.capturePlaceholder)}">${escapeHtml(state.captureMessage)}</textarea>
+            <p class="shortcut-hint">${escapeHtml(copy.shortcutHint)}</p>
             <div class="selection-summary">
               <div class="selection-header">
                 <span>${feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault)}</span>
@@ -964,6 +1046,30 @@ export function initChangeThis(options: WidgetOptions): void {
       ` : ""}
     `;
 
+    const refreshDraftSendControls = () => {
+      const mainSendButton = shadow.querySelector<HTMLButtonElement>("[data-action='send']");
+      if (mainSendButton) {
+        mainSendButton.disabled = state.sending
+          || (state.type === "comment" && !state.noteMessage.trim())
+          || (state.type === "screenshot" && (!state.captureArea || !state.captureMessage.trim()));
+      }
+
+      shadow.querySelectorAll<HTMLButtonElement>("[data-action='send-pin']").forEach((button) => {
+        const index = Number(button.dataset.pinIndex);
+        const pin = state.pins[index];
+        button.disabled = state.sending || !pin || pin.status === "sent" || !pin.message.trim();
+      });
+    };
+
+    const submitReadyFeedbackFromKeyboard = (event: KeyboardEvent, button: HTMLButtonElement | null) => {
+      if (event.key !== "Enter" || (!event.ctrlKey && !event.metaKey) || !button || button.disabled) {
+        return;
+      }
+
+      event.preventDefault();
+      button.click();
+    };
+
     shadow.querySelector<HTMLButtonElement>("[data-action='toggle']")?.addEventListener("click", () => {
       state.open = !state.open;
       render();
@@ -1058,6 +1164,12 @@ export function initChangeThis(options: WidgetOptions): void {
         if (label) {
           label.textContent = draftPinLabel(state.pins[index], index, copy.missingText);
         }
+        refreshDraftSendControls();
+      });
+      textarea.addEventListener("keydown", (event) => {
+        const index = Number((event.target as HTMLTextAreaElement).dataset.pinMessageIndex);
+        const button = shadow.querySelector<HTMLButtonElement>(`[data-action='send-pin'][data-pin-index="${index}"]`);
+        submitReadyFeedbackFromKeyboard(event, button);
       });
     });
 
@@ -1077,12 +1189,22 @@ export function initChangeThis(options: WidgetOptions): void {
       });
     });
 
-    shadow.querySelector<HTMLTextAreaElement>("[data-note-message]")?.addEventListener("input", (event) => {
+    const noteTextarea = shadow.querySelector<HTMLTextAreaElement>("[data-note-message]");
+    noteTextarea?.addEventListener("input", (event) => {
       state.noteMessage = (event.target as HTMLTextAreaElement).value;
+      refreshDraftSendControls();
+    });
+    noteTextarea?.addEventListener("keydown", (event) => {
+      submitReadyFeedbackFromKeyboard(event, shadow.querySelector<HTMLButtonElement>("[data-action='send']"));
     });
 
-    shadow.querySelector<HTMLTextAreaElement>("[data-capture-message]")?.addEventListener("input", (event) => {
+    const captureTextarea = shadow.querySelector<HTMLTextAreaElement>("[data-capture-message]");
+    captureTextarea?.addEventListener("input", (event) => {
       state.captureMessage = (event.target as HTMLTextAreaElement).value;
+      refreshDraftSendControls();
+    });
+    captureTextarea?.addEventListener("keydown", (event) => {
+      submitReadyFeedbackFromKeyboard(event, shadow.querySelector<HTMLButtonElement>("[data-action='send']"));
     });
 
     shadow.querySelectorAll<HTMLButtonElement>("[data-action='send-pin']").forEach((button) => {
@@ -1826,6 +1948,7 @@ const projectKey = currentScript?.dataset.project;
 
 if (projectKey) {
   const variant = currentScript?.dataset.buttonVariant;
+  const position = currentScript?.dataset.position;
 
   initChangeThis({
     projectKey,
@@ -1833,6 +1956,7 @@ if (projectKey) {
     buttonLabel: currentScript?.dataset.buttonLabel,
     buttonStateLabel: currentScript?.dataset.buttonState,
     buttonVariant: variant === "dev" || variant === "prod" || variant === "review" ? variant : undefined,
+    buttonPosition: position === "bottom-right" || position === "bottom-left" || position === "top-right" || position === "top-left" ? position : undefined,
     locale: currentScript?.dataset.locale === "fr" || currentScript?.dataset.locale === "en" ? currentScript.dataset.locale : undefined,
     visible: currentScript?.dataset.visible !== "false"
   });
