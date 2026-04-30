@@ -465,4 +465,5 @@
 
 - [2026-04-30] Documentation déploiement prod hors checklist: ajout de `docs/deploy-railway-ovh-changethis-dev.md` avec le chemin concret OVH domaine -> Railway app -> PostgreSQL Railway -> DNS `app.changethis.dev`, et mise à jour des décisions avec le domaine retenu `changethis.dev`. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Correctif déploiement Railway hors checklist: ajout du script `start` dans `apps/web/package.json` pour permettre à Railway d'exécuter `next start` sur le workspace web après le build. Validation locale non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Contrôle d'accès signup hors checklist: branchement réel de `ENABLE_PUBLIC_SIGNUP` pour masquer le CTA public, supprimer le lien de login vers signup quand fermé, et rediriger `/signup` vers `/login` tant que les inscriptions publiques ne sont pas ouvertes. Validation locale non lancée automatiquement conformément à la consigne utilisateur active.
 

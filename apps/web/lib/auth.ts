@@ -164,6 +164,10 @@ export function getAuthMode(): "local" | "supabase" {
   return process.env.NODE_ENV === "production" ? "supabase" : "local";
 }
 
+export function isPublicSignupEnabled(): boolean {
+  return process.env.ENABLE_PUBLIC_SIGNUP === "true";
+}
+
 function toWorkspaceRole(value: string): WorkspaceRole {
   return isWorkspaceRole(value) ? value : "viewer";
 }

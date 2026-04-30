@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getAuthMode } from "../../lib/auth";
+import { getAuthMode, isPublicSignupEnabled } from "../../lib/auth";
 import { requestSignUpEmail } from "../../lib/supabase-server";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
@@ -14,6 +14,10 @@ type SignUpPageProps = {
 };
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
+  if (!isPublicSignupEnabled()) {
+    redirect("/login");
+  }
+
   const params = await searchParams;
   const hasError = Boolean(params?.error);
   const isSent = params?.sent === "1";

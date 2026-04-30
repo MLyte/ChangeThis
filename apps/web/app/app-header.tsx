@@ -4,6 +4,7 @@ import { Database, Inbox, LogOut, Settings, ShieldCheck, UserRound, type LucideI
 import { AppNavLink } from "./app-nav-link";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { LanguageSwitch, T } from "./i18n";
+import { isPublicSignupEnabled } from "../lib/auth";
 
 type HeaderNavItem = {
   href: string;
@@ -22,6 +23,7 @@ type AppHeaderProps = {
 export function AppHeader({ navItems = [], showAuthLinks = false, session }: AppHeaderProps) {
   const authMode = process.env.AUTH_MODE === "supabase" ? "supabase" : "local";
   const dataStore = process.env.DATA_STORE === "supabase" ? "supabase" : "local";
+  const publicSignupEnabled = isPublicSignupEnabled();
 
   return (
     <header className="topbar app-header">
@@ -62,9 +64,11 @@ export function AppHeader({ navItems = [], showAuthLinks = false, session }: App
             <Link className="link" href="/login">
               <T k="nav.login" />
             </Link>
-            <Link className="button" href="/signup">
-              <T k="nav.signup" />
-            </Link>
+            {publicSignupEnabled ? (
+              <Link className="button" href="/signup">
+                <T k="nav.signup" />
+              </Link>
+            ) : null}
           </div>
         ) : null}
 

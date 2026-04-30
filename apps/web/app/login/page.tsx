@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getAuthMode } from "../../lib/auth";
+import { getAuthMode, isPublicSignupEnabled } from "../../lib/auth";
 import { signInWithPassword } from "../../lib/supabase-server";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
@@ -20,6 +20,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const nextPath = sanitizeNextPath(params?.next ?? params?.redirect);
   const hasError = Boolean(params?.error);
   const isLocalMode = getAuthMode() === "local";
+  const publicSignupEnabled = isPublicSignupEnabled();
 
   async function loginAction(formData: FormData) {
     "use server";
@@ -99,6 +100,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           {!isLocalMode ? (
             <p className="microcopy"><T k="login.noBackend" /></p>
+          ) : null}
+
+          {publicSignupEnabled ? (
+            <p className="microcopy">
+              <T k="signup.loginHint" /> <a className="inline-link" href="/signup"><T k="nav.signup" /></a>
+            </p>
           ) : null}
         </div>
       </section>
