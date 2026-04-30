@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
@@ -17,7 +18,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import type { IssueProvider, WidgetButtonPosition, WidgetLocale } from "@changethis/shared";
+import type { IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
@@ -77,6 +78,11 @@ const widgetPositionOptions: Array<{ label: string; value: WidgetButtonPosition 
   { label: "Bas gauche", value: "bottom-left" },
   { label: "Haut droite", value: "top-right" },
   { label: "Haut gauche", value: "top-left" }
+];
+
+const widgetVariantOptions: Array<{ label: string; value: WidgetButtonVariant }> = [
+  { label: "Standard", value: "default" },
+  { label: "Discret production", value: "subtle" }
 ];
 
 type InstallCheckResult = {
@@ -253,7 +259,7 @@ export function IssueDestinationSetup({ projects, integrations, section, users =
     });
   }
 
-  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition">>) {
+  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant">>) {
     const project = projectViews.find((item) => item.publicKey === projectKey);
     if (!project) {
       return;
@@ -261,7 +267,8 @@ export function IssueDestinationSetup({ projects, integrations, section, users =
 
     const nextSettings = {
       widgetLocale: update.widgetLocale ?? project.widgetLocale,
-      widgetButtonPosition: update.widgetButtonPosition ?? project.widgetButtonPosition
+      widgetButtonPosition: update.widgetButtonPosition ?? project.widgetButtonPosition,
+      widgetButtonVariant: update.widgetButtonVariant ?? project.widgetButtonVariant
     };
 
     setProjectViews((current) => current.map((item) => item.publicKey === projectKey
@@ -747,6 +754,48 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
         <div>
           <p className="eyebrow">Connexions</p>
           <h3 id="git-connections-title"><T k="settings.gitConnections.title" /></h3>
+          <p className="section-lede">
+            Reliez GitHub ou GitLab à ChangeThis pour transformer les feedbacks clients en issues prêtes à traiter.
+          </p>
+        </div>
+      </div>
+
+      <div className="git-tutorial" aria-label="Tutoriel Connexions Git">
+        <div className="git-tutorial-intro">
+          <p className="eyebrow">Tutoriel rapide</p>
+          <h4>Connectez votre outil Git en 2 minutes</h4>
+          <p>
+            Choisissez votre outil Git, sélectionnez le dépôt du projet, puis envoyez vos feedbacks clients vers des issues exploitables.
+          </p>
+        </div>
+        <ol className="git-tutorial-steps">
+          <li>
+            <span>1</span>
+            <div>
+              <strong>Connecter un compte</strong>
+              <p>Autorisez ChangeThis à lire vos dépôts GitHub ou GitLab disponibles.</p>
+            </div>
+          </li>
+          <li>
+            <span>2</span>
+            <div>
+              <strong>Choisir un dépôt</strong>
+              <p>Dans Sites connectés, associez chaque site au repository qui recevra ses issues.</p>
+            </div>
+          </li>
+          <li>
+            <span>3</span>
+            <div>
+              <strong>Créer l’issue</strong>
+              <p>Depuis l’inbox, validez un feedback et envoyez-le avec son contexte, son URL et sa capture.</p>
+            </div>
+          </li>
+        </ol>
+        <div className="git-tutorial-safety">
+          <ShieldCheck aria-hidden="true" className="ui-icon" size={18} strokeWidth={2.2} />
+          <p>
+            ChangeThis peut créer des issues dans les dépôts choisis, mais ne modifie pas votre code et ne publie rien dans un dépôt non sélectionné.
+          </p>
         </div>
       </div>
 
@@ -936,7 +985,7 @@ function ConnectedSitesSection({
   onCopyInstallSnippet: (project: ProjectView) => void;
   onOpenSiteModal: () => void;
   onSelectProvider: (provider: IssueProvider) => void;
-  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition">>) => void;
+  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant">>) => void;
   projects: ProjectView[];
   repositoryLoadMessage: string;
   repositoryLoadState: RepositoryLoadState;
@@ -1042,6 +1091,18 @@ function ConnectedSitesSection({
                       </select>
                     </label>
                     <label>
+                      <span>Visibilité</span>
+                      <select
+                        disabled={isPending}
+                        onChange={(event) => onUpdateWidgetSettings(project.publicKey, { widgetButtonVariant: event.target.value as WidgetButtonVariant })}
+                        value={project.widgetButtonVariant}
+                      >
+                        {widgetVariantOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
                       <span>Position bouton</span>
                       <select
                         disabled={isPending}
@@ -1102,8 +1163,14 @@ function ConnectedSitesSection({
               </div>
               {connectedIntegrations.length === 0 ? (
                 <div className="repository-loader unavailable" role="status">
-                  <strong>Aucune connexion Git active</strong>
-                  <span>Connectez GitHub ou GitLab avant d&apos;ajouter un site.</span>
+                  <div>
+                    <strong>Aucune connexion Git active</strong>
+                    <span>Connectez GitHub ou GitLab avant d&apos;ajouter un site.</span>
+                  </div>
+                  <Link className="button secondary-button repository-loader-action" href="/settings/git-connections">
+                    <GitBranch aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+                    Connexions Git
+                  </Link>
                 </div>
               ) : null}
               {shouldShowRepositoryStatus ? (
@@ -1155,14 +1222,16 @@ function ConnectedSitesSection({
                     ))}
                   </select>
                 </label>
-                <button className="button" disabled={isPending || !siteOrigin || !selectedRepositoryId || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
-                  <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                  {isPending ? "Création..." : "Créer le site"}
-                </button>
+                <p className="form-status site-create-status" role="status">
+                  {message}
+                </p>
+                <div className="site-create-actions">
+                  <button className="button" disabled={isPending || !siteOrigin || !selectedRepositoryId || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
+                    <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    {isPending ? "Création..." : "Créer le site"}
+                  </button>
+                </div>
               </form>
-              <p className="form-status" role="status">
-                {message}
-              </p>
             </div>
           </div>
         </div>
@@ -1312,7 +1381,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function installSnippet(project: Pick<ProjectView, "publicKey" | "widgetLocale" | "widgetButtonPosition">): string {
+function installSnippet(project: Pick<ProjectView, "publicKey" | "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant">): string {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  return `<script src="${origin}/widget.js" data-project="${project.publicKey}" data-locale="${project.widgetLocale}" data-position="${project.widgetButtonPosition}"></script>`;
+  const variant = project.widgetButtonVariant !== "default" ? ` data-button-variant="${project.widgetButtonVariant}"` : "";
+  return `<script src="${origin}/widget.js" data-project="${project.publicKey}" data-locale="${project.widgetLocale}" data-position="${project.widgetButtonPosition}"${variant}></script>`;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Languages } from "lucide-react";
 
 export type Locale = "fr" | "en";
 
@@ -28,7 +27,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "settings.users.title": "Utilisateurs",
     "settings.users.copy": "Les clients peuvent toujours envoyer un feedback sans compte. Ces accès servent uniquement à consulter et traiter les retours dans la console.",
     "footer.copy": "Retours, connexions Git et scripts d'installation au même endroit.",
-    "footer.creator": "créateur de l'app",
+    "footer.creator": "Réalisé par mathieuluyten.be",
     "footer.gitAccounts": "Comptes Git",
     "login.eyebrow": "Accès console",
     "login.title": "Connexion ChangeThis",
@@ -68,11 +67,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.workflow.3": "ChangeThis crée l'issue dans le dépôt GitHub ou GitLab lié au site.",
     "home.siteState.ready": "Prêt",
     "home.siteState.configure": "À configurer",
-    "home.metric.actionable": "Retours à traiter",
-    "home.metric.sites": "Sites configurés",
-    "home.metric.retries": "Relances en attente",
     "home.hero.eyebrow": "Console de retours",
     "home.hero.statement": "Une boîte de réception produit pour transformer les retours clients en issues GitHub ou GitLab exploitables.",
+    "home.hero.statement.prefix": "Une boîte de réception produit pour transformer les retours clients en issues",
+    "home.hero.statement.or": "ou",
+    "home.hero.statement.suffix": "exploitables.",
     "home.hero.lede": "Installez le widget sur chaque site, reliez le site à son dépôt, puis traitez les retours entrants avec contexte complet, brouillon d'issue et relances visibles.",
     "home.hero.primary": "Traiter les retours",
     "home.hero.signup": "Créer un compte",
@@ -245,6 +244,14 @@ const dictionaries: Record<Locale, Dictionary> = {
     "actions.processing": "Traitement en cours...",
     "actions.ignore": "Ignorer",
     "actions.close": "Fermer",
+    "issueComposer.title": "Préparer l'issue",
+    "issueComposer.copy": "Modifiez le titre, complétez la description ou ajoutez votre réponse avant de créer l'issue Git.",
+    "issueComposer.issueTitle": "Titre",
+    "issueComposer.description": "Description / commentaire",
+    "issueComposer.labels": "Labels",
+    "issueComposer.labelsHint": "Séparez les labels par des virgules.",
+    "issueComposer.cancel": "Annuler",
+    "issueComposer.submit": "Créer l'issue",
     "actions.error.impossible": "Action impossible pour le moment. Réessayez dans quelques secondes.",
     "actions.error.connection": "Connexion interrompue. Vérifiez le serveur local puis réessayez."
   },
@@ -266,7 +273,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "settings.users.title": "Users",
     "settings.users.copy": "Clients can still submit feedback without an account. These accounts only control access to the console and feedback processing.",
     "footer.copy": "Feedback, Git connections, and install scripts in one place.",
-    "footer.creator": "créateur de l'app",
+    "footer.creator": "Made by mathieuluyten.be",
     "footer.gitAccounts": "Git accounts",
     "login.eyebrow": "Console access",
     "login.title": "Sign in to ChangeThis",
@@ -306,11 +313,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.workflow.3": "ChangeThis creates the issue in the GitHub or GitLab repository linked to the site.",
     "home.siteState.ready": "Ready",
     "home.siteState.configure": "Needs setup",
-    "home.metric.actionable": "Feedback to triage",
-    "home.metric.sites": "Configured sites",
-    "home.metric.retries": "Pending retries",
     "home.hero.eyebrow": "Feedback console",
     "home.hero.statement": "A product inbox that turns customer feedback into actionable GitHub or GitLab issues.",
+    "home.hero.statement.prefix": "A product inbox that turns customer feedback into actionable",
+    "home.hero.statement.or": "or",
+    "home.hero.statement.suffix": "issues.",
     "home.hero.lede": "Install the widget on each site, link the site to its repository, then process incoming feedback with full context, an issue draft, and visible retries.",
     "home.hero.primary": "Process the inbox",
     "home.hero.signup": "Create an account",
@@ -483,6 +490,14 @@ const dictionaries: Record<Locale, Dictionary> = {
     "actions.processing": "Processing...",
     "actions.ignore": "Ignore",
     "actions.close": "Close",
+    "issueComposer.title": "Prepare issue",
+    "issueComposer.copy": "Edit the title, complete the description, or add your reply before creating the Git issue.",
+    "issueComposer.issueTitle": "Title",
+    "issueComposer.description": "Description / comment",
+    "issueComposer.labels": "Labels",
+    "issueComposer.labelsHint": "Separate labels with commas.",
+    "issueComposer.cancel": "Cancel",
+    "issueComposer.submit": "Create issue",
     "actions.error.impossible": "This action is not available right now. Try again in a few seconds.",
     "actions.error.connection": "Connection interrupted. Check the local server, then try again."
   }
@@ -543,9 +558,6 @@ export function LanguageSwitch() {
 
   return (
     <div className="language-switch" role="group" aria-label={t("nav.language")}>
-      <span className="language-icon" aria-hidden="true">
-        <Languages className="ui-icon muted-icon" size={15} strokeWidth={2.2} />
-      </span>
       {(["fr", "en"] as const).map((item) => (
         <button
           aria-pressed={locale === item}

@@ -6,6 +6,7 @@ import {
   type IssueTarget,
   type Site,
   type WidgetButtonPosition,
+  type WidgetButtonVariant,
   type WidgetLocale
 } from "@changethis/shared";
 import { demoProject, localWorkspace, type ChangeThisProject } from "./demo-project";
@@ -28,6 +29,7 @@ export type CreateConnectedSiteInput = {
   workspaceId?: string;
   widgetLocale?: WidgetLocale;
   widgetButtonPosition?: WidgetButtonPosition;
+  widgetButtonVariant?: WidgetButtonVariant;
 };
 
 export type ProjectIssueTargetUpdate = {
@@ -42,6 +44,7 @@ export type ProjectWidgetSettingsUpdate = {
   projectKey: string;
   widgetLocale: WidgetLocale;
   widgetButtonPosition: WidgetButtonPosition;
+  widgetButtonVariant: WidgetButtonVariant;
 };
 
 const defaultStore: SiteRegistryStore = {
@@ -98,6 +101,7 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
     allowedOrigins: [allowedOrigin],
     widgetLocale: input.widgetLocale ?? "fr",
     widgetButtonPosition: input.widgetButtonPosition ?? "bottom-right",
+    widgetButtonVariant: input.widgetButtonVariant ?? "default",
     issueTarget,
     createdAt: now,
     updatedAt: now
@@ -127,6 +131,7 @@ export async function updateProjectWidgetSettings(
         ...site,
         widgetLocale: update.widgetLocale,
         widgetButtonPosition: update.widgetButtonPosition,
+        widgetButtonVariant: update.widgetButtonVariant,
         updatedAt: now
       };
 
@@ -215,15 +220,17 @@ export function ensureIssueTargetConfigured(project: ChangeThisProject): IssueTa
   return validation.value;
 }
 
-export function installSnippet(project: string | Pick<ChangeThisProject, "publicKey" | "widgetLocale" | "widgetButtonPosition">): string {
+export function installSnippet(project: string | Pick<ChangeThisProject, "publicKey" | "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant">): string {
   const projectKey = typeof project === "string" ? project : project.publicKey;
   const locale = typeof project === "string" ? undefined : project.widgetLocale;
   const position = typeof project === "string" ? undefined : project.widgetButtonPosition;
+  const variant = typeof project === "string" ? undefined : project.widgetButtonVariant;
   const attributes = [
     `src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget.js"`,
     `data-project="${projectKey}"`,
     locale ? `data-locale="${locale}"` : undefined,
-    position ? `data-position="${position}"` : undefined
+    position ? `data-position="${position}"` : undefined,
+    variant && variant !== "default" ? `data-button-variant="${variant}"` : undefined
   ].filter(Boolean).join(" ");
 
   return `<script ${attributes}></script>`;
@@ -316,6 +323,10 @@ function parseWidgetButtonPosition(value: unknown): WidgetButtonPosition {
   return value === "bottom-left" || value === "top-right" || value === "top-left" ? value : "bottom-right";
 }
 
+function parseWidgetButtonVariant(value: unknown): WidgetButtonVariant {
+  return value === "subtle" ? "subtle" : "default";
+}
+
 function normalizeSiteName(value: string | undefined): string | undefined {
   const name = value?.trim();
   return name ? name.slice(0, 120) : undefined;
@@ -391,6 +402,7 @@ function sanitizeStore(value: unknown): SiteRegistryStore {
         allowedOrigins,
         widgetLocale: parseWidgetLocale(site.widgetLocale),
         widgetButtonPosition: parseWidgetButtonPosition(site.widgetButtonPosition),
+        widgetButtonVariant: parseWidgetButtonVariant(site.widgetButtonVariant),
         issueTarget: issueTarget.value,
         createdAt: site.createdAt,
         updatedAt: site.updatedAt

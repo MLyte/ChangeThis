@@ -71,6 +71,7 @@ export type FeedbackRepository = {
   create(input: CreateFeedbackInput): Promise<StoredFeedback>;
   list(filters?: { projectKey?: string; status?: FeedbackStatus; workspaceId?: string }): Promise<StoredFeedback[]>;
   get(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback | undefined>;
+  updateIssueDraft(id: string, issueDraft: IssueDraft, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   markIssueCreationPending(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   recordIssueAttempt(id: string, result: IssueAttemptResult, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   recordExternalIssueState(id: string, externalIssue: ExternalIssueRef, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
@@ -155,6 +156,19 @@ export class FileFeedbackRepository implements FeedbackRepository {
   async get(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback | undefined> {
     const store = await this.read();
     return store.feedbacks.find((feedback) => feedback.id === id && belongsToWorkspace(feedback, filters.workspaceId));
+  }
+
+  async updateIssueDraft(id: string, issueDraft: IssueDraft, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.update((store) => {
+      const feedback = findFeedback(store, id, filters.workspaceId);
+      feedback.issueDraft = {
+        title: issueDraft.title,
+        description: issueDraft.description,
+        labels: [...issueDraft.labels]
+      };
+      feedback.updatedAt = new Date().toISOString();
+      return feedback;
+    });
   }
 
   async markIssueCreationPending(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {

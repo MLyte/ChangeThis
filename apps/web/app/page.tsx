@@ -1,27 +1,42 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { FeedbackStatus, IssueProvider } from "@changethis/shared";
+import type { ReactNode } from "react";
+import { Camera, GitPullRequestCreate, Inbox, MousePointerClick, RefreshCw, Settings2, Webhook, Workflow, type LucideIcon } from "lucide-react";
+import { listConfiguredProjects } from "../lib/project-registry";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
-import { ProviderBadge } from "./provider-badge";
+import { ProviderIcon } from "./provider-badge";
 
 export const dynamic = "force-dynamic";
 
-const workflowKeys = ["home.workflow.1", "home.workflow.2", "home.workflow.3"];
+const workflowSteps: Array<{ key: string; Icon: LucideIcon }> = [
+  { key: "home.workflow.1", Icon: MousePointerClick },
+  { key: "home.workflow.2", Icon: Inbox },
+  { key: "home.workflow.3", Icon: GitPullRequestCreate }
+];
+
+const productBlocks: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
+  { titleKey: "home.product.inbox.title", copyKey: "home.product.inbox.copy", Icon: Inbox },
+  { titleKey: "home.product.config.title", copyKey: "home.product.config.copy", Icon: Settings2 },
+  { titleKey: "home.product.draft.title", copyKey: "home.product.draft.copy", Icon: GitPullRequestCreate },
+  { titleKey: "home.product.retry.title", copyKey: "home.product.retry.copy", Icon: RefreshCw }
+];
 
 export default async function HomePage() {
-  const liveSignals = [
-    { labelKey: "home.metric.actionable", value: "3", tone: "warning" },
-    { labelKey: "home.metric.sites", value: "4", tone: "ok" },
-    { labelKey: "home.metric.retries", value: "1", tone: "danger" }
-  ];
+  const projects = await listConfiguredProjects();
+  const siteRows = projects.map((project) => ({
+    name: project.name,
+    origin: project.allowedOrigins.find((origin) => !origin.includes("localhost") && !origin.includes("127.0.0.1")) ?? "local demo",
+    provider: project.issueTarget.provider,
+    repo: `${project.issueTarget.namespace}/${project.issueTarget.project}`,
+    stateKey: project.issueTarget.webUrl ? "home.siteState.ready" : "home.siteState.configure"
+  }));
 
   return (
     <main className="shell app-home">
       <AppHeader
-        showAuthLinks
         navItems={[
           { href: "/projects", labelKey: "nav.issues" },
           { href: "/settings", labelKey: "nav.settings" }
@@ -32,33 +47,20 @@ export default async function HomePage() {
         <div className="workspace-copy">
           <p className="eyebrow"><T k="home.hero.eyebrow" /></p>
           <h1 id="product-title" className="product-title">
-            <span>ChangeThis</span>
             <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
+            <span>ChangeThis</span>
           </h1>
-          <p className="hero-statement">
-            <T k="home.hero.statement" />
-          </p>
+          <HeroStatement />
           <p className="lede">
             <T k="home.hero.lede" />
           </p>
           <div className="hero-actions">
-            <Link className="button" href="/signup"><T k="home.hero.signup" /></Link>
-            <Link className="button secondary-button" href="/login"><T k="home.hero.login" /></Link>
+            <Link className="button" href="/projects"><T k="home.hero.primary" /></Link>
             <Link className="button secondary-button" href="/demo"><T k="home.hero.secondary" /></Link>
           </div>
-          <p className="hero-trust"><T k="home.hero.trust" /></p>
         </div>
 
-        <ConsolePreview feedbacks={previewFeedbacks} siteRows={previewSiteRows} />
-      </section>
-
-      <section className="ops-strip" aria-label="État opérationnel">
-        {liveSignals.map((signal) => (
-          <article className={`signal-card ${signal.tone}`} key={signal.labelKey}>
-            <span><T k={signal.labelKey} /></span>
-            <strong>{signal.value}</strong>
-          </article>
-        ))}
+        <ConsolePreview siteRows={siteRows} />
       </section>
 
       <section className="section product-section">
@@ -67,22 +69,15 @@ export default async function HomePage() {
           <h2><T k="home.product.title" /></h2>
         </div>
         <div className="product-grid">
-          <article className="product-block">
-            <h3><T k="home.product.inbox.title" /></h3>
-            <p><T k="home.product.inbox.copy" /></p>
-          </article>
-          <article className="product-block">
-            <h3><T k="home.product.config.title" /></h3>
-            <p><T k="home.product.config.copy" /></p>
-          </article>
-          <article className="product-block">
-            <h3><T k="home.product.draft.title" /></h3>
-            <p><T k="home.product.draft.copy" /></p>
-          </article>
-          <article className="product-block">
-            <h3><T k="home.product.retry.title" /></h3>
-            <p><T k="home.product.retry.copy" /></p>
-          </article>
+          {productBlocks.map(({ titleKey, copyKey, Icon }) => (
+            <article className="product-block" key={titleKey}>
+              <span className="product-icon" aria-hidden="true">
+                <Icon size={22} strokeWidth={2.2} />
+              </span>
+              <h3><T k={titleKey} /></h3>
+              <p><T k={copyKey} /></p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -92,24 +87,15 @@ export default async function HomePage() {
           <h2><T k="home.workflow.title" /></h2>
         </div>
         <div className="steps">
-          {workflowKeys.map((item, index) => (
-            <article className="step" key={item}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <p><T k={item} /></p>
+          {workflowSteps.map(({ key, Icon }, index) => (
+            <article className="step" key={key}>
+              <span className="step-index">{String(index + 1).padStart(2, "0")}</span>
+              <span className="step-icon" aria-hidden="true">
+                <Icon size={24} strokeWidth={2.2} />
+              </span>
+              <p><T k={key} /></p>
             </article>
           ))}
-        </div>
-      </section>
-
-      <section className="signup-band" aria-labelledby="signup-band-title">
-        <div>
-          <p className="eyebrow"><T k="home.signup.eyebrow" /></p>
-          <h2 id="signup-band-title"><T k="home.signup.title" /></h2>
-          <p><T k="home.signup.copy" /></p>
-        </div>
-        <div className="signup-band-actions">
-          <Link className="button" href="/signup"><T k="home.signup.primary" /></Link>
-          <Link className="button secondary-button" href="/demo"><T k="home.signup.secondary" /></Link>
         </div>
       </section>
 
@@ -132,34 +118,77 @@ export default async function HomePage() {
   );
 }
 
+function HeroStatement() {
+  return (
+    <p className="hero-statement">
+      <T k="home.hero.statement.prefix" />{" "}
+      <span className="hero-provider github">
+        <ProviderIcon provider="github" className="hero-provider-icon" />
+        <span>GitHub</span>
+      </span>{" "}
+      <T k="home.hero.statement.or" />{" "}
+      <span className="hero-provider gitlab">
+        <ProviderIcon provider="gitlab" className="hero-provider-icon" />
+        <span>GitLab</span>
+      </span>{" "}
+      <T k="home.hero.statement.suffix" />
+    </p>
+  );
+}
+
 function ConsolePreview({
-  feedbacks,
   siteRows
 }: {
-  feedbacks: PreviewFeedback[];
   siteRows: Array<{
     name: string;
     origin: string;
-    provider: IssueProvider;
+    provider: string;
     repo: string;
     stateKey: string;
   }>;
 }) {
+  const previewFeedbacks = [
+    {
+      title: "[Patrick] /demo - Le bouton devis est trop bas",
+      context: "Patrick - page contact - pin - 1920 x 917",
+      status: "à créer"
+    },
+    {
+      title: "[Jean-Pierre] /demo - L'espace est trop grand",
+      context: "Jean-Pierre - capture écran - 1920 x 917",
+      status: "à créer"
+    },
+    {
+      title: "[Feedback] /demo - Crénage du titre",
+      context: "Demo ChangeThis - screenshot - 2560 x 1277",
+      status: "échec"
+    }
+  ];
+  const sidebarItems: Array<{ key: string; label: ReactNode; Icon: LucideIcon; active?: boolean }> = [
+    { key: "inbox", label: "Inbox", Icon: Inbox, active: true },
+    { key: "sites", label: <T k="home.preview.sidebar.sites" />, Icon: Webhook },
+    { key: "integrations", label: <T k="home.preview.sidebar.integrations" />, Icon: GitPullRequestCreate },
+    { key: "retries", label: "Retries", Icon: RefreshCw }
+  ];
+
   return (
     <div className="console-preview" aria-label="Aperçu de la console ChangeThis">
       <div className="preview-topline">
         <span className="window-dot coral" />
         <span className="window-dot amber" />
         <span className="window-dot green" />
+        <Workflow className="preview-title-icon" aria-hidden="true" size={16} strokeWidth={2.2} />
         <strong>Console ChangeThis</strong>
       </div>
 
       <div className="preview-layout">
         <aside className="preview-sidebar">
-          <span className="sidebar-item active">Inbox</span>
-          <span className="sidebar-item"><T k="home.preview.sidebar.sites" /></span>
-          <span className="sidebar-item"><T k="home.preview.sidebar.integrations" /></span>
-          <span className="sidebar-item">Retries</span>
+          {sidebarItems.map(({ key, label, Icon, active }) => (
+            <span className={`sidebar-item${active ? " active" : ""}`} key={key}>
+              <Icon aria-hidden="true" size={15} strokeWidth={2.2} />
+              {label}
+            </span>
+          ))}
         </aside>
 
         <div className="preview-main">
@@ -168,29 +197,20 @@ function ConsolePreview({
               <span className="mini-label">Inbox</span>
               <h2><T k="home.preview.header" /></h2>
             </div>
-            <span className="status-badge needs_setup">{feedbacks.length} <T k="home.preview.recent" /></span>
+            <span className="status-badge needs_setup">{previewFeedbacks.length} <T k="home.preview.recent" /></span>
           </div>
 
           <div className="preview-list">
-            {feedbacks.length > 0 ? (
-              feedbacks.map((feedback) => (
-                <article className="preview-feedback" key={feedback.id}>
-                  <div>
-                    <h3>{feedback.title}</h3>
-                    <p>{feedback.details}</p>
-                  </div>
-                  <span>{formatStatus(feedback.status)}</span>
-                </article>
-              ))
-            ) : (
-              <article className="preview-feedback">
+            {previewFeedbacks.map((feedback) => (
+              <article className="preview-feedback" key={feedback.title}>
                 <div>
-                  <h3><T k="home.preview.empty.title" /></h3>
-                  <p><T k="home.preview.empty.copy" /></p>
+                  <Camera className="preview-card-icon" aria-hidden="true" size={16} strokeWidth={2.2} />
+                  <h3>{feedback.title}</h3>
+                  <p>{feedback.context}</p>
                 </div>
-                <span><T k="home.preview.ready" /></span>
+                <span>{feedback.status}</span>
               </article>
-            )}
+            ))}
           </div>
 
           <div className="preview-sites">
@@ -198,7 +218,7 @@ function ConsolePreview({
               <div className="preview-site-row" key={site.name}>
                 <strong>{site.name}</strong>
                 <span>{site.origin}</span>
-                <ProviderBadge provider={site.provider} />
+                <span>{site.provider}</span>
                 <span>{site.repo}</span>
                 <em><T k={site.stateKey} /></em>
               </div>
@@ -208,68 +228,4 @@ function ConsolePreview({
       </div>
     </div>
   );
-}
-
-type PreviewFeedback = {
-  id: string;
-  title: string;
-  details: string;
-  status: FeedbackStatus;
-};
-
-type PreviewSiteRow = {
-  name: string;
-  origin: string;
-  provider: IssueProvider;
-  repo: string;
-  stateKey: string;
-};
-
-const previewFeedbacks: PreviewFeedback[] = [
-  {
-    id: "preview-feedback-hero-cta",
-    title: "[Feedback] /pricing - Clarifier le bouton principal",
-    details: "Site vitrine A - pin - 1440 x 900",
-    status: "raw"
-  },
-  {
-    id: "preview-feedback-mobile-menu",
-    title: "[Feedback] /contact - Menu mobile trop bas",
-    details: "Site vitrine B - screenshot - 390 x 844",
-    status: "retrying"
-  },
-  {
-    id: "preview-feedback-copy",
-    title: "[Feedback] /services - Reformuler le titre",
-    details: "Site vitrine C - comment - 1280 x 720",
-    status: "sent_to_provider"
-  }
-];
-
-const previewSiteRows: PreviewSiteRow[] = [
-  {
-    name: "Site vitrine A",
-    origin: "client-a.example",
-    provider: "github",
-    repo: "agency/client-a",
-    stateKey: "home.siteState.ready"
-  },
-  {
-    name: "Site vitrine B",
-    origin: "client-b.example",
-    provider: "gitlab",
-    repo: "studio/client-b",
-    stateKey: "home.siteState.ready"
-  },
-  {
-    name: "Site vitrine C",
-    origin: "client-c.example",
-    provider: "github",
-    repo: "team/client-c",
-    stateKey: "home.siteState.configure"
-  }
-];
-
-function formatStatus(status: FeedbackStatus) {
-  return <T k={`status.${status}`} />;
 }

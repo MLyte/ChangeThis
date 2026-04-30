@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { forbidden, unauthorized } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Clock3, Inbox, RotateCcw, Send, Settings2, type LucideIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Globe2, Inbox, RotateCcw, Send, type LucideIcon } from "lucide-react";
 import type { FeedbackStatus } from "@changethis/shared";
 import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import type { ChangeThisProject } from "../../lib/demo-project";
@@ -108,31 +108,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       />
 
       <section className="dashboard dashboard-compact">
-        <div className="dashboard-header dashboard-header-compact">
-          <div className="dashboard-title-block">
-            <p className="eyebrow"><T k="projects.eyebrow" /></p>
-            <h1><T k="projects.title" /></h1>
-          </div>
-          <div className="dashboard-actions">
-            <span className="dashboard-timestamp">
-              <T k="projects.dashboard.updated" /> {latestFeedback ? formatDate(latestFeedback.createdAt) : "-"}
-            </span>
-            <Link className="button secondary-button" href="/settings/connected-sites">
-              <Settings2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-              Sites
-            </Link>
-            <Link className="button light-button" href="/demo"><T k="projects.testFeedback" /></Link>
-          </div>
-        </div>
-
-        <div className="dashboard-status-grid" aria-label="Synthèse opérationnelle">
-          <StatusMetric icon={Inbox} label="À traiter" value={priorityFeedbacks.length} tone={priorityFeedbacks.length > 0 ? "warning" : "ok"} />
-          <StatusMetric icon={Clock3} label="En file" value={queuedFeedbacks.length} tone="warning" />
-          <StatusMetric icon={RotateCcw} label="Relances" value={retryFeedbacks.length} tone="warning" />
-          <StatusMetric icon={AlertTriangle} label="Échecs" value={failedFeedbacks.length} tone="danger" />
-          <StatusMetric icon={CheckCircle2} label="Résolus" value={resolvedFeedbacks.length} tone="ok" />
-        </div>
-
         <div className="dashboard-workbench compact-workbench">
           <section className="inbox-panel compact-inbox" id="issues" aria-labelledby="local-inbox-title">
             <div className="inbox-hero compact-inbox-header">
@@ -188,11 +163,29 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           </section>
 
           <aside className="dashboard-side-panel" aria-label="Contexte ChangeThis">
+            <section className="side-panel-section status-side-section" aria-labelledby="status-side-title">
+              <div className="side-panel-heading">
+                <p className="eyebrow">Synthèse</p>
+                <h2 id="status-side-title">File actuelle</h2>
+              </div>
+              <div className="side-status-stack" aria-label="Synthèse opérationnelle">
+                <StatusMetric icon={Inbox} label="À traiter" value={priorityFeedbacks.length} tone={priorityFeedbacks.length > 0 ? "warning" : "ok"} />
+                <StatusMetric icon={Clock3} label="En file" value={queuedFeedbacks.length} tone="warning" />
+                <StatusMetric icon={RotateCcw} label="Relances" value={retryFeedbacks.length} tone="warning" />
+                <StatusMetric icon={AlertTriangle} label="Échecs" value={failedFeedbacks.length} tone="danger" />
+                <StatusMetric icon={CheckCircle2} label="Résolus" value={resolvedFeedbacks.length} tone="ok" />
+              </div>
+            </section>
+
             <section className="side-panel-section">
               <div className="side-panel-heading">
                 <p className="eyebrow">Routage</p>
                 <h2>Sites connectés</h2>
               </div>
+              <Link className="button secondary-button full-width-button" href="/settings/connected-sites">
+                <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                Sites connectés
+              </Link>
               <div className="route-summary">
                 <strong>{readyProjects}/{projects.length}</strong>
                 <span>sites prêts à créer des issues</span>
@@ -204,9 +197,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               <div className="site-route-list">
                 {projects.map((project) => <ProjectRouteRow key={project.publicKey} project={project} />)}
               </div>
-              <Link className="button secondary-button full-width-button" href="/settings/connected-sites">
-                Configurer les sites
-              </Link>
             </section>
 
             <section className="side-panel-section">
@@ -373,6 +363,8 @@ function FeedbackGroup({ description, feedbacks, title }: { description: string;
 function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const draftLabels = feedback.issueDraft.labels.join(" / ");
   const viewport = `${feedback.payload.metadata.viewport.width} x ${feedback.payload.metadata.viewport.height}`;
+  const appEnvironment = feedback.payload.metadata.app;
+  const appEnvironmentSummary = formatAppEnvironmentSummary(appEnvironment);
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
 
   return (
@@ -405,6 +397,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           <span>{feedback.projectName}</span>
           <span>{feedback.payload.metadata.path}</span>
           <span>{viewport}</span>
+          {appEnvironmentSummary ? <span>{appEnvironmentSummary}</span> : null}
           <span>{formatDate(feedback.createdAt)}</span>
         </div>
       </div>
@@ -427,6 +420,14 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
         {feedback.screenshotAsset ? (
           <ScreenshotPreview
             asset={feedback.screenshotAsset}
+            feedback={{
+              createdAt: feedback.createdAt,
+              issueTarget: feedback.issueTarget,
+              message: feedback.payload.message,
+              projectName: feedback.projectName,
+              status: feedback.status,
+              title: feedback.issueDraft.title
+            }}
             metadata={feedback.payload.metadata}
             pin={feedback.payload.pin}
             pins={feedback.payload.pins}
@@ -438,6 +439,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
       <FeedbackActions
         externalIssueUrl={feedback.externalIssue?.url}
         feedbackId={feedback.id}
+        issueDraft={feedback.issueDraft}
         status={feedback.status}
       />
     </article>
@@ -502,6 +504,15 @@ function matchesDashboardFilters(feedback: StoredFeedback, filters: DashboardFil
     feedback.payload.message,
     feedback.payload.metadata.path,
     feedback.payload.metadata.title,
+    feedback.payload.metadata.app?.environment,
+    feedback.payload.metadata.app?.release,
+    feedback.payload.metadata.app?.appVersion,
+    feedback.payload.metadata.app?.buildId,
+    feedback.payload.metadata.app?.commitSha,
+    feedback.payload.metadata.app?.branch,
+    feedback.payload.metadata.app?.testRunId,
+    feedback.payload.metadata.app?.scenario,
+    feedback.payload.metadata.app?.customer,
     feedback.projectName,
     feedback.issueTarget.namespace,
     feedback.issueTarget.project,
@@ -532,6 +543,20 @@ function isFeedbackStatus(value?: string): value is FeedbackStatus {
     || value === "kept"
     || value === "resolved"
     || value === "ignored";
+}
+
+function formatAppEnvironmentSummary(app?: StoredFeedback["payload"]["metadata"]["app"]): string | undefined {
+  if (!app) {
+    return undefined;
+  }
+
+  const primary = app.environment ?? app.release ?? app.appVersion;
+  if (!primary) {
+    return undefined;
+  }
+
+  const details = [app.buildId, app.testRunId].filter(Boolean).join(" · ");
+  return details ? `Env: ${primary} · ${details}` : `Env: ${primary}`;
 }
 
 function formatDate(value: string): string {

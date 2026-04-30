@@ -1,4 +1,5 @@
 import { validateIssueTarget } from "@changethis/shared";
+import type { IssueDraft } from "@changethis/shared";
 import type { StoredFeedback } from "./feedback-repository";
 import { getFeedbackRepository } from "./feedback-repository";
 import { getIssueProviderClient, IssueProviderError } from "./issue-providers";
@@ -10,13 +11,17 @@ const retryMaxDelayMs = 15 * 60_000;
 export async function createIssueForFeedback(
   feedback: StoredFeedback,
   requestId: string,
-  options: { workspaceId?: string } = {}
+  options: { issueDraft?: IssueDraft; workspaceId?: string } = {}
 ): Promise<StoredFeedback> {
   if (feedback.externalIssue && feedback.status === "sent_to_provider") {
     return feedback;
   }
 
   const repository = getFeedbackRepository();
+  if (options.issueDraft) {
+    await repository.updateIssueDraft(feedback.id, options.issueDraft, options);
+  }
+
   const issueTargetValidation = validateIssueTarget(feedback.issueTarget);
 
   if (!issueTargetValidation.ok) {

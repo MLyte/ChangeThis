@@ -14,12 +14,18 @@ const providerLabels: Record<IssueProvider, string> = {
   gitlab: "GitLab"
 };
 
+export function ProviderIcon({ provider, className }: { provider: IssueProvider; className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className ?? "provider-icon"} viewBox="0 0 24 24">
+      <path d={providerIconPaths[provider]} />
+    </svg>
+  );
+}
+
 export function ProviderBadge({ provider }: ProviderBadgeProps) {
   return (
     <span className={`provider-badge ${provider}`}>
-      <svg aria-hidden="true" className="provider-icon" viewBox="0 0 24 24">
-        <path d={providerIconPaths[provider]} />
-      </svg>
+      <ProviderIcon provider={provider} />
       <span>{providerLabels[provider]}</span>
     </span>
   );

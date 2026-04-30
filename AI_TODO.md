@@ -376,6 +376,12 @@
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-04-30] Micro-amélioration UX hors checklist: ajout d'un tutoriel compact sur la page Connexions Git, conçu avec deux agents UX, pour expliquer connexion, dépôt et création d'issue. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UI hors checklist: renommage du bouton sidebar dashboard `Sites` en `Sites connectés`. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UI hors checklist: ajout du footer partagé sur la page `/demo`. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UI hors checklist: aperçu hero rendu plus représentatif avec des feedbacks factices incluant Patrick et Jean-Pierre. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UI hors checklist: ajout des logos vectoriels GitHub et GitLab inline dans la phrase du hero. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration widget hors checklist: ajout d'un mode bouton discret configuré par site et d'un évitement automatique des footers visibles pour les positions basses. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-28] Tâche 14 complétée: filtrage dashboard par `workspaceId` issu de la session pour les vues `/projects`, `/settings` et `/api/projects/issue-targets`, via `getFeedbackRepository().list` et `listConfiguredProjects()`.
 - [2026-04-28] Tâche 13 complétée: restriction runtime de `getCurrentSession` en production pour interdire la session locale de fallback (`AUTH_MODE=local`).
 - [2026-04-28] Tâche 11 complétée: implémentation du login Supabase réel sur `/login` via `signInWithPassword` et cookie serveur `changethis_access_token`.

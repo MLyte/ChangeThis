@@ -1,5 +1,5 @@
 import html2canvas from "html2canvas";
-import type { CaptureArea, FeedbackPayload, FeedbackType, PinTarget } from "@changethis/shared";
+import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackType, PinTarget } from "@changethis/shared";
 
 const capturePage = html2canvas as unknown as typeof import("html2canvas").default;
 
@@ -8,10 +8,19 @@ type WidgetOptions = {
   endpoint?: string;
   buttonLabel?: string;
   buttonStateLabel?: string;
-  buttonVariant?: "default" | "dev" | "prod" | "review";
+  buttonVariant?: "default" | "dev" | "prod" | "review" | "subtle";
   buttonPosition?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
   locale?: "fr" | "en";
   visible?: boolean;
+  environment?: string;
+  release?: string;
+  appVersion?: string;
+  buildId?: string;
+  commitSha?: string;
+  branch?: string;
+  testRunId?: string;
+  scenario?: string;
+  customer?: string;
 };
 
 type DraftPin = {
@@ -69,10 +78,14 @@ const widgetCopy = {
     placeholder: "Décris le retour global sur cette page",
     capturePlaceholder: "Décris ce qu'il faut corriger dans cette capture",
     metaDefault: "URL, navigateur et viewport seront ajoutés automatiquement.",
-    shortcutHint: "Ctrl + Entrée pour envoyer",
+    shortcutHint: "Ctrl + Entrée pour envoyer l'action en cours",
+    shortcutHintAll: "Ctrl + Entrée pour envoyer l'action en cours",
     close: "Fermer",
     sending: "Envoi...",
     send: "Envoyer",
+    sendAll: "Tout envoyer",
+    sendAllPending: "Envoyer tous les retours en attente",
+    sendPendingCount: "Envoyer {count} retours en attente",
     selectArea: "Trace la zone à capturer",
     defineCapture: "Définir la zone",
     addPin: "Ajouter une pin",
@@ -109,10 +122,14 @@ const widgetCopy = {
     placeholder: "Describe the page-level feedback here",
     capturePlaceholder: "Describe what should change in this capture",
     metaDefault: "URL, browser and viewport will be added automatically.",
-    shortcutHint: "Ctrl + Enter to send",
+    shortcutHint: "Ctrl + Enter to send the current action",
+    shortcutHintAll: "Ctrl + Enter to send the current action",
     close: "Close",
     sending: "Sending...",
     send: "Send",
+    sendAll: "Send all",
+    sendAllPending: "Send all pending feedbacks",
+    sendPendingCount: "Send {count} pending feedbacks",
     selectArea: "Drag the area to capture",
     defineCapture: "Define area",
     addPin: "Add pin",
@@ -152,6 +169,7 @@ export function initChangeThis(options: WidgetOptions): void {
   const buttonStateLabel = options.buttonStateLabel;
   const buttonVariant = options.buttonVariant ?? "default";
   const buttonPosition = options.buttonPosition ?? "bottom-right";
+  const appEnvironment = buildAppEnvironment(options);
   const sentPinsStorageKey = `${sentPinsStorageKeyPrefix}${options.projectKey}`;
   const sentFeedbacksStorageKey = `${sentFeedbacksStorageKeyPrefix}${options.projectKey}`;
   const currentPins = loadSentPinsForView(sentPinsStorageKey, currentViewKey());
@@ -160,6 +178,10 @@ export function initChangeThis(options: WidgetOptions): void {
   root.id = rootId;
   root.attachShadow({ mode: "open" });
   document.documentElement.appendChild(root);
+
+  const updateFloatingOffset = () => {
+    root.style.setProperty("--ct-footer-offset", `${buttonPosition.startsWith("bottom") ? footerAvoidanceOffset() : 0}px`);
+  };
 
   const state = {
     open: false,
@@ -297,6 +319,7 @@ export function initChangeThis(options: WidgetOptions): void {
     const shadow = root.shadowRoot;
     if (!shadow) return;
 
+    updateFloatingOffset();
     syncDraftView();
     const pinMarkers = state.pins.map((pin, index) => {
       const position = pinViewportPosition(pin.target);
@@ -326,9 +349,16 @@ export function initChangeThis(options: WidgetOptions): void {
     const totalDraftFeedbacks = draftNotes.length + draftPins.length + draftCaptures.length;
     const totalSentFeedbacks = sentNotes.length + sentPins.length + sentCaptures.length;
     const totalFeedbacks = totalDraftFeedbacks + totalSentFeedbacks;
-    const canSend = !state.sending
-      && (state.type === "comment" ? Boolean(state.noteMessage.trim()) : true)
-      && (!isCaptureTab || (Boolean(state.captureArea) && Boolean(state.captureMessage.trim())));
+    const getReadyDraftFeedbackCount = () => (state.noteMessage.trim() ? 1 : 0)
+      + state.pins.filter((pin) => pin.status === "draft" && pin.message.trim()).length
+      + (state.captureArea && state.captureMessage.trim() ? 1 : 0);
+    const readyDraftFeedbackCount = getReadyDraftFeedbackCount();
+    const canSend = !state.sending && readyDraftFeedbackCount > 0;
+    const sendLabel = state.sending
+      ? copy.sending
+      : readyDraftFeedbackCount > 1
+        ? copy.sendPendingCount.replace("{count}", String(readyDraftFeedbackCount))
+        : copy.sendAllPending;
 
     shadow.innerHTML = `
       <style>
@@ -350,13 +380,28 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 12px 16px;
           box-shadow: 0 12px 30px rgba(17, 24, 39, 0.22);
         }
-        .button[data-position="bottom-right"] { right: 20px; bottom: 20px; }
-        .button[data-position="bottom-left"] { left: 20px; bottom: 20px; }
+        .button[data-position="bottom-right"] { right: 20px; bottom: calc(20px + var(--ct-footer-offset, 0px)); }
+        .button[data-position="bottom-left"] { left: 20px; bottom: calc(20px + var(--ct-footer-offset, 0px)); }
         .button[data-position="top-right"] { right: 20px; top: 20px; }
         .button[data-position="top-left"] { left: 20px; top: 20px; }
         .button[data-variant="dev"] { background: #1d4ed8; }
         .button[data-variant="prod"] { background: #0f766e; }
         .button[data-variant="review"] { background: #7c2d12; }
+        .button[data-variant="subtle"] {
+          background: rgba(17, 24, 39, 0.72);
+          border: 1px solid rgba(255, 255, 255, 0.44);
+          color: #fff;
+          opacity: 0.46;
+          padding: 10px 12px;
+          transform: scale(0.92);
+          transform-origin: bottom right;
+        }
+        .button[data-variant="subtle"]:hover,
+        .button[data-variant="subtle"]:focus-visible,
+        .button[data-variant="subtle"][aria-expanded="true"] {
+          opacity: 1;
+          transform: scale(1);
+        }
         .button-state {
           border-radius: 999px;
           background: rgba(255, 255, 255, 0.16);
@@ -378,8 +423,8 @@ export function initChangeThis(options: WidgetOptions): void {
           box-shadow: 0 20px 50px rgba(17, 24, 39, 0.18);
           padding: 14px;
         }
-        .panel[data-position="bottom-right"] { right: 20px; bottom: 76px; }
-        .panel[data-position="bottom-left"] { left: 20px; bottom: 76px; }
+        .panel[data-position="bottom-right"] { right: 20px; bottom: calc(76px + var(--ct-footer-offset, 0px)); }
+        .panel[data-position="bottom-left"] { left: 20px; bottom: calc(76px + var(--ct-footer-offset, 0px)); }
         .panel[data-position="top-right"] { right: 20px; top: 76px; }
         .panel[data-position="top-left"] { left: 20px; top: 76px; }
         .panel-header {
@@ -824,7 +869,7 @@ export function initChangeThis(options: WidgetOptions): void {
         .notice {
           position: fixed;
           right: 20px;
-          bottom: 76px;
+          bottom: calc(76px + var(--ct-footer-offset, 0px));
           z-index: 2147483647;
           border: 1px solid #bbf7d0;
           border-radius: 8px;
@@ -850,7 +895,7 @@ export function initChangeThis(options: WidgetOptions): void {
       </style>
       ${pinMarkers}
       ${state.notice ? `<div class="notice" role="status">${escapeHtml(state.notice)}</div>` : ""}
-      <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}">
+      <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}">
         <span>${escapeHtml(buttonLabel)}</span>
         ${buttonStateLabel ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
       </button>
@@ -874,7 +919,7 @@ export function initChangeThis(options: WidgetOptions): void {
           </div>
           ${state.type === "comment" ? `
             <textarea data-note-message placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.noteMessage)}</textarea>
-            <p class="shortcut-hint">${escapeHtml(copy.shortcutHint)}</p>
+            <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
             <p class="meta">${escapeHtml(copy.metaDefault)}</p>
           ` : ""}
           ${isPinTab ? `
@@ -895,7 +940,7 @@ export function initChangeThis(options: WidgetOptions): void {
                     </div>
                     ${pin.status === "sent" ? "" : `
                       <textarea class="pin-message" data-pin-message-index="${index}" placeholder="${escapeHtml(copy.pinPlaceholder)}">${escapeHtml(pin.message)}</textarea>
-                      <p class="shortcut-hint">${escapeHtml(copy.shortcutHint)}</p>
+                      <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
                       <div class="pin-actions">
                         <span></span><button class="send" data-action="send-pin" data-pin-index="${index}" ${state.sending || !pin.message.trim() ? "disabled" : ""}>${lucideIcons.send}${state.sending ? escapeHtml(copy.sending) : escapeHtml(copy.send)}</button>
                       </div>
@@ -907,7 +952,7 @@ export function initChangeThis(options: WidgetOptions): void {
           ` : ""}
           ${isCaptureTab ? `
             <textarea data-capture-message placeholder="${escapeHtml(copy.capturePlaceholder)}">${escapeHtml(state.captureMessage)}</textarea>
-            <p class="shortcut-hint">${escapeHtml(copy.shortcutHint)}</p>
+            <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
             <div class="selection-summary">
               <div class="selection-header">
                 <span>${feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault)}</span>
@@ -917,7 +962,7 @@ export function initChangeThis(options: WidgetOptions): void {
           ` : ""}
           <div class="actions">
             <button class="cancel" data-action="close">${escapeHtml(copy.close)}</button>
-            ${isPinTab ? "" : `<button class="send" data-action="send" ${canSend ? "" : "disabled"}>${lucideIcons.send}${state.sending ? escapeHtml(copy.sending) : escapeHtml(copy.send)}</button>`}
+            <button class="send" data-action="send" aria-label="${escapeHtml(copy.sendAllPending)}" title="${escapeHtml(copy.sendAllPending)}" ${canSend ? "" : "disabled"}>${lucideIcons.send}${escapeHtml(sendLabel)}</button>
           </div>
         </section>
       ` : ""}
@@ -1049,9 +1094,7 @@ export function initChangeThis(options: WidgetOptions): void {
     const refreshDraftSendControls = () => {
       const mainSendButton = shadow.querySelector<HTMLButtonElement>("[data-action='send']");
       if (mainSendButton) {
-        mainSendButton.disabled = state.sending
-          || (state.type === "comment" && !state.noteMessage.trim())
-          || (state.type === "screenshot" && (!state.captureArea || !state.captureMessage.trim()));
+        mainSendButton.disabled = state.sending || getReadyDraftFeedbackCount() === 0;
       }
 
       shadow.querySelectorAll<HTMLButtonElement>("[data-action='send-pin']").forEach((button) => {
@@ -1222,7 +1265,8 @@ export function initChangeThis(options: WidgetOptions): void {
             projectKey: options.projectKey,
             type: "pin",
             message: draft.message,
-            pins: [draft.target]
+            pins: [draft.target],
+            appEnvironment
           });
           const sentAt = new Date().toISOString();
           state.pins[index] = {
@@ -1281,35 +1325,92 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLButtonElement>("[data-action='send']")?.addEventListener("click", async () => {
       syncDraftView();
+      const pendingNoteMessage = state.noteMessage.trim();
+      const pendingPins = state.pins
+        .map((pin, index) => ({ pin, index }))
+        .filter((entry) => entry.pin.status === "draft" && entry.pin.message.trim());
+      const pendingCapture = state.captureArea && state.captureMessage.trim()
+        ? { message: state.captureMessage, captureArea: state.captureArea }
+        : undefined;
+
+      if (!pendingNoteMessage && pendingPins.length === 0 && !pendingCapture) {
+        return;
+      }
+
       state.sending = true;
       render();
       try {
-        const submitted = await submitFeedback({
-          endpoint,
-          projectKey: options.projectKey,
-          type: state.type,
-          message: state.type === "screenshot" ? state.captureMessage : state.noteMessage,
-          captureArea: state.captureArea
-        });
-        if ((state.type === "comment" || state.type === "screenshot") && submitted.id) {
-          const sentFeedback: StoredSentFeedback = {
-            viewKey: state.viewKey,
-            feedbackId: submitted.id,
-            type: state.type,
-            message: state.type === "screenshot" ? state.captureMessage : state.noteMessage,
-            sentAt: new Date().toISOString(),
-            captureArea: state.captureArea
-          };
-          state.sentFeedbacks = [sentFeedback, ...state.sentFeedbacks].slice(0, 120);
-          persistSentFeedback(sentFeedbacksStorageKey, state.viewKey, sentFeedback);
+        if (pendingNoteMessage) {
+          const submitted = await submitFeedback({
+            endpoint,
+            projectKey: options.projectKey,
+            type: "comment",
+            message: pendingNoteMessage,
+            appEnvironment
+          });
+
+          if (submitted.id) {
+            const sentFeedback: StoredSentFeedback = {
+              viewKey: state.viewKey,
+              feedbackId: submitted.id,
+              type: "comment",
+              message: pendingNoteMessage,
+              sentAt: new Date().toISOString()
+            };
+            state.sentFeedbacks = [sentFeedback, ...state.sentFeedbacks].slice(0, 120);
+            persistSentFeedback(sentFeedbacksStorageKey, state.viewKey, sentFeedback);
+          }
+
+          state.noteMessage = "";
         }
-        if (state.type === "screenshot") {
+
+        for (const { pin, index } of pendingPins) {
+          const submitted = await submitFeedback({
+            endpoint,
+            projectKey: options.projectKey,
+            type: "pin",
+            message: pin.message,
+            pins: [pin.target],
+            appEnvironment
+          });
+          const sentAt = new Date().toISOString();
+          state.pins[index] = {
+            ...pin,
+            status: "sent",
+            feedbackId: submitted.id,
+            sentAt
+          };
+          persistSentPin(sentPinsStorageKey, state.viewKey, state.pins[index]);
+        }
+
+        if (pendingCapture) {
+          const submitted = await submitFeedback({
+            endpoint,
+            projectKey: options.projectKey,
+            type: "screenshot",
+            message: pendingCapture.message,
+            captureArea: pendingCapture.captureArea,
+            appEnvironment
+          });
+
+          if (submitted.id) {
+            const sentFeedback: StoredSentFeedback = {
+              viewKey: state.viewKey,
+              feedbackId: submitted.id,
+              type: "screenshot",
+              message: pendingCapture.message,
+              sentAt: new Date().toISOString(),
+              captureArea: pendingCapture.captureArea
+            };
+            state.sentFeedbacks = [sentFeedback, ...state.sentFeedbacks].slice(0, 120);
+            persistSentFeedback(sentFeedbacksStorageKey, state.viewKey, sentFeedback);
+          }
+
           state.captureMessage = "";
           state.captureArea = undefined;
           state.draftViewKey = undefined;
-        } else {
-          state.noteMessage = "";
         }
+
         state.type = "comment";
         state.open = false;
         state.notice = copy.sent;
@@ -1327,8 +1428,14 @@ export function initChangeThis(options: WidgetOptions): void {
     });
   };
 
-  window.addEventListener("scroll", updatePinnedMarkers, { passive: true });
-  window.addEventListener("resize", updatePinnedMarkers);
+  window.addEventListener("scroll", () => {
+    updatePinnedMarkers();
+    updateFloatingOffset();
+  }, { passive: true });
+  window.addEventListener("resize", () => {
+    updatePinnedMarkers();
+    updateFloatingOffset();
+  });
   installNavigationListener(() => {
     if (syncDraftView()) {
       render();
@@ -1345,6 +1452,7 @@ async function submitFeedback(params: {
   message: string;
   pins?: PinTarget[];
   captureArea?: CaptureArea;
+  appEnvironment?: FeedbackAppEnvironment;
 }): Promise<{ id?: string }> {
   const screenshotDataUrl = params.type === "screenshot" && params.captureArea
     ? await captureViewport(params.captureArea)
@@ -1362,6 +1470,7 @@ async function submitFeedback(params: {
     screenshotDataUrl,
     metadata: {
       url: window.location.href,
+      origin: httpOrigin(window.location.origin),
       path: window.location.pathname,
       title: document.title,
       userAgent: navigator.userAgent,
@@ -1373,8 +1482,19 @@ async function submitFeedback(params: {
         x: window.scrollX,
         y: window.scrollY
       },
+      screen: {
+        width: window.screen.width,
+        height: window.screen.height,
+        availableWidth: window.screen.availWidth,
+        availableHeight: window.screen.availHeight,
+        colorDepth: window.screen.colorDepth,
+        pixelDepth: window.screen.pixelDepth
+      },
       devicePixelRatio: window.devicePixelRatio,
       language: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      online: navigator.onLine,
+      app: params.appEnvironment,
       createdAt: new Date().toISOString()
     }
   };
@@ -1647,6 +1767,27 @@ function pinViewportPosition(pin: PinTarget): { x: number; y: number } {
 
 function currentViewKey(): string {
   return `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+function footerAvoidanceOffset(): number {
+  const candidates = Array.from(document.querySelectorAll<HTMLElement>("footer, [role='contentinfo'], [data-changethis-footer]"));
+  const viewportHeight = window.innerHeight;
+
+  return candidates.reduce((offset, element) => {
+    const rect = element.getBoundingClientRect();
+    const isVisible = rect.width > 80 && rect.height > 32 && rect.bottom > 0 && rect.top < viewportHeight;
+    if (!isVisible) {
+      return offset;
+    }
+
+    const overlapsBottomZone = rect.top < viewportHeight - 8 && rect.bottom > viewportHeight - 120;
+    if (!overlapsBottomZone) {
+      return offset;
+    }
+
+    const requiredOffset = Math.min(320, Math.max(0, viewportHeight - rect.top + 12));
+    return Math.max(offset, requiredOffset);
+  }, 0);
 }
 
 function loadSentPinsForView(storageKey: string, viewKey: string): DraftPin[] {
@@ -1931,6 +2072,41 @@ function inferLocale(): "fr" | "en" {
   return document.documentElement.lang.toLowerCase().startsWith("fr") ? "fr" : "en";
 }
 
+function buildAppEnvironment(options: WidgetOptions): FeedbackAppEnvironment | undefined {
+  const appEnvironment: FeedbackAppEnvironment = {
+    environment: safeDataValue(options.environment),
+    release: safeDataValue(options.release),
+    appVersion: safeDataValue(options.appVersion),
+    buildId: safeDataValue(options.buildId),
+    commitSha: safeDataValue(options.commitSha),
+    branch: safeDataValue(options.branch),
+    testRunId: safeDataValue(options.testRunId),
+    scenario: safeDataValue(options.scenario),
+    customer: safeDataValue(options.customer)
+  };
+
+  return appEnvironment.environment
+    || appEnvironment.release
+    || appEnvironment.appVersion
+    || appEnvironment.buildId
+    || appEnvironment.commitSha
+    || appEnvironment.branch
+    || appEnvironment.testRunId
+    || appEnvironment.scenario
+    || appEnvironment.customer
+    ? appEnvironment
+    : undefined;
+}
+
+function safeDataValue(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.slice(0, 128) : undefined;
+}
+
+function httpOrigin(value: string): string | undefined {
+  return value.startsWith("http://") || value.startsWith("https://") ? value : undefined;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -1955,9 +2131,18 @@ if (projectKey) {
     endpoint: currentScript?.dataset.endpoint,
     buttonLabel: currentScript?.dataset.buttonLabel,
     buttonStateLabel: currentScript?.dataset.buttonState,
-    buttonVariant: variant === "dev" || variant === "prod" || variant === "review" ? variant : undefined,
+    buttonVariant: variant === "dev" || variant === "prod" || variant === "review" || variant === "subtle" ? variant : undefined,
     buttonPosition: position === "bottom-right" || position === "bottom-left" || position === "top-right" || position === "top-left" ? position : undefined,
     locale: currentScript?.dataset.locale === "fr" || currentScript?.dataset.locale === "en" ? currentScript.dataset.locale : undefined,
-    visible: currentScript?.dataset.visible !== "false"
+    visible: currentScript?.dataset.visible !== "false",
+    environment: currentScript?.dataset.environment,
+    release: currentScript?.dataset.release,
+    appVersion: currentScript?.dataset.appVersion,
+    buildId: currentScript?.dataset.buildId,
+    commitSha: currentScript?.dataset.commitSha,
+    branch: currentScript?.dataset.branch,
+    testRunId: currentScript?.dataset.testRunId,
+    scenario: currentScript?.dataset.scenario,
+    customer: currentScript?.dataset.customer
   });
 }

@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     modes: ["comment", "pin", "screenshot"],
     locale: project.widgetLocale,
     buttonPosition: project.widgetButtonPosition,
+    buttonVariant: project.widgetButtonVariant,
     endpoint: "/api/public/feedback"
   });
 }

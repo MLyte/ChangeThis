@@ -6,6 +6,7 @@ export type WorkspaceMemberRole = "owner" | "admin" | "member" | "viewer";
 export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";
 export type WidgetLocale = "fr" | "en";
 export type WidgetButtonPosition = "bottom-right" | "bottom-left" | "top-right" | "top-left";
+export type WidgetButtonVariant = "default" | "subtle";
 
 export type Workspace = {
   id: string;
@@ -33,6 +34,7 @@ export type Site = {
   allowedOrigins: string[];
   widgetLocale: WidgetLocale;
   widgetButtonPosition: WidgetButtonPosition;
+  widgetButtonVariant: WidgetButtonVariant;
   createdAt: string;
   updatedAt: string;
 };
@@ -64,8 +66,21 @@ export type CaptureArea = {
   height: number;
 };
 
+export type FeedbackAppEnvironment = {
+  environment?: string;
+  release?: string;
+  appVersion?: string;
+  buildId?: string;
+  commitSha?: string;
+  branch?: string;
+  testRunId?: string;
+  scenario?: string;
+  customer?: string;
+};
+
 export type FeedbackMetadata = {
   url: string;
+  origin?: string;
   path: string;
   title: string;
   userAgent: string;
@@ -77,8 +92,19 @@ export type FeedbackMetadata = {
     x: number;
     y: number;
   };
+  screen?: {
+    width: number;
+    height: number;
+    availableWidth?: number;
+    availableHeight?: number;
+    colorDepth?: number;
+    pixelDepth?: number;
+  };
   devicePixelRatio: number;
   language: string;
+  timezone?: string;
+  online?: boolean;
+  app?: FeedbackAppEnvironment;
   createdAt: string;
 };
 
@@ -301,6 +327,7 @@ export function validateIssueTarget(value: unknown): IssueTargetValidationResult
 
 function buildIssueDescription(feedback: FeedbackPayload): string {
   const pins = getFeedbackPins(feedback);
+  const appEnvironmentLines = formatAppEnvironmentForIssue(feedback.metadata.app);
   const lines = [
     "## Feedback client",
     "",
@@ -309,14 +336,20 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     "## Contexte",
     "",
     `- Page: ${feedback.metadata.url}`,
+    feedback.metadata.origin ? `- Origine: ${feedback.metadata.origin}` : undefined,
     `- Chemin: ${feedback.metadata.path}`,
     `- Titre: ${feedback.metadata.title || "Non disponible"}`,
     `- Mode: ${feedback.type}`,
     `- Viewport: ${feedback.metadata.viewport.width}x${feedback.metadata.viewport.height}`,
+    feedback.metadata.screen ? `- Ecran: ${feedback.metadata.screen.width}x${feedback.metadata.screen.height}` : undefined,
     `- Device pixel ratio: ${feedback.metadata.devicePixelRatio}`,
     `- Langue: ${feedback.metadata.language}`,
+    feedback.metadata.timezone ? `- Fuseau horaire: ${feedback.metadata.timezone}` : undefined,
+    typeof feedback.metadata.online === "boolean" ? `- En ligne: ${feedback.metadata.online ? "oui" : "non"}` : undefined,
     `- Date: ${feedback.metadata.createdAt}`,
     "",
+    ...appEnvironmentLines,
+    ...(appEnvironmentLines.length ? [""] : []),
     "## Localisation",
     "",
     ...formatPinsForIssue(pins),
@@ -348,7 +381,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     "## Analyse IA",
     "",
     "A completer automatiquement."
-  ];
+  ].filter((line): line is string => typeof line === "string");
 
   return lines.join("\n");
 }
@@ -422,6 +455,7 @@ function validateMetadata(value: unknown): MetadataValidationResult {
 
   const metadata: FeedbackMetadata = {
     url: value.url,
+    origin: validateOrigin(value.origin),
     path: value.path,
     title: value.title,
     userAgent: value.userAgent,
@@ -434,6 +468,10 @@ function validateMetadata(value: unknown): MetadataValidationResult {
     createdAt: value.createdAt
   };
 
+  if (value.origin !== undefined && metadata.origin === undefined) {
+    return invalid("metadata.origin must be an HTTP origin");
+  }
+
   if (value.scroll !== undefined) {
     if (!isRecord(value.scroll) || !isNonNegativeNumber(value.scroll.x, 100_000) || !isNonNegativeNumber(value.scroll.y, 100_000)) {
       return invalid("metadata.scroll must contain non-negative x and y");
@@ -445,10 +483,137 @@ function validateMetadata(value: unknown): MetadataValidationResult {
     };
   }
 
+  if (value.screen !== undefined) {
+    const screen = value.screen;
+    if (!isRecord(screen)
+      || !isPositiveInteger(screen.width, 100_000)
+      || !isPositiveInteger(screen.height, 100_000)) {
+      return invalid("metadata.screen must contain positive width and height");
+    }
+
+    const availableWidth = screen.availableWidth;
+    const availableHeight = screen.availableHeight;
+    const colorDepth = screen.colorDepth;
+    const pixelDepth = screen.pixelDepth;
+
+    if (availableWidth !== undefined && !isPositiveInteger(availableWidth, 100_000)) {
+      return invalid("metadata.screen.availableWidth must be a positive integer");
+    }
+
+    if (availableHeight !== undefined && !isPositiveInteger(availableHeight, 100_000)) {
+      return invalid("metadata.screen.availableHeight must be a positive integer");
+    }
+
+    if (colorDepth !== undefined && !isPositiveInteger(colorDepth, 256)) {
+      return invalid("metadata.screen.colorDepth must be a positive integer");
+    }
+
+    if (pixelDepth !== undefined && !isPositiveInteger(pixelDepth, 256)) {
+      return invalid("metadata.screen.pixelDepth must be a positive integer");
+    }
+
+    metadata.screen = {
+      width: screen.width,
+      height: screen.height,
+      availableWidth,
+      availableHeight,
+      colorDepth,
+      pixelDepth
+    };
+  }
+
+  if (value.timezone !== undefined) {
+    if (typeof value.timezone !== "string" || value.timezone.length > 128) {
+      return invalid("metadata.timezone must be a string");
+    }
+
+    metadata.timezone = value.timezone;
+  }
+
+  if (value.online !== undefined) {
+    if (typeof value.online !== "boolean") {
+      return invalid("metadata.online must be a boolean");
+    }
+
+    metadata.online = value.online;
+  }
+
+  if (value.app !== undefined) {
+    const app = validateAppEnvironment(value.app);
+    if (!app.ok) {
+      return app;
+    }
+
+    metadata.app = app.value;
+  }
+
   return {
     ok: true,
     value: metadata
   };
+}
+
+function validateAppEnvironment(value: unknown): { ok: true; value: FeedbackAppEnvironment } | { ok: false; error: string } {
+  if (!isRecord(value)) {
+    return invalid("metadata.app must be an object");
+  }
+
+  const app: FeedbackAppEnvironment = {};
+  for (const key of ["environment", "release", "appVersion", "buildId", "commitSha", "branch", "testRunId", "scenario", "customer"] as const) {
+    const item = value[key];
+    if (item === undefined) {
+      continue;
+    }
+
+    if (typeof item !== "string" || item.length > 128) {
+      return invalid(`metadata.app.${key} must be a string`);
+    }
+
+    app[key] = item;
+  }
+
+  return { ok: true, value: app };
+}
+
+function validateOrigin(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string" || value.length > 2048) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(value);
+    if ((url.protocol === "http:" || url.protocol === "https:") && url.origin === value) {
+      return value;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+function formatAppEnvironmentForIssue(app: FeedbackAppEnvironment | undefined): string[] {
+  if (!app) {
+    return [];
+  }
+
+  const lines = [
+    app.environment ? `- Environnement: ${app.environment}` : undefined,
+    app.release ? `- Release: ${app.release}` : undefined,
+    app.appVersion ? `- Version app: ${app.appVersion}` : undefined,
+    app.buildId ? `- Build: ${app.buildId}` : undefined,
+    app.commitSha ? `- Commit: ${app.commitSha}` : undefined,
+    app.branch ? `- Branche: ${app.branch}` : undefined,
+    app.testRunId ? `- Test run: ${app.testRunId}` : undefined,
+    app.scenario ? `- Scenario: ${app.scenario}` : undefined,
+    app.customer ? `- Client: ${app.customer}` : undefined
+  ].filter((line): line is string => typeof line === "string");
+
+  return lines.length ? ["## Environnement client/test", "", ...lines] : [];
 }
 
 function validatePin(value: unknown): PinValidationResult {

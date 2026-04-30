@@ -29,8 +29,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Request body must be valid JSON" }, { status: 400 });
   }
 
-  if (!isRecord(body) || !isWidgetLocale(body.widgetLocale) || !isWidgetButtonPosition(body.widgetButtonPosition)) {
-    return NextResponse.json({ error: "widgetLocale and widgetButtonPosition are required" }, { status: 422 });
+  if (!isRecord(body) || !isWidgetLocale(body.widgetLocale) || !isWidgetButtonPosition(body.widgetButtonPosition) || !isWidgetButtonVariant(body.widgetButtonVariant)) {
+    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition and widgetButtonVariant are required" }, { status: 422 });
   }
 
   const { projectKey } = await context.params;
@@ -39,7 +39,8 @@ export async function PATCH(
     const site = await updateProjectWidgetSettings({
       projectKey,
       widgetLocale: body.widgetLocale,
-      widgetButtonPosition: body.widgetButtonPosition
+      widgetButtonPosition: body.widgetButtonPosition,
+      widgetButtonVariant: body.widgetButtonVariant
     }, session.workspace.id);
 
     return NextResponse.json({
@@ -89,4 +90,8 @@ function isWidgetLocale(value: unknown): value is "fr" | "en" {
 
 function isWidgetButtonPosition(value: unknown): value is "bottom-right" | "bottom-left" | "top-right" | "top-left" {
   return value === "bottom-right" || value === "bottom-left" || value === "top-right" || value === "top-left";
+}
+
+function isWidgetButtonVariant(value: unknown): value is "default" | "subtle" {
+  return value === "default" || value === "subtle";
 }

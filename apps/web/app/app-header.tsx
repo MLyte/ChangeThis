@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Inbox, LogOut, Settings, UserRound, type LucideIcon } from "lucide-react";
+import { AppNavLink } from "./app-nav-link";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { LanguageSwitch, T } from "./i18n";
 
@@ -30,10 +31,10 @@ export function AppHeader({ navItems = [], showAuthLinks = false, session }: App
         {navItems.length > 0 ? (
           <nav className="primary-nav" aria-label="Application">
             {navItems.map((item) => (
-              <Link className="app-nav-link" href={item.href} key={item.href}>
+              <AppNavLink href={item.href} key={item.href}>
                 <NavIcon labelKey={item.labelKey} />
                 <T k={item.labelKey} />
-              </Link>
+              </AppNavLink>
             ))}
           </nav>
         ) : null}

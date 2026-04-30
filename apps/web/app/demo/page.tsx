@@ -1,4 +1,5 @@
 import { demoProject } from "../../lib/demo-project";
+import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
 
@@ -56,6 +57,8 @@ export default function DemoPage() {
           </aside>
         </div>
       </section>
+
+      <AppFooter />
 
       <script
         src="/widget.global.js"
