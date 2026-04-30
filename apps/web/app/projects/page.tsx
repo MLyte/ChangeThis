@@ -11,6 +11,7 @@ import { AppHeader } from "../app-header";
 import { T } from "../i18n";
 import { ProviderBadge } from "../provider-badge";
 import { FeedbackActions } from "./feedback-actions";
+import { DemoSeedButton } from "./demo-seed-button";
 import { RetryDueButton } from "./retry-due-button";
 import { ScreenshotPreview } from "./screenshot-preview";
 
@@ -116,6 +117,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 <h2 id="local-inbox-title"><T k="projects.inbox.title" /></h2>
               </div>
             <div className="inbox-toolbar">
+              <DemoSeedButton />
               <RetryDueButton />
               <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
             </div>

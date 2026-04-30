@@ -469,7 +469,7 @@ h3 {
 }
 
 .hero-statement {
-  color: var(--ink);
+  color: var(--accent);
   font-size: clamp(24px, 3vw, 36px);
   font-weight: 850;
   line-height: 1.12;
@@ -1269,6 +1269,60 @@ dd {
 .demo-sidebar textarea {
   min-height: 92px;
   resize: vertical;
+}
+
+.demo-environment-card {
+  background: linear-gradient(135deg, #eef4ff 0%, #fff7ed 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.demo-environment-card strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.demo-environment-card span,
+.demo-environment-card dd,
+.demo-environment-card dt {
+  font-size: 12px;
+}
+
+.demo-environment-card span {
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.demo-environment-card dl {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 0;
+}
+
+.demo-environment-card div {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.demo-environment-card dt {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.demo-environment-card dd {
+  color: var(--ink);
+  font-family: "JetBrains Mono", "IBM Plex Mono", monospace;
+  font-weight: 850;
+  margin: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .auth-shell {
@@ -2089,7 +2143,7 @@ dd {
   border-left: 0;
   display: grid;
   gap: 12px;
-  grid-template-columns: 10px minmax(260px, 1.2fr) minmax(190px, 0.55fr) 112px auto;
+  grid-template-columns: 10px minmax(280px, 0.95fr) minmax(260px, 0.75fr) 112px minmax(176px, 190px);
   padding: 12px 16px;
 }
 
@@ -2145,6 +2199,7 @@ dd {
 .compact-feedback-row .feedback-main {
   gap: 6px;
   min-width: 0;
+  max-width: 620px;
 }
 
 .compact-feedback-row .feedback-main h2 {
@@ -2210,12 +2265,15 @@ dd {
 }
 
 .compact-feedback-row .feedback-actions {
-  min-width: 112px;
+  min-width: 176px;
+  width: 100%;
 }
 
 .compact-feedback-row .feedback-actions .button {
+  justify-content: center;
   min-height: 32px;
   padding: 7px 10px;
+  width: 100%;
 }
 
 .compact-callout {

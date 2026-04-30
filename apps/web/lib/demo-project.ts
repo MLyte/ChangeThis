@@ -1,5 +1,6 @@
 import {
   validateIssueTarget,
+  type FeedbackAppEnvironment,
   type IssueTarget,
   type Site,
   type Workspace
@@ -53,6 +54,18 @@ export const demoProject: ChangeThisProject = {
   },
   createdAt: localTimestamp,
   updatedAt: localTimestamp
+};
+
+export const demoAppEnvironment: Required<FeedbackAppEnvironment> = {
+  environment: "staging",
+  release: "2026.04.30-rc1",
+  appVersion: "0.1.0-staging",
+  buildId: "atelier-nova-build-001",
+  commitSha: "0000000",
+  branch: "demo/staging-simulated-client",
+  testRunId: "manual-demo-atelier-nova",
+  scenario: "appointment-booking-feedback",
+  customer: "atelier-nova-demo"
 };
 
 validateDemoProject();

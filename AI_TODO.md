@@ -376,6 +376,11 @@
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-04-30] Micro-amélioration demo hors checklist: ajout d'un bouton dashboard `Créer une simulation réaliste` et d'une route admin non-prod qui crée dynamiquement plusieurs sites, providers Git et feedbacks synthétiques avec statuts variés. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration test/demo hors checklist: ajout d'un preset client fictif `Atelier Nova` injecté par défaut dans le widget `/demo` via les attributs d'environnement, release, build, branche, scénario et test run. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UX hors checklist: bouton `Ignorer` passé en style danger rouge avec confirmation native avant archivage. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UI hors checklist: rééquilibrage des colonnes des lignes feedback du dashboard pour réduire le vide dans la colonne principale et mieux réserver l'espace brouillon/actions. Validation non lancée automatiquement conformément à la consigne utilisateur active.
+- [2026-04-30] Micro-amélioration UI hors checklist: passage du texte général du hero en bleu accent pour laisser GitHub en noir et GitLab en orange marque. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Micro-amélioration UX hors checklist: ajout d'un tutoriel compact sur la page Connexions Git, conçu avec deux agents UX, pour expliquer connexion, dépôt et création d'issue. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Micro-amélioration UI hors checklist: renommage du bouton sidebar dashboard `Sites` en `Sites connectés`. Validation non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Micro-amélioration UI hors checklist: ajout du footer partagé sur la page `/demo`. Validation non lancée automatiquement conformément à la consigne utilisateur active.

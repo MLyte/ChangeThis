@@ -1,4 +1,4 @@
-import { demoProject } from "../../lib/demo-project";
+import { demoAppEnvironment, demoProject } from "../../lib/demo-project";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
@@ -46,9 +46,32 @@ export default function DemoPage() {
               <li><T k="demo.scenarios.2" /></li>
               <li><T k="demo.scenarios.3" /></li>
             </ul>
+            <div className="demo-environment-card" aria-label="Environnement client simulé">
+              <p className="eyebrow">Simulation client</p>
+              <strong>Atelier Nova - portail staging</strong>
+              <span>Client fictif, sans données sensibles.</span>
+              <dl>
+                <div>
+                  <dt>Environnement</dt>
+                  <dd>{demoAppEnvironment.environment}</dd>
+                </div>
+                <div>
+                  <dt>Release</dt>
+                  <dd>{demoAppEnvironment.release}</dd>
+                </div>
+                <div>
+                  <dt>Scenario</dt>
+                  <dd>{demoAppEnvironment.scenario}</dd>
+                </div>
+                <div>
+                  <dt>Test run</dt>
+                  <dd>{demoAppEnvironment.testRunId}</dd>
+                </div>
+              </dl>
+            </div>
             <label>
               <T k="demo.email" />
-              <input type="email" defaultValue="client@example.com" />
+              <input type="email" defaultValue="nadia.petit@example.test" />
             </label>
             <label>
               <T k="demo.privateComment" />
@@ -64,6 +87,15 @@ export default function DemoPage() {
         src="/widget.global.js"
         data-project={demoProject.publicKey}
         data-endpoint="/api/public/feedback"
+        data-environment={demoAppEnvironment.environment}
+        data-release={demoAppEnvironment.release}
+        data-app-version={demoAppEnvironment.appVersion}
+        data-build-id={demoAppEnvironment.buildId}
+        data-commit-sha={demoAppEnvironment.commitSha}
+        data-branch={demoAppEnvironment.branch}
+        data-test-run-id={demoAppEnvironment.testRunId}
+        data-scenario={demoAppEnvironment.scenario}
+        data-customer={demoAppEnvironment.customer}
         async
       />
     </main>

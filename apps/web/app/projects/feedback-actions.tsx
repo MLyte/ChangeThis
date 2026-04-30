@@ -122,6 +122,16 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
     );
   }
 
+  function ignoreFeedback() {
+    const confirmed = window.confirm("Ignorer ce feedback ? Il sortira de la file active, mais restera disponible dans l'historique.");
+
+    if (!confirmed) {
+      return;
+    }
+
+    run(`/api/projects/feedbacks/${feedbackId}/ignore`, "ignore");
+  }
+
   if ((status === "sent_to_provider" || status === "resolved") && externalIssueUrl) {
     return (
       <div className="feedback-actions">
@@ -180,9 +190,9 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
         <T k="actions.keepFeedback" />
       </button>
       <button
-        className="button secondary-button"
+        className="button danger-button"
         disabled={isPending}
-        onClick={() => run(`/api/projects/feedbacks/${feedbackId}/ignore`, "ignore")}
+        onClick={ignoreFeedback}
         type="button"
       >
         <Archive aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
