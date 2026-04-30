@@ -66,6 +66,11 @@ export default async function HomePage() {
             <Link className="button" href="/projects"><T k="home.hero.primary" /></Link>
             <Link className="button secondary-button" href="/demo"><T k="home.hero.secondary" /></Link>
           </div>
+          {!publicSignupEnabled ? (
+            <p className="microcopy">
+              <Link className="inline-link" href="/login"><T k="home.hero.login" /></Link>
+            </p>
+          ) : null}
         </div>
 
         <ConsolePreview siteRows={siteRows} />
