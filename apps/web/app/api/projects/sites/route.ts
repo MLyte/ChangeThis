@@ -13,7 +13,7 @@ import {
 } from "../../../../lib/project-registry";
 
 export async function GET(request: Request) {
-  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
+  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "viewer");
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);

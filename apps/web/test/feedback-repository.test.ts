@@ -188,3 +188,47 @@ test("file repository exposes sent issue counts for connected site metrics", asy
     assert.deepEqual(createdIssuesForSite.map((feedback) => feedback.externalIssue?.number).sort(), [1, 2]);
   });
 });
+
+test("file repository filters feedback reads by workspace", async () => {
+  await withRepository(async (repository) => {
+    const workspaceA = "workspace-a";
+    const workspaceB = "workspace-b";
+    const payloadA = feedbackPayload({ message: "Workspace A feedback" });
+    const payloadB = feedbackPayload({ message: "Workspace B feedback" });
+    const feedbackA = await repository.create({
+      projectKey: "demo_project_key",
+      projectName: "Demo Project",
+      issueTarget,
+      payload: payloadA,
+      issueDraft: buildIssueDraft(payloadA),
+      workspaceId: workspaceA
+    });
+    const feedbackB = await repository.create({
+      projectKey: "demo_project_key",
+      projectName: "Demo Project",
+      issueTarget,
+      payload: payloadB,
+      issueDraft: buildIssueDraft(payloadB),
+      workspaceId: workspaceB
+    });
+
+    await repository.recordIssueAttempt(feedbackA.id, {
+      ok: false,
+      error: "GitHub rate limit",
+      retryable: true,
+      nextRetryAt: "2026-04-28T09:00:00.000Z"
+    }, { workspaceId: workspaceA });
+    await repository.recordIssueAttempt(feedbackB.id, {
+      ok: false,
+      error: "GitHub rate limit",
+      retryable: true,
+      nextRetryAt: "2026-04-28T09:00:00.000Z"
+    }, { workspaceId: workspaceB });
+
+    assert.deepEqual((await repository.list({ workspaceId: workspaceA })).map((feedback) => feedback.id), [feedbackA.id]);
+    assert.equal((await repository.get(feedbackB.id, { workspaceId: workspaceA })), undefined);
+    assert.deepEqual((await repository.dueForRetry({ workspaceId: workspaceA, now: new Date("2026-04-28T09:00:00.000Z") })).map((feedback) => feedback.id), [feedbackA.id]);
+    assert.equal((await repository.events(feedbackB.id, { workspaceId: workspaceA })).length, 0);
+    assert.ok((await repository.events(feedbackA.id, { workspaceId: workspaceA })).length > 0);
+  });
+});

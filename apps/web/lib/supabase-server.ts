@@ -3,6 +3,11 @@ type SupabaseUser = {
   email?: string;
 };
 
+type SupabaseAuthUserRow = {
+  id?: unknown;
+  email?: unknown;
+};
+
 type WorkspaceMemberRow = {
   user_id?: string;
   organization_id: string;
@@ -38,6 +43,16 @@ export type WorkspaceMemberSummary = {
   status: string;
   joinedAt?: string;
 };
+
+export type WorkspaceMemberStatus = "invited" | "active" | "disabled";
+
+export type WorkspaceMemberUpsertResult = WorkspaceMemberSummary & {
+  status: WorkspaceMemberStatus;
+};
+
+type InviteWorkspaceMemberResult =
+  | { ok: true; member: WorkspaceMemberUpsertResult }
+  | { ok: false; reason: "invitee_not_found" | "already_active" | "invalid_role" | "invalid_inviter" };
 
 export type SupabasePasswordSignInResult =
   | {
@@ -412,6 +427,185 @@ export async function listWorkspaceMembers(organizationId: string): Promise<Work
   return members;
 }
 
+export async function getWorkspaceUserByEmail(email: string): Promise<SupabaseUser | null> {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return null;
+  }
+
+  if (!email) {
+    return null;
+  }
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users?email=eq.${encodeURIComponent(email)}&select=id,email&limit=1`, {
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      Authorization: `Bearer ${supabaseServiceRoleKey}`
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const users = await response.json() as SupabaseAuthUserRow[];
+  const user = users[0];
+
+  if (typeof user?.id !== "string") {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: typeof user.email === "string" ? user.email : email
+  };
+}
+
+export async function getWorkspaceMember(organizationId: string, userId: string): Promise<WorkspaceMemberUpsertResult | null> {
+  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(organizationId) || !isUuid(userId)) {
+    return null;
+  }
+
+  const members = await supabaseRest<Array<WorkspaceMemberRow & { user_id: string }>>(
+    `/rest/v1/workspace_members?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}&select=organization_id,user_id,role,status,created_at`
+  );
+  const row = members[0];
+
+  if (!row) {
+    return null;
+  }
+
+  const email = await getSupabaseUserEmail(row.user_id);
+
+  return {
+    userId: row.user_id,
+    email: email ?? row.user_id,
+    role: row.role,
+    status: normalizeWorkspaceMemberStatus(row.status),
+    joinedAt: row.created_at
+  };
+}
+
+export async function inviteWorkspaceMember(input: {
+  organizationId: string;
+  email: string;
+  role: string;
+  invitedBy: string;
+}): Promise<InviteWorkspaceMemberResult> {
+  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(input.organizationId) || !isUuid(input.invitedBy)) {
+    return { ok: false, reason: "invalid_inviter" };
+  }
+
+  const role = normalizeWorkspaceRole(input.role);
+  if (!role) {
+    return { ok: false, reason: "invalid_role" };
+  }
+
+  const user = await getWorkspaceUserByEmail(input.email);
+  if (!user) {
+    return { ok: false, reason: "invitee_not_found" };
+  }
+
+  const existing = await getWorkspaceMember(input.organizationId, user.id);
+  if (existing?.status === "active") {
+    return { ok: false, reason: "already_active" };
+  }
+
+  const now = new Date().toISOString();
+  const payload = {
+    organization_id: input.organizationId,
+    user_id: user.id,
+    role,
+    status: "invited",
+    invited_by: input.invitedBy,
+    invited_at: now
+  };
+
+  if (existing) {
+    const updated = await updateWorkspaceMember(input.organizationId, user.id, {
+      role,
+      status: "invited",
+      invited_by: input.invitedBy,
+      invited_at: now
+    });
+    return updated ? { ok: true, member: { ...updated, status: "invited" } } : { ok: false, reason: "invitee_not_found" };
+  }
+
+  await supabaseRest("/rest/v1/workspace_members", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const member = await getWorkspaceMember(input.organizationId, user.id);
+  return member ? { ok: true, member } : { ok: false, reason: "invitee_not_found" };
+}
+
+export async function updateWorkspaceMemberStatus(input: {
+  organizationId: string;
+  userId: string;
+  status: WorkspaceMemberStatus;
+  role?: string;
+}): Promise<WorkspaceMemberUpsertResult | null> {
+  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(input.organizationId) || !isUuid(input.userId)) {
+    return null;
+  }
+
+  const update: Record<string, string> = {
+    status: input.status
+  };
+
+  if (input.role) {
+    const role = normalizeWorkspaceRole(input.role);
+    if (role) {
+      update.role = role;
+    }
+  }
+
+  const row = await updateWorkspaceMember(input.organizationId, input.userId, update);
+  return row;
+}
+
+export async function updateWorkspaceMember(
+  organizationId: string,
+  userId: string,
+  patch: Record<string, string>
+): Promise<WorkspaceMemberUpsertResult | null> {
+  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(organizationId) || !isUuid(userId)) {
+    return null;
+  }
+
+  const encodedOrg = encodeURIComponent(organizationId);
+  const encodedUser = encodeURIComponent(userId);
+  const patchedRows = await supabaseRest<Array<WorkspaceMemberRow>>(
+    `/rest/v1/workspace_members?organization_id=eq.${encodedOrg}&user_id=eq.${encodedUser}&limit=1`,
+    {
+      method: "PATCH",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(patch)
+    }
+  );
+
+  const row = patchedRows[0];
+  if (!row || row.user_id !== userId) {
+    return null;
+  }
+
+  const email = await getSupabaseUserEmail(row.user_id);
+
+  return {
+    userId: row.user_id,
+    email: email ?? row.user_id,
+    role: row.role,
+    status: normalizeWorkspaceMemberStatus(row.status),
+    joinedAt: row.created_at
+  };
+}
+
 export async function insertProviderCredentialMetadata(input: {
   integrationId: string;
   credentialKind: string;
@@ -498,6 +692,18 @@ async function getSupabaseUserEmail(userId: string): Promise<string | undefined>
 
   const body = await response.json() as { email?: unknown };
   return typeof body.email === "string" ? body.email : undefined;
+}
+
+function normalizeWorkspaceRole(value: string): string | undefined {
+  return value === "viewer" || value === "member" || value === "admin" || value === "owner" ? value : undefined;
+}
+
+function normalizeWorkspaceMemberStatus(value: string | undefined): WorkspaceMemberStatus {
+  if (value === "invited" || value === "active" || value === "disabled") {
+    return value;
+  }
+
+  return "active";
 }
 
 function isUuid(value: string): boolean {

@@ -54,22 +54,27 @@ export async function POST(request: Request, context: RouteContext) {
 
   const projectKey = isRecord(rawBody) && typeof rawBody.projectKey === "string" ? rawBody.projectKey : "";
   const { id } = await context.params;
+  const project = await findConfiguredProjectByKey(projectKey);
+
+  if (!project) {
+    logWarn("feedback_cancel_rejected_not_found", { request_id: requestId, origin, feedback_id: id, project_key: projectKey });
+    return NextResponse.json({ error: "Feedback not found" }, { status: 404, headers });
+  }
+
+  if (!origin || !project.allowedOrigins.includes(origin)) {
+    logWarn("feedback_cancel_rejected_origin", { request_id: requestId, origin, feedback_id: id, project_key: projectKey });
+    return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403, headers });
+  }
+
   const repository = getFeedbackRepository();
-  const feedback = await repository.get(id);
+  const feedback = await repository.get(id, { workspaceId: project.workspaceId });
 
   if (!feedback || feedback.projectKey !== projectKey) {
     logWarn("feedback_cancel_rejected_not_found", { request_id: requestId, origin, feedback_id: id, project_key: projectKey });
     return NextResponse.json({ error: "Feedback not found" }, { status: 404, headers });
   }
 
-  const project = await findConfiguredProjectByKey(projectKey);
-
-  if (!project || !origin || !project.allowedOrigins.includes(origin)) {
-    logWarn("feedback_cancel_rejected_origin", { request_id: requestId, origin, feedback_id: id, project_key: projectKey });
-    return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403, headers });
-  }
-
-  const canceled = await repository.markIgnored(id);
+  const canceled = await repository.markIgnored(id, { workspaceId: project.workspaceId });
 
   logInfo("feedback_canceled_by_client", {
     request_id: requestId,

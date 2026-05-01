@@ -66,6 +66,8 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
           integrations={providerIntegrations}
           hasLiveDemo={hasLiveDemo}
           projects={projectViews}
+          canManageMembers={session.workspace.role === "admin" || session.workspace.role === "owner"}
+          currentUserId={session.user.id}
           section={section}
           users={workspaceUsers}
           workspaceName={session.workspace.name}

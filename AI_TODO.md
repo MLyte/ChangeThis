@@ -25,16 +25,16 @@
 - [x] Créer une route callback/session Supabase qui pose un cookie serveur sécurisé.
 - [x] Remplacer la session locale par une session Supabase obligatoire en production.
 - [x] Lier chaque requête dashboard à un `workspaceId` issu de la session.
-- [ ] Filtrer toutes les lectures de feedbacks par workspace.
-- [ ] Filtrer toutes les lectures de projets/sites par workspace.
+- [x] Filtrer toutes les lectures de feedbacks par workspace.
+- [x] Filtrer toutes les lectures de projets/sites par workspace.
 - [x] Filtrer toutes les intégrations provider par workspace.
-- [ ] Appliquer les rôles `viewer`, `member`, `admin` et `owner` sur chaque route API privée.
+- [x] Appliquer les rôles `viewer`, `member`, `admin` et `owner` sur chaque route API privée.
 - [x] Restreindre la modification des destinations d'issues aux rôles `admin` et `owner`.
 - [x] Restreindre les relances de retries aux rôles `admin` et `owner`.
 - [ ] Ajouter un flux d'onboarding qui crée l'organisation, le workspace, l'owner et le premier site.
-- [ ] Ajouter une page de gestion des membres du workspace.
-- [ ] Ajouter une invitation membre avec statut `invited`.
-- [ ] Ajouter une désactivation membre avec statut `disabled`.
+- [x] Ajouter une page de gestion des membres du workspace.
+- [x] Ajouter une invitation membre avec statut `invited`.
+- [x] Ajouter une désactivation membre avec statut `disabled`.
 - [ ] Ajouter un sélecteur de workspace si un utilisateur appartient à plusieurs organisations.
 
 ## 3. Onboarding produit
@@ -482,4 +482,7 @@
 - [2026-04-30] Nettoyage copy beta privée hors checklist: suppression des formulations marketing trop ouvertes autour de “créer un compte”, ajout d'un lien direct vers `/login` sur la home quand l'inscription est fermée, et réalignement des clés marketing dormantes `home.signup.*` / `home.hero.signup` sur un positionnement invitation-only. Validation locale non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-04-30] Correctif prod widget démo hors checklist: ajout de l'origine `NEXT_PUBLIC_APP_URL` aux `allowedOrigins` du `demoProject`, afin que `/demo` puisse réellement poster vers `/api/public/feedback` depuis `app.changethis.dev` et pas seulement depuis `localhost`. Validation locale non lancée automatiquement conformément à la consigne utilisateur active.
 - [2026-05-01] Passe sécurité urgente: isolation des intégrations provider par `workspaceId`, restriction `admin/owner` des destinations d'issues et relances, signature HMAC + contrôle d'âge du `state` OAuth, durcissement `CSRF`/`Origin` sur les mutations privées et `/api/widget/config`, ajout des headers de sécurité/CSP/HSTS, endpoints `/api/health` et `/api/ready`, redaction des secrets dans les logs, et suppression d'une fuite cross-workspace sur la home publique. Validation exécutée: `npm run build` OK. Blocages urgents restants documentés: stockage applicatif encore local pour feedbacks/sites/credentials, `DATA_STORE=supabase` non finalisé, rate limit public encore mémoire et file de jobs durable non implémentée.
+- [2026-05-01] Tâches Auth/workspaces complétées (points 2-5): filtre projet/site par workspace pour les lectures, rôles `viewer/member/admin/owner` alignés sur les routes API privées, page gestion membres opérationnelle avec invite `invited` et désactivation `disabled`. Vérifications: `npm run typecheck` OK, `npx tsx --test test/feedback-repository.test.ts` OK.
+- [2026-05-01] Tâche feedbacks/workspace complétée: l'annulation publique résout le projet avant lecture et scope `get`/`markIgnored` avec `project.workspaceId`; `events()` accepte aussi un filtre workspace; test multi-workspace ajouté. Validation ciblée exécutée: `npx tsx --test test/feedback-repository.test.ts` OK.
+- [2026-05-01] Audit agents onboarding: la première tâche non cochée reste partielle et non cochable. Le flux signup/set-password crée déjà l'organisation/workspace et le membre `owner`, mais aucun premier site n'est créé automatiquement dans ce flux; la création de site reste portée par `/api/projects/sites` et l'écran Sites connectés. Aucun changement fonctionnel effectué.
 

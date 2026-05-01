@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Copy,
@@ -32,6 +32,8 @@ type Props = {
   section: SettingsSection;
   users?: WorkspaceUserView[];
   workspaceName?: string;
+  canManageMembers?: boolean;
+  currentUserId?: string;
 };
 
 type ProjectView = ChangeThisProject & {
@@ -92,9 +94,19 @@ type InstallCheckResult = {
   message: string;
 };
 
-export function IssueDestinationSetup({ projects, integrations, hasLiveDemo = false, section, users = [], workspaceName }: Props) {
+export function IssueDestinationSetup({
+  projects,
+  integrations,
+  hasLiveDemo = false,
+  section,
+  users = [],
+  workspaceName,
+  canManageMembers = false,
+  currentUserId
+}: Props) {
   const { t } = useLanguage();
   const [projectViews, setProjectViews] = useState<ProjectView[]>(projects);
+  const [workspaceUsers, setWorkspaceUsers] = useState<WorkspaceUserView[]>(users);
   const firstConnectedProvider = integrations.find((integration) => integration.status === "connected")?.provider ?? "github";
   const [selectedProvider, setSelectedProvider] = useState<IssueProvider>(firstConnectedProvider);
   const [message, setMessage] = useState(t("destinations.message.initial"));
@@ -107,6 +119,12 @@ export function IssueDestinationSetup({ projects, integrations, hasLiveDemo = fa
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
   const [installChecks, setInstallChecks] = useState<Record<string, InstallCheckResult>>({});
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"viewer" | "member" | "admin">("member");
+
+  useEffect(() => {
+    setWorkspaceUsers(users);
+  }, [users]);
 
   const connectedProviders = useMemo(
     () => new Set(integrations.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
@@ -348,6 +366,85 @@ export function IssueDestinationSetup({ projects, integrations, hasLiveDemo = fa
     });
   }
 
+  function inviteWorkspaceMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const email = inviteEmail.trim();
+    if (!email) {
+      toast.error("Invitation impossible", {
+        description: "Ajoutez une adresse email."
+      });
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/workspace/members", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email,
+            role: inviteRole
+          })
+        });
+        const body = (await response.json()) as { member?: WorkspaceUserView; error?: string };
+
+        const invitedMember = body.member;
+        if (!response.ok || !invitedMember) {
+          throw new Error(body.error ?? "Impossible d'inviter ce membre.");
+        }
+
+        setWorkspaceUsers((current) => [invitedMember, ...current.filter((member) => member.userId !== invitedMember.userId)]);
+        setInviteEmail("");
+        toast.success("Invitation envoyée", {
+          description: `${invitedMember.email} peut maintenant rejoindre le workspace.`
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
+        toast.error("Invitation impossible", {
+          description: errorMessage
+        });
+      }
+    });
+  }
+
+  function disableWorkspaceUser(userId: string) {
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/workspace/members", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            userId,
+            status: "disabled"
+          })
+        });
+        const body = (await response.json()) as { member?: WorkspaceUserView; error?: string };
+        const updatedMember = body.member;
+
+        if (!response.ok || !updatedMember) {
+          throw new Error(body.error ?? "Impossible de désactiver le membre.");
+        }
+
+        setWorkspaceUsers((current) => current.map((member) => member.userId === updatedMember.userId
+          ? updatedMember
+          : member));
+        toast.success("Membre désactivé", {
+          description: `${updatedMember.email} n'a plus accès au workspace.`
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
+        toast.error("Action impossible", {
+          description: errorMessage
+        });
+      }
+    });
+  }
+
   function testScript(projectKey: string) {
     startTransition(async () => {
       try {
@@ -451,7 +548,18 @@ export function IssueDestinationSetup({ projects, integrations, hasLiveDemo = fa
           ) : null}
 
           {section === "users" ? (
-            <UsersSection users={users} workspaceName={workspaceName} />
+            <UsersSection
+              canManageMembers={canManageMembers}
+              currentUserId={currentUserId}
+              onDisable={disableWorkspaceUser}
+              onInvite={inviteWorkspaceMember}
+              users={workspaceUsers}
+              inviteEmail={inviteEmail}
+              inviteRole={inviteRole}
+              onInviteEmailChange={setInviteEmail}
+              onInviteRoleChange={setInviteRole}
+              workspaceName={workspaceName}
+            />
           ) : null}
         </div>
       </div>
@@ -459,7 +567,29 @@ export function IssueDestinationSetup({ projects, integrations, hasLiveDemo = fa
   );
 }
 
-function UsersSection({ users, workspaceName }: { users: WorkspaceUserView[]; workspaceName?: string }) {
+function UsersSection({
+  users,
+  workspaceName,
+  canManageMembers,
+  currentUserId,
+  inviteEmail,
+  inviteRole,
+  onInvite,
+  onInviteEmailChange,
+  onInviteRoleChange,
+  onDisable
+}: {
+  users: WorkspaceUserView[];
+  workspaceName?: string;
+  canManageMembers: boolean;
+  currentUserId?: string;
+  inviteEmail: string;
+  inviteRole: "viewer" | "member" | "admin";
+  onInvite: (event: FormEvent<HTMLFormElement>) => void;
+  onInviteEmailChange: (email: string) => void;
+  onInviteRoleChange: (role: "viewer" | "member" | "admin") => void;
+  onDisable: (userId: string) => void;
+}) {
   const activeUsers = users.filter((user) => user.status === "active").length;
   const adminUsers = users.filter((user) => user.role === "owner" || user.role === "admin").length;
 
@@ -496,10 +626,26 @@ function UsersSection({ users, workspaceName }: { users: WorkspaceUserView[]; wo
             <strong>{workspaceName ?? "Workspace ChangeThis"}</strong>
             <span>Les feedbacks publics restent ouverts. Cette liste ne concerne que l&apos;accès à la console.</span>
           </div>
-          <button className="button secondary-button" disabled type="button">
-            <Mail aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            Inviter
-          </button>
+          {canManageMembers ? (
+            <form className="member-invite-form" onSubmit={onInvite}>
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(event) => onInviteEmailChange(event.target.value)}
+                placeholder="email@exemple.com"
+                required
+              />
+              <select value={inviteRole} onChange={(event) => onInviteRoleChange(event.target.value as "viewer" | "member" | "admin")}>
+                <option value="member">Membre</option>
+                <option value="admin">Admin</option>
+                <option value="viewer">Lecteur</option>
+              </select>
+              <button className="button secondary-button" type="submit">
+                <Mail aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                Inviter
+              </button>
+            </form>
+          ) : null}
         </div>
 
         <div className="users-table" role="table" aria-label="Utilisateurs du workspace">
@@ -507,6 +653,7 @@ function UsersSection({ users, workspaceName }: { users: WorkspaceUserView[]; wo
             <span role="columnheader">Utilisateur</span>
             <span role="columnheader">Rôle</span>
             <span role="columnheader">Statut</span>
+            <span role="columnheader">Actions</span>
             <span role="columnheader">Arrivée</span>
           </div>
           {users.map((user) => (
@@ -523,6 +670,13 @@ function UsersSection({ users, workspaceName }: { users: WorkspaceUserView[]; wo
                 <span className={`status-badge ${user.status === "active" ? "connected" : "inactive"}`}>
                   {user.status === "active" ? "Actif" : user.status}
                 </span>
+              </span>
+              <span role="cell">
+                {canManageMembers && user.status !== "disabled" && user.userId !== currentUserId ? (
+                  <button className="button secondary-button" onClick={() => onDisable(user.userId)} type="button">
+                    Désactiver
+                  </button>
+                ) : null}
               </span>
               <span role="cell">{user.joinedAt ? formatMemberDate(user.joinedAt) : "Session locale"}</span>
             </div>

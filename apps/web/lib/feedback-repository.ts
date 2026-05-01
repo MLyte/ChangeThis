@@ -79,7 +79,7 @@ export type FeedbackRepository = {
   markResolved(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   markIgnored(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   dueForRetry(filters?: Date | { workspaceId?: string; now?: Date }): Promise<StoredFeedback[]>;
-  events(feedbackId: string): Promise<FeedbackEvent[]>;
+  events(feedbackId: string, filters?: { workspaceId?: string }): Promise<FeedbackEvent[]>;
   clearWorkspace(workspaceId: string): Promise<{ feedbacks: number; events: number }>;
 };
 
@@ -280,8 +280,13 @@ export class FileFeedbackRepository implements FeedbackRepository {
     });
   }
 
-  async events(feedbackId: string): Promise<FeedbackEvent[]> {
+  async events(feedbackId: string, filters: { workspaceId?: string } = {}): Promise<FeedbackEvent[]> {
     const store = await this.read();
+    const feedback = store.feedbacks.find((item) => item.id === feedbackId && belongsToWorkspace(item, filters.workspaceId));
+    if (!feedback) {
+      return [];
+    }
+
     return store.events.filter((event) => event.feedbackId === feedbackId);
   }
 
