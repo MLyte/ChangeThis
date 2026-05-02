@@ -14,23 +14,33 @@ type HeaderNavItem = {
 type AppHeaderProps = {
   navItems?: HeaderNavItem[];
   showAuthLinks?: boolean;
+  suppressAuthActions?: boolean;
+  suppressSession?: boolean;
   session?: {
     email: string;
     isLocalMode: boolean;
   };
 };
 
-export async function AppHeader({ navItems = [], showAuthLinks = false, session }: AppHeaderProps) {
+export async function AppHeader({
+  navItems = [],
+  showAuthLinks = false,
+  suppressAuthActions = false,
+  suppressSession = false,
+  session
+}: AppHeaderProps) {
   const publicSignupEnabled = isPublicSignupEnabled();
-  const resolvedSession = session ?? await loadHeaderSession();
+  const resolvedSession = suppressSession ? undefined : session ?? await loadHeaderSession();
   const showPrimaryNav = resolvedSession && navItems.length > 0;
-  const showPublicAuthActions = !resolvedSession && (showAuthLinks || navItems.length > 0 || publicSignupEnabled);
+  const showPublicAuthActions = !suppressAuthActions && !resolvedSession && (showAuthLinks || navItems.length > 0 || publicSignupEnabled);
   const showHeaderSession = resolvedSession && !resolvedSession.isLocalMode;
 
   return (
     <header className="topbar app-header">
       <Link className="brand" href="/">
-        <span>ChangeThis</span>
+        <span className="brand-wordmark" aria-label="ChangeThis">
+          <span>Change</span><span className="brand-wordmark-accent">This</span>
+        </span>
         <Image src={logoChangeThis} alt="" aria-hidden="true" className="brand-logo" priority />
       </Link>
 

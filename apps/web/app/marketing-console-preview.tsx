@@ -1,243 +1,174 @@
-import { CheckCircle2, Clock3, GitPullRequestCreate, Inbox, RotateCcw, Workflow, type LucideIcon } from "lucide-react";
-import { T } from "./i18n";
+"use client";
+
+import {
+  Archive,
+  Camera,
+  CheckCircle2,
+  Code2,
+  GitBranch,
+  GitPullRequestCreate,
+  Inbox,
+  MapPin,
+  MessageSquare,
+  Send,
+  Settings2
+} from "lucide-react";
+import { useLanguage } from "./i18n";
 import { ProviderBadge } from "./provider-badge";
 
-type PreviewFeedbackStatus = "raw" | "issue_creation_pending" | "retrying" | "sent_to_provider";
-
-type PreviewFeedback = {
-  id: string;
-  title: string;
-  message: string;
-  site: string;
-  path: string;
-  type: "pin" | "capture" | "note";
-  status: PreviewFeedbackStatus;
-  issueState: string;
-  provider: "github" | "gitlab";
-  receivedAt: string;
-};
-
-const statusConfig: Record<PreviewFeedbackStatus, { badgeClass: string; label: string; metricTone: "ok" | "warning" | "danger" }> = {
-  raw: { badgeClass: "needs_setup", label: "Nouveau", metricTone: "warning" },
-  issue_creation_pending: { badgeClass: "issue_creation_pending", label: "En file", metricTone: "warning" },
-  retrying: { badgeClass: "retrying", label: "À revoir", metricTone: "warning" },
-  sent_to_provider: { badgeClass: "connected", label: "Créée", metricTone: "ok" }
-};
-
-const previewFeedbacks: PreviewFeedback[] = [
+const feedbackItems = [
   {
-    id: "fb-preview-1",
-    title: "Pin sur /checkout",
-    message: "Patrick: le bouton devis descend sous le pli mobile.",
-    site: "Cabinet Orion",
-    path: "/checkout",
-    type: "pin",
-    status: "raw",
-    issueState: "Non créée",
-    provider: "github",
-    receivedAt: "09:41"
+    titleKey: "home.loop.feedback.1.title",
+    copyKey: "home.loop.feedback.1.copy",
+    metaKey: "home.loop.feedback.1.meta",
+    Icon: MapPin
   },
   {
-    id: "fb-preview-2",
-    title: "Capture sur /pricing",
-    message: "Jean-Pierre: l’espace entre les cartes paraît trop grand.",
-    site: "Studio Lumen",
-    path: "/pricing",
-    type: "capture",
-    status: "issue_creation_pending",
-    issueState: "En cours",
-    provider: "gitlab",
-    receivedAt: "09:24"
+    titleKey: "home.loop.feedback.2.title",
+    copyKey: "home.loop.feedback.2.copy",
+    metaKey: "home.loop.feedback.2.meta",
+    Icon: Camera
   },
   {
-    id: "fb-preview-3",
-    title: "Note sur /demo",
-    message: "Crénage du titre à vérifier sur grand écran.",
-    site: "Atelier Nova",
-    path: "/demo",
-    type: "note",
-    status: "retrying",
-    issueState: "À relancer",
-    provider: "github",
-    receivedAt: "08:58"
-  }
-];
-
-const previewRoutes = [
-  {
-    name: "Cabinet Orion",
-    repo: "cabinet-orion/booking-portal",
-    provider: "github" as const
-  },
-  {
-    name: "Studio Lumen",
-    repo: "studio-lumen/shopfront",
-    provider: "gitlab" as const
-  },
-  {
-    name: "Atelier Nova",
-    repo: "atelier-nova/portal-staging",
-    provider: "github" as const
+    titleKey: "home.loop.feedback.3.title",
+    copyKey: "home.loop.feedback.3.copy",
+    metaKey: "home.loop.feedback.3.meta",
+    Icon: MessageSquare
   }
 ];
 
 export function MarketingConsolePreview() {
-  const activeCount = previewFeedbacks.filter((feedback) => feedback.status !== "sent_to_provider").length;
-  const queuedCount = previewFeedbacks.filter((feedback) => feedback.status === "issue_creation_pending").length;
-  const reviewCount = previewFeedbacks.filter((feedback) => feedback.status === "retrying").length;
+  const { t } = useLanguage();
 
   return (
-    <div className="console-preview dashboard-preview-console" aria-label="Aperçu de la console ChangeThis">
-      <div className="preview-topline">
-        <span className="window-dot coral" />
-        <span className="window-dot amber" />
-        <span className="window-dot green" />
-        <Workflow className="preview-title-icon" aria-hidden="true" size={16} strokeWidth={2.2} />
-        <strong>Console ChangeThis</strong>
-      </div>
-
-      <div className="dashboard-preview-workbench">
-        <section className="inbox-panel compact-inbox dashboard-preview-inbox" aria-labelledby="preview-inbox-title">
-          <div className="inbox-hero compact-inbox-header">
+    <div className="product-loop-preview" aria-label={t("home.loop.aria")}>
+      <div className="product-loop-board">
+        <section className="loop-panel loop-setup-panel" aria-labelledby="preview-setup-title">
+          <div className="loop-panel-heading">
             <div>
-              <p className="eyebrow">Inbox</p>
-              <h2 id="preview-inbox-title"><T k="home.preview.header" /></h2>
+              <p className="eyebrow">{t("home.loop.setup.eyebrow")}</p>
+              <h2 id="preview-setup-title">{t("home.loop.setup.title")}</h2>
             </div>
-            <span className="status-badge needs_setup">{previewFeedbacks.length} <T k="home.preview.recent" /></span>
           </div>
 
-          <nav className="dashboard-view-tabs" aria-label="Vue de démonstration">
-            <span className="view-tab active">File active <span>{activeCount}</span></span>
-            <span className="view-tab">Historique <span>8</span></span>
-            <span className="view-tab">Tous <span>11</span></span>
-          </nav>
+          <div className="loop-panel-visual">
+            <div className="loop-script-card" aria-label={t("home.loop.script.aria")}>
+              <div className="loop-script-card-bar">
+                <Code2 aria-hidden="true" size={15} strokeWidth={2.2} />
+                <span>client-site.dev</span>
+              </div>
+              <code>{`<script src="https://app.changethis.dev/widget.js"
+  data-project="cabinet-orion">
+</script>`}</code>
+            </div>
 
-          <div className="dashboard-preview-filter-row" aria-hidden="true">
-            <span>Recherche</span>
-            <span>Statut: action requise</span>
-            <span>Site: tous</span>
-          </div>
-
-          <div className="feedback-table-head" aria-hidden="true">
-            <span />
-            <span>Feedback</span>
-            <span>Site / page</span>
-            <span>Statut</span>
-            <span>Issue</span>
-            <span>Reçu</span>
-            <span>Actions</span>
-          </div>
-
-          <div className="feedback-list" role="list" aria-label="Retours récents">
-            {previewFeedbacks.map((feedback) => <PreviewFeedbackRow feedback={feedback} key={feedback.id} />)}
+            <div className="loop-git-config-card">
+              <div className="loop-git-config-header">
+                <Settings2 aria-hidden="true" size={16} strokeWidth={2.2} />
+                <strong>{t("home.loop.git.title")}</strong>
+              </div>
+              <div className="loop-git-provider-row">
+                <ProviderBadge provider="github" />
+                <span>cabinet-orion/booking-portal</span>
+                <CheckCircle2 aria-hidden="true" size={15} strokeWidth={2.2} />
+              </div>
+              <div className="loop-git-provider-row">
+                <ProviderBadge provider="gitlab" />
+                <span>studio-lumen/shopfront</span>
+                <CheckCircle2 aria-hidden="true" size={15} strokeWidth={2.2} />
+              </div>
+            </div>
           </div>
         </section>
 
-        <aside className="dashboard-side-panel dashboard-preview-side" aria-label="Synthèse ChangeThis">
-          <section className="side-panel-section status-side-section">
-            <div className="side-panel-heading">
-              <p className="eyebrow">Synthèse</p>
-              <h2>File actuelle</h2>
+        <section className="loop-panel loop-visitor-panel" aria-labelledby="preview-visitor-title">
+          <div className="loop-panel-heading">
+            <div>
+              <p className="eyebrow">{t("home.loop.visitor.eyebrow")}</p>
+              <h2 id="preview-visitor-title">{t("home.loop.visitor.title")}</h2>
             </div>
-            <div className="side-status-stack">
-              <PreviewMetric icon={Inbox} label="À traiter" tone="warning" value={activeCount} />
-              <PreviewMetric icon={Clock3} label="En file" tone="warning" value={queuedCount} />
-              <PreviewMetric icon={RotateCcw} label="Relances" tone="warning" value={1} />
-              <PreviewMetric icon={RotateCcw} label="À revoir" tone="warning" value={reviewCount} />
-              <PreviewMetric icon={CheckCircle2} label="Résolus" tone="ok" value={8} />
-            </div>
-          </section>
+          </div>
 
-          <section className="side-panel-section">
-            <div className="side-panel-heading">
-              <p className="eyebrow">Routage</p>
-              <h2>Sites connectés</h2>
+          <div className="loop-panel-visual loop-site-feedback-stage" aria-hidden="true">
+            <div className="loop-fake-site-header">
+              <span />
+              <span />
+              <span />
             </div>
-            <div className="route-summary">
-              <strong>3/3</strong>
-              <span>sites prêts à créer des issues</span>
+            <div className="loop-fake-site-hero">
+              <strong>{t("home.loop.fakeSite.title")}</strong>
+              <span>{t("home.loop.fakeSite.subtitle")}</span>
             </div>
-            <div className="site-route-list">
-              {previewRoutes.map((route) => (
-                <article className="site-route-row" key={route.repo}>
+            <div className="loop-fake-site-grid">
+              <span />
+              <span />
+              <span />
+            </div>
+            <span className="loop-feedback-pin">1</span>
+            <div className="loop-feedback-widget-card">
+              <div className="loop-feedback-widget-tabs">
+                <span>{t("home.loop.widget.note")}</span>
+                <span className="active">{t("home.loop.widget.marker")}</span>
+                <span>{t("home.loop.widget.capture")}</span>
+              </div>
+              <p>{t("home.loop.widget.copy")}</p>
+              <button type="button">
+                <Send aria-hidden="true" size={13} strokeWidth={2.2} />
+                {t("home.loop.widget.send")}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="loop-panel loop-developer-panel" aria-labelledby="preview-developer-title">
+          <div className="loop-panel-heading">
+            <div>
+              <p className="eyebrow">{t("home.loop.developer.eyebrow")}</p>
+              <h2 id="preview-developer-title">{t("home.loop.developer.title")}</h2>
+            </div>
+          </div>
+
+          <div className="loop-panel-visual developer-inbox-card">
+            <div className="developer-inbox-toolbar">
+              <span>
+                <Inbox aria-hidden="true" size={15} strokeWidth={2.2} />
+                {t("home.loop.inbox.active")}
+              </span>
+              <strong>3</strong>
+            </div>
+
+            <div className="developer-feedback-list">
+              {feedbackItems.map(({ titleKey, copyKey, metaKey, Icon }, index) => (
+                <article className={index === 0 ? "developer-feedback-item active" : "developer-feedback-item"} key={titleKey}>
+                  <Icon aria-hidden="true" size={16} strokeWidth={2.2} />
                   <div>
-                    <strong>{route.name}</strong>
-                    <span>{route.repo}</span>
+                    <strong>{t(titleKey)}</strong>
+                    <span>{t(copyKey)}</span>
                   </div>
-                  <ProviderBadge provider={route.provider} />
+                  <em>{t(metaKey)}</em>
                 </article>
               ))}
             </div>
-          </section>
-        </aside>
+
+            <div className="developer-decision-card">
+              <div>
+                <GitBranch aria-hidden="true" size={16} strokeWidth={2.2} />
+                <span>cabinet-orion/booking-portal</span>
+              </div>
+              <div className="loop-developer-actions">
+                <span className="button dashboard-preview-action">
+                  <GitPullRequestCreate aria-hidden="true" size={14} strokeWidth={2.2} />
+                  {t("home.loop.actions.task")}
+                </span>
+                <span className="button secondary-button dashboard-preview-action">
+                  <Archive aria-hidden="true" size={14} strokeWidth={2.2} />
+                  {t("home.loop.actions.archive")}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
-  );
-}
-
-function PreviewFeedbackRow({ feedback }: { feedback: PreviewFeedback }) {
-  const status = statusConfig[feedback.status];
-
-  return (
-    <article className={`feedback-card compact-feedback-row dashboard-preview-feedback-row ${feedback.status}`} role="listitem">
-      <span className="feedback-select" aria-hidden="true">
-        <span className="dashboard-preview-checkbox" />
-      </span>
-      <div className="feedback-main">
-        <div className="feedback-tags mobile-feedback-tags" aria-label="Métadonnées du feedback">
-          <span className="status-badge connected">{feedback.type}</span>
-          <span className={`status-badge ${status.badgeClass}`}>{status.label}</span>
-          <ProviderBadge provider={feedback.provider} />
-        </div>
-        <h2>{feedback.title}</h2>
-        <p>{feedback.message}</p>
-        <div className="feedback-meta">
-          <span>{feedback.site}</span>
-          <span>{feedback.path}</span>
-          <span>{feedback.type}</span>
-        </div>
-      </div>
-      <div className="feedback-site-cell">
-        <strong>{feedback.site}</strong>
-        <span>{feedback.path}</span>
-      </div>
-      <div className="feedback-status-cell">
-        <span className={`status-dot ${feedback.status}`} aria-hidden="true" />
-        <span className={`status-badge ${status.badgeClass}`}>{status.label}</span>
-      </div>
-      <div className="feedback-issue-cell">
-        <ProviderBadge provider={feedback.provider} />
-        <span>{feedback.issueState}</span>
-      </div>
-      <div className="feedback-received-cell">
-        <span>{feedback.receivedAt}</span>
-      </div>
-      <div className="feedback-actions">
-        <span className="button secondary-button dashboard-preview-action">
-          <GitPullRequestCreate aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-          Issue
-        </span>
-      </div>
-    </article>
-  );
-}
-
-function PreviewMetric({
-  icon: Icon,
-  label,
-  tone,
-  value
-}: {
-  icon: LucideIcon;
-  label: string;
-  tone: "ok" | "warning" | "danger";
-  value: number;
-}) {
-  return (
-    <article className={`status-metric ${tone}`}>
-      <Icon aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
   );
 }

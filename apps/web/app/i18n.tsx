@@ -30,10 +30,10 @@ const dictionaries: Record<Locale, Dictionary> = {
     "settings.gitConnections.title": "Connexions Git",
     "settings.users.title": "Utilisateurs",
     "settings.users.copy": "Les clients peuvent toujours envoyer un feedback sans compte. Ces accès servent uniquement à consulter et traiter les retours dans la console.",
-    "footer.copy": "Retours, connexions Git et scripts d'installation au même endroit.",
+    "footer.copy": "Retours, connexions Git et code d'installation au même endroit.",
     "footer.support": "Support",
     "footer.license": "Licence",
-    "footer.creator": "Service par mathieuluyten.be",
+    "footer.creator": "mathieuluyten.be",
     "footer.gitAccounts": "Comptes Git",
     "login.eyebrow": "Accès console · bêta privée",
     "login.title": "Connexion ChangeThis",
@@ -83,65 +83,182 @@ const dictionaries: Record<Locale, Dictionary> = {
     "nav.openConsole": "Ouvrir la console",
     "nav.language": "Sélecteur de langue",
 
-    "home.workflow.1": "Le widget capture le message, l'URL, le viewport, l'épingle et la capture.",
-    "home.workflow.1.strong": "Capture complète.",
-    "home.workflow.2": "Triez les retours utilisateurs, ajoutez un commentaire, puis répondez vite dans l'issue GitHub ou GitLab.",
+    "home.workflow.1": "Le bouton de retour garde le message, la page, la taille d'écran, le repère et l'image.",
+    "home.workflow.1.strong": "Contexte complet.",
+    "home.workflow.2": "Triez les retours utilisateurs, ajoutez un commentaire, puis décidez quoi envoyer vers GitHub ou GitLab.",
     "home.workflow.2.strong": "Décision rapide.",
-    "home.workflow.3": "ChangeThis crée l'issue dans le dépôt GitHub ou GitLab lié au site.",
-    "home.workflow.3.strong": "Issue prête.",
+    "home.workflow.3": "ChangeThis prépare une tâche claire dans l'espace GitHub ou GitLab lié au site.",
+    "home.workflow.3.strong": "Tâche prête.",
     "home.siteState.ready": "Prêt",
     "home.siteState.configure": "À configurer",
-    "home.hero.eyebrow": "Console de retours",
-    "home.hero.statement": "Une boîte de réception produit pour transformer les retours clients en issues GitHub ou GitLab exploitables.",
-    "home.hero.statement.prefix": "Une boîte de réception produit pour transformer les retours clients en issues",
+    "home.hero.eyebrow": "Disponible prochainement",
+    "home.hero.statement": "Un espace clair pour transformer les retours clients en tâches prêtes à envoyer vers GitHub ou GitLab.",
+    "home.hero.statement.prefix": "Un espace clair pour transformer les retours clients en tâches prêtes à envoyer vers",
     "home.hero.statement.or": "ou",
-    "home.hero.statement.suffix": "exploitables.",
-    "home.hero.lede": "Installez le widget sur chaque site, reliez le site à son dépôt, puis traitez les retours entrants avec contexte complet, brouillon d'issue et relances visibles.",
+    "home.hero.statement.suffix": "",
+    "home.hero.lede": "ChangeThis est en développement. Les premiers accès ouvriront progressivement.",
     "home.hero.primary": "Traiter les retours",
     "home.hero.signup": "Accéder à la bêta",
     "home.hero.login": "J'ai déjà un compte",
     "home.hero.secondary": "Envoyer un retour test",
-    "home.hero.trust": "Les visiteurs envoient des feedbacks sans compte. Seule votre console est protégée.",
+    "home.hero.trust": "Les visiteurs envoient des retours sans compte. Seul votre espace d'équipe est protégé.",
     "home.hero.privateBeta": "Bêta privée : les inscriptions sont actuellement fermées. Utilisez un compte existant pour accéder à la console.",
-    "home.waitlist.label": "Recevoir une invitation au lancement",
-    "home.waitlist.submit": "Rejoindre la liste",
+    "home.waitlist.callout.title": "Recevoir une invitation",
+    "home.waitlist.callout.copy": "Entrez votre e-mail professionnel pour être prévenu quand un accès bêta correspondra à votre usage.",
+    "home.signup.callout.title": "Accès ouvert",
+    "home.signup.callout.copy": "Créez votre espace équipe et commencez à connecter vos sites dès maintenant.",
+    "home.waitlist.label": "E-mail professionnel",
+    "home.waitlist.submit": "S'inscrire à la bêta",
     "home.waitlist.status.joined": "C'est noté. Nous vous préviendrons dès que l'accès public ouvre.",
     "home.waitlist.status.existing": "Cet e-mail est déjà dans la liste. Votre demande est bien enregistrée.",
     "home.waitlist.status.error": "Inscription impossible pour le moment. Vérifiez l'e-mail puis réessayez.",
+    "home.waitlist.point.1": "Accès progressif, sans inscription publique ouverte.",
+    "home.waitlist.point.2": "Pensé pour les équipes qui travaillent avec GitHub ou GitLab.",
+    "home.waitlist.point.3": "Invitation envoyée quand le chemin bêta est prêt pour votre usage.",
+    "home.problem.eyebrow": "Pourquoi ChangeThis",
+    "home.problem.title": "Les retours web utiles se perdent avant d'arriver au bon endroit.",
+    "home.problem.question": "Ça vous arrive souvent ?",
+    "home.problem.intro": "Trois phrases qu'on entend dans de vraies équipes web. Simples en apparence, rarement complètes pour passer à l'action.",
+    "home.problem.point.1": "Les retours arrivent par e-mail, Slack, Teams, un Word ou une phrase autour de la machine à café.",
+    "home.problem.point.2": "Les équipes manquent du contexte exact: page, taille d'écran, élément visé, capture.",
+    "home.problem.point.3": "Les équipes perdent du temps à reformuler avant même de créer une tâche claire.",
+    "home.problem.example.1.source": "Canaux dispersés",
+    "home.problem.example.1.reality": "Un retour arrive par e-mail, Slack, Teams, un Word ou une phrase entre deux réunions.",
+    "home.problem.example.1.consequence": "La remarque existe, mais elle n'a pas encore d'endroit clair où vivre.",
+    "home.problem.example.2.source": "Contexte absent",
+    "home.problem.example.2.reality": "On parle d'un bouton, mais pas de la page exacte, de la taille d'écran, ni de l'élément visé.",
+    "home.problem.example.2.consequence": "L'équipe doit rejouer la scène avant même de comprendre quoi corriger.",
+    "home.problem.example.3.source": "Filtre manquant",
+    "home.problem.example.3.reality": "Un petit doute devient vite une tâche Git, même quand il faudrait juste clarifier ou archiver.",
+    "home.problem.example.3.consequence": "Sans tri simple avant Git, le dépôt se remplit de bruit avant les vrais sujets.",
+    "home.beta.eyebrow": "Ce que fait ChangeThis",
+    "home.beta.title": "Capturez un retour précis, qualifiez-le en équipe, puis envoyez une tâche exploitable vers Git.",
+    "home.beta.capture.title": "Retour bien situé",
+    "home.beta.capture.copy": "Message, page, taille d'écran, repère et capture réunis dans un seul retour.",
+    "home.beta.inbox.title": "Boîte de réception claire",
+    "home.beta.inbox.copy": "Triez les retours avant de les envoyer à la bonne personne ou au bon outil.",
+    "home.beta.routing.title": "Tâche prête à traiter",
+    "home.beta.routing.copy": "Un brouillon clair avec tout le contexte utile.",
+    "home.beta.access.title": "Sites et dépôts liés",
+    "home.beta.access.copy": "Chaque site peut pointer vers le bon dépôt GitHub ou GitLab.",
+    "home.context.eyebrow": "Ce que contient un retour",
+    "home.context.title": "Le contexte arrive avec le retour.",
+    "home.context.copy": "ChangeThis garde les informations qui aident l'équipe à comprendre, vérifier puis décider quoi faire du retour.",
+    "home.context.page.title": "Page exacte",
+    "home.context.page.copy": "URL, titre de page et site lié au retour.",
+    "home.context.device.title": "Appareil et navigateur",
+    "home.context.device.copy": "Navigateur, user agent et OS transmis par le navigateur.",
+    "home.context.viewport.title": "Taille d'écran",
+    "home.context.viewport.copy": "Largeur, hauteur et densité d'affichage pour retrouver le bon contexte responsive.",
+    "home.context.message.title": "Message du visiteur",
+    "home.context.message.copy": "Texte libre laissé avec le retour, sans compte visiteur.",
+    "home.context.pin.title": "Repère sur la page",
+    "home.context.pin.copy": "Position du repère, coordonnées et zone visée quand le visiteur pointe un élément.",
+    "home.context.capture.title": "Capture de zone",
+    "home.context.capture.copy": "Image jointe quand une capture est utile pour vérifier le problème.",
+    "home.context.element.title": "Élément ciblé",
+    "home.context.element.copy": "Sélecteur technique et texte visible quand un élément précis est pointé.",
+    "home.context.routing.title": "Destination de traitement",
+    "home.context.routing.copy": "Site, espace d'équipe et dépôt Git prévu pour préparer la tâche.",
+    "home.mobile.eyebrow": "Boucle mobile",
+    "home.mobile.title": "Le retour commence souvent sur mobile. Le contexte doit suivre.",
+    "home.mobile.title.intro": "Les clients utilisent aussi leur mobile.",
+    "home.mobile.title.impact": "Les retours doivent fonctionner sur chaque appareil.",
+    "home.mobile.copy": "Côté visiteur, le bouton de retour reste compact. Côté équipe, chaque signal conserve la page, le statut et la destination Git sans devenir un outil lourd.",
+    "home.mobile.point.visitor": "Visiteur sans compte",
+    "home.mobile.point.team": "Tri côté équipe",
+    "home.mobile.point.context": "Contexte prêt à traiter",
+    "home.mobile.label.visitor": "Visiteur",
+    "home.mobile.label.team": "Équipe",
+    "home.workflow.capture.title": "Le visiteur signale",
+    "home.workflow.capture.copy": "Il ajoute une note, pointe une zone ou demande une capture sans créer de compte.",
+    "home.workflow.triage.title": "L'équipe qualifie",
+    "home.workflow.triage.copy": "L'espace d'équipe regroupe les retours par site, état et destination pour décider vite.",
+    "home.workflow.issue.title": "La tâche part au bon endroit",
+    "home.workflow.issue.copy": "Le contexte utile accompagne la tâche Git, au lieu de rester perdu dans un fil de discussion.",
+    "home.beta.scope.eyebrow": "Cadre bêta",
+    "home.beta.scope.title": "Disponible prochainement, avec accès volontairement progressif.",
+    "home.beta.note.1": "Les visiteurs n'ont pas besoin de compte pour envoyer un retour.",
+    "home.beta.note.2": "L'espace de traitement reste réservé aux équipes invitées.",
+    "home.beta.note.3": "Les connexions GitHub et GitLab sont prévues dans le parcours bêta selon la configuration de chaque équipe.",
+    "home.beta.note.4": "Les inscriptions publiques ouvriront progressivement après validation des premiers cas réels.",
+    "home.closing.eyebrow": "Liste d'attente",
+    "home.closing.title": "Gardez une place pour les premiers accès bêta.",
+    "home.closing.copy": "Laissez votre e-mail maintenant; nous ouvrirons les invitations progressivement, avec un onboarding court et concret.",
     "home.ops.label": "État opérationnel",
     "home.product.eyebrow": "Première vue utilisable",
     "home.product.title": "Tout ce qu'il faut pour passer du signal client à l'action.",
-    "home.product.inbox.title": "Réception durable",
+    "home.product.inbox.title": "Retours conservés",
     "home.product.inbox.strong": "Rien ne disparaît.",
-    "home.product.inbox.copy": "Les retours restent disponibles après redémarrage, avec statuts, erreurs fournisseur et prochain essai.",
+    "home.product.inbox.copy": "Les retours restent disponibles, avec leur état, les erreurs éventuelles et la prochaine tentative.",
     "home.product.config.title": "Configuration par site",
     "home.product.config.strong": "Un site, un dépôt.",
     "home.product.config.copy": "Chaque clé publique conserve ses origines autorisées et son dépôt cible GitHub ou GitLab.",
     "home.product.draft.title": "Brouillon lisible",
     "home.product.draft.strong": "Contexte complet.",
-    "home.product.draft.copy": "L'issue contient message, page, viewport, langue, labels, pin, capture et données techniques.",
+    "home.product.draft.copy": "La tâche contient message, page, taille d'écran, langue, repère, capture et détails utiles.",
     "home.product.retry.title": "Reprise contrôlée",
     "home.product.retry.strong": "Relances lisibles.",
     "home.product.retry.copy": "Les retours à reprendre restent visibles, rejouables manuellement, puis automatisables via la route de relance.",
     "home.workflow.eyebrow": "Flux produit",
-    "home.workflow.title": "Un circuit court, mais traçable.",
+    "home.workflow.title": "As easy as A, B, C",
     "home.signup.eyebrow": "Bêta privée",
-    "home.signup.title": "Accès sur invitation, console privée, widget testable.",
-    "home.signup.copy": "La démo reste publique pour tester le widget. L'accès à la console est limité aux comptes déjà créés pendant la phase bêta.",
+    "home.signup.title": "Accès sur invitation, espace privé, bouton de retour testable.",
+    "home.signup.copy": "La démo reste publique pour tester le bouton de retour. L'accès à l'espace d'équipe est limité aux comptes déjà créés pendant la phase bêta.",
     "home.signup.primary": "Se connecter",
-    "home.signup.secondary": "Voir la démo widget",
-    "home.install.eyebrow": "Installation widget",
-    "home.install.title": "Une balise par site, une clé publique par projet.",
+    "home.signup.secondary": "Voir la démo",
+    "home.install.eyebrow": "Installation",
+    "home.install.title": "Une ligne de code par site, une clé publique par projet.",
     "home.install.strong": "Installation simple.",
-    "home.install.copy": "Le bundle local expose le même chemin que la production. La page démo permet de tester le flux complet sans compte client.",
+    "home.install.copy": "Le code de test suit le même chemin que la production. La page démo permet de tester le parcours complet sans compte client.",
     "home.preview.label": "Aperçu de la console ChangeThis",
+    "home.preview.badge": "Aperçu bêta",
+    "home.preview.private": "Accès privé",
+    "home.preview.metric.signal": "signal client",
+    "home.preview.metric.viewport": "mobile",
+    "home.preview.metric.destination": "préparé",
+    "home.preview.draft.eyebrow": "Brouillon",
+    "home.preview.context.page": "Page",
+    "home.preview.context.viewport": "Écran",
+    "home.preview.context.type": "Type",
+    "home.preview.context.received": "Reçu",
+    "home.preview.route.eyebrow": "Routage",
+    "home.preview.route.title": "Prêt pour issue",
     "home.preview.sidebar.sites": "Sites",
     "home.preview.sidebar.integrations": "Intégrations",
     "home.preview.header": "Retours entrants",
     "home.preview.recent": "récents",
     "home.preview.empty.title": "Aucun retour pour le moment",
-    "home.preview.empty.copy": "Envoyez un retour depuis la démo widget pour alimenter cette console.",
+    "home.preview.empty.copy": "Envoyez un retour depuis la démo pour alimenter cet espace.",
     "home.preview.ready": "prêt",
+    "home.loop.aria": "Aperçu du parcours ChangeThis",
+    "home.loop.setup.eyebrow": "Installer",
+    "home.loop.setup.title": "Code à ajouter sur le site, Git connecté dans l'espace équipe.",
+    "home.loop.script.aria": "Exemple de script ChangeThis",
+    "home.loop.git.title": "Destinations des tâches",
+    "home.loop.visitor.eyebrow": "Capturer",
+    "home.loop.visitor.title": "Le client annote la page, capture ou pose un repère.",
+    "home.loop.fakeSite.title": "Booking portal",
+    "home.loop.fakeSite.subtitle": "Checkout mobile",
+    "home.loop.widget.note": "Note",
+    "home.loop.widget.marker": "Repère",
+    "home.loop.widget.capture": "Capture",
+    "home.loop.widget.copy": "Le bouton devis est trop bas sur mobile.",
+    "home.loop.widget.send": "Envoyer",
+    "home.loop.developer.eyebrow": "Trier",
+    "home.loop.developer.title": "La boîte de réception transforme le retour en décision.",
+    "home.loop.inbox.active": "À traiter",
+    "home.loop.feedback.1.title": "Repère sur /checkout",
+    "home.loop.feedback.1.copy": "Le bouton devis tombe trop bas sur iPhone.",
+    "home.loop.feedback.1.meta": "Écran mobile",
+    "home.loop.feedback.2.title": "Capture des tarifs",
+    "home.loop.feedback.2.copy": "L'espace entre les cartes casse la lecture.",
+    "home.loop.feedback.2.meta": "Capture + page",
+    "home.loop.feedback.3.title": "Note sur /demo",
+    "home.loop.feedback.3.copy": "Le titre semble trop dense en desktop.",
+    "home.loop.feedback.3.meta": "Commentaire",
+    "home.loop.actions.task": "Tâche",
+    "home.loop.actions.archive": "Archiver",
 
     "status.raw": "à créer",
     "status.raw.long": "À créer",
@@ -311,10 +428,10 @@ const dictionaries: Record<Locale, Dictionary> = {
     "settings.gitConnections.title": "Git connections",
     "settings.users.title": "Users",
     "settings.users.copy": "Clients can still submit feedback without an account. These accounts only control access to the console and feedback processing.",
-    "footer.copy": "Feedback, Git connections, and install scripts in one place.",
+    "footer.copy": "Feedback, Git connections, and install code in one place.",
     "footer.support": "Support",
     "footer.license": "License",
-    "footer.creator": "Service by mathieuluyten.be",
+    "footer.creator": "mathieuluyten.be",
     "footer.gitAccounts": "Git accounts",
     "login.eyebrow": "Console access · private beta",
     "login.title": "Sign in to ChangeThis",
@@ -364,65 +481,182 @@ const dictionaries: Record<Locale, Dictionary> = {
     "nav.openConsole": "Open console",
     "nav.language": "Language switcher",
 
-    "home.workflow.1": "The widget captures the message, URL, viewport, pin, and screenshot.",
-    "home.workflow.1.strong": "Complete capture.",
-    "home.workflow.2": "Triage user feedback, add a comment, then answer quickly in the GitHub or GitLab issue.",
+    "home.workflow.1": "The feedback button keeps the message, page, screen size, marker, and screenshot.",
+    "home.workflow.1.strong": "Full context.",
+    "home.workflow.2": "Sort user feedback, add a comment, then decide what should go to GitHub or GitLab.",
     "home.workflow.2.strong": "Fast decision.",
-    "home.workflow.3": "ChangeThis creates the issue in the GitHub or GitLab repository linked to the site.",
-    "home.workflow.3.strong": "Ready issue.",
+    "home.workflow.3": "ChangeThis prepares a clear task in the GitHub or GitLab space linked to the site.",
+    "home.workflow.3.strong": "Ready task.",
     "home.siteState.ready": "Ready",
     "home.siteState.configure": "Needs setup",
-    "home.hero.eyebrow": "Feedback console",
-    "home.hero.statement": "A product inbox that turns customer feedback into actionable GitHub or GitLab issues.",
-    "home.hero.statement.prefix": "A product inbox that turns customer feedback into actionable",
+    "home.hero.eyebrow": "Available soon",
+    "home.hero.statement": "A clear space that turns customer feedback into tasks ready for GitHub or GitLab.",
+    "home.hero.statement.prefix": "A clear space that turns customer feedback into tasks ready for",
     "home.hero.statement.or": "or",
-    "home.hero.statement.suffix": "issues.",
-    "home.hero.lede": "Install the widget on each site, link the site to its repository, then process incoming feedback with full context, an issue draft, and visible retries.",
-    "home.hero.primary": "Process the inbox",
+    "home.hero.statement.suffix": "",
+    "home.hero.lede": "ChangeThis is in development. Early access will open gradually.",
+    "home.hero.primary": "Review feedback",
     "home.hero.signup": "Access the beta",
     "home.hero.login": "I already have an account",
     "home.hero.secondary": "Send test feedback",
-    "home.hero.trust": "Visitors submit feedback without an account. Only your console is protected.",
+    "home.hero.trust": "Visitors send feedback without an account. Only your team space is protected.",
     "home.hero.privateBeta": "Private beta: signups are currently closed. Use an existing account to access the console.",
-    "home.waitlist.label": "Get an invitation when access opens",
-    "home.waitlist.submit": "Join the list",
+    "home.waitlist.callout.title": "Get an invitation",
+    "home.waitlist.callout.copy": "Enter your work email to be notified when a beta seat matches your use case.",
+    "home.signup.callout.title": "Access is open",
+    "home.signup.callout.copy": "Create your team space and start connecting your sites now.",
+    "home.waitlist.label": "Work email",
+    "home.waitlist.submit": "Join the beta",
     "home.waitlist.status.joined": "You're on the list. We will let you know when public access opens.",
     "home.waitlist.status.existing": "This email is already on the list. You're safely in.",
     "home.waitlist.status.error": "We cannot add this email right now. Check it and try again.",
+    "home.waitlist.point.1": "Gradual access, with no open public signup yet.",
+    "home.waitlist.point.2": "Designed for teams working with GitHub or GitLab.",
+    "home.waitlist.point.3": "Invitation sent when the beta path is ready for your use case.",
+    "home.problem.eyebrow": "Why ChangeThis",
+    "home.problem.title": "Useful website feedback gets lost before it reaches the right place.",
+    "home.problem.question": "Does this happen often?",
+    "home.problem.intro": "Three lines heard in real web teams. Simple on the surface, rarely complete enough to act on.",
+    "home.problem.point.1": "Feedback arrives through email, Slack, Teams, a Word document, or a sentence by the coffee machine.",
+    "home.problem.point.2": "Teams miss the exact context: page, screen size, selected element, screenshot.",
+    "home.problem.point.3": "Teams lose time rewriting feedback before creating a clear task.",
+    "home.problem.example.1.source": "Scattered channels",
+    "home.problem.example.1.reality": "Feedback arrives through email, Slack, Teams, a Word document, or a sentence by the coffee machine.",
+    "home.problem.example.1.consequence": "The note exists, but nobody knows yet where to put it or who should handle it.",
+    "home.problem.example.2.source": "Missing context",
+    "home.problem.example.2.reality": "The message mentions a button, without the exact page, screen size, selected element, or clear screenshot.",
+    "home.problem.example.2.consequence": "The team has to replay the issue, ask follow-up questions, and loses the initial thread.",
+    "home.problem.example.3.source": "Missing filter",
+    "home.problem.example.3.reality": "A small doubt quickly becomes a Git task, even when it only needs clarification or archiving.",
+    "home.problem.example.3.consequence": "Without a simple review step before Git, the repository fills with noise before the real topics.",
+    "home.beta.eyebrow": "What ChangeThis does",
+    "home.beta.title": "Capture precise feedback, review it as a team, then send an actionable task to Git.",
+    "home.beta.capture.title": "Well-located feedback",
+    "home.beta.capture.copy": "Message, page, screen size, marker, and screenshot grouped into one feedback item.",
+    "home.beta.inbox.title": "Clear feedback space",
+    "home.beta.inbox.copy": "Sort feedback before sending it to the right person or tool.",
+    "home.beta.routing.title": "Task ready to handle",
+    "home.beta.routing.copy": "A clear draft with all useful context.",
+    "home.beta.access.title": "Sites mapped to repositories",
+    "home.beta.access.copy": "Each site can point to the right GitHub or GitLab repository.",
+    "home.context.eyebrow": "What a feedback item contains",
+    "home.context.title": "Context arrives with the feedback.",
+    "home.context.copy": "ChangeThis keeps the details that help the team understand, verify, and decide what should happen next.",
+    "home.context.page.title": "Exact page",
+    "home.context.page.copy": "URL, page title, and the site linked to the feedback.",
+    "home.context.device.title": "Device and browser",
+    "home.context.device.copy": "Browser, user agent, and OS details sent by the browser.",
+    "home.context.viewport.title": "Screen size",
+    "home.context.viewport.copy": "Width, height, and display density to reproduce the responsive context.",
+    "home.context.message.title": "Visitor message",
+    "home.context.message.copy": "Free-text note sent with the feedback, without a visitor account.",
+    "home.context.pin.title": "Page marker",
+    "home.context.pin.copy": "Marker position, coordinates, and targeted area when the visitor points to something.",
+    "home.context.capture.title": "Area screenshot",
+    "home.context.capture.copy": "Image attached when a screenshot helps verify the issue.",
+    "home.context.element.title": "Targeted element",
+    "home.context.element.copy": "Technical selector and visible text when a precise element is selected.",
+    "home.context.routing.title": "Review destination",
+    "home.context.routing.copy": "Site, team space, and intended Git repository used to prepare the task.",
+    "home.mobile.eyebrow": "Mobile loop",
+    "home.mobile.title": "Feedback often starts on mobile. The context should follow.",
+    "home.mobile.title.intro": "Clients also use their phones.",
+    "home.mobile.title.impact": "Feedback should work on every device.",
+    "home.mobile.copy": "For visitors, the feedback button stays compact. For teams, each signal keeps the page, status, and Git destination without becoming a heavy tool.",
+    "home.mobile.point.visitor": "Visitor without account",
+    "home.mobile.point.team": "Team triage",
+    "home.mobile.point.context": "Context ready to handle",
+    "home.mobile.label.visitor": "Visitor",
+    "home.mobile.label.team": "Team",
+    "home.workflow.capture.title": "The visitor reports",
+    "home.workflow.capture.copy": "They add a note, point to an area, or request a screenshot without creating an account.",
+    "home.workflow.triage.title": "The team qualifies",
+    "home.workflow.triage.copy": "The team space groups feedback by site, state, and destination so decisions stay quick.",
+    "home.workflow.issue.title": "The task lands correctly",
+    "home.workflow.issue.copy": "Useful context follows the Git task instead of getting lost in a chat thread.",
+    "home.beta.scope.eyebrow": "Beta scope",
+    "home.beta.scope.title": "Available soon, with deliberately gradual access.",
+    "home.beta.note.1": "Visitors do not need an account to send feedback.",
+    "home.beta.note.2": "The review space stays limited to invited teams.",
+    "home.beta.note.3": "GitHub and GitLab connections are planned for the beta flow according to each team's setup.",
+    "home.beta.note.4": "Public signups will open gradually after the first real use cases are validated.",
+    "home.closing.eyebrow": "Waitlist",
+    "home.closing.title": "Save a seat for the first beta access.",
+    "home.closing.copy": "Leave your email now; we will open invitations gradually, with short and concrete onboarding.",
     "home.ops.label": "Operational status",
     "home.product.eyebrow": "Ready-to-use view",
     "home.product.title": "Everything you need to turn customer signals into action.",
-    "home.product.inbox.title": "Persistent inbox",
+    "home.product.inbox.title": "Saved feedback",
     "home.product.inbox.strong": "Nothing disappears.",
-    "home.product.inbox.copy": "Feedback stays available after restarts, with statuses, provider errors, and the next retry.",
+    "home.product.inbox.copy": "Feedback stays available with its state, possible errors, and the next retry.",
     "home.product.config.title": "Per-site configuration",
     "home.product.config.strong": "One site, one repository.",
     "home.product.config.copy": "Each public key keeps its allowed origins and target GitHub or GitLab repository.",
     "home.product.draft.title": "Readable draft",
     "home.product.draft.strong": "Full context.",
-    "home.product.draft.copy": "The issue includes the message, page, viewport, language, labels, pin, screenshot, and technical data.",
+    "home.product.draft.copy": "The task includes the message, page, screen size, language, marker, screenshot, and useful details.",
     "home.product.retry.title": "Controlled recovery",
     "home.product.retry.strong": "Visible failures.",
     "home.product.retry.copy": "API failures are visible, manually replayable, then automatable through the retries route.",
     "home.workflow.eyebrow": "Product flow",
-    "home.workflow.title": "A short, traceable loop.",
+    "home.workflow.title": "As easy as A, B, C",
     "home.signup.eyebrow": "Private beta",
-    "home.signup.title": "Invite-only access, private console, testable widget.",
-    "home.signup.copy": "The demo stays public to test the widget. Console access is limited to accounts that were already created during the beta phase.",
+    "home.signup.title": "Invite-only access, private team space, testable feedback button.",
+    "home.signup.copy": "The demo stays public to test the feedback button. Team-space access is limited to accounts that were already created during the beta phase.",
     "home.signup.primary": "Sign in",
-    "home.signup.secondary": "View widget demo",
-    "home.install.eyebrow": "Widget installation",
-    "home.install.title": "One tag per site, one public key per project.",
+    "home.signup.secondary": "View demo",
+    "home.install.eyebrow": "Installation",
+    "home.install.title": "One line of code per site, one public key per project.",
     "home.install.strong": "Simple install.",
-    "home.install.copy": "The local bundle exposes the same path as production. The demo page lets you test the full flow without a customer account.",
+    "home.install.copy": "The test code follows the same path as production. The demo page lets you test the full flow without a customer account.",
     "home.preview.label": "ChangeThis console preview",
+    "home.preview.badge": "Beta preview",
+    "home.preview.private": "Private access",
+    "home.preview.metric.signal": "client signal",
+    "home.preview.metric.viewport": "mobile",
+    "home.preview.metric.destination": "prepared",
+    "home.preview.draft.eyebrow": "Draft",
+    "home.preview.context.page": "Page",
+    "home.preview.context.viewport": "Screen",
+    "home.preview.context.type": "Type",
+    "home.preview.context.received": "Received",
+    "home.preview.route.eyebrow": "Routing",
+    "home.preview.route.title": "Ready for issue",
     "home.preview.sidebar.sites": "Sites",
     "home.preview.sidebar.integrations": "Integrations",
     "home.preview.header": "Incoming feedback",
     "home.preview.recent": "recent",
     "home.preview.empty.title": "No feedback yet",
-    "home.preview.empty.copy": "Send feedback from the widget demo to populate this console.",
+    "home.preview.empty.copy": "Send feedback from the demo to populate this space.",
     "home.preview.ready": "ready",
+    "home.loop.aria": "ChangeThis journey preview",
+    "home.loop.setup.eyebrow": "Install",
+    "home.loop.setup.title": "Add the code to the site, connect Git in the team space.",
+    "home.loop.script.aria": "ChangeThis script example",
+    "home.loop.git.title": "Task destinations",
+    "home.loop.visitor.eyebrow": "Capture",
+    "home.loop.visitor.title": "The client annotates the page, captures it, or drops a marker.",
+    "home.loop.fakeSite.title": "Booking portal",
+    "home.loop.fakeSite.subtitle": "Mobile checkout",
+    "home.loop.widget.note": "Note",
+    "home.loop.widget.marker": "Marker",
+    "home.loop.widget.capture": "Capture",
+    "home.loop.widget.copy": "The quote button sits too low on mobile.",
+    "home.loop.widget.send": "Send",
+    "home.loop.developer.eyebrow": "Sort",
+    "home.loop.developer.title": "The feedback space turns feedback into a decision.",
+    "home.loop.inbox.active": "To handle",
+    "home.loop.feedback.1.title": "Marker on /checkout",
+    "home.loop.feedback.1.copy": "The quote button drops too low on iPhone.",
+    "home.loop.feedback.1.meta": "Mobile screen",
+    "home.loop.feedback.2.title": "Pricing capture",
+    "home.loop.feedback.2.copy": "The spacing between cards breaks readability.",
+    "home.loop.feedback.2.meta": "Capture + page",
+    "home.loop.feedback.3.title": "Note on /demo",
+    "home.loop.feedback.3.copy": "The title feels too dense on desktop.",
+    "home.loop.feedback.3.meta": "Comment",
+    "home.loop.actions.task": "Task",
+    "home.loop.actions.archive": "Archive",
 
     "status.raw": "to create",
     "status.raw.long": "To create",
@@ -621,6 +855,129 @@ export function useLanguage() {
 export function T({ k }: { k: string }) {
   const { t } = useLanguage();
   return <>{t(k)}</>;
+}
+
+export function TRich({ k }: { k: string }) {
+  const { locale, t } = useLanguage();
+  return <>{richText(locale, k) ?? t(k)}</>;
+}
+
+function richText(locale: Locale, key: string): ReactNode | undefined {
+  if (locale === "en") {
+    switch (key) {
+      case "home.hero.lede":
+        return <>ChangeThis is <strong>in development</strong>. Early access will open gradually.</>;
+      case "home.waitlist.callout.copy":
+        return <>Enter your work email to be notified when <strong>a beta seat matches your use case</strong>.</>;
+      case "home.signup.callout.copy":
+        return <>Create your team space and start connecting <strong>your sites</strong> now.</>;
+      case "home.problem.point.1":
+        return <>Feedback arrives through <strong>email, Slack, Teams</strong>, a Word document, or <strong>a sentence by the coffee machine</strong>.</>;
+      case "home.problem.title":
+        return <>Useful website feedback gets lost <strong>before it reaches the right place</strong>.</>;
+      case "home.problem.point.2":
+        return <>Teams miss the exact context: <strong>page, screen size</strong>, selected element, screenshot.</>;
+      case "home.problem.point.3":
+        return <>Teams lose time rewriting feedback before creating <strong>a clear task</strong>.</>;
+      case "home.problem.example.1.reality":
+        return <>Feedback arrives through <strong>email, Slack, Teams</strong>, a Word document, or <strong>a sentence by the coffee machine</strong>.</>;
+      case "home.problem.example.1.consequence":
+        return <>The note exists, but nobody knows yet <strong>where to put it</strong> or who should handle it.</>;
+      case "home.problem.example.2.reality":
+        return <>The message mentions a button, without the exact <strong>page, screen size, selected element</strong>, or clear screenshot.</>;
+      case "home.problem.example.2.consequence":
+        return <>The team has to replay the issue, ask follow-up questions, and <strong>loses the initial thread</strong>.</>;
+      case "home.problem.example.3.reality":
+        return <>A small doubt quickly becomes <strong>a Git task</strong>, even when it only needs clarification or archiving.</>;
+      case "home.problem.example.3.consequence":
+        return <>Without a <strong>simple review step before Git</strong>, the repository fills with noise before the real topics.</>;
+      case "home.beta.capture.copy":
+        return <>Message, page, screen size, marker, and screenshot grouped into <strong>one feedback item</strong>.</>;
+      case "home.beta.inbox.copy":
+        return <>Sort feedback before sending it to <strong>the right person</strong> or <strong>the right tool</strong>.</>;
+      case "home.beta.routing.copy":
+        return <>A clear draft with <strong>all useful context</strong>.</>;
+      case "home.beta.access.copy":
+        return <>Each site can point to <strong>the right GitHub or GitLab repository</strong>.</>;
+      case "home.mobile.copy":
+        return <>For visitors, the feedback button stays compact. For teams, each signal keeps <strong>the page, state, and Git destination</strong> without becoming a heavy tool.</>;
+      case "home.workflow.capture.copy":
+        return <>They add a note, point to an area, or request a screenshot <strong>without creating an account</strong>.</>;
+      case "home.workflow.triage.copy":
+        return <>The team space groups feedback by <strong>site, state, and destination</strong> so decisions stay quick.</>;
+      case "home.workflow.issue.copy":
+        return <>Useful context follows the Git task instead of getting lost in <strong>a chat thread</strong>.</>;
+      case "home.beta.note.1":
+        return <>Visitors do not need an account to <strong>send feedback</strong>.</>;
+      case "home.beta.note.2":
+        return <>The review space stays limited to <strong>invited teams</strong>.</>;
+      case "home.beta.note.3":
+        return <>GitHub and GitLab connections are planned for the beta flow according to <strong>each team&apos;s setup</strong>.</>;
+      case "home.beta.note.4":
+        return <>Public signups will open gradually after <strong>the first real use cases</strong> are validated.</>;
+      case "home.closing.copy":
+        return <>Leave your email now; we will open invitations gradually, with <strong>short and concrete onboarding</strong>.</>;
+      default:
+        return undefined;
+    }
+  }
+
+  switch (key) {
+    case "home.hero.lede":
+      return <>ChangeThis est <strong>en développement</strong>. Les premiers accès ouvriront progressivement.</>;
+    case "home.waitlist.callout.copy":
+      return <>Entrez votre e-mail professionnel pour être prévenu quand <strong>un accès bêta correspondra à votre usage</strong>.</>;
+    case "home.signup.callout.copy":
+      return <>Créez votre espace équipe et commencez à connecter <strong>vos sites</strong> dès maintenant.</>;
+    case "home.problem.point.1":
+      return <>Les retours arrivent par <strong>e-mail, Slack, Teams</strong>, un Word ou <strong>une phrase autour de la machine à café</strong>.</>;
+    case "home.problem.title":
+      return <>Les retours web utiles se perdent <strong>avant d&apos;arriver au bon endroit</strong>.</>;
+    case "home.problem.point.2":
+      return <>Les équipes manquent du contexte exact: <strong>page, taille d&apos;écran</strong>, élément visé, capture.</>;
+    case "home.problem.point.3":
+      return <>Les équipes perdent du temps à reformuler avant même de créer <strong>une tâche claire</strong>.</>;
+    case "home.problem.example.1.reality":
+      return <>Un retour arrive par <strong>e-mail, Slack, Teams</strong>, un Word ou <strong>une phrase entre deux réunions</strong>.</>;
+    case "home.problem.example.1.consequence":
+      return <>La remarque existe, mais elle n&apos;a pas encore <strong>d&apos;endroit clair où vivre</strong>.</>;
+    case "home.problem.example.2.reality":
+      return <>On parle d&apos;un bouton, mais pas de la <strong>page exacte</strong>, de la <strong>taille d&apos;écran</strong>, ni de <strong>l&apos;élément visé</strong>.</>;
+    case "home.problem.example.2.consequence":
+      return <>L&apos;équipe doit rejouer la scène avant même de <strong>comprendre quoi corriger</strong>.</>;
+    case "home.problem.example.3.reality":
+      return <>Un petit doute devient vite <strong>une tâche Git</strong>, même quand il faudrait juste clarifier ou archiver.</>;
+    case "home.problem.example.3.consequence":
+      return <>Sans <strong>tri simple avant Git</strong>, le dépôt se remplit de bruit avant les vrais sujets.</>;
+    case "home.beta.capture.copy":
+      return <>Message, page, taille d&apos;écran, repère et capture réunis dans <strong>un seul retour</strong>.</>;
+    case "home.beta.inbox.copy":
+      return <>Triez les retours avant de les envoyer à <strong>la bonne personne</strong> ou <strong>au bon outil</strong>.</>;
+    case "home.beta.routing.copy":
+      return <>Un brouillon clair avec <strong>tout le contexte utile</strong>.</>;
+    case "home.beta.access.copy":
+      return <>Chaque site peut pointer vers <strong>le bon dépôt GitHub ou GitLab</strong>.</>;
+    case "home.mobile.copy":
+      return <>Côté visiteur, le bouton de retour reste compact. Côté équipe, chaque signal conserve <strong>la page, le statut et la destination Git</strong> sans devenir un outil lourd.</>;
+    case "home.workflow.capture.copy":
+      return <>Il ajoute une note, pointe une zone ou demande une capture <strong>sans créer de compte</strong>.</>;
+    case "home.workflow.triage.copy":
+      return <>L&apos;espace d&apos;équipe regroupe les retours par <strong>site, état et destination</strong> pour décider vite.</>;
+    case "home.workflow.issue.copy":
+      return <>Le contexte utile accompagne la tâche Git, au lieu de rester perdu dans <strong>un fil de discussion</strong>.</>;
+    case "home.beta.note.1":
+      return <>Les visiteurs n&apos;ont pas besoin de compte pour <strong>envoyer un retour</strong>.</>;
+    case "home.beta.note.2":
+      return <>L&apos;espace de traitement reste réservé aux <strong>équipes invitées</strong>.</>;
+    case "home.beta.note.3":
+      return <>Les connexions GitHub et GitLab sont prévues dans le parcours bêta selon <strong>la configuration de chaque équipe</strong>.</>;
+    case "home.beta.note.4":
+      return <>Les inscriptions publiques ouvriront progressivement après validation des <strong>premiers cas réels</strong>.</>;
+    case "home.closing.copy":
+      return <>Laissez votre e-mail maintenant; nous ouvrirons les invitations progressivement, avec <strong>un accompagnement court et concret</strong>.</>;
+    default:
+      return undefined;
+  }
 }
 
 export function LanguageSwitch() {

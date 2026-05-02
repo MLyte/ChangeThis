@@ -1,6 +1,8 @@
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -9,7 +11,7 @@ const csp = [
   "frame-ancestors 'none'",
   "img-src 'self' data: blob: https:",
   "object-src 'none'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
   "connect-src 'self' https:",
   "worker-src 'self' blob:"

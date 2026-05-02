@@ -1,29 +1,77 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Camera, GitPullRequestCreate, Inbox, MapPin, MessageSquare, MousePointerClick, RefreshCw, Send, Settings2, type LucideIcon } from "lucide-react";
+import { CalendarClock, Camera, CheckCircle2, FileText, GitBranch, GitPullRequestCreate, Globe2, Inbox, Mail, MessageSquare, MonitorCheck, MousePointerClick, Pin, Route, Ruler, ShieldCheck, Smartphone, Sparkles, Type, Users, type LucideIcon } from "lucide-react";
 import { isPublicSignupEnabled } from "../lib/auth";
 import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
 import logoChangeThis from "./assets/logoChangeThis.png";
-import { T } from "./i18n";
+import { T, TRich } from "./i18n";
 import { MarketingConsolePreview } from "./marketing-console-preview";
-import { ProviderIcon } from "./provider-badge";
+import { ProviderBadge, ProviderIcon } from "./provider-badge";
 
 export const dynamic = "force-dynamic";
 
-const workflowSteps: Array<{ key: string; emphasisKey: string; Icon: LucideIcon }> = [
-  { key: "home.workflow.1", emphasisKey: "home.workflow.1.strong", Icon: MousePointerClick },
-  { key: "home.workflow.2", emphasisKey: "home.workflow.2.strong", Icon: Inbox },
-  { key: "home.workflow.3", emphasisKey: "home.workflow.3.strong", Icon: GitPullRequestCreate }
+const betaBlocks: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
+  { titleKey: "home.beta.capture.title", copyKey: "home.beta.capture.copy", Icon: MousePointerClick },
+  { titleKey: "home.beta.inbox.title", copyKey: "home.beta.inbox.copy", Icon: Inbox },
+  { titleKey: "home.beta.routing.title", copyKey: "home.beta.routing.copy", Icon: Route },
+  { titleKey: "home.beta.access.title", copyKey: "home.beta.access.copy", Icon: ShieldCheck }
 ];
 
-const productBlocks: Array<{ titleKey: string; copyKey: string; emphasisKey: string; Icon: LucideIcon }> = [
-  { titleKey: "home.product.inbox.title", copyKey: "home.product.inbox.copy", emphasisKey: "home.product.inbox.strong", Icon: Inbox },
-  { titleKey: "home.product.config.title", copyKey: "home.product.config.copy", emphasisKey: "home.product.config.strong", Icon: Settings2 },
-  { titleKey: "home.product.draft.title", copyKey: "home.product.draft.copy", emphasisKey: "home.product.draft.strong", Icon: GitPullRequestCreate },
-  { titleKey: "home.product.retry.title", copyKey: "home.product.retry.copy", emphasisKey: "home.product.retry.strong", Icon: RefreshCw }
+const feedbackContextItems: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
+  { titleKey: "home.context.page.title", copyKey: "home.context.page.copy", Icon: Globe2 },
+  { titleKey: "home.context.device.title", copyKey: "home.context.device.copy", Icon: MonitorCheck },
+  { titleKey: "home.context.viewport.title", copyKey: "home.context.viewport.copy", Icon: Ruler },
+  { titleKey: "home.context.message.title", copyKey: "home.context.message.copy", Icon: Type },
+  { titleKey: "home.context.pin.title", copyKey: "home.context.pin.copy", Icon: Pin },
+  { titleKey: "home.context.capture.title", copyKey: "home.context.capture.copy", Icon: Camera },
+  { titleKey: "home.context.element.title", copyKey: "home.context.element.copy", Icon: MousePointerClick },
+  { titleKey: "home.context.routing.title", copyKey: "home.context.routing.copy", Icon: GitBranch }
+];
+
+const waitlistPoints: Array<{ key: string; Icon: LucideIcon }> = [
+  { key: "home.waitlist.point.1", Icon: CheckCircle2 },
+  { key: "home.waitlist.point.2", Icon: GitBranch },
+  { key: "home.waitlist.point.3", Icon: Sparkles }
+];
+
+const problemPoints: Array<{ sourceKey: string; realityKey: string; consequenceKey: string }> = [
+  {
+    sourceKey: "home.problem.example.1.source",
+    realityKey: "home.problem.example.1.reality",
+    consequenceKey: "home.problem.example.1.consequence"
+  },
+  {
+    sourceKey: "home.problem.example.2.source",
+    realityKey: "home.problem.example.2.reality",
+    consequenceKey: "home.problem.example.2.consequence"
+  },
+  {
+    sourceKey: "home.problem.example.3.source",
+    realityKey: "home.problem.example.3.reality",
+    consequenceKey: "home.problem.example.3.consequence"
+  }
+];
+
+const workflowSteps: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
+  { titleKey: "home.workflow.capture.title", copyKey: "home.workflow.capture.copy", Icon: MessageSquare },
+  { titleKey: "home.workflow.triage.title", copyKey: "home.workflow.triage.copy", Icon: Inbox },
+  { titleKey: "home.workflow.issue.title", copyKey: "home.workflow.issue.copy", Icon: GitPullRequestCreate }
+];
+
+const betaNotes: Array<{ key: string; Icon: LucideIcon }> = [
+  { key: "home.beta.note.1", Icon: MousePointerClick },
+  { key: "home.beta.note.2", Icon: Users },
+  { key: "home.beta.note.3", Icon: GitBranch },
+  { key: "home.beta.note.4", Icon: CalendarClock }
+];
+
+const mobileProofPoints: Array<{ key: string; Icon: LucideIcon }> = [
+  { key: "home.mobile.point.visitor", Icon: Smartphone },
+  { key: "home.mobile.point.team", Icon: MonitorCheck },
+  { key: "home.mobile.point.context", Icon: FileText }
 ];
 
 type HomePageProps = {
@@ -55,71 +103,89 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <main className="shell app-home">
-      <AppHeader
-        navItems={[
-          { href: "/projects", labelKey: "nav.issues" },
-          { href: "/settings", labelKey: "nav.settings" }
-        ]}
-      />
+      <AppHeader suppressAuthActions={!publicSignupEnabled} suppressSession={!publicSignupEnabled} />
 
-      <section className="workspace-hero" aria-labelledby="product-title">
-        <div className="workspace-copy">
+      <section className="home-section home-hero home-grid" aria-labelledby="product-title">
+        <div className="home-hero-copy">
           <p className="eyebrow"><T k="home.hero.eyebrow" /></p>
           <h1 id="product-title" className="product-title">
             <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
-            <span>ChangeThis</span>
+            <span className="brand-wordmark hero-wordmark" aria-label="ChangeThis">
+              <span>Change</span><span className="brand-wordmark-accent">This</span>
+            </span>
           </h1>
           <HeroStatement />
           <p className="lede">
-            <T k="home.hero.lede" />
+            <TRich k="home.hero.lede" />
           </p>
-          {!publicSignupEnabled ? (
-            <div className="local-mode-callout">
-              <strong><T k="login.privateBeta.title" /></strong>
-              <span><T k="home.hero.privateBeta" /></span>
-            </div>
-          ) : null}
-          {!publicSignupEnabled ? (
-            <form action={waitlistAction} className="waitlist-form">
-              <label>
-                <span><T k="home.waitlist.label" /></span>
-                <input autoComplete="email" name="email" required type="email" />
-              </label>
-              <button className="button" type="submit"><T k="home.waitlist.submit" /></button>
-              {waitlistStatus ? (
-                <p className={`waitlist-status ${waitlistStatus === "error" ? "error" : "success"}`} role="status">
-                  <T k={`home.waitlist.status.${waitlistStatus}`} />
-                </p>
-              ) : null}
-            </form>
-          ) : null}
-          <div className="hero-actions">
-            <Link className="button" href="/projects"><T k="home.hero.primary" /></Link>
-            <Link className="button secondary-button" href="/demo"><T k="home.hero.secondary" /></Link>
-          </div>
-          {!publicSignupEnabled ? (
-            <p className="microcopy">
-              <Link className="inline-link" href="/login"><T k="home.hero.login" /></Link>
-            </p>
-          ) : null}
+          {publicSignupEnabled ? (
+            <SignupAccessCard />
+          ) : (
+            <WaitlistForm action={waitlistAction} waitlistStatus={waitlistStatus} />
+          )}
         </div>
 
-        <MarketingConsolePreview />
+        <div className="home-hero-preview">
+          <MarketingConsolePreview />
+        </div>
       </section>
 
-      <section className="section product-section">
-        <div className="section-heading compact">
-          <p className="eyebrow"><T k="home.product.eyebrow" /></p>
-          <h2><T k="home.product.title" /></h2>
+      <section className="home-section problem-section problem-editorial">
+        <div className="home-section-header">
+          <p className="eyebrow"><T k="home.problem.eyebrow" /></p>
+          <h2><T k="home.problem.question" /></h2>
+          <p className="problem-intro"><T k="home.problem.intro" /></p>
         </div>
-        <div className="product-grid">
-          {productBlocks.map(({ titleKey, copyKey, emphasisKey, Icon }) => (
+        <div className="problem-list problem-quotes">
+          {problemPoints.map(({ sourceKey, realityKey, consequenceKey }) => (
+            <article className="problem-item problem-quote" key={realityKey}>
+              <div className="problem-item-copy">
+                <p className="problem-source"><T k={sourceKey} /></p>
+                <blockquote>
+                  <span className="quote-mark" aria-hidden="true">“</span>
+                  <p><TRich k={realityKey} /></p>
+                </blockquote>
+                <p className="problem-consequence"><TRich k={consequenceKey} /></p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="home-section product-section">
+        <div className="home-section-header compact">
+          <p className="eyebrow"><T k="home.beta.eyebrow" /></p>
+          <h2><T k="home.beta.title" /></h2>
+        </div>
+        <div className="home-card-grid product-grid">
+          {betaBlocks.map(({ titleKey, copyKey, Icon }) => (
             <article className="product-block" key={titleKey}>
               <span className="product-icon" aria-hidden="true">
                 <Icon size={22} strokeWidth={2.2} />
               </span>
               <h3><T k={titleKey} /></h3>
-              <p><strong><T k={emphasisKey} /></strong> <T k={copyKey} /></p>
+              <p><TRich k={copyKey} /></p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="home-section feedback-context-section" aria-labelledby="feedback-context-title">
+        <div className="home-section-header compact">
+          <p className="eyebrow"><T k="home.context.eyebrow" /></p>
+          <h2 id="feedback-context-title"><T k="home.context.title" /></h2>
+          <p className="feedback-context-lede"><T k="home.context.copy" /></p>
+        </div>
+        <div className="feedback-context-grid">
+          {feedbackContextItems.map(({ titleKey, copyKey, Icon }) => (
+            <article className="feedback-context-card" key={titleKey}>
+              <span className="feedback-context-icon" aria-hidden="true">
+                <Icon size={20} strokeWidth={2.3} />
+              </span>
+              <div>
+                <h3><T k={titleKey} /></h3>
+                <p><T k={copyKey} /></p>
+              </div>
             </article>
           ))}
         </div>
@@ -127,37 +193,58 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <MobilePreviewSection />
 
-      <section className="workflow-band">
-        <div className="section-heading">
+      <section className="home-section workflow-band">
+        <div className="home-section-header">
           <p className="eyebrow"><T k="home.workflow.eyebrow" /></p>
           <h2><T k="home.workflow.title" /></h2>
         </div>
         <div className="steps">
-          {workflowSteps.map(({ key, emphasisKey }, index) => (
-            <article className="step" key={key}>
-              <span className="step-index">{String(index + 1).padStart(2, "0")}</span>
-              <WorkflowReplica index={index} />
-              <p><strong><T k={emphasisKey} /></strong> <T k={key} /></p>
+          {workflowSteps.map(({ titleKey, copyKey, Icon }, index) => (
+            <article className="step" key={titleKey}>
+              <span className="step-index">{String.fromCharCode(65 + index)}</span>
+              <span className="step-icon" aria-hidden="true">
+                <Icon size={22} strokeWidth={2.2} />
+              </span>
+              <h3><T k={titleKey} /></h3>
+              <p><TRich k={copyKey} /></p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="install-section">
+      <section className="home-section beta-scope-section">
+        <div className="home-section-header compact">
+          <p className="eyebrow"><T k="home.beta.scope.eyebrow" /></p>
+          <h2><T k="home.beta.scope.title" /></h2>
+        </div>
+        <ul className="beta-scope-list">
+          {betaNotes.map(({ key, Icon }) => (
+            <li key={key}>
+              <Icon size={17} strokeWidth={2.4} aria-hidden="true" />
+              <span><TRich k={key} /></span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="home-section waitlist-closing-section">
         <div>
-          <p className="eyebrow"><T k="home.install.eyebrow" /></p>
-          <h2><T k="home.install.title" /></h2>
+          <span className="closing-icon" aria-hidden="true">
+            <Sparkles size={22} strokeWidth={2.3} />
+          </span>
+          <p className="eyebrow"><T k="home.closing.eyebrow" /></p>
+          <h2><T k="home.closing.title" /></h2>
           <p className="lede">
-            <strong><T k="home.install.strong" /></strong> <T k="home.install.copy" />
+            <TRich k="home.closing.copy" />
           </p>
         </div>
-        <pre className="code-block"><code>{`<script
-  src="https://app.changethis.dev/widget.js"
-  data-project="project_public_key"
-  data-button-label="Feedback">
-</script>`}</code></pre>
+        {publicSignupEnabled ? (
+          <SignupAccessCard compact />
+        ) : (
+          <WaitlistForm action={waitlistAction} compact waitlistStatus={waitlistStatus} />
+        )}
       </section>
-      <AppFooter />
+      <AppFooter suppressSession={!publicSignupEnabled} />
     </main>
   );
 }
@@ -176,33 +263,39 @@ function normalizeWaitlistStatus(value?: string): "joined" | "existing" | "error
 
 function MobilePreviewSection() {
   return (
-    <section className="mobile-proof-section" aria-labelledby="mobile-proof-title">
+    <section className="home-section mobile-proof-section" aria-labelledby="mobile-proof-title">
       <div className="mobile-proof-copy">
-        <p className="eyebrow">Works on mobile too</p>
-        <h2 id="mobile-proof-title">Le visiteur et l’admin gardent la boucle sous la main.</h2>
+        <p className="eyebrow"><T k="home.mobile.eyebrow" /></p>
+        <h2 id="mobile-proof-title">
+          <span className="mobile-title-intro"><T k="home.mobile.title.intro" /></span>
+          <span className="mobile-title-impact"><T k="home.mobile.title.impact" /></span>
+        </h2>
         <p className="lede">
-          Le widget reste accessible côté client, et l’équipe peut suivre les retours entrants côté console sans attendre d’être revenue sur grand écran.
+          <TRich k="home.mobile.copy" />
         </p>
         <div className="mobile-proof-points">
-          <span>Côté visiteur</span>
-          <span>Côté admin</span>
-          <span>Contexte prêt pour issue</span>
+          {mobileProofPoints.map(({ key, Icon }) => (
+            <span key={key}>
+              <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
+              <T k={key} />
+            </span>
+          ))}
         </div>
       </div>
 
-      <div className="mobile-device-pair" aria-label="Aperçus mobiles ChangeThis côté visiteur et côté admin">
-        <div className="iphone-pro-max-mockup user-mobile-mockup" aria-label="Aperçu mobile visiteur ChangeThis sur iPhone Pro Max">
-          <span className="mobile-device-label">User</span>
+      <div className="mobile-device-pair" aria-label="Aperçus mobiles ChangeThis côté visiteur et côté équipe">
+        <div className="iphone-pro-max-mockup user-mobile-mockup" aria-label="Aperçu mobile visiteur ChangeThis">
+          <span className="mobile-device-label"><T k="home.mobile.label.visitor" /></span>
           <div className="iphone-frame">
             <div className="iphone-screen">
               <div className="iphone-dynamic-island" />
               <div className="mobile-browser-bar">
-                <span>app.changethis.dev/demo</span>
+                <span>atelier-nova.be</span>
               </div>
               <div className="mobile-demo-page">
                 <span className="mobile-demo-kicker">Atelier Nova</span>
                 <h3>Objets calmes pour maisons vivantes.</h3>
-                <p>Une page client fictive avec un formulaire, une collection et quelques zones à commenter.</p>
+                <p>Une page client avec formulaire, collection et zones à commenter.</p>
                 <div className="mobile-demo-card" />
                 <div className="mobile-demo-lines">
                   <span />
@@ -212,64 +305,91 @@ function MobilePreviewSection() {
               </div>
               <div className="mobile-widget-panel">
                 <div className="mobile-widget-header">
-                  <strong>Feedback</strong>
+                  <strong>Retour</strong>
                   <span>Capture</span>
                 </div>
                 <div className="mobile-widget-tabs">
                   <span>Note</span>
-                  <span className="active">Pin</span>
-                  <span>Shot</span>
+                  <span className="active">Repère</span>
+                  <span>Capture</span>
                 </div>
                 <div className="mobile-widget-text">Le bouton devis est trop bas sur mobile.</div>
                 <button type="button">Envoyer</button>
               </div>
-              <button className="mobile-feedback-button" type="button">Feedback</button>
+              <button className="mobile-feedback-button" type="button">Retour</button>
             </div>
           </div>
         </div>
 
-        <div className="iphone-pro-max-mockup admin-mobile-mockup" aria-label="Aperçu mobile admin ChangeThis sur iPhone Pro Max">
-          <span className="mobile-device-label">Admin</span>
+        <div className="iphone-pro-max-mockup admin-mobile-mockup" aria-label="Aperçu mobile équipe ChangeThis">
+          <span className="mobile-device-label"><T k="home.mobile.label.team" /></span>
           <div className="iphone-frame">
             <div className="iphone-screen">
               <div className="iphone-dynamic-island" />
               <div className="mobile-browser-bar">
-                <span>app.changethis.dev/projects</span>
+                <span>app.changethis.dev</span>
               </div>
-              <div className="mobile-admin-console">
-                <div className="mobile-admin-header">
-                  <span className="mobile-demo-kicker">Inbox</span>
-                  <strong>3 retours entrants</strong>
+              <div className="mobile-admin-console mobile-dashboard-shell">
+                <div className="mobile-dashboard-header">
+                  <div>
+                    <span className="mobile-demo-kicker">Console opérationnelle</span>
+                    <strong>Retours ChangeThis</strong>
+                  </div>
+                  <button type="button">Tester</button>
                 </div>
-                <div className="mobile-admin-tabs">
-                  <span className="active">À traiter</span>
-                  <span>À revoir</span>
+                <div className="mobile-dashboard-tabs" aria-hidden="true">
+                  <span className="active">File active <strong>3</strong></span>
+                  <span>Historique <strong>8</strong></span>
+                  <span>Tous <strong>11</strong></span>
                 </div>
-                <article className="mobile-admin-feedback active">
-                  <div>
-                    <strong>Pin sur /checkout</strong>
-                    <span>Cabinet Orion · mobile</span>
+                <div className="mobile-dashboard-filters" aria-hidden="true">
+                  <span>Statut: action requise</span>
+                  <span>Site: tous</span>
+                  <span>Git: tous</span>
+                </div>
+                <div className="mobile-dashboard-feedback-list">
+                  <article className="mobile-dashboard-feedback active">
+                    <div className="mobile-dashboard-feedback-main">
+                      <div className="mobile-dashboard-tags">
+                        <span className="status-badge needs_setup">À créer</span>
+                        <ProviderBadge provider="github" />
+                      </div>
+                      <strong>Repère sur /checkout</strong>
+                      <p>Le bouton devis est trop bas sur mobile.</p>
+                      <span>Cabinet Orion · /checkout · il y a 4 min</span>
+                    </div>
+                    <div className="mobile-dashboard-issue">
+                      <span>Brouillon, destination et contexte</span>
+                      <strong>cabinet-orion/booking-flow</strong>
+                    </div>
+                  </article>
+                  <article className="mobile-dashboard-feedback">
+                    <div className="mobile-dashboard-feedback-main">
+                      <div className="mobile-dashboard-tags">
+                        <span className="status-badge issue_creation_pending">En file</span>
+                        <ProviderBadge provider="gitlab" />
+                      </div>
+                      <strong>Capture sur /pricing</strong>
+                      <p>La carte Pro masque le détail du tarif annuel.</p>
+                      <span>Studio Lumen · /pricing · il y a 18 min</span>
+                    </div>
+                  </article>
+                </div>
+                <div className="mobile-dashboard-summary">
+                  <div className="mobile-dashboard-summary-header">
+                    <span>Synthèse</span>
+                    <strong>File actuelle</strong>
                   </div>
-                  <em>À créer</em>
-                </article>
-                <article className="mobile-admin-feedback">
-                  <div>
-                    <strong>Capture sur /pricing</strong>
-                    <span>Studio Lumen · GitLab</span>
+                  <div className="mobile-dashboard-metric-row">
+                    <span className="warning"><strong>1</strong> À traiter</span>
+                    <span><strong>1</strong> En file</span>
+                    <span className="ok"><strong>1</strong> Résolu</span>
                   </div>
-                  <em>En file</em>
-                </article>
-                <article className="mobile-admin-feedback review">
-                  <div>
-                    <strong>Note sur /demo</strong>
-                    <span>Atelier Nova · GitHub</span>
+                  <div className="mobile-dashboard-route">
+                    <span>Sites connectés</span>
+                    <strong>3/3</strong>
+                    <em>GitHub prêt · GitLab configuré</em>
                   </div>
-                  <em>À revoir</em>
-                </article>
-                <div className="mobile-admin-issue-card">
-                  <span>Destination</span>
-                  <strong>atelier-nova/portal-staging</strong>
-                  <button type="button">Créer l’issue</button>
                 </div>
               </div>
             </div>
@@ -277,6 +397,82 @@ function MobilePreviewSection() {
         </div>
       </div>
     </section>
+  );
+}
+
+function SignupAccessCard({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`waitlist-form signup-access-card${compact ? " compact" : ""}`}>
+      {!compact ? (
+        <div className="waitlist-form-header">
+          <span className="waitlist-icon" aria-hidden="true">
+            <Users size={18} strokeWidth={2.3} />
+          </span>
+          <div>
+            <strong><T k="home.signup.callout.title" /></strong>
+            <p><TRich k="home.signup.callout.copy" /></p>
+          </div>
+        </div>
+      ) : null}
+      <div className="hero-actions signup-access-actions">
+        <Link className="button" href="/signup"><T k="home.hero.signup" /></Link>
+        <Link className="button secondary-button" href="/login"><T k="home.hero.login" /></Link>
+      </div>
+      {!compact ? (
+        <ul className="waitlist-points" aria-label="Détails de l'accès ChangeThis">
+          {waitlistPoints.map(({ key, Icon }) => (
+            <li key={key}>
+              <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
+              <span><T k={key} /></span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+type WaitlistFormProps = {
+  action: (formData: FormData) => Promise<void>;
+  compact?: boolean;
+  waitlistStatus?: "joined" | "existing" | "error";
+};
+
+function WaitlistForm({ action, compact = false, waitlistStatus }: WaitlistFormProps) {
+  return (
+    <form action={action} className={`waitlist-form${compact ? " compact" : ""}`}>
+      <div className="waitlist-form-header">
+        <span className="waitlist-icon" aria-hidden="true">
+          <Mail size={18} strokeWidth={2.3} />
+        </span>
+        <div>
+          <strong><T k="home.waitlist.callout.title" /></strong>
+          <p><TRich k="home.waitlist.callout.copy" /></p>
+        </div>
+      </div>
+      <div className="waitlist-controls">
+        <label>
+          <span><T k="home.waitlist.label" /></span>
+          <input autoComplete="email" name="email" placeholder="you@company.com" required type="email" />
+        </label>
+        <button className="button" type="submit"><T k="home.waitlist.submit" /></button>
+      </div>
+      {waitlistStatus ? (
+        <p className={`waitlist-status ${waitlistStatus === "error" ? "error" : "success"}`} role="status">
+          <T k={`home.waitlist.status.${waitlistStatus}`} />
+        </p>
+      ) : null}
+      {!compact ? (
+        <ul className="waitlist-points" aria-label="Détails de la bêta ChangeThis">
+          {waitlistPoints.map(({ key, Icon }) => (
+            <li key={key}>
+              <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
+              <span><T k={key} /></span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </form>
   );
 }
 
@@ -292,70 +488,7 @@ function HeroStatement() {
       <span className="hero-provider gitlab">
         <ProviderIcon provider="gitlab" className="hero-provider-icon" />
         <span>GitLab</span>
-      </span>{" "}
-      <strong><T k="home.hero.statement.suffix" /></strong>
+      </span>.
     </p>
-  );
-}
-
-function WorkflowReplica({ index }: { index: number }) {
-  if (index === 0) {
-    return (
-      <div className="workflow-replica capture-replica" aria-hidden="true">
-        <div className="replica-widget">
-          <div className="replica-widget-header">
-            <strong>Feedback</strong>
-            <span>Capture</span>
-          </div>
-          <div className="replica-tabs">
-            <span><MessageSquare size={12} /> Note</span>
-            <span><MapPin size={12} /> Pin</span>
-            <span className="active"><Camera size={12} /> Capture</span>
-          </div>
-          <div className="replica-textarea">Le bouton valider sort de l&apos;écran mobile.</div>
-          <div className="replica-meta">
-            <span>/checkout</span>
-            <span>390 x 844</span>
-          </div>
-          <div className="replica-capture-frame">
-            <span className="replica-pin">1</span>
-          </div>
-          <button type="button"><Send size={13} /> Envoyer</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (index === 1) {
-    return (
-      <div className="workflow-replica inbox-replica" aria-hidden="true">
-        <div className="replica-inbox-row">
-          <span className="replica-status-dot" />
-          <div>
-            <strong>Capture sur /checkout</strong>
-            <p>Envoyé par Jean-Pierre · Atelier Nova</p>
-          </div>
-          <span className="replica-tag">À créer</span>
-        </div>
-        <div className="replica-draft-line">
-          <span>Brouillon, destination et contexte</span>
-          <strong>GitHub</strong>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="workflow-replica issue-replica" aria-hidden="true">
-      <div className="replica-issue-card">
-        <span className="replica-tag primary">Issue prête</span>
-        <strong>[Feedback] /checkout - bouton caché sur iPhone</strong>
-        <p>message · page · viewport · capture · pin</p>
-      </div>
-      <div className="replica-provider-row">
-        <ProviderIcon provider="github" className="replica-provider-icon" />
-        <span>atelier-nova/portal-staging</span>
-      </div>
-    </div>
   );
 }
