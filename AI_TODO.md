@@ -13,11 +13,11 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 ### P0 - Chemin critique beta vendable
 1. **Onboarding premier site**: terminer le flux qui crée organisation, workspace, owner et premier site, ou à minima livrer l'action manuelle "Créer un site" avec domaine autorisé et clé publique.
 2. **Checklist onboarding courte**: afficher les étapes compte Git, site, script, feedback test et issue créée.
-3. **Widget public installable**: ajouter une version publique du widget dans le bundle servi, smoke test page HTML externe, budget de taille et vérification compatibilité navigateur.
+3. **Widget public installable**: ajouter une version publique du widget dans le bundle servi, smoke test page HTML externe et vérification compatibilité navigateur.
 4. **GitHub workspace-backed pour beta**: finaliser installation App, token installation, association issue target à l'intégration et validation dépôt.
 5. **Sécurité publique minimale restante**: limiter les champs texte des routes privées, décider screenshot beta (désactivable par site ou stockage objet) et ajouter stratégie scan/quarantaine.
 6. **Fiabilité issue minimale restante**: idempotence/verrou anti double issue, relance manuelle propre, statut terminal simple, circuit breaker et backoff jitter.
-7. **Documentation client minimale restante**: installer le widget, configurer GitHub, FAQ beta privée et checklist smoke staging.
+7. **Documentation client minimale restante**: configurer GitLab, domaines autorisés, FAQ beta privée et checklist smoke staging.
 
 ### P1 - Beta confortable et sûre
 1. Tests ciblés widget restants (Shadow DOM, messages/métadonnées HTML, champs sensibles, sélection, scroll/resize).
@@ -80,8 +80,6 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter des tests widget pour sélection de zone minimale ignorée.
 - [ ] Ajouter des tests widget pour repositionnement du pin après scroll et resize.
 - [ ] Ajouter un smoke test du bundle `/widget.js` et `/widget.global.js` dans une page HTML externe.
-- [ ] Définir un budget de taille pour `packages/widget/dist/widget.global.js`.
-- [ ] Ajouter un check CI qui échoue si le bundle widget dépasse le budget validé.
 - [ ] Mesurer le coût d'initialisation du widget sur page externe.
 - [ ] Mesurer le temps de capture screenshot p50/p95 sur desktop et mobile.
 
@@ -169,7 +167,6 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter un scan de secrets local/CI sur l'historique et le workspace courant.
 
 ## 9. Tests et accessibilité
-- [ ] Ajouter des tests unitaires pour `auth.ts`.
 - [ ] Ajouter des tests unitaires pour `credential-store.ts`.
 - [ ] Ajouter des tests unitaires pour `issue-workflow.ts`.
 - [ ] Ajouter des tests API pour `/api/public/feedback`.
@@ -235,8 +232,6 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter une matrice des fonctionnalités par plan dans la documentation.
 
 ## 12. Documentation client et release
-- [ ] Créer une documentation "Installer le widget sur un site".
-- [ ] Créer une documentation "Configurer GitHub".
 - [ ] Créer une documentation "Configurer GitLab".
 - [ ] Créer une documentation "Gérer les domaines autorisés".
 - [ ] Créer une documentation "Comprendre les statuts de feedback".
@@ -340,6 +335,11 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-02] Documentation client minimale: ajout de `docs/installer-widget-site.fr.md` pour l'installation du widget sur site client, avec snippet, `data-project`, origine autorisée, local/prod, tests et erreurs fréquentes. Validation agent: relecture Markdown complète, pas de test code requis.
+- [2026-05-02] Documentation client minimale GitHub: ajout de `docs/configure-github.fr.md` pour connecter GitHub, vérifier les dépôts, associer un site, tester la création d'issue et dépanner les erreurs provider. Validation: relecture Markdown, pas de test code requis.
+- [2026-05-02] Widget commercial budget: ajout d'un budget brut `280 KiB` pour `packages/widget/dist/widget.global.js`, script `widget:size`, et check intégré au build widget. Validation agent: `npm run build --workspace @changethis/widget` OK; `npm run widget:size` OK; `npm run typecheck --workspace @changethis/widget` OK.
+- [2026-05-02] Sécurité API méthodes HTTP: extension du refus 405 + `Allow` aux routes privées feedback actions, `issue-targets` et `retries`, avec tests ciblés dans `apps/web/test/api-methods.test.ts`. Validation agent: `npx tsx --test test/api-methods.test.ts` OK; `npm run typecheck --workspace @changethis/web` OK. Reste à couvrir les autres routes API.
+- [2026-05-02] Tests auth: ajout de `apps/web/test/auth.test.ts` couvrant mode local, absence de session Supabase, session Supabase bearer token et hiérarchie des rôles workspace. Validation agent: `npx tsx --test test/auth.test.ts` OK; `npm run typecheck --workspace @changethis/web` OK.
 - [2026-05-02] Documentation client minimale: ajout de `docs/quick-start-client.fr.md` pour guider un client bêta de la connexion console jusqu'au premier feedback transformé en issue. Validation: documentation Markdown relue, pas de test code requis.
 - [2026-05-02] Support léger: ajout d'un lien Support visible dans le footer global vers `support@changethis.dev`, avec libellés FR/EN. Validation ciblée agent: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK.
 - [2026-05-02] Tests widget commerciaux: ajout d'un test ciblé vérifiant que les labels configurables du bouton widget sont échappés avant injection Shadow DOM. Validation ciblée agent: `npm run test --workspace @changethis/widget` OK; `npm run typecheck --workspace @changethis/widget` OK.

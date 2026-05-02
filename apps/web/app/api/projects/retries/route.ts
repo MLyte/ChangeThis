@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
-import { requirePrivateMutationOrigin } from "../../../../lib/api-security";
+import { methodNotAllowed, requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { processDueIssueRetries } from "../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../lib/logger";
+
+const unsupportedMethod = methodNotAllowed(["POST"]);
+
+export const GET = unsupportedMethod;
+export const PUT = unsupportedMethod;
+export const PATCH = unsupportedMethod;
+export const DELETE = unsupportedMethod;
+export const OPTIONS = unsupportedMethod;
 
 export async function POST(request: Request) {
   const session = requireWorkspaceRole(await requireWorkspaceSession(request), ["admin", "owner"]);

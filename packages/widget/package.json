@@ -7,8 +7,9 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && tsc -p tsconfig.json --emitDeclarationOnly",
+    "build": "vite build && npm run size:check && tsc -p tsconfig.json --emitDeclarationOnly",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "size:check": "node ../../scripts/check-widget-bundle-size.mjs",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -6,9 +6,16 @@ import {
   saveProjectIssueTarget
 } from "../../../../lib/project-registry";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
-import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
+import { methodNotAllowed, requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { getProviderIntegrationAsync } from "../../../../lib/provider-integrations";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
+
+const unsupportedMethod = methodNotAllowed(["GET", "HEAD", "POST"]);
+
+export const PUT = unsupportedMethod;
+export const PATCH = unsupportedMethod;
+export const DELETE = unsupportedMethod;
+export const OPTIONS = unsupportedMethod;
 
 export async function GET(request: Request) {
   const session = requireWorkspaceRole(await requireWorkspaceSession(request), "viewer");

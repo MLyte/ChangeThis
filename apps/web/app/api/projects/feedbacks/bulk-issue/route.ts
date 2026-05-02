@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
 import type { FeedbackStatus } from "@changethis/shared";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
-import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
+import { methodNotAllowed, requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { resolveFeedbackForAction } from "../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../lib/logger";
 
 const actionableStatuses: FeedbackStatus[] = ["raw", "retrying", "failed"];
+const unsupportedMethod = methodNotAllowed(["POST"]);
+
+export const GET = unsupportedMethod;
+export const PUT = unsupportedMethod;
+export const PATCH = unsupportedMethod;
+export const DELETE = unsupportedMethod;
+export const OPTIONS = unsupportedMethod;
 
 export async function POST(request: Request) {
   const session = requireWorkspaceRole(await requireWorkspaceSession(request), "member");
