@@ -6452,6 +6452,7 @@ code {
 .waitlist-form {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.68));
+  --waitlist-control-offset: calc((12px * 1.2) + 8px);
   border-color: var(--glass-line);
   backdrop-filter: blur(18px) saturate(135%);
   box-shadow: var(--glass-shadow-soft), var(--glass-highlight);
@@ -6460,7 +6461,7 @@ code {
 }
 
 .waitlist-controls {
-  align-items: end;
+  align-items: start;
   gap: 12px;
   grid-template-columns: minmax(220px, 1fr) max-content;
 }
@@ -6495,7 +6496,7 @@ code {
 }
 
 .waitlist-form .button {
-  align-self: end;
+  align-self: start;
   border: 0;
   box-shadow:
     0 10px 22px rgba(63, 81, 181, 0.2),
@@ -6503,6 +6504,7 @@ code {
   cursor: pointer;
   height: 48px;
   line-height: 1;
+  margin-top: var(--waitlist-control-offset);
   min-height: 48px;
   min-width: 174px;
   padding: 0 20px;
@@ -8207,6 +8209,7 @@ code {
   }
 
   .waitlist-form .button {
+    margin-top: 0;
     min-width: 0;
     width: 100%;
   }
