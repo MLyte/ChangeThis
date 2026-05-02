@@ -33,7 +33,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "footer.copy": "Retours, connexions Git et code d'installation au même endroit.",
     "footer.support": "Support",
     "footer.license": "Licence",
-    "footer.creator": "Service par mathieuluyten.be",
+    "footer.creator": "mathieuluyten.be",
     "footer.gitAccounts": "Comptes Git",
     "login.eyebrow": "Accès console · bêta privée",
     "login.title": "Connexion ChangeThis",
@@ -95,15 +95,15 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.hero.statement.prefix": "Un espace clair pour transformer les retours clients en tâches prêtes à envoyer vers",
     "home.hero.statement.or": "ou",
     "home.hero.statement.suffix": "",
-    "home.hero.lede": "L'app est en développement. Laissez votre e-mail, je vous préviens dès que les premiers accès ouvrent.",
+    "home.hero.lede": "ChangeThis est en développement. Les premiers accès ouvriront progressivement.",
     "home.hero.primary": "Traiter les retours",
     "home.hero.signup": "Accéder à la bêta",
     "home.hero.login": "J'ai déjà un compte",
     "home.hero.secondary": "Envoyer un retour test",
     "home.hero.trust": "Les visiteurs envoient des retours sans compte. Seul votre espace d'équipe est protégé.",
     "home.hero.privateBeta": "Bêta privée : les inscriptions sont actuellement fermées. Utilisez un compte existant pour accéder à la console.",
-    "home.waitlist.callout.title": "Bêta bientôt disponible",
-    "home.waitlist.callout.copy": "L'app n'est pas encore ouverte au public. Laissez votre e-mail pour recevoir une invitation quand les premiers accès seront prêts.",
+    "home.waitlist.callout.title": "Recevoir une invitation",
+    "home.waitlist.callout.copy": "Entrez votre e-mail professionnel pour être prévenu quand un accès bêta correspondra à votre usage.",
     "home.waitlist.label": "E-mail professionnel",
     "home.waitlist.submit": "S'inscrire à la bêta",
     "home.waitlist.status.joined": "C'est noté. Nous vous préviendrons dès que l'accès public ouvre.",
@@ -125,11 +125,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.problem.example.2.source": "Contexte absent",
     "home.problem.example.2.reality": "On parle d'un bouton, mais pas de la page exacte, de la taille d'écran, ni de l'élément visé.",
     "home.problem.example.2.consequence": "L'équipe doit rejouer la scène avant même de comprendre quoi corriger.",
-    "home.problem.example.3.source": "Tâche à reconstruire",
-    "home.problem.example.3.reality": "Quelqu'un finit par reformuler, trier, recopier et transformer le retour en tâche exploitable.",
-    "home.problem.example.3.consequence": "Le temps part dans la traduction du signal au lieu de partir dans la correction.",
-    "home.beta.eyebrow": "Ce qui arrive",
-    "home.beta.title": "Une bêta courte, centrée sur le vrai chemin du retour client vers l'action.",
+    "home.problem.example.3.source": "Filtre manquant",
+    "home.problem.example.3.reality": "Un petit doute devient vite une tâche Git, même quand il faudrait juste clarifier ou archiver.",
+    "home.problem.example.3.consequence": "Sans tri simple avant Git, le dépôt se remplit de bruit avant les vrais sujets.",
+    "home.beta.eyebrow": "Ce que fait ChangeThis",
+    "home.beta.title": "Capturez un retour précis, qualifiez-le en équipe, puis envoyez une tâche exploitable vers Git.",
     "home.beta.capture.title": "Retour bien situé",
     "home.beta.capture.copy": "Message, page, taille d'écran, repère et capture réunis dans un seul retour.",
     "home.beta.inbox.title": "Boîte de réception claire",
@@ -138,10 +138,29 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.beta.routing.copy": "Un brouillon clair avec tout le contexte utile.",
     "home.beta.access.title": "Sites et dépôts liés",
     "home.beta.access.copy": "Chaque site peut pointer vers le bon dépôt GitHub ou GitLab.",
+    "home.context.eyebrow": "Ce que contient un retour",
+    "home.context.title": "Le contexte arrive avec le retour.",
+    "home.context.copy": "ChangeThis garde les informations qui aident l'équipe à comprendre, vérifier puis décider quoi faire du retour.",
+    "home.context.page.title": "Page exacte",
+    "home.context.page.copy": "URL, titre de page et site lié au retour.",
+    "home.context.device.title": "Appareil et navigateur",
+    "home.context.device.copy": "Navigateur, user agent et OS transmis par le navigateur.",
+    "home.context.viewport.title": "Taille d'écran",
+    "home.context.viewport.copy": "Largeur, hauteur et densité d'affichage pour retrouver le bon contexte responsive.",
+    "home.context.message.title": "Message du visiteur",
+    "home.context.message.copy": "Texte libre laissé avec le retour, sans compte visiteur.",
+    "home.context.pin.title": "Repère sur la page",
+    "home.context.pin.copy": "Position du repère, coordonnées et zone visée quand le visiteur pointe un élément.",
+    "home.context.capture.title": "Capture de zone",
+    "home.context.capture.copy": "Image jointe quand une capture est utile pour vérifier le problème.",
+    "home.context.element.title": "Élément ciblé",
+    "home.context.element.copy": "Sélecteur technique et texte visible quand un élément précis est pointé.",
+    "home.context.routing.title": "Destination de traitement",
+    "home.context.routing.copy": "Site, espace d'équipe et dépôt Git prévu pour préparer la tâche.",
     "home.mobile.eyebrow": "Boucle mobile",
     "home.mobile.title": "Le retour commence souvent sur mobile. Le contexte doit suivre.",
-    "home.mobile.title.intro": "Le retour commence souvent sur mobile.",
-    "home.mobile.title.impact": "Le contexte doit suivre.",
+    "home.mobile.title.intro": "Les clients utilisent aussi leur mobile.",
+    "home.mobile.title.impact": "Les retours doivent fonctionner sur chaque appareil.",
     "home.mobile.copy": "Côté visiteur, le bouton de retour reste compact. Côté équipe, chaque signal conserve la page, le statut et la destination Git sans devenir un outil lourd.",
     "home.mobile.point.visitor": "Visiteur sans compte",
     "home.mobile.point.team": "Tri côté équipe",
@@ -179,7 +198,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.product.retry.strong": "Relances lisibles.",
     "home.product.retry.copy": "Les retours à reprendre restent visibles, rejouables manuellement, puis automatisables via la route de relance.",
     "home.workflow.eyebrow": "Flux produit",
-    "home.workflow.title": "Un circuit court, mais traçable.",
+    "home.workflow.title": "As easy as A, B, C",
     "home.signup.eyebrow": "Bêta privée",
     "home.signup.title": "Accès sur invitation, espace privé, bouton de retour testable.",
     "home.signup.copy": "La démo reste publique pour tester le bouton de retour. L'accès à l'espace d'équipe est limité aux comptes déjà créés pendant la phase bêta.",
@@ -409,7 +428,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "footer.copy": "Feedback, Git connections, and install code in one place.",
     "footer.support": "Support",
     "footer.license": "License",
-    "footer.creator": "Service by mathieuluyten.be",
+    "footer.creator": "mathieuluyten.be",
     "footer.gitAccounts": "Git accounts",
     "login.eyebrow": "Console access · private beta",
     "login.title": "Sign in to ChangeThis",
@@ -471,15 +490,15 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.hero.statement.prefix": "A clear space that turns customer feedback into tasks ready for",
     "home.hero.statement.or": "or",
     "home.hero.statement.suffix": "",
-    "home.hero.lede": "The app is in development. Leave your email and I'll let you know when early access opens.",
+    "home.hero.lede": "ChangeThis is in development. Early access will open gradually.",
     "home.hero.primary": "Review feedback",
     "home.hero.signup": "Access the beta",
     "home.hero.login": "I already have an account",
     "home.hero.secondary": "Send test feedback",
     "home.hero.trust": "Visitors send feedback without an account. Only your team space is protected.",
     "home.hero.privateBeta": "Private beta: signups are currently closed. Use an existing account to access the console.",
-    "home.waitlist.callout.title": "Beta coming soon",
-    "home.waitlist.callout.copy": "The app is not open to the public yet. Leave your email to receive an invitation when the first seats are ready.",
+    "home.waitlist.callout.title": "Get an invitation",
+    "home.waitlist.callout.copy": "Enter your work email to be notified when a beta seat matches your use case.",
     "home.waitlist.label": "Work email",
     "home.waitlist.submit": "Join the beta",
     "home.waitlist.status.joined": "You're on the list. We will let you know when public access opens.",
@@ -501,11 +520,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.problem.example.2.source": "Missing context",
     "home.problem.example.2.reality": "The message mentions a button, without the exact page, screen size, selected element, or clear screenshot.",
     "home.problem.example.2.consequence": "The team has to replay the issue, ask follow-up questions, and loses the initial thread.",
-    "home.problem.example.3.source": "Task to rebuild",
-    "home.problem.example.3.reality": "Before creating a clear task, someone rewrites, sorts, and copies the feedback by hand.",
-    "home.problem.example.3.consequence": "Useful time goes into translating feedback instead of fixing the thing.",
-    "home.beta.eyebrow": "What is coming",
-    "home.beta.title": "A short beta focused on the real path from customer feedback to action.",
+    "home.problem.example.3.source": "Missing filter",
+    "home.problem.example.3.reality": "A small doubt quickly becomes a Git task, even when it only needs clarification or archiving.",
+    "home.problem.example.3.consequence": "Without a simple review step before Git, the repository fills with noise before the real topics.",
+    "home.beta.eyebrow": "What ChangeThis does",
+    "home.beta.title": "Capture precise feedback, review it as a team, then send an actionable task to Git.",
     "home.beta.capture.title": "Well-located feedback",
     "home.beta.capture.copy": "Message, page, screen size, marker, and screenshot grouped into one feedback item.",
     "home.beta.inbox.title": "Clear feedback space",
@@ -514,10 +533,29 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.beta.routing.copy": "A clear draft with all useful context.",
     "home.beta.access.title": "Sites mapped to repositories",
     "home.beta.access.copy": "Each site can point to the right GitHub or GitLab repository.",
+    "home.context.eyebrow": "What a feedback item contains",
+    "home.context.title": "Context arrives with the feedback.",
+    "home.context.copy": "ChangeThis keeps the details that help the team understand, verify, and decide what should happen next.",
+    "home.context.page.title": "Exact page",
+    "home.context.page.copy": "URL, page title, and the site linked to the feedback.",
+    "home.context.device.title": "Device and browser",
+    "home.context.device.copy": "Browser, user agent, and OS details sent by the browser.",
+    "home.context.viewport.title": "Screen size",
+    "home.context.viewport.copy": "Width, height, and display density to reproduce the responsive context.",
+    "home.context.message.title": "Visitor message",
+    "home.context.message.copy": "Free-text note sent with the feedback, without a visitor account.",
+    "home.context.pin.title": "Page marker",
+    "home.context.pin.copy": "Marker position, coordinates, and targeted area when the visitor points to something.",
+    "home.context.capture.title": "Area screenshot",
+    "home.context.capture.copy": "Image attached when a screenshot helps verify the issue.",
+    "home.context.element.title": "Targeted element",
+    "home.context.element.copy": "Technical selector and visible text when a precise element is selected.",
+    "home.context.routing.title": "Review destination",
+    "home.context.routing.copy": "Site, team space, and intended Git repository used to prepare the task.",
     "home.mobile.eyebrow": "Mobile loop",
     "home.mobile.title": "Feedback often starts on mobile. The context should follow.",
-    "home.mobile.title.intro": "Feedback often starts on mobile.",
-    "home.mobile.title.impact": "The context should follow.",
+    "home.mobile.title.intro": "Clients also use their phones.",
+    "home.mobile.title.impact": "Feedback should work on every device.",
     "home.mobile.copy": "For visitors, the feedback button stays compact. For teams, each signal keeps the page, status, and Git destination without becoming a heavy tool.",
     "home.mobile.point.visitor": "Visitor without account",
     "home.mobile.point.team": "Team triage",
@@ -555,7 +593,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.product.retry.strong": "Visible failures.",
     "home.product.retry.copy": "API failures are visible, manually replayable, then automatable through the retries route.",
     "home.workflow.eyebrow": "Product flow",
-    "home.workflow.title": "A short, traceable loop.",
+    "home.workflow.title": "As easy as A, B, C",
     "home.signup.eyebrow": "Private beta",
     "home.signup.title": "Invite-only access, private team space, testable feedback button.",
     "home.signup.copy": "The demo stays public to test the feedback button. Team-space access is limited to accounts that were already created during the beta phase.",
@@ -822,9 +860,9 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
   if (locale === "en") {
     switch (key) {
       case "home.hero.lede":
-        return <>The app is <strong>in development</strong>. Leave your email and I&apos;ll let you know when early access opens.</>;
+        return <>ChangeThis is <strong>in development</strong>. Early access will open gradually.</>;
       case "home.waitlist.callout.copy":
-        return <>The app is not open to the public yet. Leave your email to receive an invitation when <strong>the first seats are ready</strong>.</>;
+        return <>Enter your work email to be notified when <strong>a beta seat matches your use case</strong>.</>;
       case "home.problem.point.1":
         return <>Feedback arrives through <strong>email, Slack, Teams</strong>, a Word document, or <strong>a sentence by the coffee machine</strong>.</>;
       case "home.problem.title":
@@ -842,9 +880,9 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
       case "home.problem.example.2.consequence":
         return <>The team has to replay the issue, ask follow-up questions, and <strong>loses the initial thread</strong>.</>;
       case "home.problem.example.3.reality":
-        return <>Before creating a clear task, someone <strong>rewrites, sorts, and copies</strong> the feedback by hand.</>;
+        return <>A small doubt quickly becomes <strong>a Git task</strong>, even when it only needs clarification or archiving.</>;
       case "home.problem.example.3.consequence":
-        return <>Useful time goes into translating feedback instead of <strong>fixing the thing</strong>.</>;
+        return <>Without a <strong>simple review step before Git</strong>, the repository fills with noise before the real topics.</>;
       case "home.beta.capture.copy":
         return <>Message, page, screen size, marker, and screenshot grouped into <strong>one feedback item</strong>.</>;
       case "home.beta.inbox.copy":
@@ -878,9 +916,9 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
 
   switch (key) {
     case "home.hero.lede":
-      return <>L&apos;app est <strong>en développement</strong>. Laissez votre e-mail, je vous préviens dès que les premiers accès ouvrent.</>;
+      return <>ChangeThis est <strong>en développement</strong>. Les premiers accès ouvriront progressivement.</>;
     case "home.waitlist.callout.copy":
-      return <>L&apos;app n&apos;est pas encore ouverte au public. Laissez votre e-mail pour recevoir une invitation quand <strong>les premiers accès seront prêts</strong>.</>;
+      return <>Entrez votre e-mail professionnel pour être prévenu quand <strong>un accès bêta correspondra à votre usage</strong>.</>;
     case "home.problem.point.1":
       return <>Les retours arrivent par <strong>e-mail, Slack, Teams</strong>, un Word ou <strong>une phrase autour de la machine à café</strong>.</>;
     case "home.problem.title":
@@ -898,9 +936,9 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
     case "home.problem.example.2.consequence":
       return <>L&apos;équipe doit rejouer la scène avant même de <strong>comprendre quoi corriger</strong>.</>;
     case "home.problem.example.3.reality":
-      return <>Quelqu&apos;un finit par <strong>reformuler, trier, recopier</strong> et transformer le retour en tâche exploitable.</>;
+      return <>Un petit doute devient vite <strong>une tâche Git</strong>, même quand il faudrait juste clarifier ou archiver.</>;
     case "home.problem.example.3.consequence":
-      return <>Le temps part dans la traduction du signal au lieu de partir dans <strong>la correction</strong>.</>;
+      return <>Sans <strong>tri simple avant Git</strong>, le dépôt se remplit de bruit avant les vrais sujets.</>;
     case "home.beta.capture.copy":
       return <>Message, page, taille d&apos;écran, repère et capture réunis dans <strong>un seul retour</strong>.</>;
     case "home.beta.inbox.copy":

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { CalendarClock, CheckCircle2, FileText, GitBranch, GitPullRequestCreate, Inbox, Mail, MessageSquare, MonitorCheck, MousePointerClick, Route, ShieldCheck, Smartphone, Sparkles, Users, type LucideIcon } from "lucide-react";
+import { CalendarClock, Camera, CheckCircle2, FileText, GitBranch, GitPullRequestCreate, Globe2, Inbox, Mail, MessageSquare, MonitorCheck, MousePointerClick, Pin, Route, Ruler, ShieldCheck, Smartphone, Sparkles, Type, Users, type LucideIcon } from "lucide-react";
 import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
@@ -16,6 +16,17 @@ const betaBlocks: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }>
   { titleKey: "home.beta.inbox.title", copyKey: "home.beta.inbox.copy", Icon: Inbox },
   { titleKey: "home.beta.routing.title", copyKey: "home.beta.routing.copy", Icon: Route },
   { titleKey: "home.beta.access.title", copyKey: "home.beta.access.copy", Icon: ShieldCheck }
+];
+
+const feedbackContextItems: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
+  { titleKey: "home.context.page.title", copyKey: "home.context.page.copy", Icon: Globe2 },
+  { titleKey: "home.context.device.title", copyKey: "home.context.device.copy", Icon: MonitorCheck },
+  { titleKey: "home.context.viewport.title", copyKey: "home.context.viewport.copy", Icon: Ruler },
+  { titleKey: "home.context.message.title", copyKey: "home.context.message.copy", Icon: Type },
+  { titleKey: "home.context.pin.title", copyKey: "home.context.pin.copy", Icon: Pin },
+  { titleKey: "home.context.capture.title", copyKey: "home.context.capture.copy", Icon: Camera },
+  { titleKey: "home.context.element.title", copyKey: "home.context.element.copy", Icon: MousePointerClick },
+  { titleKey: "home.context.routing.title", copyKey: "home.context.routing.copy", Icon: GitBranch }
 ];
 
 const waitlistPoints: Array<{ key: string; Icon: LucideIcon }> = [
@@ -152,6 +163,27 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
       </section>
 
+      <section className="home-section feedback-context-section" aria-labelledby="feedback-context-title">
+        <div className="home-section-header compact">
+          <p className="eyebrow"><T k="home.context.eyebrow" /></p>
+          <h2 id="feedback-context-title"><T k="home.context.title" /></h2>
+          <p className="feedback-context-lede"><T k="home.context.copy" /></p>
+        </div>
+        <div className="feedback-context-grid">
+          {feedbackContextItems.map(({ titleKey, copyKey, Icon }) => (
+            <article className="feedback-context-card" key={titleKey}>
+              <span className="feedback-context-icon" aria-hidden="true">
+                <Icon size={20} strokeWidth={2.3} />
+              </span>
+              <div>
+                <h3><T k={titleKey} /></h3>
+                <p><T k={copyKey} /></p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <MobilePreviewSection />
 
       <section className="home-section workflow-band">
@@ -162,7 +194,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <div className="steps">
           {workflowSteps.map(({ titleKey, copyKey, Icon }, index) => (
             <article className="step" key={titleKey}>
-              <span className="step-index">{String(index + 1).padStart(2, "0")}</span>
+              <span className="step-index">{String.fromCharCode(65 + index)}</span>
               <span className="step-icon" aria-hidden="true">
                 <Icon size={22} strokeWidth={2.2} />
               </span>
