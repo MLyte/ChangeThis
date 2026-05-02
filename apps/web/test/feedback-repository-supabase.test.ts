@@ -35,8 +35,8 @@ const issueTarget: IssueTarget = {
 test("getFeedbackRepository keeps file mode by default", async () => {
   const previousMode = process.env.DATA_STORE;
   delete process.env.DATA_STORE;
-  const module = await import(`${new URL("../lib/feedback-repository.ts", import.meta.url).href}?file-default-test`) as FeedbackRepositoryModule;
-  const repository = module.getFeedbackRepository();
+  const repositoryModule = await import(`${new URL("../lib/feedback-repository.ts", import.meta.url).href}?file-default-test`) as FeedbackRepositoryModule;
+  const repository = repositoryModule.getFeedbackRepository();
   if (previousMode === undefined) {
     delete process.env.DATA_STORE;
   } else {

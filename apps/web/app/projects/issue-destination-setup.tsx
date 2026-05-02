@@ -122,10 +122,6 @@ export function IssueDestinationSetup({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"viewer" | "member" | "admin">("member");
 
-  useEffect(() => {
-    setWorkspaceUsers(users);
-  }, [users]);
-
   const connectedProviders = useMemo(
     () => new Set(integrations.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
     [integrations]
@@ -1199,6 +1195,7 @@ function ConnectedSitesSection({
   const shouldShowRepositoryStatus = isSelectedProviderConnected && repositoryLoadState !== "idle";
   const isRepositorySelectDisabled = !isSelectedProviderConnected || repositoryLoadState === "loading" || repositoryOptions.length === 0;
   const connectedIntegrations = Array.from(connectedProviders);
+  const hasConnectedProvider = connectedIntegrations.length > 0;
 
   return (
     <section className="settings-section linked-sites" aria-labelledby="linked-sites-title">
@@ -1215,12 +1212,50 @@ function ConnectedSitesSection({
 
       {projects.length === 0 ? (
         <div className="empty-state connected-sites-empty">
-          <h2>Aucun site connecté</h2>
-          <p>Ajoutez un site pour générer sa clé publique, installer le widget et router les retours vers un dépôt Git réel.</p>
-          <button className="button" onClick={() => onOpenSiteModal()} type="button">
-            <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            Ajouter un nouveau site
-          </button>
+          <div>
+            <p className="eyebrow">Premier site</p>
+            <h2>Aucun site connecté</h2>
+            <p>Créez un site réel pour obtenir une clé publique, limiter les origines autorisées et envoyer les retours vers le bon dépôt Git.</p>
+          </div>
+          <div className="onboarding-steps" aria-label="Étapes pour connecter un site">
+            <div className={`onboarding-step${hasConnectedProvider ? " done" : " current"}`}>
+              <span>1</span>
+              <div>
+                <strong>Connecter Git</strong>
+                <p>{hasConnectedProvider ? "Une connexion Git est active." : "Activez GitHub ou GitLab avant de créer le site."}</p>
+              </div>
+            </div>
+            <div className={`onboarding-step${hasConnectedProvider ? " current" : ""}`}>
+              <span>2</span>
+              <div>
+                <strong>Créer le site</strong>
+                <p>Choisissez son nom, son domaine autorisé et le dépôt qui recevra les issues.</p>
+              </div>
+            </div>
+            <div className="onboarding-step">
+              <span>3</span>
+              <div>
+                <strong>Installer le script</strong>
+                <p>Copiez la balise widget générée puis vérifiez sa présence depuis cette page.</p>
+              </div>
+            </div>
+          </div>
+          <div className="empty-state-actions">
+            {hasConnectedProvider ? (
+              <button className="button" onClick={() => onOpenSiteModal()} type="button">
+                <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                Ajouter un nouveau site
+              </button>
+            ) : (
+              <Link className="button" href="/settings/git-connections">
+                <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                Connecter Git
+              </Link>
+            )}
+            <Link className="button secondary-button" href="/projects">
+              Voir la file
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="site-repo-list">

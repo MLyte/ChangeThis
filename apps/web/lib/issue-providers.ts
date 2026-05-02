@@ -52,6 +52,7 @@ export type ProviderRepository = {
 };
 
 type TokenResolver = () => Promise<string | undefined>;
+const defaultProviderTimeoutMs = 10_000;
 
 export function getIssueProviderClient(provider: IssueProvider, options: IssueProviderClientOptions = {}): IssueProviderClient {
   if (provider === "github") {
@@ -104,7 +105,7 @@ function createGitHubClient(resolveToken: TokenResolver): IssueProviderClient {
         return createDemoExternalIssueRef("github", validatedTarget, draft.title);
       }
 
-      const response = await fetch(`https://api.github.com/repos/${validatedTarget.namespace}/${validatedTarget.project}/issues`, {
+      const response = await fetchProvider("github", `https://api.github.com/repos/${validatedTarget.namespace}/${validatedTarget.project}/issues`, {
         method: "POST",
         headers: {
           Accept: "application/vnd.github+json",
@@ -153,7 +154,7 @@ function createGitHubClient(resolveToken: TokenResolver): IssueProviderClient {
         throw new IssueProviderError("github", "validation_failed", "GitHub issue number is missing.");
       }
 
-      const response = await fetch(`https://api.github.com/repos/${validatedTarget.namespace}/${validatedTarget.project}/issues/${issueNumber}`, {
+      const response = await fetchProvider("github", `https://api.github.com/repos/${validatedTarget.namespace}/${validatedTarget.project}/issues/${issueNumber}`, {
         headers: {
           Accept: "application/vnd.github+json",
           Authorization: `Bearer ${token}`,
@@ -196,7 +197,7 @@ function createGitLabClient(resolveToken: TokenResolver): IssueProviderClient {
 
       const projectId = validatedTarget.externalProjectId ?? encodeURIComponent(`${validatedTarget.namespace}/${validatedTarget.project}`);
       const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
-      const response = await fetch(`${baseUrl}/api/v4/projects/${projectId}/issues`, {
+      const response = await fetchProvider("gitlab", `${baseUrl}/api/v4/projects/${projectId}/issues`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -244,7 +245,7 @@ function createGitLabClient(resolveToken: TokenResolver): IssueProviderClient {
       }
 
       const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
-      const response = await fetch(`${baseUrl}/api/v4/projects/${projectId}/issues/${issueIid}`, {
+      const response = await fetchProvider("gitlab", `${baseUrl}/api/v4/projects/${projectId}/issues/${issueIid}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "PRIVATE-TOKEN": token
@@ -431,7 +432,7 @@ async function fetchProviderJsonPages(provider: IssueProvider, firstUrl: string,
   let nextUrl: string | undefined = firstUrl;
 
   while (nextUrl) {
-    const response = await fetch(nextUrl, { headers });
+    const response = await fetchProvider(provider, nextUrl, { headers });
     const body = await parseResponseBody(response);
 
     if (!response.ok) {
@@ -541,7 +542,7 @@ async function createGitHubInstallationToken(integrationId?: string, workspaceId
     issuedAt: now - 60,
     expiresAt: now + 540
   });
-  const response = await fetch(`https://api.github.com/app/installations/${installationId}/access_tokens`, {
+  const response = await fetchProvider("github", `https://api.github.com/app/installations/${installationId}/access_tokens`, {
     method: "POST",
     headers: {
       Accept: "application/vnd.github+json",
@@ -558,6 +559,36 @@ async function createGitHubInstallationToken(integrationId?: string, workspaceId
   }
 
   return body.token;
+}
+
+async function fetchProvider(provider: IssueProvider, input: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), providerTimeoutMs());
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: init.signal ?? controller.signal
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new IssueProviderError(provider, "transient_failure", `${provider} request timed out.`);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function providerTimeoutMs(): number {
+  const configured = Number(process.env.ISSUE_PROVIDER_TIMEOUT_MS);
+  return Number.isFinite(configured) && configured > 0 ? configured : defaultProviderTimeoutMs;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError"
+    || error instanceof Error && error.name === "AbortError";
 }
 
 function signGitHubAppJwt(input: { appId: string; privateKey: string; issuedAt: number; expiresAt: number }): string {

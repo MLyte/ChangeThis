@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getIssueProviderClient, listIssueProviderRepositories } from "../lib/issue-providers.ts";
+import { getIssueProviderClient, IssueProviderError, listIssueProviderRepositories } from "../lib/issue-providers.ts";
 import type { IssueDraft, IssueTarget } from "@changethis/shared";
 
 const originalFetch = globalThis.fetch;
+const originalTimeout = process.env.ISSUE_PROVIDER_TIMEOUT_MS;
 
 test.afterEach(() => {
   globalThis.fetch = originalFetch;
+  if (originalTimeout === undefined) {
+    delete process.env.ISSUE_PROVIDER_TIMEOUT_MS;
+  } else {
+    process.env.ISSUE_PROVIDER_TIMEOUT_MS = originalTimeout;
+  }
 });
 
 test("lists GitHub repositories with the configured provider token", async () => {
@@ -128,4 +134,39 @@ test("creates provider issues with the selected target", async () => {
     url: "https://github.com/agency/product-site/issues/12",
     state: "open"
   });
+});
+
+test("times out provider issue creation as a transient failure", async () => {
+  process.env.ISSUE_PROVIDER_TIMEOUT_MS = "1";
+  globalThis.fetch = async (_input, init) => {
+    await new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => {
+        reject(new DOMException("Aborted", "AbortError"));
+      });
+    });
+
+    throw new Error("unreachable");
+  };
+
+  const target: IssueTarget = {
+    provider: "github",
+    namespace: "agency",
+    project: "product-site",
+    integrationId: "local-github",
+    webUrl: "https://github.com/agency/product-site"
+  };
+  const draft: IssueDraft = {
+    title: "Clarifier le bouton",
+    description: "Feedback client",
+    labels: ["source:client-feedback"]
+  };
+  const client = getIssueProviderClient("github", { token: "github-token", integrationId: target.integrationId });
+
+  await assert.rejects(
+    () => client.createIssue(target, draft),
+    (error) => error instanceof IssueProviderError
+      && error.provider === "github"
+      && error.code === "transient_failure"
+      && error.message === "github request timed out."
+  );
 });

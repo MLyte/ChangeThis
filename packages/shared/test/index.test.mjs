@@ -69,6 +69,30 @@ test("validateFeedbackPayload rejects oversized screenshots", () => {
   assert.match(result.error, /screenshotDataUrl/);
 });
 
+test("validateFeedbackPayload accepts safe screenshot MIME types", () => {
+  for (const mimeType of ["image/png", "image/jpeg", "image/webp"]) {
+    const result = validateFeedbackPayload(validPayload({
+      screenshotDataUrl: `data:${mimeType};base64,AAAA`
+    }));
+
+    assert.equal(result.ok, true);
+  }
+});
+
+test("validateFeedbackPayload rejects unsafe or malformed screenshot data URLs", () => {
+  for (const screenshotDataUrl of [
+    "data:image/svg+xml;base64,AAAA",
+    "data:text/html;base64,AAAA",
+    "data:image/png,AAAA",
+    "data:image/png;base64,A"
+  ]) {
+    const result = validateFeedbackPayload(validPayload({ screenshotDataUrl }));
+
+    assert.equal(result.ok, false);
+    assert.match(result.error, /screenshotDataUrl/);
+  }
+});
+
 test("buildIssueDraft creates a concise provider-neutral issue draft", () => {
   const validation = validateFeedbackPayload(validPayload());
   assert.equal(validation.ok, true);

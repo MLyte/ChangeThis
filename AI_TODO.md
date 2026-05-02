@@ -83,8 +83,8 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 ## 3. Onboarding produit
 - [ ] Définir le parcours premier utilisateur de `signup/login` jusqu'au premier feedback reçu.
 - [ ] Créer une checklist onboarding affichée dans l'app avec étapes compte Git, site, script, feedback test et issue créée.
-- [ ] Ajouter un état vide guidé pour `/projects` quand aucun site réel n'est configuré.
-- [ ] Ajouter un état vide guidé pour `/settings/connected-sites` quand aucun site n'existe.
+- [x] Ajouter un état vide guidé pour `/projects` quand aucun site réel n'est configuré.
+- [x] Ajouter un état vide guidé pour `/settings/connected-sites` quand aucun site n'existe.
 - [ ] Ajouter une action "Créer un site" avec nom, domaine autorisé et clé publique générée.
 - [ ] Ajouter une validation visible des origines autorisées avant de fournir le script widget.
 - [ ] Ajouter un test de feedback depuis un site configuré, distinct de la page `/demo`.
@@ -117,10 +117,10 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 
 ## 5. Widget commercial
 - [ ] Ajouter une version publique du widget dans le bundle servi.
-- [ ] Ajouter des cache headers versionnés pour `/widget.js` et `/widget.global.js`.
+- [x] Ajouter des cache headers versionnés pour `/widget.js` et `/widget.global.js`.
 - [ ] Ajouter une option widget pour désactiver la capture screenshot par site.
 - [ ] Ajouter une vérification de compatibilité navigateur du widget.
-- [ ] Ajouter un fallback UX si le bundle widget n'est pas construit.
+- [x] Ajouter un fallback UX si le bundle widget n'est pas construit.
 - [x] Ajouter des tests unitaires widget pour `inferEndpoint` depuis `data-endpoint`, `script.src` et fallback.
 - [x] Ajouter des tests unitaires widget pour `inferLocale` depuis attribut, localStorage et langue document.
 - [ ] Ajouter des tests widget pour le rendu Shadow DOM sans collision avec CSS hôte.
@@ -196,8 +196,8 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter un maximum de retries configurable.
 - [ ] Ajouter un statut terminal après dépassement du maximum de retries.
 - [ ] Ajouter un verrou distribué pour éviter deux créations d'issues concurrentes sur le même feedback.
-- [ ] Ajouter un timeout explicite sur tous les appels GitHub.
-- [ ] Ajouter un timeout explicite sur tous les appels GitLab.
+- [x] Ajouter un timeout explicite sur tous les appels GitHub.
+- [x] Ajouter un timeout explicite sur tous les appels GitLab.
 - [ ] Ajouter un timeout explicite sur tous les appels Supabase REST.
 - [ ] Ajouter un circuit breaker simple par provider.
 - [ ] Ajouter une stratégie de backoff avec jitter.
@@ -221,7 +221,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [x] Ajouter une validation d'origine stricte pour `/api/widget/config`.
 - [ ] Ne pas exposer `issueTarget` complet dans `/api/widget/config` si non nécessaire au widget.
 - [ ] Ajouter une limite de longueur sur les champs texte dans les routes privées.
-- [ ] Ajouter une validation MIME réelle des screenshots côté serveur.
+- [x] Ajouter une validation MIME réelle des screenshots côté serveur.
 - [ ] Ajouter un scan ou une stratégie de quarantaine pour les uploads image.
 - [x] Redacter les secrets et tokens dans tous les logs d'erreur.
 - [ ] Ajouter une rotation documentée de `CHANGETHIS_SECRET_KEY`.
@@ -419,6 +419,11 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-02] Sécurité publique minimale screenshots: `validateFeedbackPayload` n'accepte plus que les screenshots data URL base64 `image/png`, `image/jpeg` et `image/webp`, avec refus des MIME dangereux ou data URLs malformées. Validation ciblée: `npm run test --workspace @changethis/shared` OK; `npm run typecheck` OK.
+- [2026-05-02] Micro-tâche widget public: le bundle réel servi par `/widget.js` et `/widget.global.js` reçoit désormais des headers JavaScript avec cache public court, `stale-while-revalidate`, `ETag` et `X-ChangeThis-Widget-Version` dérivés du contenu, tandis que le fallback absent reste `no-store`. Test ciblé ajouté pour prouver que les deux routes servent `packages/widget/dist/widget.global.js` en JS quand il est présent. Validation ciblée: `npx tsx --test test/widget-bundle.test.ts` OK; `npm run typecheck --workspace @changethis/web` OK après intégration de l'état vide `/projects`.
+- [2026-05-02] Widget public installable: `/widget.js` et `/widget.global.js` servent désormais un fallback JavaScript exécutable si `packages/widget/dist/widget.global.js` est absent, avec badge UX discret, console error, état global `missing-widget-bundle`, option `data-fallback="silent"` et header `X-ChangeThis-Widget-Fallback`. Validation ciblée: `npx tsx --test test/widget-bundle.test.ts` OK; `npm run test --workspace @changethis/web` OK; `npm run typecheck --workspace @changethis/web` OK.
+- [2026-05-02] Micro-tâche onboarding settings: état vide guidé pour `/settings/connected-sites` quand aucun site n'existe, avec étapes Git -> site -> script et CTA adapté selon la présence d'une connexion Git active. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK.
+- [2026-05-02] Fiabilité provider minimale: ajout d'un timeout configurable `ISSUE_PROVIDER_TIMEOUT_MS` autour des appels GitHub/GitLab (création issue, lecture issue, listing repos, token installation), avec conversion des aborts en `IssueProviderError` `transient_failure`. Validation ciblée: `npx tsx --test test/issue-providers.test.ts` OK; `npm run typecheck --workspace @changethis/web` OK.
 - [2026-05-02] Quick win P1 widget: extraction ciblée de `inferEndpoint`/`inferLocale` dans `packages/widget/src/inference.ts` et ajout de tests unitaires couvrant `data-endpoint`, `script.src`, fallback, attribut locale, localStorage et langue document. Validation ciblée: `npm run test --workspace @changethis/widget` OK; `npm run typecheck --workspace @changethis/widget` OK.
 - [2026-05-01] Correctif CI hors checklist: correction des erreurs `npm run lint` qui faisaient échouer GitHub Actions avant `test`, `typecheck` et `build` depuis le commit suivant `cacbd62`; la prod expose déjà `/api/health` et les headers sécurité du commit `6a69c12`, mais le pipeline restait rouge. Validation exécutée: `npm run lint`, `npm test`, `npm run typecheck`, `npm run build` OK.
 - [2026-05-01] Documentation priorisation hors checklist: ajout de `docs/ai-task-priority-triage.md` avec classement des taches `AI_TODO.md` en 3 categories (`Urgent`, `A faire d'ici 7 jours maximum`, `Bonus`) et ordre d'importance dans chaque categorie. Validation locale non lancee automatiquement conformement a la consigne utilisateur active.
@@ -541,3 +546,4 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [2026-05-02] Migration DB minimale feedbacks: ajout de `supabase/migrations/0006_feedback_repository_model_columns.sql` pour aligner `feedbacks` et `feedback_status_events` sur le modèle repository actuel (payload/draft/update timestamp, data URL screenshot transitoire, métadonnées asset minimales, statuts `kept`/`resolved` côté événements). Validation: `npm run test --workspace @changethis/web` OK, `npm run typecheck --workspace @changethis/web` OK.
 - [2026-05-02] Migration DB provider integrations: ajout de `supabase/migrations/0007_provider_integrations_workspace_storage.sql` pour durcir stockage workspace/provider (status `needs_setup`, checks, index, unicités partielles, trigger `updated_at`) et stocker les credentials chiffrés (`ciphertext`/`iv`/`tag`). Validation: `git diff --check` OK sur le scope migration.
 - [2026-05-02] P0 provider integrations Supabase: ajout des chemins async Supabase pour lister/créer/connecter/désactiver les intégrations provider par workspace, stocker et relire les credentials chiffrés, et utiliser ces connexions dans les routes settings/sites/issue-targets/providers. Validation: `npm run test --workspace @changethis/web` OK, `npm test` OK, `npm run typecheck` OK.
+- [2026-05-02] Micro-tâche onboarding `/projects`: ajout d'un état vide guidé quand aucun site réel n'est configuré, avec étapes connexion Git, création site, script widget et feedback test. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK.

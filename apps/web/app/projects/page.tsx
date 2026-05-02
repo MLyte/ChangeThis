@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { forbidden, unauthorized } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Clock3, Globe2, Inbox, RotateCcw, Send, type LucideIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Code2, GitBranch, Globe2, Inbox, MessageSquareText, RotateCcw, type LucideIcon } from "lucide-react";
 import type { FeedbackStatus } from "@changethis/shared";
 import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import type { ChangeThisProject } from "../../lib/demo-project";
@@ -102,6 +102,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const latestFeedback = feedbacks.at(0);
   const readyProjects = projects.filter((project) => project.issueTarget.namespace && project.issueTarget.project).length;
   const hasActiveFilters = isFilteringDashboard(filters);
+  const hasConfiguredSite = projects.length > 0;
 
   return (
     <main className="shell">
@@ -128,50 +129,56 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             </div>
           </div>
 
-            <DashboardViewTabs
-              activeCount={activeFeedbacks.length}
-              historyCount={historyFeedbacks.length}
-              status={filters.status}
-              totalCount={feedbacks.length}
-            />
-
-            <DashboardFilterBar
-              filteredCount={filteredFeedbacks.length}
-              filters={filters}
-              hasActiveFilters={hasActiveFilters}
-              historyCount={historyFeedbacks.length}
-              activeCount={activeFeedbacks.length}
-              priorityCount={priorityCount}
-              projects={projects}
-              statusCounts={feedbackStatusCounts}
-              totalCount={feedbacks.length}
-            />
-
-            {filteredFeedbacks.length === 0 ? (
-              <div className="empty-state compact-empty-state">
-                <h2>{hasActiveFilters ? "Aucun retour pour cette vue" : <T k="projects.empty.title" />}</h2>
-                <p>{hasActiveFilters ? "Ajustez les filtres, passez en Historique, ou revenez à la File active." : <T k="projects.empty.copy" />}</p>
-                {hasActiveFilters ? (
-                  <Link className="button secondary-button" href="/projects">Réinitialiser les filtres</Link>
-                ) : (
-                  <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
-                )}
-              </div>
+            {!hasConfiguredSite ? (
+              <ProjectsOnboardingEmptyState />
             ) : (
-              <BulkIssueForm>
-                <div className="feedback-table-head" aria-hidden="true">
-                  <span />
-                  <span>Feedback</span>
-                  <span>Site / page</span>
-                  <span>Statut</span>
-                  <span>Issue</span>
-                  <span>Reçu</span>
-                  <span>Actions</span>
-                </div>
-                <div className="feedback-list" role="list" aria-label="Retours à traiter">
-                  {filteredFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
-                </div>
-              </BulkIssueForm>
+              <>
+                <DashboardViewTabs
+                  activeCount={activeFeedbacks.length}
+                  historyCount={historyFeedbacks.length}
+                  status={filters.status}
+                  totalCount={feedbacks.length}
+                />
+
+                <DashboardFilterBar
+                  filteredCount={filteredFeedbacks.length}
+                  filters={filters}
+                  hasActiveFilters={hasActiveFilters}
+                  historyCount={historyFeedbacks.length}
+                  activeCount={activeFeedbacks.length}
+                  priorityCount={priorityCount}
+                  projects={projects}
+                  statusCounts={feedbackStatusCounts}
+                  totalCount={feedbacks.length}
+                />
+
+                {filteredFeedbacks.length === 0 ? (
+                  <div className="empty-state compact-empty-state">
+                    <h2>{hasActiveFilters ? "Aucun retour pour cette vue" : <T k="projects.empty.title" />}</h2>
+                    <p>{hasActiveFilters ? "Ajustez les filtres, passez en Historique, ou revenez à la File active." : <T k="projects.empty.copy" />}</p>
+                    {hasActiveFilters ? (
+                      <Link className="button secondary-button" href="/projects">Réinitialiser les filtres</Link>
+                    ) : (
+                      <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
+                    )}
+                  </div>
+                ) : (
+                  <BulkIssueForm>
+                    <div className="feedback-table-head" aria-hidden="true">
+                      <span />
+                      <span>Feedback</span>
+                      <span>Site / page</span>
+                      <span>Statut</span>
+                      <span>Issue</span>
+                      <span>Reçu</span>
+                      <span>Actions</span>
+                    </div>
+                    <div className="feedback-list" role="list" aria-label="Retours à traiter">
+                      {filteredFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
+                    </div>
+                  </BulkIssueForm>
+                )}
+              </>
             )}
           </section>
 
@@ -208,7 +215,13 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 <ProviderCount provider="gitlab" count={gitlabProjects} />
               </div>
               <div className="site-route-list">
-                {projects.map((project) => <ProjectRouteRow key={project.publicKey} project={project} />)}
+                {projects.length > 0 ? (
+                  projects.map((project) => <ProjectRouteRow key={project.publicKey} project={project} />)
+                ) : (
+                  <div className="site-route-empty">
+                    Ajoutez un site réel pour activer la route widget vers issue.
+                  </div>
+                )}
               </div>
             </section>
 
@@ -230,6 +243,83 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       </section>
       <AppFooter />
     </main>
+  );
+}
+
+function ProjectsOnboardingEmptyState() {
+  return (
+    <div className="empty-state compact-empty-state projects-onboarding-empty">
+      <div>
+        <p className="eyebrow">Premier site réel</p>
+        <h2>Préparez la file avant les retours clients</h2>
+        <p>Connectez Git, créez un site autorisé, installez le script puis envoyez un feedback test depuis ce site pour vérifier le circuit complet.</p>
+      </div>
+      <div className="onboarding-steps projects-onboarding-steps" aria-label="Étapes pour activer la file de retours">
+        <OnboardingStep
+          icon={GitBranch}
+          index="1"
+          title="Connexion Git"
+          copy="Activez GitHub ou GitLab pour que chaque retour puisse devenir une issue."
+        />
+        <OnboardingStep
+          icon={Globe2}
+          index="2"
+          title="Site réel"
+          copy="Créez le site, choisissez son domaine autorisé et le dépôt cible."
+        />
+        <OnboardingStep
+          icon={Code2}
+          index="3"
+          title="Script widget"
+          copy="Copiez la balise générée sur le site puis lancez le test d'installation."
+        />
+        <OnboardingStep
+          icon={MessageSquareText}
+          index="4"
+          title="Feedback test"
+          copy="Envoyez un retour depuis le site configuré pour alimenter cette file."
+        />
+      </div>
+      <div className="empty-state-actions">
+        <Link className="button" href="/settings/git-connections">
+          <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+          Connecter Git
+        </Link>
+        <Link className="button secondary-button" href="/settings/connected-sites">
+          <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+          Créer un site
+        </Link>
+        <Link className="button secondary-button" href="/demo">
+          <MessageSquareText aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+          Tester la démo
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function OnboardingStep({
+  copy,
+  icon: Icon,
+  index,
+  title
+}: {
+  copy: string;
+  icon: LucideIcon;
+  index: string;
+  title: string;
+}) {
+  return (
+    <div className="onboarding-step">
+      <span aria-hidden="true">{index}</span>
+      <div>
+        <strong>
+          <Icon aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+          {title}
+        </strong>
+        <p>{copy}</p>
+      </div>
+    </div>
   );
 }
 
