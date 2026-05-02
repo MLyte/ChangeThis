@@ -125,6 +125,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
       </section>
 
+      <MobilePreviewSection />
+
       <section className="home-section workflow-band">
         <div className="home-section-header">
           <p className="eyebrow"><T k="home.workflow.eyebrow" /></p>
@@ -184,6 +186,112 @@ function normalizeWaitlistStatus(value?: string): "joined" | "existing" | "error
   }
 
   return undefined;
+}
+
+function MobilePreviewSection() {
+  return (
+    <section className="home-section mobile-proof-section" aria-labelledby="mobile-proof-title">
+      <div className="mobile-proof-copy">
+        <p className="eyebrow"><T k="home.mobile.eyebrow" /></p>
+        <h2 id="mobile-proof-title"><T k="home.mobile.title" /></h2>
+        <p className="lede">
+          <T k="home.mobile.copy" />
+        </p>
+        <div className="mobile-proof-points">
+          <span><T k="home.mobile.point.visitor" /></span>
+          <span><T k="home.mobile.point.team" /></span>
+          <span><T k="home.mobile.point.context" /></span>
+        </div>
+      </div>
+
+      <div className="mobile-device-pair" aria-label="Aperçus mobiles ChangeThis côté visiteur et côté équipe">
+        <div className="iphone-pro-max-mockup user-mobile-mockup" aria-label="Aperçu mobile visiteur ChangeThis">
+          <span className="mobile-device-label"><T k="home.mobile.label.visitor" /></span>
+          <div className="iphone-frame">
+            <div className="iphone-screen">
+              <div className="iphone-dynamic-island" />
+              <div className="mobile-browser-bar">
+                <span>atelier-nova.be</span>
+              </div>
+              <div className="mobile-demo-page">
+                <span className="mobile-demo-kicker">Atelier Nova</span>
+                <h3>Objets calmes pour maisons vivantes.</h3>
+                <p>Une page client avec formulaire, collection et zones à commenter.</p>
+                <div className="mobile-demo-card" />
+                <div className="mobile-demo-lines">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+              <div className="mobile-widget-panel">
+                <div className="mobile-widget-header">
+                  <strong>Feedback</strong>
+                  <span>Capture</span>
+                </div>
+                <div className="mobile-widget-tabs">
+                  <span>Note</span>
+                  <span className="active">Pin</span>
+                  <span>Shot</span>
+                </div>
+                <div className="mobile-widget-text">Le bouton devis est trop bas sur mobile.</div>
+                <button type="button">Envoyer</button>
+              </div>
+              <button className="mobile-feedback-button" type="button">Feedback</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="iphone-pro-max-mockup admin-mobile-mockup" aria-label="Aperçu mobile équipe ChangeThis">
+          <span className="mobile-device-label"><T k="home.mobile.label.team" /></span>
+          <div className="iphone-frame">
+            <div className="iphone-screen">
+              <div className="iphone-dynamic-island" />
+              <div className="mobile-browser-bar">
+                <span>app.changethis.dev</span>
+              </div>
+              <div className="mobile-admin-console">
+                <div className="mobile-admin-header">
+                  <span className="mobile-demo-kicker">Inbox</span>
+                  <strong>Retours entrants</strong>
+                </div>
+                <div className="mobile-admin-tabs">
+                  <span className="active">À traiter</span>
+                  <span>À revoir</span>
+                </div>
+                <article className="mobile-admin-feedback active">
+                  <div>
+                    <strong>Pin sur /checkout</strong>
+                    <span>Cabinet Orion · mobile</span>
+                  </div>
+                  <em>À créer</em>
+                </article>
+                <article className="mobile-admin-feedback">
+                  <div>
+                    <strong>Capture sur /pricing</strong>
+                    <span>Studio Lumen · GitLab</span>
+                  </div>
+                  <em>En file</em>
+                </article>
+                <article className="mobile-admin-feedback review">
+                  <div>
+                    <strong>Note sur /demo</strong>
+                    <span>Atelier Nova · GitHub</span>
+                  </div>
+                  <em>À revoir</em>
+                </article>
+                <div className="mobile-admin-issue-card">
+                  <span>Destination</span>
+                  <strong>atelier-nova/portal-staging</strong>
+                  <button type="button">Créer l’issue</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 type WaitlistFormProps = {

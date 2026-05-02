@@ -6299,6 +6299,148 @@ code {
   display: none;
 }
 
+.app-home .mobile-proof-section {
+  align-items: center;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f7f8ff 100%);
+  border-block: 1px solid var(--line);
+  color: var(--ink);
+  display: grid;
+  gap: clamp(28px, 4.5vw, 64px);
+  grid-template-columns: minmax(280px, 0.78fr) minmax(520px, 1.22fr);
+  max-width: none;
+  overflow: hidden;
+  padding-inline: max(var(--home-gutter), calc((100vw - var(--home-max)) / 2 + var(--home-gutter)));
+}
+
+.app-home .mobile-proof-copy {
+  justify-self: end;
+  max-width: 560px;
+}
+
+.app-home .mobile-proof-copy .eyebrow {
+  color: var(--accent);
+}
+
+.app-home .mobile-proof-copy h2 {
+  font-size: clamp(32px, 4vw, 54px);
+}
+
+.app-home .mobile-proof-copy .lede {
+  color: var(--muted);
+}
+
+.app-home .mobile-proof-points {
+  gap: 8px;
+  margin-top: 26px;
+}
+
+.app-home .mobile-proof-points span {
+  background: var(--panel);
+  border: 1px solid rgba(63, 81, 181, 0.16);
+  border-radius: 7px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.app-home .mobile-device-pair {
+  align-items: center;
+  background: var(--primary-soft);
+  border: 1px solid rgba(63, 81, 181, 0.14);
+  border-radius: 8px;
+  display: grid;
+  gap: clamp(16px, 2.6vw, 34px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-self: stretch;
+  min-width: 0;
+  padding: clamp(18px, 3vw, 34px);
+}
+
+.app-home .mobile-device-label {
+  background: white;
+  border: 1px solid rgba(63, 81, 181, 0.14);
+  border-radius: 7px;
+  color: var(--muted-strong);
+  font-size: 11px;
+  padding: 7px 10px;
+}
+
+.app-home .admin-mobile-mockup {
+  margin-top: clamp(28px, 5vw, 58px);
+}
+
+.app-home .iphone-frame {
+  border-color: rgba(23, 32, 51, 0.18);
+  border-radius: 42px;
+  box-shadow:
+    0 24px 62px rgba(23, 32, 51, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  padding: 10px;
+  width: min(286px, 21vw);
+}
+
+.app-home .iphone-screen {
+  border-radius: 32px;
+}
+
+.app-home .mobile-browser-bar {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(63, 81, 181, 0.12);
+  height: 34px;
+  margin: 52px 14px 12px;
+}
+
+.app-home .mobile-demo-page {
+  padding: 0 18px;
+}
+
+.app-home .mobile-demo-page h3 {
+  font-size: 22px;
+  line-height: 1.05;
+}
+
+.app-home .mobile-widget-panel {
+  border-color: rgba(63, 81, 181, 0.16);
+  border-radius: 16px;
+  bottom: 74px;
+  box-shadow: 0 18px 44px rgba(23, 32, 51, 0.16);
+  left: 16px;
+  padding: 12px;
+  right: 16px;
+}
+
+.app-home .mobile-widget-text {
+  border-color: rgba(63, 81, 181, 0.14);
+}
+
+.app-home .mobile-feedback-button {
+  bottom: 18px;
+  box-shadow: 0 12px 28px rgba(63, 81, 181, 0.24);
+  right: 18px;
+}
+
+.app-home .mobile-admin-console {
+  gap: 9px;
+  padding: 18px 16px 20px;
+}
+
+.app-home .mobile-admin-header strong {
+  font-size: 22px;
+}
+
+.app-home .mobile-admin-feedback {
+  border-radius: 12px;
+  min-height: 56px;
+  padding: 10px;
+}
+
+.app-home .mobile-admin-issue-card {
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(23, 32, 51, 0.14);
+  padding: 12px;
+}
+
 .console-preview {
   box-shadow: 0 18px 48px rgba(23, 26, 31, 0.1);
   justify-self: stretch;
@@ -6580,6 +6722,24 @@ code {
     border-left: 1px solid var(--line);
     border-top: 0;
   }
+
+  .app-home .mobile-proof-section {
+    grid-template-columns: 1fr;
+  }
+
+  .app-home .mobile-proof-copy {
+    justify-self: start;
+    max-width: 760px;
+  }
+
+  .app-home .mobile-device-pair {
+    justify-self: center;
+    max-width: 760px;
+  }
+
+  .app-home .iphone-frame {
+    width: min(292px, 36vw);
+  }
 }
 
 @media (max-width: 900px) {
@@ -6597,6 +6757,15 @@ code {
   .beta-scope-section,
   .waitlist-closing-section {
     grid-template-columns: 1fr;
+  }
+
+  .app-home .mobile-device-pair {
+    max-width: 620px;
+    padding: 18px;
+  }
+
+  .app-home .iphone-frame {
+    width: min(270px, 38vw);
   }
 }
 
@@ -6642,5 +6811,24 @@ code {
   .waitlist-form .button {
     min-width: 0;
     width: 100%;
+  }
+
+  .app-home .mobile-proof-section {
+    padding-block: 54px;
+    padding-inline: clamp(16px, 5vw, 24px);
+  }
+
+  .app-home .mobile-device-pair {
+    grid-template-columns: 1fr;
+    max-width: 360px;
+    padding: 16px;
+  }
+
+  .app-home .admin-mobile-mockup {
+    margin-top: 0;
+  }
+
+  .app-home .iphone-frame {
+    width: min(300px, 82vw);
   }
 }
