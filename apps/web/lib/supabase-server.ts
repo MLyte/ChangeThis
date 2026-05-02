@@ -91,6 +91,16 @@ export type SupabaseEmailSignUpResult =
       error: "invalid" | "unavailable" | "missing";
     };
 
+export type PublicLaunchWaitlistResult =
+  | {
+      ok: true;
+      status: "joined" | "existing";
+    }
+  | {
+      ok: false;
+      error: "invalid" | "unavailable" | "missing";
+    };
+
 function getSupabaseUrl(): string | undefined {
   return process.env.NEXT_PUBLIC_SUPABASE_URL;
 }
@@ -353,6 +363,57 @@ export async function updateSupabasePassword(input: {
   return {
     ok: true
   };
+}
+
+export async function joinPublicLaunchWaitlist(input: {
+  email: string;
+  source?: string;
+}): Promise<PublicLaunchWaitlistResult> {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey()) {
+    return {
+      ok: false,
+      error: "unavailable"
+    };
+  }
+
+  const email = input.email.trim().toLowerCase();
+
+  if (!email) {
+    return {
+      ok: false,
+      error: "missing"
+    };
+  }
+
+  if (!isValidEmail(email)) {
+    return {
+      ok: false,
+      error: "invalid"
+    };
+  }
+
+  try {
+    const rows = await supabaseRest<Array<{ id: string }>>("/rest/v1/public_launch_waitlist?on_conflict=email", {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=ignore-duplicates,return=representation"
+      },
+      body: JSON.stringify({
+        email,
+        source: input.source?.trim() || "homepage"
+      })
+    });
+
+    return {
+      ok: true,
+      status: rows[0]?.id ? "joined" : "existing"
+    };
+  } catch {
+    return {
+      ok: false,
+      error: "unavailable"
+    };
+  }
 }
 
 export async function createWorkspaceForUser(input: {
@@ -785,4 +846,8 @@ function normalizeWorkspaceMemberStatus(value: string | undefined): WorkspaceMem
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function isValidEmail(value: string): boolean {
+  return value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }

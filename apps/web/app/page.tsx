@@ -1,7 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import { Camera, GitPullRequestCreate, Inbox, MapPin, MessageSquare, MousePointerClick, RefreshCw, Send, Settings2, type LucideIcon } from "lucide-react";
 import { isPublicSignupEnabled } from "../lib/auth";
+import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
 import logoChangeThis from "./assets/logoChangeThis.png";
@@ -24,8 +26,32 @@ const productBlocks: Array<{ titleKey: string; copyKey: string; emphasisKey: str
   { titleKey: "home.product.retry.title", copyKey: "home.product.retry.copy", emphasisKey: "home.product.retry.strong", Icon: RefreshCw }
 ];
 
-export default async function HomePage() {
+type HomePageProps = {
+  searchParams?: Promise<{
+    waitlist?: string;
+  }>;
+};
+
+export default async function HomePage({ searchParams }: HomePageProps) {
   const publicSignupEnabled = isPublicSignupEnabled();
+  const params = await searchParams;
+  const waitlistStatus = normalizeWaitlistStatus(params?.waitlist);
+
+  async function waitlistAction(formData: FormData) {
+    "use server";
+
+    const email = formData.get("email")?.toString().trim() ?? "";
+    const result = await joinPublicLaunchWaitlist({
+      email,
+      source: "homepage"
+    });
+
+    if (!result.ok) {
+      redirect(`/?waitlist=${encodeURIComponent(result.error)}`);
+    }
+
+    redirect(`/?waitlist=${encodeURIComponent(result.status)}`);
+  }
 
   return (
     <main className="shell app-home">
@@ -52,6 +78,20 @@ export default async function HomePage() {
               <strong><T k="login.privateBeta.title" /></strong>
               <span><T k="home.hero.privateBeta" /></span>
             </div>
+          ) : null}
+          {!publicSignupEnabled ? (
+            <form action={waitlistAction} className="waitlist-form">
+              <label>
+                <span><T k="home.waitlist.label" /></span>
+                <input autoComplete="email" name="email" required type="email" />
+              </label>
+              <button className="button" type="submit"><T k="home.waitlist.submit" /></button>
+              {waitlistStatus ? (
+                <p className={`waitlist-status ${waitlistStatus === "error" ? "error" : "success"}`} role="status">
+                  <T k={`home.waitlist.status.${waitlistStatus}`} />
+                </p>
+              ) : null}
+            </form>
           ) : null}
           <div className="hero-actions">
             <Link className="button" href="/projects"><T k="home.hero.primary" /></Link>
@@ -120,6 +160,18 @@ export default async function HomePage() {
       <AppFooter />
     </main>
   );
+}
+
+function normalizeWaitlistStatus(value?: string): "joined" | "existing" | "error" | undefined {
+  if (value === "joined" || value === "existing") {
+    return value;
+  }
+
+  if (value === "invalid" || value === "missing" || value === "unavailable") {
+    return "error";
+  }
+
+  return undefined;
 }
 
 function MobilePreviewSection() {

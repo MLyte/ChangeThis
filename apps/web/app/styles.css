@@ -640,6 +640,64 @@ h3 {
   margin-top: 28px;
 }
 
+.waitlist-form {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  margin-top: 18px;
+  max-width: 560px;
+}
+
+.waitlist-form label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.waitlist-form label span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.waitlist-form input {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  min-height: 42px;
+  min-width: 0;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.waitlist-form .button {
+  min-height: 42px;
+}
+
+.waitlist-status {
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 850;
+  grid-column: 1 / -1;
+  line-height: 1.4;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.waitlist-status.success {
+  background: var(--success-soft);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+}
+
+.waitlist-status.error {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
+  color: var(--coral);
+}
+
 .hero-trust {
   color: var(--muted);
   font-size: 14px;
@@ -5386,6 +5444,7 @@ code {
   }
 
   .repo-form,
+  .waitlist-form,
   .site-repo-row,
   .site-row-main,
   .site-row-meta,
