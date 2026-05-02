@@ -403,25 +403,48 @@ textarea {
 
 .app-footer {
   align-items: center;
+  background: rgba(247, 248, 255, 0.95);
   border-top: 1px solid var(--line);
+  backdrop-filter: blur(14px);
   color: var(--muted);
   display: flex;
   gap: 18px;
   justify-content: space-between;
   margin-top: auto;
-  padding: 18px clamp(18px, 4vw, 56px);
+  padding: 10px clamp(18px, 4vw, 56px);
+  position: sticky;
+  bottom: 0;
+  z-index: 19;
 }
 
-.app-footer div,
+.footer-brand,
+.footer-ops,
 .app-footer nav,
 .app-footer a {
   align-items: center;
   display: flex;
 }
 
-.app-footer div {
+.footer-brand {
   gap: 6px;
   min-width: 0;
+}
+
+.footer-ops {
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.footer-local-tools {
+  align-items: center;
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  padding-left: 10px;
 }
 
 .app-footer strong {
@@ -1888,6 +1911,8 @@ dd {
 }
 
 .auth-shell {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
 }
 
@@ -1900,8 +1925,11 @@ dd {
   display: grid;
   gap: clamp(28px, 5vw, 56px);
   grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.58fr);
+  margin: 0 auto;
+  max-width: var(--page-max);
   min-height: calc(100vh - 64px);
   padding: clamp(38px, 6vw, 72px) clamp(18px, 4vw, 56px);
+  width: 100%;
 }
 
 .signup-layout {
@@ -4704,9 +4732,16 @@ code {
     flex-direction: column;
   }
 
-  .app-footer div,
+  .footer-brand,
+  .footer-ops,
   .app-footer nav {
     flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .footer-local-tools {
+    border-left: 0;
+    padding-left: 0;
   }
 
   .session-menu {

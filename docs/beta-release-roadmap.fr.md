@@ -5,10 +5,10 @@ Ce document transforme le plan de production en piste executable pour une beta p
 ## Phase 1 - Stabilisation locale
 
 - Installer avec `npm ci`.
-- Valider les gates locaux: `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`.
+- Valider les gates locaux: `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`, `npm run security:audit`.
 - Verifier un feedback complet depuis `/demo` vers `/projects`.
 - Verifier une creation d'issue manuelle avec un depot GitHub ou GitLab de test.
-- Documenter toute exception `npm audit` avant ouverture beta.
+- Documenter toute exception `npm audit` avec package, CVE, impact et plan de correction avant ouverture beta.
 
 ## Phase 2 - GitHub et CI
 

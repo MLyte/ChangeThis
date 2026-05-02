@@ -110,9 +110,10 @@ Livrables :
 Gates CI recommandés :
 
 1. `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`.
-2. Tests d'intégration API (`/api/public/feedback`, `/api/widget/config`).
-3. Tests E2E widget -> API -> inbox (`/demo` vers `/projects`).
-4. Tests de chaos simples: redémarrage service, indisponibilité provider, timeout DB.
+2. `npm run security:audit` comme gate non destructif; toute vulnérabilité `high` ou `critical` doit bloquer la release ou être documentée avec package, CVE, impact et plan de correction.
+3. Tests d'intégration API (`/api/public/feedback`, `/api/widget/config`).
+4. Tests E2E widget -> API -> inbox (`/demo` vers `/projects`).
+5. Tests de chaos simples: redémarrage service, indisponibilité provider, timeout DB.
 
 ## 8) Plan de release par étapes
 

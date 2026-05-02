@@ -9,6 +9,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build && tsc -p tsconfig.json --emitDeclarationOnly",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 import { forbidden, unauthorized } from "next/navigation";
 import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import { getFeedbackRepository } from "../../lib/feedback-repository";
-import { listProviderIntegrations } from "../../lib/provider-integrations";
+import { listProviderIntegrationsAsync } from "../../lib/provider-integrations";
 import { installSnippet, listConfiguredProjects } from "../../lib/project-registry";
 import { listWorkspaceMembers, type WorkspaceMemberSummary } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
@@ -45,7 +45,7 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
       }
     };
   });
-  const providerIntegrations = listProviderIntegrations(workspaceId);
+  const providerIntegrations = await listProviderIntegrationsAsync(workspaceId);
   const workspaceUsers = await loadWorkspaceUsers(session.workspace.id, {
     userId: session.user.id,
     email: session.user.email,

@@ -10,6 +10,8 @@ import {
   type WidgetLocale
 } from "@changethis/shared";
 import { demoProject, localWorkspace, type ChangeThisProject } from "./demo-project";
+import { getDataStoreMode } from "./runtime";
+import { isSupabaseServiceConfigured, supabaseServiceRest } from "./supabase-server";
 
 type StoredConnectedSite = Site & {
   issueTarget: IssueTarget;
@@ -17,6 +19,34 @@ type StoredConnectedSite = Site & {
 
 type SiteRegistryStore = {
   sites: StoredConnectedSite[];
+};
+
+type SupabaseProjectRow = {
+  id: string;
+  organization_id: string;
+  name: string;
+  public_key: string;
+  allowed_origins: string[];
+  widget_locale: unknown;
+  widget_button_position: unknown;
+  widget_button_variant: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+type SupabaseProjectPublicKeyRow = {
+  project_id: string;
+  public_key: string;
+};
+
+type SupabaseIssueTargetRow = {
+  project_id: string;
+  integration_id?: string | null;
+  provider: IssueProvider;
+  namespace: string;
+  project_name: string;
+  external_project_id?: string | null;
+  web_url?: string | null;
 };
 
 export type CreateConnectedSiteInput = {
@@ -57,6 +87,10 @@ const localDataFile = path.join(localDataDir, "connected-sites.json");
 let lock: Promise<unknown> = Promise.resolve();
 
 export async function listConfiguredProjects(workspaceId?: string): Promise<ChangeThisProject[]> {
+  if (usesSupabaseProjectRegistry()) {
+    return listSupabaseConfiguredProjects(workspaceId);
+  }
+
   const store = await readStore();
   return store.sites
     .filter((site) => !workspaceId || site.workspaceId === workspaceId)
@@ -68,6 +102,10 @@ export async function findConfiguredProjectByKey(
   projectKey: string,
   workspaceId?: string
 ): Promise<ChangeThisProject | undefined> {
+  if (usesSupabaseProjectRegistry()) {
+    return findSupabaseConfiguredProjectByKey(projectKey, workspaceId);
+  }
+
   const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === projectKey);
   if (project) {
     return project;
@@ -89,6 +127,10 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
   const allowedOrigin = normalizeAllowedOrigin(input.allowedOrigin);
   if (!allowedOrigin) {
     throw new ProjectTargetValidationError("Site URL must be a valid HTTP origin", 422);
+  }
+
+  if (usesSupabaseProjectRegistry()) {
+    return createSupabaseConnectedSite(input, issueTarget, allowedOrigin);
   }
 
   const workspaceId = input.workspaceId ?? localWorkspace.id;
@@ -118,6 +160,10 @@ export async function updateProjectWidgetSettings(
   update: ProjectWidgetSettingsUpdate,
   workspaceId?: string
 ): Promise<ChangeThisProject> {
+  if (usesSupabaseProjectRegistry()) {
+    return updateSupabaseProjectWidgetSettings(update, workspaceId);
+  }
+
   let updatedProject: ChangeThisProject | undefined;
   const now = new Date().toISOString();
 
@@ -148,6 +194,10 @@ export async function updateProjectWidgetSettings(
 }
 
 export async function deleteConnectedSite(projectKey: string, workspaceId?: string): Promise<boolean> {
+  if (usesSupabaseProjectRegistry()) {
+    return deleteSupabaseConnectedSite(projectKey, workspaceId);
+  }
+
   let deleted = false;
 
   await updateStore((store) => {
@@ -166,6 +216,10 @@ export async function deleteConnectedSite(projectKey: string, workspaceId?: stri
 }
 
 export async function clearConnectedSites(workspaceId: string): Promise<number> {
+  if (usesSupabaseProjectRegistry()) {
+    return clearSupabaseConnectedSites(workspaceId);
+  }
+
   let deleted = 0;
 
   await updateStore((store) => {
@@ -185,6 +239,10 @@ export async function clearConnectedSites(workspaceId: string): Promise<number> 
 }
 
 export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate, workspaceId?: string): Promise<ChangeThisProject> {
+  if (usesSupabaseProjectRegistry()) {
+    return saveSupabaseProjectIssueTarget(update, workspaceId);
+  }
+
   const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === update.projectKey);
 
   if (!project) {
@@ -225,6 +283,10 @@ export async function isKnownOrigin(origin: string | null): Promise<boolean> {
     return false;
   }
 
+  if (usesSupabaseProjectRegistry()) {
+    return isKnownSupabaseOrigin(origin);
+  }
+
   const store = await readStore();
   return demoProject.allowedOrigins.includes(origin) || store.sites.some((site) => site.allowedOrigins.includes(origin));
 }
@@ -263,6 +325,411 @@ export class ProjectTargetValidationError extends Error {
     this.name = "ProjectTargetValidationError";
     this.status = status;
   }
+}
+
+function usesSupabaseProjectRegistry(): boolean {
+  return getDataStoreMode() === "supabase";
+}
+
+function ensureSupabaseProjectRegistryConfigured(): void {
+  if (!isSupabaseServiceConfigured()) {
+    throw new Error("DATA_STORE=supabase requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
+  }
+}
+
+async function listSupabaseConfiguredProjects(workspaceId?: string): Promise<ChangeThisProject[]> {
+  ensureSupabaseProjectRegistryConfigured();
+
+  if (workspaceId && !isUuid(workspaceId)) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    select: supabaseProjectSelect(),
+    order: "created_at.desc"
+  });
+
+  if (workspaceId) {
+    params.set("organization_id", `eq.${workspaceId}`);
+  }
+
+  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`);
+  return hydrateSupabaseProjects(projectRows);
+}
+
+async function findSupabaseConfiguredProjectByKey(
+  projectKey: string,
+  workspaceId?: string
+): Promise<ChangeThisProject | undefined> {
+  ensureSupabaseProjectRegistryConfigured();
+
+  if (!projectKey || (workspaceId && !isUuid(workspaceId))) {
+    return undefined;
+  }
+
+  const keyParams = new URLSearchParams({
+    public_key: `eq.${projectKey}`,
+    status: "eq.active",
+    select: "project_id,public_key",
+    limit: "1"
+  });
+  const keyRows = await supabaseServiceRest<SupabaseProjectPublicKeyRow[]>(`/rest/v1/project_public_keys?${keyParams.toString()}`);
+  const activeKey = keyRows[0];
+
+  if (!activeKey) {
+    return undefined;
+  }
+
+  const projectParams = new URLSearchParams({
+    id: `eq.${activeKey.project_id}`,
+    select: supabaseProjectSelect(),
+    limit: "1"
+  });
+
+  if (workspaceId) {
+    projectParams.set("organization_id", `eq.${workspaceId}`);
+  }
+
+  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${projectParams.toString()}`);
+  return (await hydrateSupabaseProjects(projectRows, [activeKey]))[0];
+}
+
+async function createSupabaseConnectedSite(
+  input: CreateConnectedSiteInput,
+  issueTarget: IssueTarget,
+  allowedOrigin: string
+): Promise<ChangeThisProject> {
+  ensureSupabaseProjectRegistryConfigured();
+
+  if (!input.workspaceId || !isUuid(input.workspaceId)) {
+    throw new ProjectTargetValidationError("Workspace is required for Supabase project registry", 422);
+  }
+
+  const publicKey = `ct_${crypto.randomUUID().replaceAll("-", "")}`;
+  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>("/rest/v1/projects", {
+    method: "POST",
+    headers: {
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify({
+      organization_id: input.workspaceId,
+      name: normalizeSiteName(input.name) ?? issueTarget.project,
+      public_key: publicKey,
+      allowed_origins: [allowedOrigin],
+      widget_locale: input.widgetLocale ?? "fr",
+      widget_button_position: input.widgetButtonPosition ?? "bottom-right",
+      widget_button_variant: input.widgetButtonVariant ?? "default"
+    })
+  });
+  const projectRow = projectRows[0];
+
+  if (!projectRow) {
+    throw new Error("Supabase did not return the created project");
+  }
+
+  await supabaseServiceRest("/rest/v1/project_public_keys", {
+    method: "POST",
+    headers: {
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify({
+      project_id: projectRow.id,
+      public_key: publicKey,
+      status: "active",
+      activated_at: projectRow.created_at
+    })
+  });
+
+  const issueTargetRows = await supabaseServiceRest<SupabaseIssueTargetRow[]>("/rest/v1/issue_targets", {
+    method: "POST",
+    headers: {
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify({
+      project_id: projectRow.id,
+      ...toSupabaseIssueTargetPayload(issueTarget)
+    })
+  });
+  const project = mapSupabaseProject(projectRow, publicKey, issueTargetRows[0]);
+
+  if (!project) {
+    throw new Error("Supabase returned an invalid project registry row");
+  }
+
+  return project;
+}
+
+async function updateSupabaseProjectWidgetSettings(
+  update: ProjectWidgetSettingsUpdate,
+  workspaceId?: string
+): Promise<ChangeThisProject> {
+  const project = await findSupabaseConfiguredProjectByKey(update.projectKey, workspaceId);
+
+  if (!project || !isUuid(project.id)) {
+    throw new ProjectTargetValidationError("Unknown project", 404);
+  }
+
+  const params = new URLSearchParams({
+    id: `eq.${project.id}`,
+    select: supabaseProjectSelect(),
+    limit: "1"
+  });
+
+  if (workspaceId) {
+    params.set("organization_id", `eq.${workspaceId}`);
+  }
+
+  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`, {
+    method: "PATCH",
+    headers: {
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify({
+      widget_locale: update.widgetLocale,
+      widget_button_position: update.widgetButtonPosition,
+      widget_button_variant: update.widgetButtonVariant
+    })
+  });
+  const updatedProject = mapSupabaseProject(projectRows[0], project.publicKey, toSupabaseIssueTargetRow(project.id, project.issueTarget));
+
+  if (!updatedProject) {
+    throw new ProjectTargetValidationError("Unknown project", 404);
+  }
+
+  return updatedProject;
+}
+
+async function deleteSupabaseConnectedSite(projectKey: string, workspaceId?: string): Promise<boolean> {
+  const project = await findSupabaseConfiguredProjectByKey(projectKey, workspaceId);
+
+  if (!project || !isUuid(project.id)) {
+    return false;
+  }
+
+  const params = new URLSearchParams({
+    id: `eq.${project.id}`
+  });
+
+  if (workspaceId) {
+    params.set("organization_id", `eq.${workspaceId}`);
+  }
+
+  await supabaseServiceRest(`/rest/v1/projects?${params.toString()}`, {
+    method: "DELETE",
+    headers: {
+      Prefer: "return=minimal"
+    }
+  });
+
+  return true;
+}
+
+async function clearSupabaseConnectedSites(workspaceId: string): Promise<number> {
+  if (!isUuid(workspaceId)) {
+    return 0;
+  }
+
+  const projects = await listSupabaseConfiguredProjects(workspaceId);
+
+  if (projects.length === 0) {
+    return 0;
+  }
+
+  const params = new URLSearchParams({
+    organization_id: `eq.${workspaceId}`
+  });
+  await supabaseServiceRest(`/rest/v1/projects?${params.toString()}`, {
+    method: "DELETE",
+    headers: {
+      Prefer: "return=minimal"
+    }
+  });
+
+  return projects.length;
+}
+
+async function saveSupabaseProjectIssueTarget(update: ProjectIssueTargetUpdate, workspaceId?: string): Promise<ChangeThisProject> {
+  const project = await findSupabaseConfiguredProjectByKey(update.projectKey, workspaceId);
+
+  if (!project || !isUuid(project.id)) {
+    throw new ProjectTargetValidationError("Unknown project", 404);
+  }
+
+  const issueTarget = parseRepositoryUrl(update.repositoryUrl, update.provider, {
+    externalProjectId: update.externalProjectId,
+    integrationId: update.integrationId
+  });
+
+  if (!issueTarget) {
+    throw new ProjectTargetValidationError("Repository URL must match the selected provider", 422);
+  }
+
+  const params = new URLSearchParams({
+    on_conflict: "project_id"
+  });
+  const issueTargetRows = await supabaseServiceRest<SupabaseIssueTargetRow[]>(`/rest/v1/issue_targets?${params.toString()}`, {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=representation"
+    },
+    body: JSON.stringify({
+      project_id: project.id,
+      ...toSupabaseIssueTargetPayload(issueTarget)
+    })
+  });
+  const updatedIssueTarget = mapSupabaseIssueTarget(issueTargetRows[0]) ?? issueTarget;
+
+  return {
+    ...project,
+    issueTarget: updatedIssueTarget
+  };
+}
+
+async function isKnownSupabaseOrigin(origin: string): Promise<boolean> {
+  const normalizedOrigin = normalizeAllowedOrigin(origin);
+
+  if (normalizedOrigin !== origin) {
+    return false;
+  }
+
+  const projects = await listSupabaseConfiguredProjects();
+  return projects.some((project) => project.allowedOrigins.includes(origin));
+}
+
+async function hydrateSupabaseProjects(
+  projectRows: SupabaseProjectRow[],
+  activeKeyRows?: SupabaseProjectPublicKeyRow[]
+): Promise<ChangeThisProject[]> {
+  const projectIds = projectRows.map((project) => project.id).filter(isUuid);
+
+  if (projectIds.length === 0) {
+    return [];
+  }
+
+  const [keyRows, issueTargetRows] = await Promise.all([
+    activeKeyRows ?? listSupabaseActiveProjectKeys(projectIds),
+    listSupabaseIssueTargets(projectIds)
+  ]);
+  const keysByProjectId = new Map(keyRows.map((key) => [key.project_id, key.public_key]));
+  const issueTargetsByProjectId = new Map(issueTargetRows.map((target) => [target.project_id, target]));
+
+  return projectRows.flatMap((projectRow) => {
+    const publicKey = keysByProjectId.get(projectRow.id);
+
+    if (!publicKey) {
+      return [];
+    }
+
+    const project = mapSupabaseProject(projectRow, publicKey, issueTargetsByProjectId.get(projectRow.id));
+    return project ? [project] : [];
+  });
+}
+
+async function listSupabaseActiveProjectKeys(projectIds: string[]): Promise<SupabaseProjectPublicKeyRow[]> {
+  const params = new URLSearchParams({
+    project_id: inFilter(projectIds),
+    status: "eq.active",
+    select: "project_id,public_key"
+  });
+
+  return supabaseServiceRest<SupabaseProjectPublicKeyRow[]>(`/rest/v1/project_public_keys?${params.toString()}`);
+}
+
+async function listSupabaseIssueTargets(projectIds: string[]): Promise<SupabaseIssueTargetRow[]> {
+  const params = new URLSearchParams({
+    project_id: inFilter(projectIds),
+    select: "project_id,integration_id,provider,namespace,project_name,external_project_id,web_url",
+    order: "created_at.desc"
+  });
+
+  return supabaseServiceRest<SupabaseIssueTargetRow[]>(`/rest/v1/issue_targets?${params.toString()}`);
+}
+
+function mapSupabaseProject(
+  projectRow: SupabaseProjectRow | undefined,
+  publicKey: string | undefined,
+  issueTargetRow: SupabaseIssueTargetRow | undefined
+): ChangeThisProject | undefined {
+  if (!projectRow || !publicKey || !Array.isArray(projectRow.allowed_origins)) {
+    return undefined;
+  }
+
+  const issueTarget = mapSupabaseIssueTarget(issueTargetRow);
+
+  if (!issueTarget) {
+    return undefined;
+  }
+
+  return {
+    id: projectRow.id,
+    workspaceId: projectRow.organization_id,
+    publicKey,
+    name: projectRow.name,
+    allowedOrigins: projectRow.allowed_origins.filter((origin) => typeof origin === "string" && normalizeAllowedOrigin(origin) === origin),
+    widgetLocale: parseWidgetLocale(projectRow.widget_locale),
+    widgetButtonPosition: parseWidgetButtonPosition(projectRow.widget_button_position),
+    widgetButtonVariant: parseWidgetButtonVariant(projectRow.widget_button_variant),
+    issueTarget,
+    createdAt: projectRow.created_at,
+    updatedAt: projectRow.updated_at
+  };
+}
+
+function mapSupabaseIssueTarget(row: SupabaseIssueTargetRow | undefined): IssueTarget | undefined {
+  if (!row) {
+    return undefined;
+  }
+
+  return validIssueTarget({
+    provider: row.provider,
+    namespace: row.namespace,
+    project: row.project_name,
+    externalProjectId: row.external_project_id ?? undefined,
+    integrationId: row.integration_id ?? undefined,
+    webUrl: row.web_url ?? undefined
+  });
+}
+
+function toSupabaseIssueTargetPayload(issueTarget: IssueTarget): Record<string, string | null> {
+  return {
+    provider: issueTarget.provider,
+    namespace: issueTarget.namespace,
+    project_name: issueTarget.project,
+    external_project_id: issueTarget.externalProjectId ?? null,
+    integration_id: issueTarget.integrationId && isUuid(issueTarget.integrationId) ? issueTarget.integrationId : null,
+    web_url: issueTarget.webUrl ?? null
+  };
+}
+
+function toSupabaseIssueTargetRow(projectId: string, issueTarget: IssueTarget): SupabaseIssueTargetRow {
+  return {
+    project_id: projectId,
+    provider: issueTarget.provider,
+    namespace: issueTarget.namespace,
+    project_name: issueTarget.project,
+    external_project_id: issueTarget.externalProjectId,
+    integration_id: issueTarget.integrationId,
+    web_url: issueTarget.webUrl
+  };
+}
+
+function supabaseProjectSelect(): string {
+  return [
+    "id",
+    "organization_id",
+    "name",
+    "public_key",
+    "allowed_origins",
+    "widget_locale",
+    "widget_button_position",
+    "widget_button_variant",
+    "created_at",
+    "updated_at"
+  ].join(",");
+}
+
+function inFilter(values: string[]): string {
+  return `in.(${values.join(",")})`;
 }
 
 function parseRepositoryUrl(
@@ -436,4 +903,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

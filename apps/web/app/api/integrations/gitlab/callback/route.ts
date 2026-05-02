@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { saveProviderCredentialSecret } from "../../../../../lib/credential-store";
-import { decodeProviderConnectState, normalizeProviderReturnTo } from "../../../../../lib/provider-integrations";
+import { saveProviderCredentialSecretAsync } from "../../../../../lib/credential-store";
+import { decodeProviderConnectState, normalizeProviderReturnTo, recordProviderConnection } from "../../../../../lib/provider-integrations";
 import { insertProviderCredentialMetadata } from "../../../../../lib/supabase-server";
 
 export async function GET(request: Request) {
@@ -20,7 +20,14 @@ export async function GET(request: Request) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    const storageReference = saveProviderCredentialSecret({
+    await recordProviderConnection({
+      workspaceId: state.workspaceId,
+      provider: "gitlab",
+      integrationId: state.integrationId,
+      baseUrl: process.env.GITLAB_BASE_URL ?? "https://gitlab.com"
+    });
+
+    const storageReference = await saveProviderCredentialSecretAsync({
       workspaceId: state.workspaceId,
       provider: "gitlab",
       integrationId: state.integrationId,
@@ -40,7 +47,7 @@ export async function GET(request: Request) {
     });
 
     if (token.refreshToken) {
-      saveProviderCredentialSecret({
+      await saveProviderCredentialSecretAsync({
         workspaceId: state.workspaceId,
         provider: "gitlab",
         integrationId: state.integrationId,

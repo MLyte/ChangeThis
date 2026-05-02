@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
 import { requirePrivateMutationOrigin } from "../../../../../lib/api-security";
-import { deleteProviderCredentialSecrets } from "../../../../../lib/credential-store";
-import { disableProviderIntegration, enableProviderIntegration } from "../../../../../lib/provider-integration-state";
-import { getProviderIntegration, isIssueProvider } from "../../../../../lib/provider-integrations";
+import { deleteProviderCredentialSecretsAsync } from "../../../../../lib/credential-store";
+import { disableProviderIntegrationAsync, enableProviderIntegrationAsync } from "../../../../../lib/provider-integration-state";
+import { getProviderIntegrationAsync, isIssueProvider } from "../../../../../lib/provider-integrations";
 
 export async function DELETE(
   request: Request,
@@ -28,8 +28,8 @@ export async function DELETE(
   }
 
   const workspaceId = session.workspace?.id;
-  const removedCredentials = deleteProviderCredentialSecrets(integration.provider, integration.id, workspaceId);
-  disableProviderIntegration(integration.provider, integration.id, workspaceId);
+  const removedCredentials = await deleteProviderCredentialSecretsAsync(integration.provider, integration.id, workspaceId);
+  await disableProviderIntegrationAsync(integration.provider, integration.id, workspaceId);
 
   return NextResponse.json({
     provider: integration.provider,
@@ -61,7 +61,7 @@ export async function POST(
     return NextResponse.json({ error: "Unknown provider integration" }, { status: 404 });
   }
 
-  enableProviderIntegration(integration.provider, integration.id, session.workspace?.id);
+  await enableProviderIntegrationAsync(integration.provider, integration.id, session.workspace?.id);
 
   return NextResponse.json({
     provider: integration.provider,
@@ -82,5 +82,5 @@ async function resolveIntegration(
   }
 
   const url = new URL(request.url);
-  return getProviderIntegration(provider, url.searchParams.get("integrationId") ?? undefined, workspaceId);
+  return getProviderIntegrationAsync(provider, url.searchParams.get("integrationId") ?? undefined, workspaceId);
 }

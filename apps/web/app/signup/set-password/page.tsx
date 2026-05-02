@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, getCurrentSession } from "../../../lib/auth";
 import { createWorkspaceForUser, updateSupabasePassword } from "../../../lib/supabase-server";
+import { AppFooter } from "../../app-footer";
 import { AppHeader } from "../../app-header";
 import { T } from "../../i18n";
 
@@ -107,6 +108,7 @@ export default async function SetPasswordPage({ searchParams }: SetPasswordPageP
           </form>
         </div>
       </section>
+      <AppFooter />
     </main>
   );
 }

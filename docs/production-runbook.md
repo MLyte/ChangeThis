@@ -6,8 +6,13 @@
 - `npm run typecheck`
 - `npm run lint`
 - `npm run build`
+- `npm run security:audit`
 - Submit one feedback from `/demo`, restart the web server, verify it remains visible in `/projects`.
 - Trigger manual issue creation from `/projects`.
+
+`npm run security:audit` is non destructive and runs `npm audit --audit-level=high`.
+Do not ship with a high or critical advisory unless the exception is documented
+with the package, CVE, impact, and correction plan.
 
 ## Runtime data
 

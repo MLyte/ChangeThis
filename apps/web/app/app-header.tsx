@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Database, Inbox, LogOut, Settings, ShieldCheck, UserRound, type LucideIcon } from "lucide-react";
+import { Inbox, LogOut, Settings, UserRound, type LucideIcon } from "lucide-react";
 import { AppNavLink } from "./app-nav-link";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { LanguageSwitch, T } from "./i18n";
@@ -21,12 +21,11 @@ type AppHeaderProps = {
 };
 
 export async function AppHeader({ navItems = [], showAuthLinks = false, session }: AppHeaderProps) {
-  const authMode = process.env.AUTH_MODE === "supabase" ? "supabase" : "local";
-  const dataStore = process.env.DATA_STORE === "supabase" ? "supabase" : "local";
   const publicSignupEnabled = isPublicSignupEnabled();
   const resolvedSession = session ?? await loadHeaderSession();
   const showPrimaryNav = resolvedSession && navItems.length > 0;
-  const showPublicAuthActions = !resolvedSession && (showAuthLinks || navItems.length > 0);
+  const showPublicAuthActions = !resolvedSession && (showAuthLinks || navItems.length > 0 || publicSignupEnabled);
+  const showHeaderSession = resolvedSession && !resolvedSession.isLocalMode;
 
   return (
     <header className="topbar app-header">
@@ -49,19 +48,6 @@ export async function AppHeader({ navItems = [], showAuthLinks = false, session 
 
         <LanguageSwitch />
 
-        {resolvedSession ? (
-          <div className="runtime-status" aria-label="Environnement">
-            <span className={`runtime-pill ${authMode === "supabase" ? "is-ready" : "is-local"}`}>
-              <ShieldCheck aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-              <T k={authMode === "supabase" ? "nav.auth.supabase" : "nav.auth.local"} />
-            </span>
-            <span className={`runtime-pill ${dataStore === "supabase" ? "is-ready" : "is-local"}`}>
-              <Database aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-              <T k={dataStore === "supabase" ? "nav.storage.database" : "nav.storage.local"} />
-            </span>
-          </div>
-        ) : null}
-
         {showPublicAuthActions ? (
           <div className="public-auth-actions">
             <Link className="link" href="/login">
@@ -75,17 +61,10 @@ export async function AppHeader({ navItems = [], showAuthLinks = false, session 
           </div>
         ) : null}
 
-        {resolvedSession ? (
-          <>
-          {resolvedSession.isLocalMode ? (
-            <Link className="button secondary-button local-signup-cta" href="/signup">
-              <T k="nav.signup" />
-            </Link>
-          ) : null}
+        {showHeaderSession ? (
           <div className="session-menu" aria-label="Session">
             <UserRound aria-hidden="true" className="ui-icon muted-icon" size={16} strokeWidth={2.2} />
             <span>{resolvedSession.email}</span>
-            {resolvedSession.isLocalMode ? <strong><T k="nav.localMode" /></strong> : null}
             <form action="/logout" method="post">
               <button className="link session-link" type="submit">
                 <LogOut aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
@@ -93,7 +72,6 @@ export async function AppHeader({ navItems = [], showAuthLinks = false, session 
               </button>
             </form>
           </div>
-          </>
         ) : null}
       </div>
     </header>

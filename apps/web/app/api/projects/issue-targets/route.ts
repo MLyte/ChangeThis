@@ -7,7 +7,7 @@ import {
 } from "../../../../lib/project-registry";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
-import { getProviderIntegration } from "../../../../lib/provider-integrations";
+import { getProviderIntegrationAsync } from "../../../../lib/provider-integrations";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
 
 export async function GET(request: Request) {
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
   const integrationId = typeof body.integrationId === "string" ? body.integrationId : undefined;
 
-  if (integrationId && !getProviderIntegration(body.provider, integrationId, workspaceId)) {
+  if (integrationId && !await getProviderIntegrationAsync(body.provider, integrationId, workspaceId)) {
     return NextResponse.json({ error: "Unknown provider integration" }, { status: 422 });
   }
 

@@ -4,7 +4,7 @@ import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorksp
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { IssueProviderError, listIssueProviderRepositories } from "../../../../lib/issue-providers";
-import { getProviderIntegration } from "../../../../lib/provider-integrations";
+import { getProviderIntegrationAsync } from "../../../../lib/provider-integrations";
 import {
   createConnectedSite,
   installSnippet,
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   }
 
   const integrationId = typeof body.integrationId === "string" ? body.integrationId : undefined;
-  const integration = getProviderIntegration(body.provider, integrationId, session.workspace.id);
+  const integration = await getProviderIntegrationAsync(body.provider, integrationId, session.workspace.id);
 
   if (!integration?.credentialConfigured) {
     return NextResponse.json({ error: "Provider is not connected" }, { status: 409 });

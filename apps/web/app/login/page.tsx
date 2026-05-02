@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, isPublicSignupEnabled } from "../../lib/auth";
 import { signInWithPassword } from "../../lib/supabase-server";
+import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
 
@@ -110,11 +111,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           {publicSignupEnabled ? (
             <p className="microcopy">
-              <T k="signup.loginHint" /> <a className="inline-link" href="/signup"><T k="nav.signup" /></a>
+              <T k="login.signupHint" /> <a className="inline-link" href="/signup"><T k="nav.signup" /></a>
             </p>
           ) : null}
         </div>
       </section>
+      <AppFooter />
     </main>
   );
 }

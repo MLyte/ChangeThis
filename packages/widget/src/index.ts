@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas";
 import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackType, PinTarget } from "@changethis/shared";
+import { inferEndpoint, inferLocale } from "./inference.js";
 
 const capturePage = html2canvas as unknown as typeof import("html2canvas").default;
 
@@ -52,7 +53,6 @@ type StoredSentFeedback = {
 };
 
 const rootId = "changethis-widget-root";
-const languageStorageKey = "changethis:preferredLanguage";
 const sentPinsStorageKeyPrefix = "changethis:sentPins:";
 const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
 const productWebsiteUrl = "https://app.changethis.dev";
@@ -2096,33 +2096,6 @@ function buildSelector(element: Element): string {
 
   const classes = Array.from(element.classList).slice(0, 3).map((className) => `.${CSS.escape(className)}`).join("");
   return `${element.tagName.toLowerCase()}${classes}`;
-}
-
-function inferEndpoint(): string {
-  const script = document.currentScript as HTMLScriptElement | null;
-  const endpoint = script?.dataset.endpoint;
-  if (endpoint) return endpoint;
-
-  if (script?.src) {
-    return new URL("/api/public/feedback", script.src).toString();
-  }
-
-  return "/api/public/feedback";
-}
-
-function inferLocale(): "fr" | "en" {
-  const script = document.currentScript as HTMLScriptElement | null;
-  const scriptLocale = script?.dataset.locale;
-  if (scriptLocale === "fr" || scriptLocale === "en") {
-    return scriptLocale;
-  }
-
-  const storedLocale = window.localStorage.getItem(languageStorageKey);
-  if (storedLocale === "fr" || storedLocale === "en") {
-    return storedLocale;
-  }
-
-  return document.documentElement.lang.toLowerCase().startsWith("fr") ? "fr" : "en";
 }
 
 function buildAppEnvironment(options: WidgetOptions): FeedbackAppEnvironment | undefined {

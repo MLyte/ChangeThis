@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
-import { getProviderConnectUrl, isIssueProvider, normalizeProviderReturnTo } from "../../../../../lib/provider-integrations";
+import { getProviderConnectUrlAsync, isIssueProvider, normalizeProviderReturnTo } from "../../../../../lib/provider-integrations";
 
 export async function GET(
   request: Request,
@@ -25,7 +25,7 @@ export async function GET(
     return authFailureResponse({ error: "Workspace access required", status: 403 });
   }
 
-  const connectUrl = getProviderConnectUrl(provider, request.url, returnTo, workspaceId);
+  const connectUrl = await getProviderConnectUrlAsync(provider, request.url, returnTo, workspaceId);
 
   if (!connectUrl) {
     const fallback = new URL(returnTo, request.url);

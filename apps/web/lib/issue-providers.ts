@@ -1,8 +1,8 @@
 import { createSign } from "node:crypto";
 import { validateIssueTarget, type ExternalIssueRef, type IssueDraft, type IssueProvider, type IssueTarget } from "@changethis/shared";
-import { getProviderCredentialSecret } from "./credential-store";
+import { getProviderCredentialSecretAsync } from "./credential-store";
 import { createDemoExternalIssueRef, demoRepositoriesForProvider, isDemoProviderToken } from "./demo-provider-data";
-import { getProviderIntegrationToken } from "./provider-integrations";
+import { getProviderIntegrationTokenAsync } from "./provider-integrations";
 
 export type IssueProviderErrorCode =
   | "auth_failed"
@@ -343,7 +343,7 @@ async function getIssueProviderToken(provider: IssueProvider, options: IssueProv
     return options.token;
   }
 
-  const integrationToken = getProviderIntegrationToken(provider, options.integrationId, options.workspaceId);
+  const integrationToken = await getProviderIntegrationTokenAsync(provider, options.integrationId, options.workspaceId);
 
   if (integrationToken) {
     return integrationToken;
@@ -389,7 +389,7 @@ async function listGitHubRepositories(options: IssueProviderClientOptions): Prom
 
 async function getGitHubRepositoryAccess(options: IssueProviderClientOptions): Promise<{ token: string; kind: "token" | "installation" } | undefined> {
   const token = options.token
-    ?? getProviderIntegrationToken("github", options.integrationId, options.workspaceId)
+    ?? await getProviderIntegrationTokenAsync("github", options.integrationId, options.workspaceId)
     ?? process.env.GITHUB_TOKEN;
 
   if (token) {
@@ -527,7 +527,7 @@ async function requireProviderToken(provider: IssueProvider, resolveToken: Token
 async function createGitHubInstallationToken(integrationId?: string, workspaceId?: string): Promise<string | undefined> {
   const appId = process.env.GITHUB_APP_ID;
   const privateKey = process.env.GITHUB_APP_PRIVATE_KEY?.replace(/\\n/g, "\n");
-  const installationId = getProviderCredentialSecret("github", integrationId ?? process.env.GITHUB_PROVIDER_INTEGRATION_ID ?? "local-github", "installation_id", workspaceId)
+  const installationId = await getProviderCredentialSecretAsync("github", integrationId ?? process.env.GITHUB_PROVIDER_INTEGRATION_ID ?? "local-github", "installation_id", workspaceId)
     ?? process.env.GITHUB_INSTALLATION_ID;
 
   if (!appId || !privateKey || !installationId) {

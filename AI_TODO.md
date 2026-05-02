@@ -1,11 +1,54 @@
 # AI_TODO.md
 
 ## Règle d'exécution IA
-- Traiter uniquement la première tâche non cochée de ce fichier.
+- Utiliser ce fichier comme carnet de travail et de priorisation; une demande explicite de l'utilisateur prime sur l'ordre historique des tâches.
 - Faire un changement minimal, vérifiable et réversible.
 - Exécuter le check pertinent après chaque changement.
 - Cocher la tâche terminée et ajouter une note courte dans la section "Journal".
 - S'arrêter avant la section "Intervention utilisateur requise" si une tâche dépend d'une décision, d'un accès, d'un secret, d'un compte ou d'une validation humaine.
+
+## Priorisation active beta
+Cette priorisation remanie les tâches restantes selon **importance produit/sécurité**, **facilité technique** et **rapidité de livraison**. Elle sert de guide de choix avant l'ordre historique des sections.
+
+### P0 - Chemin critique beta vendable
+1. **Persistance production workspace-backed**: repositories Postgres/Railway pour sites/projets, feedbacks, événements, destinations d'issues et intégrations provider; activer `DATA_STORE=supabase`; lire les clés publiques depuis la base; supprimer la dépendance production à `demo-project.ts`.
+2. **Onboarding premier site**: terminer le flux qui crée organisation, workspace, owner et premier site, ou à minima livrer l'action manuelle "Créer un site" avec domaine autorisé et clé publique.
+3. **États vides et checklist onboarding courte**: guider `/projects` et `/settings/connected-sites` quand aucun site réel n'existe, puis afficher les étapes compte Git, site, script, feedback test et issue créée.
+4. **Widget public installable**: servir/versionner `/widget.js` ou `/widget.global.js`, ajouter fallback si bundle absent, smoke test page HTML externe, cache headers et vérification origine/endpoint.
+5. **GitHub workspace-backed pour beta**: prioriser GitHub avant GitLab; finaliser installation App, token installation, stockage par workspace, association issue target à l'intégration et validation dépôt.
+6. **Sécurité publique minimale**: ne pas exposer `issueTarget` complet dans `/api/widget/config`, limiter les champs texte, valider MIME screenshot, vérifier exclusions Git (`.env*`, `.changethis-data`, logs) et décider screenshot beta (désactivable par site ou stockage objet).
+7. **Fiabilité issue minimale**: timeout GitHub, idempotence/verrou anti double issue, relance manuelle propre et statut terminal simple avant queue durable complète.
+8. **Documentation client minimale**: démarrage rapide, installer le widget, configurer GitHub, FAQ beta privée et checklist smoke staging.
+
+### P1 - Beta confortable et sûre
+1. CI `test/typecheck/lint/build` et tests ciblés widget (`inferEndpoint`, `inferLocale`, Shadow DOM, doublon root, échappement HTML).
+2. Stockage objet screenshots avec chemin/URL signée et hash de contenu.
+3. Observabilité minimale: `request_id`, métriques API/provider/widget, audit log destinations/providers/membres, messages d'erreur actionnables.
+4. Retry durable ou semi-durable: backoff jitter, maximum configurable, worker/cron protégé, circuit breaker simple.
+5. Support léger: lien support visible, page aide intégrée, collecte contexte support.
+6. Export CSV et pagination/tri serveur seulement après volume réel.
+
+### P2 - Après beta privée
+1. Billing complet, paiement, portail client, trial expiré et logique upgrade/downgrade.
+2. GitLab complet, webhooks provider et synchronisation open/closed.
+3. Multi-workspace selector.
+4. Analytics avancées et dashboards business.
+5. Accessibilité/cross-browser exhaustive, budgets/perf widget p50/p95.
+6. Procédures complètes backup/restore/export/suppression définitive et conformité élargie.
+
+### Quick wins à intercaler sans casser le chemin critique
+- Vérifier les exclusions Git sensibles (`.changethis-data`, `.env*`, logs).
+- Ajouter/documenter `npm audit --audit-level=high`.
+- Ajouter tests widget `inferEndpoint` puis `inferLocale`.
+- Ajouter fallback UX si bundle widget absent.
+- Ajouter états vides guidés `/settings/connected-sites` puis `/projects`.
+- Ajouter lien support visible.
+
+### Décisions gelées pour avancer vite
+- Beta privée invitation-only.
+- GitHub prioritaire au lancement beta; GitLab peut rester "coming soon" sauf client pilote.
+- Création d'issue manuelle depuis l'inbox avant automatisation par job.
+- Railway + PostgreSQL intégré reste le chemin par défaut.
 
 - [x] Créer le script de lancement Windows `start-service.bat` pour NSSM.
 ## 1. Socle commercialisable immédiat
@@ -49,14 +92,14 @@
 - [ ] Ajouter une vue "inviter un développeur ou collègue" pour les usages agence et équipe.
 
 ## 4. Données et stockage production
-- [ ] Implémenter un repository Supabase/Postgres pour les feedbacks.
-- [ ] Implémenter un repository Supabase/Postgres pour les événements de statut.
-- [ ] Implémenter un repository Supabase/Postgres pour les projets/sites.
-- [ ] Implémenter un repository Supabase/Postgres pour les destinations d'issues.
-- [ ] Implémenter un repository Supabase/Postgres pour les intégrations provider.
-- [ ] Ajouter un switch `DATA_STORE=supabase` qui utilise uniquement Postgres en production.
-- [ ] Lire les project public keys actifs depuis la base plutôt que depuis des constantes locales.
-- [ ] Supprimer la dépendance production aux projets codés en dur dans `demo-project.ts`.
+- [x] Implémenter un repository Supabase/Postgres pour les feedbacks.
+- [x] Implémenter un repository Supabase/Postgres pour les événements de statut.
+- [x] Implémenter un repository Supabase/Postgres pour les projets/sites.
+- [x] Implémenter un repository Supabase/Postgres pour les destinations d'issues.
+- [x] Implémenter un repository Supabase/Postgres pour les intégrations provider.
+- [x] Ajouter un switch `DATA_STORE=supabase` qui utilise uniquement Postgres en production.
+- [x] Lire les project public keys actifs depuis la base plutôt que depuis des constantes locales.
+- [x] Supprimer la dépendance production aux projets codés en dur dans `demo-project.ts`.
 - [ ] Ajouter une rotation des project public keys via `project_public_keys`.
 - [ ] Migrer les screenshots depuis les data URLs vers Supabase Storage ou stockage objet.
 - [ ] Stocker uniquement un chemin d'objet ou une URL signée pour chaque screenshot.
@@ -78,8 +121,8 @@
 - [ ] Ajouter une option widget pour désactiver la capture screenshot par site.
 - [ ] Ajouter une vérification de compatibilité navigateur du widget.
 - [ ] Ajouter un fallback UX si le bundle widget n'est pas construit.
-- [ ] Ajouter des tests unitaires widget pour `inferEndpoint` depuis `data-endpoint`, `script.src` et fallback.
-- [ ] Ajouter des tests unitaires widget pour `inferLocale` depuis attribut, localStorage et langue document.
+- [x] Ajouter des tests unitaires widget pour `inferEndpoint` depuis `data-endpoint`, `script.src` et fallback.
+- [x] Ajouter des tests unitaires widget pour `inferLocale` depuis attribut, localStorage et langue document.
 - [ ] Ajouter des tests widget pour le rendu Shadow DOM sans collision avec CSS hôte.
 - [ ] Ajouter des tests widget pour ouverture/fermeture sans doublonner `changethis-widget-root`.
 - [ ] Ajouter des tests widget pour échappement HTML des labels, messages et métadonnées.
@@ -189,10 +232,10 @@
 - [ ] Ajouter la vérification des webhooks GitLab avec `GITLAB_WEBHOOK_SECRET`.
 - [ ] Ajouter une politique RLS d'insertion publique contrôlée pour les feedbacks si l'API écrit directement via Supabase.
 - [ ] Ajouter des tests RLS pour owner, admin, member, viewer et utilisateur externe.
-- [ ] Ajouter `npm audit --audit-level=high` comme gate documenté.
-- [ ] Documenter chaque exception `npm audit` avec package, CVE, impact et plan de correction.
+- [x] Ajouter `npm audit --audit-level=high` comme gate documenté.
+- [x] Documenter chaque exception `npm audit` avec package, CVE, impact et plan de correction.
 - [ ] Ajouter un scan de secrets local/CI sur l'historique et le workspace courant.
-- [ ] Vérifier que `.changethis-data`, `.env*` et logs locaux restent exclus Git.
+- [x] Vérifier que `.changethis-data`, `.env*` et logs locaux restent exclus Git.
 
 ## 10. Tests et accessibilité
 - [ ] Ajouter une CI qui exécute `npm test`, `npm run typecheck`, `npm run lint` et `npm run build`.
@@ -376,6 +419,7 @@
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-02] Quick win P1 widget: extraction ciblée de `inferEndpoint`/`inferLocale` dans `packages/widget/src/inference.ts` et ajout de tests unitaires couvrant `data-endpoint`, `script.src`, fallback, attribut locale, localStorage et langue document. Validation ciblée: `npm run test --workspace @changethis/widget` OK; `npm run typecheck --workspace @changethis/widget` OK.
 - [2026-05-01] Correctif CI hors checklist: correction des erreurs `npm run lint` qui faisaient échouer GitHub Actions avant `test`, `typecheck` et `build` depuis le commit suivant `cacbd62`; la prod expose déjà `/api/health` et les headers sécurité du commit `6a69c12`, mais le pipeline restait rouge. Validation exécutée: `npm run lint`, `npm test`, `npm run typecheck`, `npm run build` OK.
 - [2026-05-01] Documentation priorisation hors checklist: ajout de `docs/ai-task-priority-triage.md` avec classement des taches `AI_TODO.md` en 3 categories (`Urgent`, `A faire d'ici 7 jours maximum`, `Bonus`) et ordre d'importance dans chaque categorie. Validation locale non lancee automatiquement conformement a la consigne utilisateur active.
 - [2026-05-01] Documentation prod hors checklist: OVH retenu pour le registrar et le DNS a ce stade; `docs/ovh-production-auth-decisions.md` ne contient plus de question ouverte immediate. Validation locale non lancee automatiquement conformement a la consigne utilisateur active.
@@ -485,4 +529,15 @@
 - [2026-05-01] Tâches Auth/workspaces complétées (points 2-5): filtre projet/site par workspace pour les lectures, rôles `viewer/member/admin/owner` alignés sur les routes API privées, page gestion membres opérationnelle avec invite `invited` et désactivation `disabled`. Vérifications: `npm run typecheck` OK, `npx tsx --test test/feedback-repository.test.ts` OK.
 - [2026-05-01] Tâche feedbacks/workspace complétée: l'annulation publique résout le projet avant lecture et scope `get`/`markIgnored` avec `project.workspaceId`; `events()` accepte aussi un filtre workspace; test multi-workspace ajouté. Validation ciblée exécutée: `npx tsx --test test/feedback-repository.test.ts` OK.
 - [2026-05-01] Audit agents onboarding: la première tâche non cochée reste partielle et non cochable. Le flux signup/set-password crée déjà l'organisation/workspace et le membre `owner`, mais aucun premier site n'est créé automatiquement dans ce flux; la création de site reste portée par `/api/projects/sites` et l'écran Sites connectés. Aucun changement fonctionnel effectué.
-
+- [2026-05-02] Micro-correction copy auth hors checklist: séparation du hint `/login` en `login.signupHint` pour afficher `Pas encore de compte ? S'inscrire`, sans casser le hint `/signup` `Vous avez déjà un compte ? Connexion`. Validation ciblée: `npm run typecheck` OK.
+- [2026-05-02] Blocage demande UI containers: harmonisation demandée entre pages publiques, mais non appliquée car la première tâche non cochée reste le flux d'onboarding organisation/workspace/owner/premier site. Prochaine action recommandée: terminer ou reprioriser cette tâche avant d'intervenir sur les containers.
+- [2026-05-02] Micro-correction UI containers: `auth-layout` est désormais centré et limité à `--page-max` comme la home, pour éviter les pages auth en pleine largeur sur grands écrans. Dashboard/admin laissé hors périmètre. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK.
+- [2026-05-02] Micro-amélioration UX footer hors checklist: déplacement des badges Auth/Stockage et des outils de session locale dans un footer sticky, en conservant la session/logout réelle dans le header. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK.
+- [2026-05-02] Quick wins sécurité/documentation: exclusions Git complétées pour `logs/`, `*.log` et `.changethis-data/`; ajout du gate non destructif `npm run security:audit` (`npm audit --audit-level=high`) et documentation des exceptions audit attendues. Validation ciblée: `git check-ignore` OK pour `.env*`, `.changethis-data`, `logs/` et logs locaux; `npm run security:audit` OK.
+- [2026-05-02] Migration DB minimale projets/sites: ajout de `supabase/migrations/0005_project_widget_settings.sql` pour aligner `projects` sur le modèle site actuel (`updated_at`, réglages widget, checks légers et index `organization_id`). Validation: relecture SQL ciblée, pas d'exécution Supabase locale.
+- [2026-05-02] P0 projets/sites: `DATA_STORE=supabase` branche maintenant `project-registry` sur Supabase pour lister/trouver/créer/supprimer les sites, persister les réglages widget, mettre à jour la destination d'issue et vérifier les origines, en conservant le store fichier local par défaut. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK, `npx tsx --test test/project-registry.test.ts` OK.
+- [2026-05-02] Test P0 projets/sites: ajout d'un test Supabase mocké pour vérifier le mapping `projects` + `project_public_keys` + `issue_targets` vers `ChangeThisProject`, le scope workspace et l'absence de fallback démo en `DATA_STORE=supabase`. Validation ciblée: `npx tsx --test test/project-registry-supabase.test.ts test/project-registry.test.ts` OK.
+- [2026-05-02] P0 feedbacks Supabase: `DATA_STORE=supabase` branche maintenant `feedback-repository` sur Supabase REST pour créer/lister/scoper les feedbacks, enregistrer les événements, tentatives provider, issues externes, retries et nettoyage workspace, en conservant `FileFeedbackRepository` par défaut. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK, `npx tsx --test test/feedback-repository.test.ts test/feedback-repository-supabase.test.ts` OK.
+- [2026-05-02] Migration DB minimale feedbacks: ajout de `supabase/migrations/0006_feedback_repository_model_columns.sql` pour aligner `feedbacks` et `feedback_status_events` sur le modèle repository actuel (payload/draft/update timestamp, data URL screenshot transitoire, métadonnées asset minimales, statuts `kept`/`resolved` côté événements). Validation: `npm run test --workspace @changethis/web` OK, `npm run typecheck --workspace @changethis/web` OK.
+- [2026-05-02] Migration DB provider integrations: ajout de `supabase/migrations/0007_provider_integrations_workspace_storage.sql` pour durcir stockage workspace/provider (status `needs_setup`, checks, index, unicités partielles, trigger `updated_at`) et stocker les credentials chiffrés (`ciphertext`/`iv`/`tag`). Validation: `git diff --check` OK sur le scope migration.
+- [2026-05-02] P0 provider integrations Supabase: ajout des chemins async Supabase pour lister/créer/connecter/désactiver les intégrations provider par workspace, stocker et relire les credentials chiffrés, et utiliser ces connexions dans les routes settings/sites/issue-targets/providers. Validation: `npm run test --workspace @changethis/web` OK, `npm test` OK, `npm run typecheck` OK.

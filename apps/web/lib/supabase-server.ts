@@ -89,26 +89,34 @@ export type SupabaseEmailSignUpResult =
       error: "invalid" | "unavailable" | "missing";
     };
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function getSupabaseUrl(): string | undefined {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL;
+}
+
+function getSupabaseAnonKey(): string | undefined {
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+}
+
+function getSupabaseServiceRoleKey(): string | undefined {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
 
 export function isSupabaseAuthConfigured(): boolean {
-  return Boolean(supabaseUrl && supabaseAnonKey);
+  return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
 }
 
 export function isSupabaseServiceConfigured(): boolean {
-  return Boolean(supabaseUrl && supabaseServiceRoleKey);
+  return Boolean(getSupabaseUrl() && getSupabaseServiceRoleKey());
 }
 
 export async function getSupabaseUser(accessToken: string): Promise<SupabaseUser | null> {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!getSupabaseUrl() || !getSupabaseAnonKey()) {
     return null;
   }
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/user`, {
     headers: {
-      apikey: supabaseAnonKey,
+      apikey: getSupabaseAnonKey()!,
       Authorization: `Bearer ${accessToken}`
     },
     cache: "no-store"
@@ -134,7 +142,7 @@ export async function signInWithPassword(input: {
   email: string;
   password: string;
 }): Promise<SupabasePasswordSignInResult> {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!getSupabaseUrl() || !getSupabaseAnonKey()) {
     return {
       ok: false,
       error: "unavailable"
@@ -148,10 +156,10 @@ export async function signInWithPassword(input: {
     };
   }
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/token?grant_type=password`, {
     method: "POST",
     headers: {
-      apikey: supabaseAnonKey,
+      apikey: getSupabaseAnonKey()!,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
@@ -194,7 +202,7 @@ export async function signUpWithPassword(input: {
   email: string;
   password: string;
 }): Promise<SupabaseSignUpResult> {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!getSupabaseUrl() || !getSupabaseAnonKey()) {
     return {
       ok: false,
       error: "unavailable"
@@ -208,10 +216,10 @@ export async function signUpWithPassword(input: {
     };
   }
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/signup`, {
     method: "POST",
     headers: {
-      apikey: supabaseAnonKey,
+      apikey: getSupabaseAnonKey()!,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
@@ -250,7 +258,7 @@ export async function requestSignUpEmail(input: {
   email: string;
   redirectTo: string;
 }): Promise<SupabaseEmailSignUpResult> {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!getSupabaseUrl() || !getSupabaseAnonKey()) {
     return {
       ok: false,
       error: "unavailable"
@@ -264,10 +272,10 @@ export async function requestSignUpEmail(input: {
     };
   }
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/otp`, {
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/otp`, {
     method: "POST",
     headers: {
-      apikey: supabaseAnonKey,
+      apikey: getSupabaseAnonKey()!,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
@@ -294,7 +302,7 @@ export async function updateSupabasePassword(input: {
   accessToken: string;
   password: string;
 }): Promise<SupabaseEmailSignUpResult> {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!getSupabaseUrl() || !getSupabaseAnonKey()) {
     return {
       ok: false,
       error: "unavailable"
@@ -308,10 +316,10 @@ export async function updateSupabasePassword(input: {
     };
   }
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/user`, {
     method: "PUT",
     headers: {
-      apikey: supabaseAnonKey,
+      apikey: getSupabaseAnonKey()!,
       Authorization: `Bearer ${input.accessToken}`,
       "Content-Type": "application/json"
     },
@@ -338,7 +346,7 @@ export async function createWorkspaceForUser(input: {
   organizationName?: string;
   email?: string;
 }): Promise<{ id: string; name: string } | null> {
-  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(input.userId)) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey() || !isUuid(input.userId)) {
     return null;
   }
 
@@ -388,7 +396,7 @@ function workspaceNameFromEmail(email?: string): string {
 }
 
 export async function getFirstWorkspaceForUser(userId: string): Promise<{ id: string; name: string; role: string } | null> {
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey()) {
     return null;
   }
 
@@ -410,7 +418,7 @@ export async function getFirstWorkspaceForUser(userId: string): Promise<{ id: st
 }
 
 export async function listWorkspaceMembers(organizationId: string): Promise<WorkspaceMemberSummary[]> {
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey()) {
     return [];
   }
 
@@ -428,7 +436,7 @@ export async function listWorkspaceMembers(organizationId: string): Promise<Work
 }
 
 export async function getWorkspaceUserByEmail(email: string): Promise<SupabaseUser | null> {
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey()) {
     return null;
   }
 
@@ -436,10 +444,10 @@ export async function getWorkspaceUserByEmail(email: string): Promise<SupabaseUs
     return null;
   }
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users?email=eq.${encodeURIComponent(email)}&select=id,email&limit=1`, {
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/admin/users?email=eq.${encodeURIComponent(email)}&select=id,email&limit=1`, {
     headers: {
-      apikey: supabaseServiceRoleKey,
-      Authorization: `Bearer ${supabaseServiceRoleKey}`
+      apikey: getSupabaseServiceRoleKey()!,
+      Authorization: `Bearer ${getSupabaseServiceRoleKey()!}`
     },
     cache: "no-store"
   });
@@ -462,7 +470,7 @@ export async function getWorkspaceUserByEmail(email: string): Promise<SupabaseUs
 }
 
 export async function getWorkspaceMember(organizationId: string, userId: string): Promise<WorkspaceMemberUpsertResult | null> {
-  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(organizationId) || !isUuid(userId)) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey() || !isUuid(organizationId) || !isUuid(userId)) {
     return null;
   }
 
@@ -492,7 +500,7 @@ export async function inviteWorkspaceMember(input: {
   role: string;
   invitedBy: string;
 }): Promise<InviteWorkspaceMemberResult> {
-  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(input.organizationId) || !isUuid(input.invitedBy)) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey() || !isUuid(input.organizationId) || !isUuid(input.invitedBy)) {
     return { ok: false, reason: "invalid_inviter" };
   }
 
@@ -549,7 +557,7 @@ export async function updateWorkspaceMemberStatus(input: {
   status: WorkspaceMemberStatus;
   role?: string;
 }): Promise<WorkspaceMemberUpsertResult | null> {
-  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(input.organizationId) || !isUuid(input.userId)) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey() || !isUuid(input.organizationId) || !isUuid(input.userId)) {
     return null;
   }
 
@@ -573,7 +581,7 @@ export async function updateWorkspaceMember(
   userId: string,
   patch: Record<string, string>
 ): Promise<WorkspaceMemberUpsertResult | null> {
-  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(organizationId) || !isUuid(userId)) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey() || !isUuid(organizationId) || !isUuid(userId)) {
     return null;
   }
 
@@ -614,38 +622,54 @@ export async function insertProviderCredentialMetadata(input: {
   scopes?: string[];
   expiresAt?: string;
 }): Promise<void> {
-  if (!supabaseUrl || !supabaseServiceRoleKey || !isUuid(input.integrationId)) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey() || !isUuid(input.integrationId)) {
+    return;
+  }
+
+  const existing = await supabaseRest<Array<{ id: string }>>(
+    `/rest/v1/provider_integration_credentials?integration_id=eq.${encodeURIComponent(input.integrationId)}&credential_kind=eq.${encodeURIComponent(input.credentialKind)}&status=eq.active&select=id&limit=1`
+  );
+  const body = {
+    integration_id: input.integrationId,
+    credential_kind: input.credentialKind,
+    storage_reference: input.storageReference,
+    display_name: input.displayName,
+    scopes: input.scopes ?? [],
+    expires_at: input.expiresAt,
+    status: "active",
+    rotated_at: new Date().toISOString()
+  };
+
+  if (existing[0]?.id) {
+    await supabaseRest(`/rest/v1/provider_integration_credentials?id=eq.${encodeURIComponent(existing[0].id)}`, {
+      method: "PATCH",
+      headers: {
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify(body)
+    });
     return;
   }
 
   await supabaseRest("/rest/v1/provider_integration_credentials", {
     method: "POST",
     headers: {
-      Prefer: "resolution=merge-duplicates"
+      Prefer: "return=minimal"
     },
-    body: JSON.stringify({
-      integration_id: input.integrationId,
-      credential_kind: input.credentialKind,
-      storage_reference: input.storageReference,
-      display_name: input.displayName,
-      scopes: input.scopes ?? [],
-      expires_at: input.expiresAt,
-      status: "active",
-      rotated_at: new Date().toISOString()
-    })
+    body: JSON.stringify(body)
   });
 }
 
 async function supabaseRest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey()) {
     throw new Error("Supabase service role is not configured");
   }
 
-  const response = await fetch(`${supabaseUrl}${path}`, {
+  const response = await fetch(`${getSupabaseUrl()}${path}`, {
     ...init,
     headers: {
-      apikey: supabaseServiceRoleKey,
-      Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      apikey: getSupabaseServiceRoleKey()!,
+      Authorization: `Bearer ${getSupabaseServiceRoleKey()!}`,
       "Content-Type": "application/json",
       ...init.headers
     },
@@ -660,7 +684,12 @@ async function supabaseRest<T>(path: string, init: RequestInit = {}): Promise<T>
     return undefined as T;
   }
 
-  return await response.json() as T;
+  const text = await response.text();
+  return text ? JSON.parse(text) as T : undefined as T;
+}
+
+export async function supabaseServiceRest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return supabaseRest<T>(path, init);
 }
 
 async function toWorkspaceMemberSummary(member: WorkspaceMemberRow & { user_id: string }): Promise<WorkspaceMemberSummary> {
@@ -674,14 +703,14 @@ async function toWorkspaceMemberSummary(member: WorkspaceMemberRow & { user_id: 
 }
 
 async function getSupabaseUserEmail(userId: string): Promise<string | undefined> {
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey()) {
     return undefined;
   }
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
     headers: {
-      apikey: supabaseServiceRoleKey,
-      Authorization: `Bearer ${supabaseServiceRoleKey}`
+      apikey: getSupabaseServiceRoleKey()!,
+      Authorization: `Bearer ${getSupabaseServiceRoleKey()!}`
     },
     cache: "no-store"
   });

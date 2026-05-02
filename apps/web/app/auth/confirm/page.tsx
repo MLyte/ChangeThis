@@ -1,3 +1,4 @@
+import { AppFooter } from "../../app-footer";
 import { AppHeader } from "../../app-header";
 import { T } from "../../i18n";
 import { AuthConfirmClient } from "./auth-confirm-client";
@@ -14,6 +15,7 @@ export default function AuthConfirmPage() {
         </div>
       </section>
       <AuthConfirmClient />
+      <AppFooter />
     </main>
   );
 }

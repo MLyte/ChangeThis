@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { saveProviderCredentialSecret } from "../../../../../lib/credential-store";
-import { decodeProviderConnectState, normalizeProviderReturnTo } from "../../../../../lib/provider-integrations";
+import { saveProviderCredentialSecretAsync } from "../../../../../lib/credential-store";
+import { decodeProviderConnectState, normalizeProviderReturnTo, recordProviderConnection } from "../../../../../lib/provider-integrations";
 import { insertProviderCredentialMetadata } from "../../../../../lib/supabase-server";
 
 export async function GET(request: Request) {
@@ -13,7 +13,14 @@ export async function GET(request: Request) {
 
   const installationId = url.searchParams.get("installation_id");
   if (state?.provider === "github" && installationId) {
-    const storageReference = saveProviderCredentialSecret({
+    await recordProviderConnection({
+      workspaceId: state.workspaceId,
+      provider: "github",
+      integrationId: state.integrationId,
+      installationId
+    });
+
+    const storageReference = await saveProviderCredentialSecretAsync({
       workspaceId: state.workspaceId,
       provider: "github",
       integrationId: state.integrationId,
