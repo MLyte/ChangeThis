@@ -4,10 +4,14 @@ import { getCurrentSession } from "../lib/auth";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
 
-export async function AppFooter() {
+type AppFooterProps = {
+  suppressSession?: boolean;
+};
+
+export async function AppFooter({ suppressSession = false }: AppFooterProps) {
   const authMode = process.env.AUTH_MODE === "supabase" ? "supabase" : "local";
   const dataStore = process.env.DATA_STORE === "supabase" ? "supabase" : "local";
-  const footerSession = await loadFooterSession();
+  const footerSession = suppressSession ? undefined : await loadFooterSession();
 
   return (
     <footer className="app-footer">

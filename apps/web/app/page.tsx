@@ -1,8 +1,6 @@
-import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Camera, GitPullRequestCreate, Inbox, MapPin, MessageSquare, MousePointerClick, RefreshCw, Send, Settings2, type LucideIcon } from "lucide-react";
-import { isPublicSignupEnabled } from "../lib/auth";
 import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
@@ -33,7 +31,6 @@ type HomePageProps = {
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const publicSignupEnabled = isPublicSignupEnabled();
   const params = await searchParams;
   const waitlistStatus = normalizeWaitlistStatus(params?.waitlist);
 
@@ -55,12 +52,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <main className="shell app-home">
-      <AppHeader
-        navItems={[
-          { href: "/projects", labelKey: "nav.issues" },
-          { href: "/settings", labelKey: "nav.settings" }
-        ]}
-      />
+      <AppHeader suppressAuthActions suppressSession />
 
       <section className="workspace-hero" aria-labelledby="product-title">
         <div className="workspace-copy">
@@ -73,35 +65,22 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <p className="lede">
             <T k="home.hero.lede" />
           </p>
-          {!publicSignupEnabled ? (
-            <div className="local-mode-callout">
-              <strong><T k="login.privateBeta.title" /></strong>
-              <span><T k="home.hero.privateBeta" /></span>
-            </div>
-          ) : null}
-          {!publicSignupEnabled ? (
-            <form action={waitlistAction} className="waitlist-form">
-              <label>
-                <span><T k="home.waitlist.label" /></span>
-                <input autoComplete="email" name="email" required type="email" />
-              </label>
-              <button className="button" type="submit"><T k="home.waitlist.submit" /></button>
-              {waitlistStatus ? (
-                <p className={`waitlist-status ${waitlistStatus === "error" ? "error" : "success"}`} role="status">
-                  <T k={`home.waitlist.status.${waitlistStatus}`} />
-                </p>
-              ) : null}
-            </form>
-          ) : null}
-          <div className="hero-actions">
-            <Link className="button" href="/projects"><T k="home.hero.primary" /></Link>
-            <Link className="button secondary-button" href="/demo"><T k="home.hero.secondary" /></Link>
+          <div className="local-mode-callout">
+            <strong><T k="home.waitlist.callout.title" /></strong>
+            <span><T k="home.waitlist.callout.copy" /></span>
           </div>
-          {!publicSignupEnabled ? (
-            <p className="microcopy">
-              <Link className="inline-link" href="/login"><T k="home.hero.login" /></Link>
-            </p>
-          ) : null}
+          <form action={waitlistAction} className="waitlist-form">
+            <label>
+              <span><T k="home.waitlist.label" /></span>
+              <input autoComplete="email" name="email" required type="email" />
+            </label>
+            <button className="button" type="submit"><T k="home.waitlist.submit" /></button>
+            {waitlistStatus ? (
+              <p className={`waitlist-status ${waitlistStatus === "error" ? "error" : "success"}`} role="status">
+                <T k={`home.waitlist.status.${waitlistStatus}`} />
+              </p>
+            ) : null}
+          </form>
         </div>
 
         <MarketingConsolePreview />
@@ -157,7 +136,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   data-button-label="Feedback">
 </script>`}</code></pre>
       </section>
-      <AppFooter />
+      <AppFooter suppressSession />
     </main>
   );
 }
