@@ -1056,9 +1056,9 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
                   </span>
                 ) : null}
                 {integration.managePath ? (
-                  <a className="button secondary-button" href={integration.managePath}>
+                  <a className="button secondary-button" href={integration.managePath} rel="noreferrer" target="_blank">
                     <ExternalLink aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                    <T k="destinations.manage" />
+                    Générer un token
                   </a>
                 ) : null}
               </div>

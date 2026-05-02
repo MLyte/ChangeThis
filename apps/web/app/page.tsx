@@ -1,12 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { ReactNode } from "react";
-import { Camera, GitPullRequestCreate, Inbox, MapPin, MessageSquare, MousePointerClick, RefreshCw, Send, Settings2, Webhook, Workflow, type LucideIcon } from "lucide-react";
+import { Camera, GitPullRequestCreate, Inbox, MapPin, MessageSquare, MousePointerClick, RefreshCw, Send, Settings2, type LucideIcon } from "lucide-react";
 import { isPublicSignupEnabled } from "../lib/auth";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
+import { MarketingConsolePreview } from "./marketing-console-preview";
 import { ProviderIcon } from "./provider-badge";
 
 export const dynamic = "force-dynamic";
@@ -26,29 +26,6 @@ const productBlocks: Array<{ titleKey: string; copyKey: string; emphasisKey: str
 
 export default async function HomePage() {
   const publicSignupEnabled = isPublicSignupEnabled();
-  const siteRows = [
-    {
-      name: "Cabinet Orion - Espace rendez-vous",
-      origin: "rdv.cabinet-orion.example",
-      provider: "github",
-      repo: "cabinet-orion/booking-portal",
-      stateKey: "home.siteState.ready"
-    },
-    {
-      name: "Studio Lumen - Shop vitrine",
-      origin: "shop.studio-lumen.example",
-      provider: "gitlab",
-      repo: "studio-lumen/shopfront",
-      stateKey: "home.siteState.ready"
-    },
-    {
-      name: "Atelier Nova - Portail client",
-      origin: "staging.portal-atelier-nova.example",
-      provider: "github",
-      repo: "atelier-nova/portal-staging",
-      stateKey: "home.siteState.configure"
-    }
-  ];
 
   return (
     <main className="shell app-home">
@@ -87,7 +64,7 @@ export default async function HomePage() {
           ) : null}
         </div>
 
-        <ConsolePreview siteRows={siteRows} />
+        <MarketingConsolePreview />
       </section>
 
       <section className="section product-section">
@@ -107,6 +84,8 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      <MobilePreviewSection />
 
       <section className="workflow-band">
         <div className="section-heading">
@@ -140,6 +119,112 @@ export default async function HomePage() {
       </section>
       <AppFooter />
     </main>
+  );
+}
+
+function MobilePreviewSection() {
+  return (
+    <section className="mobile-proof-section" aria-labelledby="mobile-proof-title">
+      <div className="mobile-proof-copy">
+        <p className="eyebrow">Works on mobile too</p>
+        <h2 id="mobile-proof-title">Le visiteur et l’admin gardent la boucle sous la main.</h2>
+        <p className="lede">
+          Le widget reste accessible côté client, et l’équipe peut suivre les retours entrants côté console sans attendre d’être revenue sur grand écran.
+        </p>
+        <div className="mobile-proof-points">
+          <span>Côté visiteur</span>
+          <span>Côté admin</span>
+          <span>Contexte prêt pour issue</span>
+        </div>
+      </div>
+
+      <div className="mobile-device-pair" aria-label="Aperçus mobiles ChangeThis côté visiteur et côté admin">
+        <div className="iphone-pro-max-mockup user-mobile-mockup" aria-label="Aperçu mobile visiteur ChangeThis sur iPhone Pro Max">
+          <span className="mobile-device-label">User</span>
+          <div className="iphone-frame">
+            <div className="iphone-screen">
+              <div className="iphone-dynamic-island" />
+              <div className="mobile-browser-bar">
+                <span>app.changethis.dev/demo</span>
+              </div>
+              <div className="mobile-demo-page">
+                <span className="mobile-demo-kicker">Atelier Nova</span>
+                <h3>Objets calmes pour maisons vivantes.</h3>
+                <p>Une page client fictive avec un formulaire, une collection et quelques zones à commenter.</p>
+                <div className="mobile-demo-card" />
+                <div className="mobile-demo-lines">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+              <div className="mobile-widget-panel">
+                <div className="mobile-widget-header">
+                  <strong>Feedback</strong>
+                  <span>Capture</span>
+                </div>
+                <div className="mobile-widget-tabs">
+                  <span>Note</span>
+                  <span className="active">Pin</span>
+                  <span>Shot</span>
+                </div>
+                <div className="mobile-widget-text">Le bouton devis est trop bas sur mobile.</div>
+                <button type="button">Envoyer</button>
+              </div>
+              <button className="mobile-feedback-button" type="button">Feedback</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="iphone-pro-max-mockup admin-mobile-mockup" aria-label="Aperçu mobile admin ChangeThis sur iPhone Pro Max">
+          <span className="mobile-device-label">Admin</span>
+          <div className="iphone-frame">
+            <div className="iphone-screen">
+              <div className="iphone-dynamic-island" />
+              <div className="mobile-browser-bar">
+                <span>app.changethis.dev/projects</span>
+              </div>
+              <div className="mobile-admin-console">
+                <div className="mobile-admin-header">
+                  <span className="mobile-demo-kicker">Inbox</span>
+                  <strong>3 retours entrants</strong>
+                </div>
+                <div className="mobile-admin-tabs">
+                  <span className="active">À traiter</span>
+                  <span>Échecs</span>
+                </div>
+                <article className="mobile-admin-feedback active">
+                  <div>
+                    <strong>Pin sur /checkout</strong>
+                    <span>Cabinet Orion · mobile</span>
+                  </div>
+                  <em>À créer</em>
+                </article>
+                <article className="mobile-admin-feedback">
+                  <div>
+                    <strong>Capture sur /pricing</strong>
+                    <span>Studio Lumen · GitLab</span>
+                  </div>
+                  <em>En file</em>
+                </article>
+                <article className="mobile-admin-feedback failed">
+                  <div>
+                    <strong>Note sur /demo</strong>
+                    <span>Atelier Nova · GitHub</span>
+                  </div>
+                  <em>Échec</em>
+                </article>
+                <div className="mobile-admin-issue-card">
+                  <span>Destination</span>
+                  <strong>atelier-nova/portal-staging</strong>
+                  <button type="button">Créer l’issue</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -218,100 +303,6 @@ function WorkflowReplica({ index }: { index: number }) {
       <div className="replica-provider-row">
         <ProviderIcon provider="github" className="replica-provider-icon" />
         <span>atelier-nova/portal-staging</span>
-      </div>
-    </div>
-  );
-}
-
-function ConsolePreview({
-  siteRows
-}: {
-  siteRows: Array<{
-    name: string;
-    origin: string;
-    provider: string;
-    repo: string;
-    stateKey: string;
-  }>;
-}) {
-  const previewFeedbacks = [
-    {
-      title: "[Patrick] /demo - Le bouton devis est trop bas",
-      context: "Patrick - page contact - pin - 1920 x 917",
-      status: "à créer"
-    },
-    {
-      title: "[Jean-Pierre] /demo - L'espace est trop grand",
-      context: "Jean-Pierre - capture écran - 1920 x 917",
-      status: "à créer"
-    },
-    {
-      title: "[Feedback] /demo - Crénage du titre",
-      context: "Demo ChangeThis - screenshot - 2560 x 1277",
-      status: "échec"
-    }
-  ];
-  const sidebarItems: Array<{ key: string; label: ReactNode; Icon: LucideIcon; active?: boolean }> = [
-    { key: "inbox", label: "Inbox", Icon: Inbox, active: true },
-    { key: "sites", label: <T k="home.preview.sidebar.sites" />, Icon: Webhook },
-    { key: "integrations", label: <T k="home.preview.sidebar.integrations" />, Icon: GitPullRequestCreate },
-    { key: "retries", label: "Retries", Icon: RefreshCw }
-  ];
-
-  return (
-    <div className="console-preview" aria-label="Aperçu de la console ChangeThis">
-      <div className="preview-topline">
-        <span className="window-dot coral" />
-        <span className="window-dot amber" />
-        <span className="window-dot green" />
-        <Workflow className="preview-title-icon" aria-hidden="true" size={16} strokeWidth={2.2} />
-        <strong>Console ChangeThis</strong>
-      </div>
-
-      <div className="preview-layout">
-        <aside className="preview-sidebar">
-          {sidebarItems.map(({ key, label, Icon, active }) => (
-            <span className={`sidebar-item${active ? " active" : ""}`} key={key}>
-              <Icon aria-hidden="true" size={15} strokeWidth={2.2} />
-              {label}
-            </span>
-          ))}
-        </aside>
-
-        <div className="preview-main">
-          <div className="preview-header">
-            <div>
-              <span className="mini-label">Inbox</span>
-              <h2><T k="home.preview.header" /></h2>
-            </div>
-            <span className="status-badge needs_setup">{previewFeedbacks.length} <T k="home.preview.recent" /></span>
-          </div>
-
-          <div className="preview-list">
-            {previewFeedbacks.map((feedback) => (
-              <article className="preview-feedback" key={feedback.title}>
-                <div>
-                  <Camera className="preview-card-icon" aria-hidden="true" size={16} strokeWidth={2.2} />
-                  <h3>{feedback.title}</h3>
-                  <p>{feedback.context}</p>
-                </div>
-                <span>{feedback.status}</span>
-              </article>
-            ))}
-          </div>
-
-          <div className="preview-sites">
-            {siteRows.map((site) => (
-              <div className="preview-site-row" key={site.name}>
-                <strong>{site.name}</strong>
-                <span>{site.origin}</span>
-                <span>{site.provider}</span>
-                <span>{site.repo}</span>
-                <em><T k={site.stateKey} /></em>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

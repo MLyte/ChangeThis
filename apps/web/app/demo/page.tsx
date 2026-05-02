@@ -1,6 +1,7 @@
 import { demoAppEnvironment, demoProject } from "../../lib/demo-project";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
+import { DemoTestPanel } from "./demo-test-panel";
 
 export default function DemoPage() {
   return (
@@ -128,11 +129,7 @@ export default function DemoPage() {
           </form>
         </section>
 
-        <aside className="demo-test-panel" aria-label="Aide test Feedback">
-          <strong>Testez ChangeThis ici</strong>
-          <span>Le bouton Feedback est en bas à droite. Cliquez dessus pour signaler cette page.</span>
-          <code>{demoProject.publicKey}</code>
-        </aside>
+        <DemoTestPanel publicKey={demoProject.publicKey} />
       </section>
 
       <AppFooter />

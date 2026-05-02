@@ -2,6 +2,7 @@
   "name": "changethis",
   "version": "0.1.0",
   "private": true,
+  "license": "Elastic-2.0",
   "description": "Client website feedback that turns into clean GitHub Issues.",
   "workspaces": [
     "apps/*",

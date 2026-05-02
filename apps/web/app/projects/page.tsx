@@ -189,11 +189,46 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 <h2 id="status-side-title">File actuelle</h2>
               </div>
               <div className="side-status-stack" aria-label="Synthèse opérationnelle">
-                <StatusMetric icon={Inbox} label="À traiter" value={priorityFeedbacks.length} tone={priorityFeedbacks.length > 0 ? "warning" : "ok"} />
-                <StatusMetric icon={Clock3} label="En file" value={queuedFeedbacks.length} tone="warning" />
-                <StatusMetric icon={RotateCcw} label="Relances" value={retryFeedbacks.length} tone="warning" />
-                <StatusMetric icon={AlertTriangle} label="Échecs" value={failedFeedbacks.length} tone="danger" />
-                <StatusMetric icon={CheckCircle2} label="Résolus" value={resolvedFeedbacks.length} tone="ok" />
+                <StatusMetric
+                  active={filters.status === "priority"}
+                  href={dashboardStatusHref(filters, "priority")}
+                  icon={Inbox}
+                  label="À traiter"
+                  value={priorityFeedbacks.length}
+                  tone={priorityFeedbacks.length > 0 ? "warning" : "ok"}
+                />
+                <StatusMetric
+                  active={filters.status === "issue_creation_pending"}
+                  href={dashboardStatusHref(filters, "issue_creation_pending")}
+                  icon={Clock3}
+                  label="En file"
+                  value={queuedFeedbacks.length}
+                  tone="warning"
+                />
+                <StatusMetric
+                  active={filters.status === "retrying"}
+                  href={dashboardStatusHref(filters, "retrying")}
+                  icon={RotateCcw}
+                  label="Relances"
+                  value={retryFeedbacks.length}
+                  tone="warning"
+                />
+                <StatusMetric
+                  active={filters.status === "failed"}
+                  href={dashboardStatusHref(filters, "failed")}
+                  icon={AlertTriangle}
+                  label="Échecs"
+                  value={failedFeedbacks.length}
+                  tone="danger"
+                />
+                <StatusMetric
+                  active={filters.status === "resolved"}
+                  href={dashboardStatusHref(filters, "resolved")}
+                  icon={CheckCircle2}
+                  label="Résolus"
+                  value={resolvedFeedbacks.length}
+                  tone="ok"
+                />
               </div>
             </section>
 
@@ -439,14 +474,56 @@ function DashboardFilterBar({
   );
 }
 
-function StatusMetric({ icon: Icon, label, tone, value }: { icon: LucideIcon; label: string; tone: "ok" | "warning" | "danger"; value: number }) {
+function StatusMetric({
+  active,
+  href,
+  icon: Icon,
+  label,
+  tone,
+  value
+}: {
+  active?: boolean;
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  tone: "ok" | "warning" | "danger";
+  value: number;
+}) {
   return (
-    <article className={`status-metric ${tone}`}>
+    <Link
+      aria-current={active ? "page" : undefined}
+      aria-label={`Voir les retours ${label.toLowerCase()}`}
+      className={`status-metric ${tone}${active ? " active" : ""}`}
+      href={href}
+    >
       <Icon aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
       <span>{label}</span>
       <strong>{value}</strong>
-    </article>
+    </Link>
   );
+}
+
+function dashboardStatusHref(filters: DashboardFilters, status: DashboardStatusFilter): string {
+  const params = new URLSearchParams();
+  params.set("status", status);
+
+  if (filters.query) {
+    params.set("q", filters.query);
+  }
+
+  if (filters.site !== "all") {
+    params.set("site", filters.site);
+  }
+
+  if (filters.type !== "all") {
+    params.set("type", filters.type);
+  }
+
+  if (filters.provider !== "all") {
+    params.set("provider", filters.provider);
+  }
+
+  return `/projects?${params.toString()}`;
 }
 
 function ProviderCount({ count, provider }: { count: number; provider: "github" | "gitlab" }) {

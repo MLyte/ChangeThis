@@ -7,7 +7,7 @@ Clients click a fixed feedback button, add a note, pin one or more page elements
 ## Product Direction
 
 - **Audience:** freelancers, small web agencies, studios, and product/design teams shipping client websites.
-- **Model:** open-core. The widget and core protocol can be open source; hosted dashboard, managed provider integrations, storage, teams, and AI triage are planned for the hosted layer.
+- **Model:** source-available/open-core. The widget and shared protocol are permissive; hosted dashboard, managed provider integrations, storage, teams, and AI triage stay in the commercial hosted layer.
 - **Promise:** clients point at what needs changing; teams receive actionable feedback, decide whether to create an issue, and keep a traceable history.
 
 ## Current Product Loop
@@ -54,6 +54,18 @@ In local development, the app serves the same widget route from the web server:
 Create the site from `/settings/connected-sites` so the public key, allowed site URL, and Git issue destination are stored together. The public feedback API only accepts requests whose `Origin` matches the connected site URL.
 
 For a quick local smoke test, use `/demo`; it loads the local widget and sends feedback to the local API.
+
+## License
+
+ChangeThis is public source and open-core, with different licenses by scope:
+
+| Scope | License |
+| --- | --- |
+| Hosted app, dashboard, API, storage, integrations, operations, and documentation | Elastic License 2.0 |
+| `packages/widget` | Apache-2.0 |
+| `packages/shared` | Apache-2.0 |
+
+The default repository license is source-available and is not intended to allow third parties to operate a competing hosted ChangeThis service without written permission. The widget and shared package stay permissive so customers can embed, audit, and integrate the client-side pieces. See `LICENSE.md`, `COMMERCIAL-LICENSE.md`, and the package-level license files for details.
 
 ## Development
 

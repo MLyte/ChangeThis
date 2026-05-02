@@ -31,7 +31,7 @@ export function requireJsonRequest(request: Request): NextResponse | undefined {
 export function methodNotAllowed(allowedMethods: readonly string[]) {
   const allow = allowedMethods.join(", ");
 
-  return function methodNotAllowedHandler(_request?: Request): NextResponse {
+  return function methodNotAllowedHandler(_request: Request): NextResponse {
     return NextResponse.json(
       { error: "Method not allowed" },
       {

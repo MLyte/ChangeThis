@@ -251,7 +251,7 @@ function getRuntimeProviderIntegrations(workspaceId?: string): RuntimeProviderIn
       disabled: githubDisabled,
       connectionConfigKeys: ["GITHUB_APP_SLUG", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"],
       credentialConfigKeys: ["GITHUB_TOKEN", "GITHUB_INSTALLATION_ID"],
-      managePath: process.env.GITHUB_MANAGE_URL ?? "https://github.com/settings/installations",
+      managePath: process.env.GITHUB_MANAGE_URL ?? "https://github.com/settings/tokens",
       baseUrl: "https://github.com",
       callbackPath: "/api/integrations/github/callback",
       oauthScopes: [],
@@ -271,7 +271,7 @@ function getRuntimeProviderIntegrations(workspaceId?: string): RuntimeProviderIn
       disabled: gitlabDisabled,
       connectionConfigKeys: ["GITLAB_OAUTH_APP_ID", "GITLAB_OAUTH_APP_SECRET"],
       credentialConfigKeys: ["GITLAB_TOKEN"],
-      managePath: process.env.GITLAB_MANAGE_URL,
+      managePath: process.env.GITLAB_MANAGE_URL ?? `${gitlabBaseUrl}/-/user_settings/personal_access_tokens`,
       baseUrl: gitlabBaseUrl,
       callbackPath: "/api/integrations/gitlab/callback",
       oauthScopes: ["api", "read_user"],
@@ -367,7 +367,9 @@ function mapSupabaseProviderIntegration(row: SupabaseProviderIntegrationRow, cre
     disabled,
     connectionConfigKeys: provider === "github" ? ["GITHUB_APP_SLUG", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"] : ["GITLAB_OAUTH_APP_ID", "GITLAB_OAUTH_APP_SECRET"],
     credentialConfigKeys: provider === "github" ? ["GITHUB_TOKEN", "GITHUB_INSTALLATION_ID"] : ["GITLAB_TOKEN"],
-    managePath: provider === "github" ? process.env.GITHUB_MANAGE_URL ?? "https://github.com/settings/installations" : process.env.GITLAB_MANAGE_URL,
+    managePath: provider === "github"
+      ? process.env.GITHUB_MANAGE_URL ?? "https://github.com/settings/tokens"
+      : process.env.GITLAB_MANAGE_URL ?? `${baseUrl}/-/user_settings/personal_access_tokens`,
     baseUrl,
     callbackPath: `/api/integrations/${provider}/callback`,
     oauthScopes: provider === "gitlab" ? ["api", "read_user"] : [],
