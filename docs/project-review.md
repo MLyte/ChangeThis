@@ -30,7 +30,7 @@ The product value remains clear: clients report page-specific feedback without a
 
 ## Recommended Next Steps
 
-1. Apply migrations `0001` to `0007` on a clean Supabase staging project.
+1. Apply migrations `0001` to `0008` on a clean Supabase staging project.
 2. Run a real smoke test: `widget -> public feedback API -> /projects -> manual issue`.
 3. Build the first-site onboarding checklist around Git connection, site creation, snippet install and feedback test.
 4. Move screenshots to object storage or disable capture for the first private beta if needed.

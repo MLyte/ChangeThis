@@ -35,7 +35,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 CHANGETHIS_SECRET_KEY=...
 ```
 
-Apply migrations `supabase/migrations/0001_*.sql` through `0007_*.sql` before a real beta smoke test.
+Apply migrations `supabase/migrations/0001_*.sql` through `0008_*.sql` before a real beta smoke test.
 `CHANGETHIS_DATA_DIR` is not part of the production beta path.
 
 ## Provider credentials

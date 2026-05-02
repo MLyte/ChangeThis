@@ -11,27 +11,41 @@ export function AuthConfirmClient() {
     const refreshToken = hashParams.get("refresh_token") ?? currentUrl.searchParams.get("refresh_token");
     const expiresIn = hashParams.get("expires_in") ?? currentUrl.searchParams.get("expires_in");
     const error = hashParams.get("error") ?? currentUrl.searchParams.get("error");
-    const callbackUrl = new URL("/api/auth/callback", window.location.origin);
-
-    callbackUrl.searchParams.set("next", nextPath);
 
     if (error) {
+      const callbackUrl = new URL("/api/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", nextPath);
       callbackUrl.searchParams.set("error", error);
+      window.location.replace(callbackUrl.toString());
+      return;
     }
 
-    if (accessToken) {
-      callbackUrl.searchParams.set("access_token", accessToken);
+    if (!accessToken) {
+      const callbackUrl = new URL("/api/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", nextPath);
+      window.location.replace(callbackUrl.toString());
+      return;
     }
 
-    if (refreshToken) {
-      callbackUrl.searchParams.set("refresh_token", refreshToken);
-    }
-
-    if (expiresIn) {
-      callbackUrl.searchParams.set("expires_in", expiresIn);
-    }
-
-    window.location.replace(callbackUrl.toString());
+    void fetch("/api/auth/callback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        accessToken,
+        refreshToken,
+        expiresIn,
+        next: nextPath
+      })
+    })
+      .then(async (response) => {
+        const body = await response.json().catch(() => null) as { redirectTo?: string } | null;
+        window.location.replace(body?.redirectTo ?? nextPath);
+      })
+      .catch(() => {
+        window.location.replace(`/login?error=callback&next=${encodeURIComponent(nextPath)}`);
+      });
   }, []);
 
   return null;

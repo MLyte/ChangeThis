@@ -42,8 +42,10 @@ const requiredPatterns = [
   ["provider credential tag field", /\btag\b/],
   ["project widget settings", /widget_locale.*widget_button_position.*widget_button_variant/s],
   ["feedback screenshot transition column", /screenshot_data_url/],
+  ["idempotent issue target unique migration", /drop constraint if exists issue_targets_project_unique[\s\S]*add constraint issue_targets_project_unique unique \(project_id\)/],
   ["project updated_at trigger", /projects_updated_at/],
   ["provider integrations updated_at trigger", /provider_integrations_updated_at/],
+  ["feedback dashboard index", /create index if not exists feedbacks_project_status_created_at_idx[\s\S]*on feedbacks \(project_id, status, created_at desc\)/],
 ];
 
 for (const [label, pattern] of requiredPatterns) {
@@ -53,7 +55,6 @@ for (const [label, pattern] of requiredPatterns) {
 }
 
 const advisoryPatterns = [
-  ["feedback dashboard index", /feedbacks.*project_id.*status.*created_at|feedbacks.*project_id.*created_at.*status/s],
   ["retry queue index", /retry|next_retry|provider_issue_attempts.*updated_at/s],
   ["screenshot storage path/hash", /screenshot_path.*screenshot_hash|screenshot_hash.*screenshot_path/s],
 ];

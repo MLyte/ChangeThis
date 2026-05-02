@@ -1,8 +1,8 @@
-import { AlertTriangle, CheckCircle2, Clock3, GitPullRequestCreate, Inbox, RotateCcw, Workflow, type LucideIcon } from "lucide-react";
+import { CheckCircle2, Clock3, GitPullRequestCreate, Inbox, RotateCcw, Workflow, type LucideIcon } from "lucide-react";
 import { T } from "./i18n";
 import { ProviderBadge } from "./provider-badge";
 
-type PreviewFeedbackStatus = "raw" | "issue_creation_pending" | "retrying" | "failed" | "sent_to_provider";
+type PreviewFeedbackStatus = "raw" | "issue_creation_pending" | "retrying" | "sent_to_provider";
 
 type PreviewFeedback = {
   id: string;
@@ -20,8 +20,7 @@ type PreviewFeedback = {
 const statusConfig: Record<PreviewFeedbackStatus, { badgeClass: string; label: string; metricTone: "ok" | "warning" | "danger" }> = {
   raw: { badgeClass: "needs_setup", label: "Nouveau", metricTone: "warning" },
   issue_creation_pending: { badgeClass: "issue_creation_pending", label: "En file", metricTone: "warning" },
-  retrying: { badgeClass: "retrying", label: "Relance", metricTone: "warning" },
-  failed: { badgeClass: "failed", label: "Échec", metricTone: "danger" },
+  retrying: { badgeClass: "retrying", label: "À revoir", metricTone: "warning" },
   sent_to_provider: { badgeClass: "connected", label: "Créée", metricTone: "ok" }
 };
 
@@ -57,7 +56,7 @@ const previewFeedbacks: PreviewFeedback[] = [
     site: "Atelier Nova",
     path: "/demo",
     type: "note",
-    status: "failed",
+    status: "retrying",
     issueState: "À relancer",
     provider: "github",
     receivedAt: "08:58"
@@ -84,8 +83,8 @@ const previewRoutes = [
 
 export function MarketingConsolePreview() {
   const activeCount = previewFeedbacks.filter((feedback) => feedback.status !== "sent_to_provider").length;
-  const failedCount = previewFeedbacks.filter((feedback) => feedback.status === "failed").length;
   const queuedCount = previewFeedbacks.filter((feedback) => feedback.status === "issue_creation_pending").length;
+  const reviewCount = previewFeedbacks.filter((feedback) => feedback.status === "retrying").length;
 
   return (
     <div className="console-preview dashboard-preview-console" aria-label="Aperçu de la console ChangeThis">
@@ -144,7 +143,7 @@ export function MarketingConsolePreview() {
               <PreviewMetric icon={Inbox} label="À traiter" tone="warning" value={activeCount} />
               <PreviewMetric icon={Clock3} label="En file" tone="warning" value={queuedCount} />
               <PreviewMetric icon={RotateCcw} label="Relances" tone="warning" value={1} />
-              <PreviewMetric icon={AlertTriangle} label="Échecs" tone="danger" value={failedCount} />
+              <PreviewMetric icon={RotateCcw} label="À revoir" tone="warning" value={reviewCount} />
               <PreviewMetric icon={CheckCircle2} label="Résolus" tone="ok" value={8} />
             </div>
           </section>

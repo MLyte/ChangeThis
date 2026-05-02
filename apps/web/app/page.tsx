@@ -191,7 +191,7 @@ function MobilePreviewSection() {
                 </div>
                 <div className="mobile-admin-tabs">
                   <span className="active">À traiter</span>
-                  <span>Échecs</span>
+                  <span>À revoir</span>
                 </div>
                 <article className="mobile-admin-feedback active">
                   <div>
@@ -207,12 +207,12 @@ function MobilePreviewSection() {
                   </div>
                   <em>En file</em>
                 </article>
-                <article className="mobile-admin-feedback failed">
+                <article className="mobile-admin-feedback review">
                   <div>
                     <strong>Note sur /demo</strong>
                     <span>Atelier Nova · GitHub</span>
                   </div>
-                  <em>Échec</em>
+                  <em>À revoir</em>
                 </article>
                 <div className="mobile-admin-issue-card">
                   <span>Destination</span>

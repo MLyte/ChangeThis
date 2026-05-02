@@ -55,6 +55,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
     cookieStore.set("changethis_access_token", signInResult.accessToken, cookieConfig);
     cookieStore.set("supabase-auth-token", signInResult.accessToken, cookieConfig);
+    if (signInResult.refreshToken) {
+      cookieStore.set("supabase-refresh-token", signInResult.refreshToken, {
+        ...cookieConfig,
+        maxAge: 60 * 60 * 24 * 30
+      });
+    }
     redirect(targetPath);
   }
 

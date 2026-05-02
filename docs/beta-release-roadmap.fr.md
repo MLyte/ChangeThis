@@ -23,7 +23,7 @@ Ce document transforme le plan de production en piste executable pour la beta pr
 ## Phase 3 - Staging connecte
 
 - Creer des secrets separes pour `local`, `staging` et `production`.
-- Appliquer les migrations Supabase `0001` a `0007`.
+- Appliquer les migrations Supabase `0001` a `0008`.
 - Valider `npm run migrations:check`, `npm run env:check` et `npm run prod:check`.
 - Configurer un depot GitHub/GitLab de test pour les issues beta.
 - Restreindre les `allowedOrigins` aux domaines pilotes.

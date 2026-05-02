@@ -40,7 +40,7 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 - Sites/projets connectes et cles publiques actives.
 - Feedbacks, statuts, evenements, tentatives provider et issues externes.
 - Integrations provider par workspace et credentials chiffres applicativement.
-- Migrations Supabase `0001` a `0007`.
+- Migrations Supabase `0001` a `0008`.
 
 ## Limites connues avant beta plus large
 

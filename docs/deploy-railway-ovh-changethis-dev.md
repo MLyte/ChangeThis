@@ -73,6 +73,7 @@ Appliquer les fichiers dans l'ordre:
 5. `supabase/migrations/0005_project_widget_settings.sql`
 6. `supabase/migrations/0006_feedback_repository_model_columns.sql`
 7. `supabase/migrations/0007_provider_integrations_workspace_storage.sql`
+8. `supabase/migrations/0008_feedback_operational_indexes.sql`
 
 Option CLI Supabase:
 

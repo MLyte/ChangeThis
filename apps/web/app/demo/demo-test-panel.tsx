@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
 
 type DemoTestPanelProps = {
   publicKey: string;
@@ -22,13 +22,17 @@ export function DemoTestPanel({ publicKey }: DemoTestPanelProps) {
     }
   });
 
-  const dismissPanel = () => {
+  const dismissPanel = (event?: SyntheticEvent<HTMLElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+
     try {
       window.localStorage.setItem(storageKey, "true");
     } catch {
       // The in-memory state still hides the helper when storage is unavailable.
     }
 
+    event?.currentTarget.closest(".demo-test-panel")?.setAttribute("hidden", "");
     setIsVisible(false);
   };
 
@@ -42,6 +46,9 @@ export function DemoTestPanel({ publicKey }: DemoTestPanelProps) {
         aria-label="Masquer l'aide de test"
         className="demo-test-panel-dismiss"
         onClick={dismissPanel}
+        onMouseDownCapture={dismissPanel}
+        onPointerDownCapture={dismissPanel}
+        onTouchStartCapture={dismissPanel}
         type="button"
       >
         <X aria-hidden="true" size={14} strokeWidth={2.4} />
