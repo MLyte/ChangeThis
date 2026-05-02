@@ -528,7 +528,7 @@ textarea,
   align-items: center;
   display: grid;
   gap: clamp(24px, 3.5vw, 44px);
-  grid-template-columns: minmax(340px, 0.82fr) minmax(640px, 1.28fr);
+  grid-template-columns: minmax(300px, 0.62fr) minmax(0, 1.38fr);
   margin: 0 auto;
   max-width: var(--page-max);
   padding: clamp(44px, 6vw, 74px) clamp(18px, 4vw, 40px) clamp(30px, 5vw, 52px);
@@ -536,6 +536,7 @@ textarea,
 
 .workspace-copy {
   max-width: 620px;
+  min-width: 0;
 }
 
 .hero-copy {
@@ -568,16 +569,16 @@ h1 {
 .product-title {
   align-items: center;
   display: flex;
-  font-size: clamp(48px, 6.2vw, 76px);
+  font-size: clamp(48px, 5.6vw, 68px);
   gap: clamp(8px, 1.2vw, 16px);
   line-height: 0.96;
 }
 
 .product-title-logo {
   flex: 0 0 auto;
-  height: clamp(64px, 7.4vw, 96px);
+  height: clamp(58px, 6.4vw, 82px);
   object-fit: contain;
-  width: clamp(64px, 7.4vw, 96px);
+  width: clamp(58px, 6.4vw, 82px);
 }
 
 h2 {
@@ -641,12 +642,22 @@ h3 {
 }
 
 .waitlist-form {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 16px 38px rgba(63, 81, 181, 0.1);
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+  max-width: 620px;
+  padding: 12px;
+}
+
+.waitlist-controls {
   align-items: end;
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(220px, 1fr) auto;
-  margin-top: 18px;
-  max-width: 560px;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .waitlist-form label {
@@ -659,6 +670,7 @@ h3 {
   color: var(--ink);
   font-size: 13px;
   font-weight: 900;
+  line-height: 1.2;
 }
 
 .waitlist-form input {
@@ -666,14 +678,19 @@ h3 {
   border: 1px solid var(--line);
   border-radius: 7px;
   color: var(--ink);
-  min-height: 42px;
+  font-size: 15px;
+  min-height: 48px;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 12px 14px;
   width: 100%;
 }
 
 .waitlist-form .button {
-  min-height: 42px;
+  align-self: stretch;
+  font-size: 14px;
+  min-height: 48px;
+  min-width: 176px;
+  padding-inline: 18px;
 }
 
 .waitlist-status {
@@ -719,9 +736,9 @@ h3 {
   border-radius: 8px;
   box-shadow: 0 18px 44px rgba(23, 26, 31, 0.12);
   justify-self: end;
-  max-width: min(100%, 920px);
+  max-width: min(100%, 980px);
   min-width: 0;
-  overflow: auto hidden;
+  overflow: hidden;
   width: 100%;
 }
 
@@ -908,8 +925,8 @@ h3 {
   align-items: stretch;
   background: #f7f9fc;
   display: grid;
-  grid-template-columns: minmax(590px, 1fr) 250px;
-  min-width: 880px;
+  grid-template-columns: minmax(500px, 1fr) minmax(300px, 0.42fr);
+  min-width: 0;
   min-height: 470px;
 }
 
@@ -967,8 +984,8 @@ h3 {
 
 .dashboard-preview-console .feedback-table-head,
 .dashboard-preview-feedback-row {
-  gap: 8px;
-  grid-template-columns: 20px minmax(150px, 1.4fr) minmax(92px, 0.62fr) minmax(84px, 0.42fr) minmax(88px, 0.5fr) 48px 66px;
+  gap: 7px;
+  grid-template-columns: 18px minmax(150px, 1.45fr) minmax(82px, 0.56fr) minmax(76px, 0.42fr) minmax(76px, 0.48fr) 40px minmax(74px, auto);
   padding-left: 12px;
   padding-right: 12px;
 }
@@ -1015,14 +1032,14 @@ h3 {
 .dashboard-preview-action {
   font-size: 11px;
   min-height: 28px;
-  padding: 5px 7px;
+  padding: 5px 8px;
   pointer-events: none;
 }
 
 .dashboard-preview-side {
   border-left: 1px solid var(--line);
   gap: 0;
-  min-width: 250px;
+  min-width: 0;
   position: static;
 }
 
@@ -1032,7 +1049,7 @@ h3 {
 
 .dashboard-preview-side .side-panel-section {
   gap: 10px;
-  padding: 12px 13px;
+  padding: 14px 16px;
 }
 
 .dashboard-preview-side .side-panel-heading h2 {
@@ -1048,13 +1065,13 @@ h3 {
 .dashboard-preview-side .status-metric {
   grid-template-columns: auto minmax(0, 1fr) auto;
   min-height: 40px;
-  padding: 7px 9px;
+  padding: 8px 10px;
 }
 
 .dashboard-preview-side .status-metric span,
 .dashboard-preview-side .site-route-row span,
 .dashboard-preview-side .route-summary span {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .dashboard-preview-side .status-metric strong {
@@ -1071,11 +1088,21 @@ h3 {
 
 .dashboard-preview-side .site-route-row {
   min-height: 42px;
-  padding: 8px;
+  padding: 9px 10px;
 }
 
 .dashboard-preview-side .site-route-row strong {
   font-size: 11px;
+}
+
+.dashboard-preview-side .site-route-row div > span {
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.dashboard-preview-side .site-route-row .provider-badge {
+  justify-self: end;
 }
 
 .mobile-proof-section {
@@ -5522,11 +5549,11 @@ code {
   }
 
   .dashboard-preview-console {
-    max-width: min(100%, 920px);
+    max-width: 100%;
   }
 
   .dashboard-preview-workbench {
-    grid-template-columns: minmax(590px, 1fr) 250px;
+    grid-template-columns: 1fr;
   }
 
   .dashboard-preview-console .feedback-table-head {
@@ -5534,7 +5561,7 @@ code {
   }
 
   .dashboard-preview-feedback-row {
-    grid-template-columns: 20px minmax(150px, 1.4fr) minmax(92px, 0.62fr) minmax(84px, 0.42fr) minmax(88px, 0.5fr) 48px 66px;
+    grid-template-columns: 18px minmax(150px, 1.45fr) minmax(82px, 0.56fr) minmax(76px, 0.42fr) minmax(76px, 0.48fr) 40px minmax(74px, auto);
   }
 
   .dashboard-preview-feedback-row .mobile-feedback-tags {
@@ -5756,8 +5783,37 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .waitlist-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .waitlist-form .button {
+    width: 100%;
+  }
+
   .steps {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-preview-console .feedback-table-head {
+    display: none;
+  }
+
+  .dashboard-preview-feedback-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-preview-feedback-row .mobile-feedback-tags {
+    display: flex;
+  }
+
+  .dashboard-preview-feedback-row .feedback-select,
+  .dashboard-preview-feedback-row .feedback-site-cell,
+  .dashboard-preview-feedback-row .feedback-status-cell,
+  .dashboard-preview-feedback-row .feedback-issue-cell,
+  .dashboard-preview-feedback-row .feedback-received-cell,
+  .dashboard-preview-feedback-row .feedback-actions {
+    display: none;
   }
 
   .workflow-replica {
@@ -5822,7 +5878,7 @@ code {
   }
 
   .dashboard-preview-side .side-status-stack {
-    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    grid-template-columns: repeat(5, minmax(112px, 1fr));
     overflow-x: auto;
   }
 

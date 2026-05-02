@@ -70,11 +70,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <span><T k="home.waitlist.callout.copy" /></span>
           </div>
           <form action={waitlistAction} className="waitlist-form">
-            <label>
-              <span><T k="home.waitlist.label" /></span>
-              <input autoComplete="email" name="email" required type="email" />
-            </label>
-            <button className="button" type="submit"><T k="home.waitlist.submit" /></button>
+            <div className="waitlist-controls">
+              <label>
+                <span><T k="home.waitlist.label" /></span>
+                <input autoComplete="email" name="email" required type="email" />
+              </label>
+              <button className="button" type="submit"><T k="home.waitlist.submit" /></button>
+            </div>
             {waitlistStatus ? (
               <p className={`waitlist-status ${waitlistStatus === "error" ? "error" : "success"}`} role="status">
                 <T k={`home.waitlist.status.${waitlistStatus}`} />
