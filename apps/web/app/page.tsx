@@ -208,7 +208,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <section className="home-section beta-scope-section">
         <div className="home-section-header compact">
           <p className="eyebrow"><T k="home.beta.scope.eyebrow" /></p>
-          <h2><T k="home.beta.scope.title" /></h2>
+          <h2 className="beta-scope-title">
+            <T k="home.beta.scope.title.main" />
+            <small><T k="home.beta.scope.title.small" /></small>
+          </h2>
         </div>
         <ul className="beta-scope-list">
           {betaNotes.map(({ key, Icon }) => (
@@ -222,11 +225,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <section className="home-section waitlist-closing-section">
         <div>
-          <span className="closing-icon" aria-hidden="true">
-            <Sparkles size={22} strokeWidth={2.3} />
-          </span>
           <p className="eyebrow"><T k="home.closing.eyebrow" /></p>
-          <h2><T k="home.closing.title" /></h2>
+          <h2 className="closing-title">
+            <small>
+              <T k="home.closing.title.small" />
+              <Sparkles className="closing-title-icon" size={24} strokeWidth={2.3} aria-hidden="true" />
+            </small>
+            <br />
+            <T k="home.closing.title.main" />
+          </h2>
           <p className="lede">
             <TRich k="home.closing.copy" />
           </p>
