@@ -1,5 +1,7 @@
 # Installer le widget sur un site
 
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
 Ce guide explique comment installer le widget ChangeThis sur un site client, en staging ou en production.
 
 ## Pré-requis
@@ -40,7 +42,7 @@ Coller le script juste avant `</body>` dans le layout global du site :
 
 Remplacer `project_public_key` par la clé publique fournie dans `/settings/connected-sites`.
 
-Le widget lit `data-project` pour récupérer sa configuration depuis ChangeThis. Sans cet attribut, ou avec une clé d'un autre site, le feedback sera refusé.
+Le widget lit `data-project` pour identifier le site lors de l'envoi du feedback. Les options visibles du widget viennent aujourd'hui des attributs du script (`data-locale`, `data-position`, `data-button-variant`, `data-endpoint`) plutôt que d'un fetch automatique de `/api/widget/config`. Sans `data-project`, ou avec une clé d'un autre site, le feedback sera refusé.
 
 ## 3. Local vs production
 
@@ -102,4 +104,4 @@ En local ChangeThis pur, `/demo` reste le smoke test le plus simple : la page ch
 - Vérifier la connexion Git dans `/settings/git-connections`.
 - Vérifier que le dépôt cible est configuré sur le site connecté.
 - Vérifier les permissions GitHub ou GitLab sur le dépôt.
-
+- En beta actuelle, la création d'issue est déclenchée manuellement depuis `/projects`; elle n'est pas automatique après l'envoi du feedback.

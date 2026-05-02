@@ -20,11 +20,22 @@ const projectKeyFallbackValues = new Set([
   "optimaster_project_key",
   "yoda_carrosserie_project_key",
 ]);
+const placeholderValues = new Set([
+  "change-me",
+  "changeme",
+  "example",
+  "secret",
+  "test",
+  "todo",
+]);
 
 const raw = process.env;
 const missing = [];
 const blockers = [];
-const isProduction = raw.NODE_ENV === "production" || raw.VERCEL_ENV === "production";
+const isProduction =
+  raw.NODE_ENV === "production"
+  || raw.VERCEL_ENV === "production"
+  || raw.RAILWAY_ENVIRONMENT === "production";
 
 for (const key of requiredBase) {
   if (!raw[key]) {
@@ -35,10 +46,25 @@ for (const key of requiredBase) {
 if (isProduction && raw.AUTH_MODE === "local") {
   blockers.push("AUTH_MODE is not allowed to be local in production");
 }
+if (isProduction && raw.AUTH_MODE !== "supabase") {
+  blockers.push("AUTH_MODE must be supabase for the current production beta path");
+}
 if (isProduction && raw.DATA_STORE === "file") {
   blockers.push("DATA_STORE is not allowed to be file in production");
 }
+if (isProduction && raw.DATA_STORE !== "supabase") {
+  blockers.push("DATA_STORE must be supabase for the current production beta path");
+}
 if (isProduction) {
+  if (raw.NEXT_PUBLIC_APP_URL && !raw.NEXT_PUBLIC_APP_URL.startsWith("https://")) {
+    blockers.push("NEXT_PUBLIC_APP_URL must use https:// in production");
+  }
+  if (raw.NEXT_PUBLIC_APP_URL?.includes("example.com") || raw.NEXT_PUBLIC_APP_URL?.includes("localhost")) {
+    blockers.push("NEXT_PUBLIC_APP_URL still points to an example or local host");
+  }
+  if (raw.CHANGETHIS_DATA_DIR) {
+    blockers.push("CHANGETHIS_DATA_DIR should be unset in production unless a non-container fallback is explicitly approved");
+  }
   for (const key of fallbackProjectKeys) {
     if (raw[key] && projectKeyFallbackValues.has(raw[key])) {
       blockers.push(`${key} uses a local fallback value in production (${raw[key]})`);
@@ -57,10 +83,21 @@ if (raw.AUTH_MODE === "supabase" || raw.DATA_STORE === "supabase") {
 if (isProduction && !raw.CHANGETHIS_SECRET_KEY) {
   missing.push("CHANGETHIS_SECRET_KEY");
 }
+if (isProduction && raw.CHANGETHIS_SECRET_KEY) {
+  if (raw.CHANGETHIS_SECRET_KEY.length < 32) {
+    blockers.push("CHANGETHIS_SECRET_KEY must be at least 32 characters in production");
+  }
+
+  if (placeholderValues.has(raw.CHANGETHIS_SECRET_KEY.toLowerCase())) {
+    blockers.push("CHANGETHIS_SECRET_KEY uses a placeholder value");
+  }
+}
 
 if (raw.NEXT_PUBLIC_APP_URL && !/^https?:\/\//.test(raw.NEXT_PUBLIC_APP_URL)) {
-  console.error("[env-check] NEXT_PUBLIC_APP_URL must start with http:// or https://");
-  process.exitCode = 1;
+  blockers.push("NEXT_PUBLIC_APP_URL must start with http:// or https://");
+}
+if (raw.NEXT_PUBLIC_SUPABASE_URL && !/^https:\/\/.+\.supabase\.co$/.test(raw.NEXT_PUBLIC_SUPABASE_URL)) {
+  blockers.push("NEXT_PUBLIC_SUPABASE_URL should look like https://<project-ref>.supabase.co");
 }
 
 if (raw.GITHUB_PROVIDER_INTEGRATION_ID && !raw.GITHUB_WEBHOOK_SECRET) {

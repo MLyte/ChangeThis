@@ -10,11 +10,13 @@
 ## Priorisation active beta
 Cette priorisation remanie les tâches restantes selon **importance produit/sécurité**, **facilité technique** et **rapidité de livraison**. Elle sert de guide de choix avant l'ordre historique des sections.
 
+État courant synchronisé: voir `docs/current-state.fr.md`. Le chemin beta réelle est Railway app + Supabase Auth/DB + OVH DNS, avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`. `DATA_STORE=file` reste local/dev uniquement.
+
 ### P0 - Chemin critique beta vendable
-1. **Onboarding premier site**: terminer le flux qui crée organisation, workspace, owner et premier site, ou à minima livrer l'action manuelle "Créer un site" avec domaine autorisé et clé publique.
+1. **Onboarding premier site**: le signup crée déjà organisation/workspace/owner et l'action manuelle "Créer un site" existe; terminer surtout la checklist guidée Git -> site -> script -> feedback test.
 2. **Checklist onboarding courte**: afficher les étapes compte Git, site, script, feedback test et issue créée.
-3. **Widget public installable**: ajouter une version publique du widget dans le bundle servi, smoke test page HTML externe et vérification compatibilité navigateur.
-4. **GitHub workspace-backed pour beta**: finaliser installation App, token installation, association issue target à l'intégration et validation dépôt.
+3. **Widget public installable**: le bundle public est servi; ajouter smoke page HTML externe, vérification compatibilité navigateur et signal d'installation réel.
+4. **GitHub workspace-backed pour beta**: flux App/tokens partiel; finaliser validation dépôt contre intégration, pagination et reconnect.
 5. **Sécurité publique minimale restante**: limiter les champs texte des routes privées, décider screenshot beta (désactivable par site ou stockage objet) et ajouter stratégie scan/quarantaine.
 6. **Fiabilité issue minimale restante**: idempotence/verrou anti double issue, relance manuelle propre, statut terminal simple, circuit breaker et backoff jitter.
 7. **Documentation client minimale restante**: configurer GitLab, domaines autorisés, FAQ beta privée et checklist smoke staging.
@@ -39,7 +41,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - Beta privée invitation-only.
 - GitHub prioritaire au lancement beta; GitLab peut rester "coming soon" sauf client pilote.
 - Création d'issue manuelle depuis l'inbox avant automatisation par job.
-- Railway + PostgreSQL intégré reste le chemin par défaut.
+- Railway app + Supabase Auth/DB + OVH DNS est le chemin beta par défaut; Railway PostgreSQL natif n'est pas consommé par le code actuel.
 
 ## 1. Auth, workspaces et rôles
 - [ ] Ajouter un flux d'onboarding qui crée l'organisation, le workspace, l'owner et le premier site.
@@ -492,3 +494,5 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [2026-05-02] Micro-correction `/demo` hors checklist: le bouton "Masquer" de la tuile d'aide persiste maintenant le masquage dans `localStorage`, avec fallback en mémoire si le stockage navigateur est indisponible. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK, `npm run lint --workspace @changethis/web` OK, `git diff --check` OK avec avertissement CRLF existant sur `AI_TODO.md`.
 - [2026-05-02] Micro-correction header hors checklist: le texte de marque `ChangeThis` passe à 20px pour être plus visible, tandis que le pictogramme est ramené à 30px afin de ne pas porter seul l'agrandissement. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK, `npm run lint --workspace @changethis/web` OK, `git diff --check` OK avec avertissements CRLF existants.
 - [2026-05-02] Documentation Go base réelle hors checklist: ajout de `docs/go-base-reelle-tasks.fr.md` avec la répartition des tâches utilisateur/IA, l'ordre recommandé, la définition de fini et les blocages probables pour connecter `app.changethis.dev` à une vraie base. Validation ciblée: `git diff --check` OK avec avertissements CRLF existants.
+- [2026-05-02] Préparation Go base réelle hors checklist: réalignement du guide Railway/OVH sur le chemin actuel Railway app + Supabase Auth/DB, durcissement `env:check` pour prod Railway, ajout de `migrations:check`, `prod:check`, `build:prod`, readiness Supabase multi-tables et `/health` minimal non cacheable. Validation: `npm run env:check` avec variables factices prod OK, `npm run prod:check` OK, `npm run typecheck` OK, `npm run lint --workspace @changethis/web` OK, `npm test` OK, `git diff --check` OK avec avertissements CRLF existants. Reste connu: `migrations:check` signale en warning le gap beta screenshots path/hash.
+- [2026-05-02] Synchronisation documentation hors checklist: ajout de `docs/current-state.fr.md` comme source courte d'état actuel et mise à jour des docs produit, prod/infra, client/provider, backlog et agents autour du chemin beta réel Railway app + Supabase Auth/DB + OVH DNS. Les docs OVH natives sont reclassées comme cible future non implémentée; les docs client précisent issue manuelle, widget sans fetch config automatique et limites beta. Validation lancée après changement.

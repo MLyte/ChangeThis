@@ -1,5 +1,7 @@
 # ChangeThis MVP Spec
 
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
 ## One-Line Pitch
 
 Clients comment directly on a staging website. Developers receive clean issues with screenshots and technical context.
@@ -11,9 +13,10 @@ A freelance web developer or small agency that wants to stop collecting vague cl
 ## Client Flow
 
 1. A fixed `Feedback` button appears on the website.
-2. The client chooses one of three modes:
+2. The client chooses one of the supported feedback modes:
    - page comment
    - pin an element
+   - multiple pins
    - screenshot note
 3. The client writes an optional message.
 4. The widget sends the feedback with page metadata.
@@ -36,7 +39,7 @@ A freelance web developer or small agency that wants to stop collecting vague cl
 - Pin coordinates
 - Best-effort CSS selector
 - Target element text
-- Screenshot data URL or storage path
+- Screenshot data URL today; object storage path is the target for production hardening
 
 ## Default Issue Labels
 
@@ -60,9 +63,18 @@ A freelance web developer or small agency that wants to stop collecting vague cl
 
 ## SaaS Milestones
 
-1. Issue provider installation flow for GitHub and GitLab
-2. Supabase-backed projects and feedbacks
-3. Private screenshot storage
-4. Dashboard inbox
-5. AI issue cleanup and duplicate detection
-6. Assisted Codex PR workflow
+1. Done/partial: issue provider flow for GitHub and GitLab, with GitHub prioritized for beta.
+2. Done/partial: Supabase-backed projects, public keys, feedbacks, events, issue attempts and provider integrations with `DATA_STORE=supabase`.
+3. Remaining: private screenshot storage with signed URLs.
+4. Done: dashboard inbox with filters, actions, status metrics and manual issue creation.
+5. Remaining: AI issue cleanup and duplicate detection.
+6. Future: assisted Codex PR workflow.
+
+## Beta Runtime
+
+- Private beta: `ENABLE_PUBLIC_SIGNUP=false`.
+- Production beta auth: `AUTH_MODE=supabase`.
+- Production beta store: `DATA_STORE=supabase`.
+- App host: Railway.
+- DNS: OVH, target `https://app.changethis.dev`.
+- `DATA_STORE=file` remains local/dev only.

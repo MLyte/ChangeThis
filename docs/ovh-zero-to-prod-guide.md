@@ -2,6 +2,10 @@
 
 Date: 2026-04-30
 
+Mise a jour 2026-05-02: ce guide decrit une cible OVH/native future, pas le chemin beta actuellement implemente. Pour la beta actuelle, suivre [deploy-railway-ovh-changethis-dev.md](deploy-railway-ovh-changethis-dev.md): Railway heberge l'app, OVH gere le DNS, Supabase fournit Auth + DB avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`. `AUTH_MODE=ovh`, `DATA_STORE=postgres` et `DATABASE_URL` ne sont pas supportes par le code actuel.
+
+Etat actuel beta: voir [current-state.fr.md](current-state.fr.md).
+
 ## Constat depuis le manager OVH
 
 La capture montre un hebergement web OVH `Starter` avec:
@@ -20,9 +24,8 @@ ChangeThis est une application Next.js serveur avec API, sessions, GitHub/GitLab
 
 Pour aller vite et proprement:
 
-- App Next.js: VPS OVH Ubuntu ou Public Cloud Instance OVH.
-- Base: PostgreSQL.
-- Auth: OVH native applicative, stockee dans PostgreSQL.
+- Chemin beta actuel: Railway app + Supabase Auth/DB + OVH DNS.
+- Chemin OVH natif futur: VPS/Public Cloud + PostgreSQL + auth applicative a implementer.
 - E-mails signup/login: SMTP OVH au depart, ou Brevo/Resend si delivrabilite plus simple.
 - Screenshots: OVH Object Storage plus tard; temporairement, ne pas mettre de gros screenshots en base.
 - Domaine: pointer vers le serveur applicatif, pas vers l'hebergement mutualise actuel.
@@ -34,7 +37,8 @@ Pour aller vite et proprement:
 - Ne pas stocker durablement les screenshots en data URL dans une base mutualisee.
 - Ne pas confondre "base incluse dans l'hebergement web" avec "base production applicative".
 - Ne pas garder `DATA_STORE=file` en production.
-- Ne pas garder Supabase Auth si la decision produit est "OVH native".
+- Ne pas configurer `AUTH_MODE=ovh`, `DATA_STORE=postgres` ou `DATABASE_URL` pour la beta actuelle: `npm run prod:check` doit echouer avec ces valeurs.
+- Ne pas garder Supabase Auth si la decision produit future devient vraiment "OVH native"; ce sera alors un chantier code dedie.
 
 ## Choix de base recommande
 

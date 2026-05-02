@@ -1,5 +1,7 @@
 # Démarrage rapide client ChangeThis
 
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
 Ce guide aide un workspace en bêta privée à recevoir un premier feedback exploitable depuis un site réel ou de test.
 
 ## Pré-requis
@@ -58,6 +60,8 @@ Retourner dans `/projects` et vérifier que le feedback apparaît dans l'inbox.
 
 Depuis `/projects`, ouvrir le feedback puis créer l'issue externe.
 
+En beta actuelle, cette étape est manuelle: ChangeThis prépare le contexte et le brouillon d'issue, mais ne crée pas automatiquement une issue dès la réception du feedback.
+
 La première boucle est validée quand :
 
 - le feedback est visible dans ChangeThis ;
@@ -70,3 +74,5 @@ La première boucle est validée quand :
 - Si l'envoi échoue avec une erreur d'origine, comparer l'origine configurée dans ChangeThis avec `window.location.origin` sur le site client.
 - Si les dépôts ne sont pas listés, vérifier la connexion Git dans `/settings/git-connections`.
 - Si l'issue n'est pas créée, vérifier les permissions du token/provider sur le dépôt cible.
+- Si GitLab OAuth est utilisé, prévoir une reconnexion si le token expire; le refresh automatique complet reste une limite beta.
+- Les screenshots restent une fonctionnalité beta: ils sont acceptés, mais leur stockage objet définitif reste à finaliser.

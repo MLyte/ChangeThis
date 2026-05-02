@@ -4,6 +4,8 @@
 Ce dépôt est un monorepo TypeScript/Next.js pour **ChangeThis** (widget de feedback + dashboard web + couche partagée).
 Les futurs agents IA doivent prioriser la sécurité des changements et la progression incrémentale.
 
+État produit/technique courant: consulter `docs/current-state.fr.md` avant de mettre à jour une documentation générale, une checklist de production ou une décision d'architecture.
+
 ## Règles de travail obligatoires
 1. **Lire `AI_TODO.md` en premier** avant toute action pour comprendre le contexte, les notes de travail et les blocages connus.
 2. Utiliser `AI_TODO.md` comme **carnet de travail**, pas comme file d'attente bloquante: une demande explicite de l'utilisateur prime sur l'ordre des tâches non cochées.

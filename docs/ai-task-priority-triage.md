@@ -2,6 +2,8 @@
 
 Date: 2026-05-01
 
+Statut 2026-05-02: snapshot historique. Ne pas l'utiliser comme backlog courant sans le comparer a [current-state.fr.md](current-state.fr.md) et `AI_TODO.md`. Plusieurs items listes ici sont deja partiellement ou totalement livres: repositories Supabase, scoping workspace, headers securite, `/api/health`, `/api/ready`, widget public, provider integrations Supabase et page membres.
+
 Contexte pris en compte:
 - app deployee sur Railway
 - domaine actif `app.changethis.dev`

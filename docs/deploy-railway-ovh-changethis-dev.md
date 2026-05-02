@@ -1,246 +1,229 @@
-# Deploy Railway + OVH pour `changethis.dev`
+# Deploy Railway + Supabase + OVH pour `app.changethis.dev`
 
-Date: 2026-04-30
+Date: 2026-05-02
 
-## Contexte retenu
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
 
-- Domaine: `changethis.dev`
-- Registrar DNS: OVHcloud
-- App web Next.js: Railway
-- Base de donnees: PostgreSQL integre Railway
-- E-mails transactionnels: Brevo
-- Domaine app cible: `app.changethis.dev`
-- Domaine public marketing cible: `changethis.dev`
+## Decision de stack beta
 
-`.dev` impose HTTPS. Railway gere le certificat automatiquement des que le DNS est correct.
+Pour le go "base reelle" actuel:
 
-## Ce qu'il ne faut pas faire
+- OVH garde le DNS du domaine `changethis.dev`.
+- Railway heberge l'app Next.js.
+- Supabase porte l'auth et le store applicatif avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`.
+- Railway PostgreSQL natif est reporte: le code actuel ne consomme pas `DATABASE_URL`.
+- Brevo/SMTP reste optionnel tant que l'auth Supabase couvre l'envoi d'e-mails.
 
-- Ne pas acheter d'hebergement web OVH pour l'application.
-- Ne pas pointer le domaine directement vers un ancien mutualise OVH.
-- Ne pas configurer les DNS OVH avant d'avoir la cible exacte fournie par Railway.
-- Ne pas melanger plusieurs domaines de production dans les variables (`changethis.eu`, `localhost`, etc.).
+Ce guide remplace l'ancien chemin `DATA_STORE=file` / Railway PostgreSQL pour la beta reelle. En production beta, `DATA_STORE=file` est un no-go.
 
-## Vue d'ensemble
+## Prerequis
 
-1. Creer le projet Railway.
-2. Connecter le repository GitHub.
-3. Ajouter PostgreSQL dans Railway.
-4. Configurer les variables d'environnement.
-5. Declarer `app.changethis.dev` dans Railway.
-6. Ajouter les enregistrements DNS dans OVH.
-7. Verifier le certificat HTTPS.
-8. Basculer `NEXT_PUBLIC_APP_URL` vers le domaine final.
+Cote utilisateur:
 
-## 1. Creer le projet Railway
+- Acces GitHub au repo `MLyte/ChangeThis`.
+- Acces Railway.
+- Acces Supabase.
+- Acces OVH DNS pour `changethis.dev`.
+- Un secret long pour `CHANGETHIS_SECRET_KEY`.
+
+Cote IA:
+
+- Verifier le repo avec `npm run prod:check` quand les variables sont disponibles.
+- Verifier les migrations avec `npm run migrations:check`.
+- Lire les erreurs Railway/Supabase si un check ou deploy echoue.
+
+## 1. Creer le service Railway
 
 Dans Railway:
 
-1. Ouvrir `https://railway.com/`.
-2. Creer un compte ou se connecter avec GitHub.
-3. Cliquer `New Project`.
-4. Choisir `Deploy from GitHub repo`.
-5. Autoriser Railway a acceder au repository `ChangeThis` si besoin.
-6. Selectionner le repository.
+1. Creer ou ouvrir le projet ChangeThis.
+2. Ajouter un service `Deploy from GitHub repo`.
+3. Selectionner `MLyte/ChangeThis`.
+4. Garder un seul service web au depart.
+5. Ne pas ajouter Railway PostgreSQL pour ce go, sauf usage futur explicitement separe.
 
-Railway detectera normalement une application Node/Next.js. Si plusieurs services sont proposes, garder un seul service web pour commencer.
+Commandes attendues:
 
-## 2. Ajouter PostgreSQL Railway
+- Build command: `npm run build:prod`
+- Start command: `npm run start --workspace @changethis/web`
 
-Dans le projet Railway:
+## 2. Creer le projet Supabase
 
-1. Cliquer `New`.
-2. Choisir `Database`.
-3. Choisir `PostgreSQL`.
-4. Laisser Railway creer le service.
+Dans Supabase:
 
-Resultat attendu:
+1. Creer un projet.
+2. Choisir une region proche des utilisateurs beta.
+3. Recuperer:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+4. Configurer l'URL du site auth sur `https://app.changethis.dev`.
+5. Ajouter les redirect URLs utilisees par l'app, notamment:
+   - `https://app.changethis.dev/auth/confirm`
+   - `https://app.changethis.dev/signup/set-password`
 
-- un service applicatif web;
-- un service PostgreSQL;
-- une variable de connexion disponible cote Railway.
+## 3. Appliquer les migrations Supabase
 
-## 3. Variables d'environnement a definir
+Appliquer les fichiers dans l'ordre:
 
-Dans Railway > service web > `Variables`, preparer au minimum:
+1. `supabase/migrations/0001_initial_schema.sql`
+2. `supabase/migrations/0002_require_single_issue_target_per_project.sql`
+3. `supabase/migrations/0003_membership_credentials_public_keys.sql`
+4. `supabase/migrations/0004_feedback_resolution_statuses.sql`
+5. `supabase/migrations/0005_project_widget_settings.sql`
+6. `supabase/migrations/0006_feedback_repository_model_columns.sql`
+7. `supabase/migrations/0007_provider_integrations_workspace_storage.sql`
+
+Option CLI Supabase:
+
+```bash
+supabase link --project-ref <project-ref>
+supabase db push
+```
+
+Option SQL Editor:
+
+1. Ouvrir chaque fichier dans l'ordre.
+2. Coller le SQL dans Supabase SQL Editor.
+3. Executer et attendre le succes avant de passer au suivant.
+
+Check local structure:
+
+```bash
+npm run migrations:check
+```
+
+## 4. Variables Railway
+
+Dans Railway > service web > Variables:
 
 ```env
 NODE_ENV=production
 NEXT_PUBLIC_APP_URL=https://app.changethis.dev
 AUTH_MODE=supabase
-DATA_STORE=file
+DATA_STORE=supabase
+ENABLE_PUBLIC_SIGNUP=false
+CHANGETHIS_SECRET_KEY=<secret-long-aleatoire>
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+SUPABASE_REST_TIMEOUT_MS=10000
 ```
 
-Etat reel du code aujourd'hui:
-
-- le login prod actuel repose encore sur Supabase;
-- le store prod complet PostgreSQL n'est pas encore migre;
-- la cible architecture finale est bien `auth applicative + PostgreSQL`, mais elle n'est pas encore entierement implemente.
-
-Donc pour un premier deploy technique:
+Ne pas definir en production:
 
 ```env
-NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://app.changethis.dev
-AUTH_MODE=supabase
+AUTH_MODE=local
 DATA_STORE=file
+CHANGETHIS_DATA_DIR=.changethis-data
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+DATABASE_URL=...
 ```
 
-Et si tu veux brancher les integrations deja existantes:
+Ne pas laisser les public keys fallback:
 
 ```env
-CHANGETHIS_SECRET_KEY=...
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-GITHUB_APP_SLUG=...
-GITHUB_APP_ID=...
-GITHUB_APP_PRIVATE_KEY=...
-GITHUB_WEBHOOK_SECRET=...
-GITLAB_OAUTH_APP_ID=...
-GITLAB_OAUTH_APP_SECRET=...
-GITLAB_WEBHOOK_SECRET=...
+NEXT_PUBLIC_DEMO_PROJECT_KEY=demo_project_key
+NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY=changethis_project_key
+NEXT_PUBLIC_ANDENNE_BEARS_PROJECT_KEY=andenne_bears_project_key
+NEXT_PUBLIC_OPTIMASTER_PROJECT_KEY=optimaster_project_key
+NEXT_PUBLIC_YODA_CARROSSERIE_PROJECT_KEY=yoda_carrosserie_project_key
 ```
 
-Ne mets pas encore Brevo tant que le flux applicatif natif e-mail n'est pas branche dans le code.
+GitHub/GitLab peuvent etre ajoutes apres le smoke app + feedback:
 
-## 4. Build et start Railway
+```env
+GITHUB_APP_SLUG=
+GITHUB_APP_ID=
+GITHUB_APP_PRIVATE_KEY=
+GITHUB_WEBHOOK_SECRET=
+GITLAB_BASE_URL=https://gitlab.com
+GITLAB_OAUTH_APP_ID=
+GITLAB_OAUTH_APP_SECRET=
+GITLAB_WEBHOOK_SECRET=
+```
 
-Railway detecte souvent automatiquement Next.js. Si Railway demande des commandes explicites:
+## 5. Domaine Railway + OVH
 
-- Build command: `npm run build`
-- Start command: `npm run start --workspace @changethis/web`
-
-Si le monorepo demande d'abord un build shared, utiliser:
-
-- Build command: `npm run build`
-- Start command: `npm run start --workspace @changethis/web`
-
-Le repository contient deja les scripts npm du monorepo, donc il faut privilegier les scripts racine plutot que des commandes manuelles custom.
-
-## 5. Domaine custom dans Railway
-
-Quand le service web est deploye:
+Dans Railway:
 
 1. Ouvrir le service web.
-2. Aller dans `Settings`.
-3. Ouvrir `Domains`.
-4. Ajouter `app.changethis.dev`.
+2. Aller dans `Settings` > `Domains`.
+3. Ajouter `app.changethis.dev`.
+4. Copier la cible DNS fournie par Railway.
 
-Railway affichera alors une cible DNS a creer chez OVH. En pratique ce sera souvent:
+Dans OVH:
 
-- soit un `CNAME` vers un hostname Railway;
-- soit exceptionnellement une autre cible indiquee par Railway.
+1. Ouvrir `changethis.dev`.
+2. Aller dans `Zone DNS`.
+3. Ajouter l'enregistrement demande par Railway, souvent:
+   - Type: `CNAME`
+   - Sous-domaine: `app`
+   - Cible: valeur Railway
+4. Ne pas ajouter de `A record` concurrent sur `app`.
 
-Tant que cette cible n'est pas visible, ne touche pas au DNS OVH.
+Attendre ensuite la validation HTTPS dans Railway.
 
-## 6. DNS OVH a creer
+## 6. Verification technique
 
-Dans OVH Manager:
+Apres redeploy Railway:
 
-1. Aller dans `Web Cloud`.
-2. Ouvrir le domaine `changethis.dev`.
-3. Aller dans `Zone DNS`.
-4. Ajouter l'entree demandee par Railway.
+1. Ouvrir `https://app.changethis.dev/api/health`.
+   - Attendu: `200` avec `{ "ok": true }`.
+2. Ouvrir `https://app.changethis.dev/api/ready`.
+   - Attendu: `200`.
+   - Si `503`, lire les checks `auth`, `productionAuth`, `dataStore`, `supabaseService`, `database`, `providerSecrets`.
 
-Cas le plus probable:
+Check local avec variables chargees:
 
-Pour `app.changethis.dev`
-
-- Type: `CNAME`
-- Sous-domaine: `app`
-- Cible: valeur fournie par Railway
-
-Pour la vitrine `changethis.dev`, deux options:
-
-- soit la laisser plus tard;
-- soit la faire pointer plus tard vers Vercel/Railway selon le site marketing choisi.
-
-Je recommande de commencer uniquement par `app.changethis.dev`, pour reduire les erreurs DNS.
-
-## 7. HTTPS et verification
-
-Apres propagation DNS:
-
-1. Revenir dans Railway > `Domains`.
-2. Verifier que `app.changethis.dev` passe en statut valide.
-3. Attendre le certificat HTTPS.
-4. Ouvrir `https://app.changethis.dev`.
-
-Si le certificat n'apparait pas encore:
-
-- attendre la propagation DNS;
-- verifier que l'entree OVH est exactement celle demandee par Railway;
-- ne pas ajouter un `A record` concurrent sur `app`.
-
-## 8. Brevo
-
-Brevo ne sert pas encore au deploy technique de base. Il servira quand le flux e-mail applicatif natif sera branche.
-
-Quand on y sera:
-
-1. Creer un compte Brevo.
-2. Verifier le domaine expediteur `changethis.dev` ou un sous-domaine mail dedie.
-3. Ajouter les DNS DKIM/SPF demandes par Brevo dans OVH.
-4. Definir:
-
-```env
-SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=...
-SMTP_PASSWORD=...
-SMTP_FROM=ChangeThis <noreply@changethis.dev>
+```bash
+npm run env:check
+npm run migrations:check
+npm run prod:check
 ```
 
-## 9. Decision technique importante
+## 7. Smoke test produit
 
-Le domaine de production est maintenant fixe:
+1. Creer ou connecter le premier compte beta.
+2. Verifier que `/projects` est accessible apres login.
+3. Creer un site dans `/settings/connected-sites`.
+4. Ajouter le domaine autorise.
+5. Copier le snippet widget.
+6. Envoyer un feedback depuis une origine autorisee.
+7. Verifier que le feedback apparait dans `/projects`.
+8. Tester logout/login et verifier que les donnees persistent.
 
-- app: `https://app.changethis.dev`
+Git ensuite:
 
-Mais la pile production n'est pas encore entierement alignee sur Railway + PostgreSQL.
+1. Configurer GitHub ou GitLab.
+2. Associer une destination issue au site.
+3. Creer manuellement une issue depuis un feedback.
+4. Verifier que l'echec est actionnable si le provider manque.
 
-Etat actuel:
+## Go / No-Go
 
-- domaine: pret;
-- hebergement Railway: pret a etre configure;
-- PostgreSQL Railway: choix valide;
-- auth applicative PostgreSQL: pas encore implementee;
-- store feedback PostgreSQL: pas encore implemente;
-- deploy technique possible des maintenant;
-- ouverture publique commerciale: pas encore saine sans les taches data/auth restantes.
+Go beta si:
 
-## 10. Checklist execution
+- `/api/health` retourne `200`.
+- `/api/ready` retourne `200`.
+- `AUTH_MODE=supabase`.
+- `DATA_STORE=supabase`.
+- Un feedback reel arrive depuis le widget et apparait dans le dashboard.
+- Les secrets ne sont pas dans Git ni dans les logs.
+- `ENABLE_PUBLIC_SIGNUP=false` tant que la beta reste privee.
 
-Quand tu executes le deploy:
+No-Go si:
 
-- creer le projet Railway;
-- connecter GitHub;
-- ajouter PostgreSQL;
-- renseigner les variables d'environnement;
-- lancer le premier deploy;
-- ajouter `app.changethis.dev` dans Railway;
-- recopier la cible DNS dans OVH;
-- attendre HTTPS;
-- verifier la page de login sur `https://app.changethis.dev`.
+- `DATA_STORE=file` en production.
+- `AUTH_MODE=local` en production.
+- `NEXT_PUBLIC_APP_URL` pointe vers localhost ou example.com.
+- Railway PostgreSQL est cree en pensant que l'app ecrit dedans.
+- Les migrations n'ont pas ete appliquees.
+- Les public keys fallback de `.env.example` sont utilisees en production.
 
-## 11. Suite logique dans le code
+## Risques beta acceptes temporairement
 
-Les prochaines vraies taches produit/infra pour rendre cette prod credible sont:
-
-1. filtrer toutes les lectures par workspace;
-2. migrer les feedbacks vers PostgreSQL;
-3. migrer les projets/sites vers PostgreSQL;
-4. remplacer la dependance production au store fichier;
-5. finaliser le flux signup/login cible.
-
-## Reponse courte a suivre
-
-Si tu veux aller vite sans casser la suite:
-
-- OVH garde le domaine;
-- Railway heberge l'app;
-- Railway heberge PostgreSQL;
-- OVH DNS pointe `app.changethis.dev` vers Railway;
-- Brevo arrive juste apres, quand on branche l'e-mail natif.
+- Les screenshots sont encore transitoirement stockes en data URL tant que Supabase Storage n'est pas branche.
+- Le rate limit public n'est pas encore un store partage.
+- La creation d'issue reste manuelle et doit etre surveillee.
+- Les retries provider ne remplacent pas encore une vraie queue durable.

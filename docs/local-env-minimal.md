@@ -1,5 +1,7 @@
 # Variables d’environnement minimales (local)
 
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
 Ce document liste le minimum utile pour lancer ChangeThis en local et les variables à activer pour tester des features complètes.
 
 ## TL;DR
@@ -36,6 +38,18 @@ CHANGETHIS_DATA_DIR=.changethis-data
 
 ## Variables de production à connaître (références)
 
+- Chemin beta actuel: `AUTH_MODE=supabase`, `DATA_STORE=supabase`, Railway app, Supabase Auth/DB.
 - `CHANGETHIS_SECRET_KEY` (obligatoire en production pour le stockage credential sécurisé).
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- `SUPABASE_REST_TIMEOUT_MS=10000` optionnel.
 - Variables `GITHUB_APP_*`, `GITHUB_INSTALLATION_ID`, `GITLAB_OAUTH_*`, `*_WEBHOOK_SECRET` quand les intégrations OAuth/App sont activées.
 - Intégrations par workspace: `*_PROVIDER_INTEGRATION_ID` et connexions persistées.
+
+No-go production beta:
+
+- `AUTH_MODE=local`
+- `DATA_STORE=file`
+- `AUTH_MODE=ovh`
+- `DATA_STORE=postgres`
+- `DATABASE_URL` comme source applicative principale
+- `CHANGETHIS_DATA_DIR`

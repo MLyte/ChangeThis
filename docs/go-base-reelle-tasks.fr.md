@@ -1,12 +1,14 @@
 # Go base reelle - repartition des taches
 
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
 Objectif: passer `app.changethis.dev` d'une beta simulee/local-file a une beta connectee a une vraie base PostgreSQL, avec auth reelle, donnees persistantes et smoke tests de bout en bout.
 
 ## Decisions a confirmer avant execution
 
 - Hebergeur applicatif: Railway reste le chemin recommande pour la beta.
-- Base de donnees: PostgreSQL managé Railway recommandé pour réduire l'assemblage initial.
-- Auth: `AUTH_MODE=supabase` si Supabase est retenu pour l'auth; sinon il faudra une auth applicative native séparée.
+- Base de donnees beta: Supabase Postgres via API REST/service role, car le code actuel ne consomme pas `DATABASE_URL`.
+- Auth: `AUTH_MODE=supabase` pour le chemin beta actuel; une auth applicative native séparée serait un chantier dédié.
 - Store applicatif: `DATA_STORE=supabase`.
 - Domaine cible: `https://app.changethis.dev`.
 - Beta: invitation-only, inscriptions publiques fermees tant que `ENABLE_PUBLIC_SIGNUP=false`.
@@ -15,7 +17,8 @@ Objectif: passer `app.changethis.dev` d'une beta simulee/local-file a une beta c
 
 ### 1. Choisir et creer les services
 
-- [ ] Confirmer le choix final: Supabase complet, Railway PostgreSQL + auth native, ou Railway + Supabase Auth.
+- [ ] Confirmer le choix beta actuel recommande: Railway pour l'app, Supabase pour auth + DB, OVH pour DNS.
+- [ ] Noter explicitement que Railway PostgreSQL natif, `DATABASE_URL`, `AUTH_MODE=ovh` et `DATA_STORE=postgres` sont des chantiers futurs non supportes par le code actuel.
 - [ ] Creer le projet/service de base retenu.
 - [ ] Creer ou verifier le service web Railway qui deploie l'app Next.js.
 - [ ] Verifier que le domaine `app.changethis.dev` pointe vers le service web.
@@ -25,11 +28,9 @@ Objectif: passer `app.changethis.dev` d'une beta simulee/local-file a une beta c
 
 - [ ] Recuperer l'URL publique de l'app: `NEXT_PUBLIC_APP_URL=https://app.changethis.dev`.
 - [ ] Recuperer les variables Supabase si Supabase est retenu:
-  - `SUPABASE_URL`
-  - `SUPABASE_SERVICE_ROLE_KEY`
-  - `SUPABASE_ANON_KEY`
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
 - [ ] Generer les secrets applicatifs:
   - `CHANGETHIS_SECRET_KEY`
   - secret de session/auth si le mode retenu en exige un
@@ -38,6 +39,7 @@ Objectif: passer `app.changethis.dev` d'une beta simulee/local-file a une beta c
   - `AUTH_MODE=supabase`
   - `DATA_STORE=supabase`
   - `ENABLE_PUBLIC_SIGNUP=false`
+  - `SUPABASE_REST_TIMEOUT_MS=10000`
 - [ ] Configurer le SMTP ou le provider mail d'auth si les liens signup/login doivent partir par email.
 
 ### 3. Actions manuelles de production
@@ -62,8 +64,10 @@ Objectif: passer `app.changethis.dev` d'une beta simulee/local-file a une beta c
 
 ### 2. Garde-fous code avant deploiement
 
-- [ ] Ajouter ou renforcer les checks de readiness pour signaler les variables prod manquantes.
-- [ ] S'assurer que `/api/ready` echoue clairement si la base ou les secrets critiques manquent.
+- [x] Ajouter ou renforcer les checks de readiness pour signaler les variables prod manquantes.
+- [x] S'assurer que `/api/ready` echoue clairement si la base ou les secrets critiques manquent.
+- [x] Ajouter un check structurel des migrations Supabase: `npm run migrations:check`.
+- [x] Ajouter un gate prod local: `npm run prod:check`.
 - [ ] Verifier que les routes publiques refusent les origines non autorisees.
 - [ ] Verifier que les credentials Git sont chiffres avant stockage.
 - [ ] Verifier que les erreurs prod ne loggent pas de secrets.

@@ -1,5 +1,23 @@
 # GitHub and GitLab Issue Providers Milestones
 
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
+This document is now an implementation progress map, not a purely future plan. Provider-neutral issue drafts, the provider interface, GitHub/GitLab clients, dashboard manual issue creation, Supabase provider integrations and encrypted credentials are partially or largely implemented. Remaining beta risks: repository validation against the selected integration, GitLab OAuth refresh, provider webhooks, stronger idempotence/locking, durable retries and full pagination/search.
+
+## Current Status Summary
+
+| Area | Status |
+| --- | --- |
+| Provider-neutral shared model | Done/partial |
+| Public feedback response and issue draft | Done/partial |
+| Supabase schema for providers/targets/external issues | Done through migrations `0001` to `0007` |
+| Issue provider interface | Done/partial |
+| GitHub issue creation | Done/partial, GitHub App preferred for beta |
+| GitLab issue creation | Done/partial, OAuth refresh still incomplete |
+| Dashboard manual issue creation/retry/sync | Done/partial |
+| Webhooks and durable workers | Remaining |
+| Repository ownership validation against integration | Remaining |
+
 ## Goal
 
 ChangeThis should let a project connect either GitHub or GitLab and keep the same transparent issue workflow:

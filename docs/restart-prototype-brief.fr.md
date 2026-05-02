@@ -1,5 +1,7 @@
 # ChangeThis - Brief prototype "repartir de zero"
 
+Statut 2026-05-02: document historique d'orientation prototype. Pour l'etat actuel beta, voir [current-state.fr.md](current-state.fr.md). Le mode Supabase existe maintenant pour auth et donnees; les suites production concernent surtout la validation staging, l'onboarding premier site, les screenshots objet, le rate limit partage et la fiabilite provider.
+
 ## Intention premiere
 
 ChangeThis sert a transformer un retour client vague, fait directement sur un site en cours de livraison, en issue exploitable par une equipe technique.

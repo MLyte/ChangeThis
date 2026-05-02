@@ -1,7 +1,9 @@
 # Feuille de route de préparation commerciale
 
-Ce document décrit les blocs manquants pour passer du prototype local actuel
-à une version SaaS commercialisable.
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
+Ce document décrit les blocs restants pour passer de la beta privée préparée
+sur Railway + Supabase Auth/DB à une version SaaS commercialisable.
 
 ## 1) Produits et marché
 
@@ -21,11 +23,11 @@ Ce document décrit les blocs manquants pour passer du prototype local actuel
   - Isolation systématique par `workspaceId` sur routes dashboard/API
   - Contrôles d’accès par rôle (`viewer`, `member`, `admin`, `owner`)
 - **Données et persistance**
-  - Remplacement des données de démo/projet local par Postgres/Supabase
-  - Référentiels persistants : feedbacks, événements, sites, destinations, providers
+  - `DATA_STORE=supabase` disponible pour feedbacks, événements, sites, destinations, providers et credentials chiffrés
+  - `DATA_STORE=file` réservé au local et interdit en production beta
   - Gestion complète des migrations, seeds de dev, backup/restore
 - **Widget**
-  - Distribution stable dans le bundle
+  - Distribution stable par `/widget.js` et `/widget.global.js`
   - Vérification de compatibilité et fallback si bundle indisponible
   - Mesure de performance d’initialisation et de capture
 
@@ -43,11 +45,11 @@ Ce document décrit les blocs manquants pour passer du prototype local actuel
 ## 4) Fiabilité, sécurité et conformité
 
 - **Résilience opérationnelle**
-  - SLO de base, health/readiness, métriques critiques
+  - `/api/health`, `/api/ready`, `env:check`, `migrations:check` et `prod:check` existent; métriques critiques et alertes restent à brancher
   - Jobs robustes, dead-letter/backoff, alertes
 - **Sécurité**
-  - Headers web, CSP, CSRF, validation stricte des origines/MIME
-  - Secrets et tokens chiffrés/stockés de manière adaptée
+  - Headers web, CSP, CSRF et validation d'origine déjà amorcés; limite body/rate limit partagé restent à durcir
+  - Credentials provider chiffrés applicativement; coffre/KMS et rotation restent à faire
   - Scans d’audit et revue logs (redaction de secrets)
 - **Conformité**
   - Processus de retention et purge
@@ -78,6 +80,6 @@ Ce document décrit les blocs manquants pour passer du prototype local actuel
 
 ## Priorité d’exécution recommandée
 
-- **P0 (pré-lancement)** : tenant-safe, sécurité web, production store, retries durable, widget public stable, onboarding 1er feedback.
+- **P0 (pré-lancement)** : smoke Supabase réel, `DATA_STORE=supabase`, sécurité API publique, screenshots hors data URL, onboarding 1er site, issue manuelle fiable.
 - **P1** : billing minimal, observabilité API, runbooks, conformité opérationnelle, documentation client essentielle.
 - **P2** : optimisations UI/UX avancées, rapports, tests de charge, extensions multicanaux de support.

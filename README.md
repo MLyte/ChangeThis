@@ -9,10 +9,13 @@ Clients click a fixed feedback button, add a note, pin one or more page elements
 - **Audience:** freelancers, small web agencies, studios, and product/design teams shipping client websites.
 - **Model:** source-available/open-core. The widget and shared protocol are permissive; hosted dashboard, managed provider integrations, storage, teams, and AI triage stay in the commercial hosted layer.
 - **Promise:** clients point at what needs changing; teams receive actionable feedback, decide whether to create an issue, and keep a traceable history.
+- **Current beta posture:** private beta, `ENABLE_PUBLIC_SIGNUP=false`, Railway app hosting, Supabase Auth/DB for the real beta path, OVH DNS for `app.changethis.dev`.
+
+See [docs/current-state.fr.md](docs/current-state.fr.md) for the synchronized current-state snapshot used by the documentation.
 
 ## Current Product Loop
 
-1. A workspace owner signs in or creates an account.
+1. A workspace owner signs in with a beta account. Public signup stays closed unless explicitly enabled.
 2. The team connects GitHub and/or GitLab with a server-side token, OAuth flow, or GitHub App setup.
 3. The owner adds a connected site in `/settings/connected-sites`, chooses a provider, selects a real accessible repository, and copies the generated widget script.
 4. A visitor submits feedback from the widget. No visitor account is required.
@@ -24,8 +27,9 @@ Clients click a fixed feedback button, add a note, pin one or more page elements
 - Public embeddable widget served from `/widget.js` and `/widget.global.js`.
 - Feedback modes: note, pin, multiple pins, capture/screenshot.
 - Per-pin feedback text and sent/unsent feedback management in the widget panel.
-- Public feedback API with origin validation and local rate limiting.
-- Durable file-backed local stores for feedback, connected sites, provider credentials, and disabled provider state.
+- Public feedback API with origin validation and local rate limiting. The local limiter is a known beta hardening item for multi-instance deployments.
+- Supabase-backed repositories for the real beta path: feedbacks, status events, connected sites, public keys, provider integrations, encrypted provider credentials, attempts, and external issues.
+- File-backed stores kept for local development with `DATA_STORE=file`.
 - Dashboard inbox with filters by text, status, site, feedback type, and provider.
 - Feedback actions: create issue, retry, keep without issue, archive, cancel submitted public feedback, and sync external issue state.
 - Feedback statuses: `raw`, `issue_creation_pending`, `retrying`, `sent_to_provider`, `failed`, `kept`, `resolved`, `ignored`.
@@ -34,8 +38,9 @@ Clients click a fixed feedback button, add a note, pin one or more page elements
 - GitHub/GitLab issue creation with idempotency keys and retry state.
 - GitHub/GitLab issue lookup to move feedback to `resolved` when the external issue is closed.
 - Git connection disable/reactivate flow.
-- Supabase/local authentication modes, `/login`, `/signup`, `/logout`, auth callback cookies, protected dashboard routes, workspace roles, and a `/settings/users` members view.
+- Supabase/local authentication modes, `/login`, `/signup`, `/logout`, auth callback cookies, protected dashboard routes, workspace roles, and a `/settings/users` members view. Production beta must use `AUTH_MODE=supabase`.
 - Sonner toasts for user feedback.
+- Production readiness endpoints: `/api/health` and `/api/ready`.
 
 ## Install A Widget
 
@@ -53,7 +58,7 @@ In local development, the app serves the same widget route from the web server:
 
 Create the site from `/settings/connected-sites` so the public key, allowed site URL, and Git issue destination are stored together. The public feedback API only accepts requests whose `Origin` matches the connected site URL.
 
-For a quick local smoke test, use `/demo`; it loads the local widget and sends feedback to the local API.
+For a quick smoke test, use `/demo`; it loads the real widget bundle and sends feedback to the current app API. It is a product demo, not proof that a customer site is installed correctly.
 
 ## License
 
@@ -79,7 +84,7 @@ The local web app runs on `http://localhost:3000` by default. If the port is occ
 Useful local routes:
 
 - `/` landing page with product CTAs.
-- `/signup` account/workspace creation entry point.
+- `/signup` account/workspace creation entry point, gated by `ENABLE_PUBLIC_SIGNUP`.
 - `/login` authenticated console entry point.
 - `/demo` test page that loads the real widget bundle against the local API.
 - `/projects` designer/product inbox.
@@ -131,16 +136,18 @@ GITLAB_BASE_URL=https://gitlab.com
 
 For a self-hosted GitLab, set `GITLAB_BASE_URL` to the instance base URL, for example `https://gitrural.cra.wallonie.be`.
 
-For Supabase auth experiments, set:
+For the real beta path, use Supabase:
 
 ```env
 AUTH_MODE=supabase
+DATA_STORE=supabase
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
+CHANGETHIS_SECRET_KEY=...
 ```
 
-`AUTH_MODE=local` is disabled automatically in production runtime. Production should use Supabase mode.
+`AUTH_MODE=local` and `DATA_STORE=file` are disabled/no-go for production beta. Railway PostgreSQL native `DATABASE_URL` is not consumed by the current code path.
 
 ## Validation
 
@@ -150,6 +157,8 @@ npm run build --workspace @changethis/widget
 npm run typecheck --workspace @changethis/web
 npm run lint --workspace @changethis/web
 npm run test --workspace @changethis/web
+npm run migrations:check
+npm run prod:check
 npm run build --workspace @changethis/web
 ```
 
@@ -159,6 +168,9 @@ Root-level equivalents are available:
 npm run typecheck
 npm run lint
 npm run test
+npm run migrations:check
+npm run prod:check
+npm run build:prod
 npm run build
 ```
 
@@ -186,3 +198,4 @@ docs                 Product and technical specs
 - Move local rate limiting to a shared store for serverless production.
 - Sign OAuth state with a server secret before relying on provider OAuth in production.
 - Store screenshots in object storage with short-lived signed URLs instead of JSON data URLs.
+- Strengthen provider idempotence/locking and durable retry processing.

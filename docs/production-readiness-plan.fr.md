@@ -1,5 +1,7 @@
 # Plan vers une version production "100% fonctionnelle"
 
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
 Ce plan traduit l'état actuel du projet en une trajectoire exécutable vers une mise en production robuste.
 
 ## 1) Définir "100% fonctionnelle" avec des critères mesurables
@@ -18,7 +20,7 @@ Le projet peut passer en commercial uniquement si **tous** les critères ci-dess
 En cas d'un seul critère non tenu, la décision est **No-Go**.
 
 - [ ] **Go bloquant** — Le flux `widget -> inbox -> issue` fonctionne en conditions réelles (site réel, origine autorisée, destination externe configurée).
-- [ ] **Go bloquant** — Persistance production active par workspace (pas de fallback local en prod), migrations applicables en 1 étape rollback incluse.
+- [ ] **Go bloquant** — Persistance production active par workspace avec `DATA_STORE=supabase`, migrations `0001` à `0007` appliquées, rollback documenté.
 - [ ] **Go bloquant** — Contrôle d'accès workspace/ rôle (`viewer` limité, `admin/owner` pour actions critiques) vérifié sur toutes les routes dashboard et API critiques.
 - [ ] **Go bloquant** — Sécurité d'entrée/sortie : CORS + CSRF + validation stricte, secrets minimum exposés, logs sensibles masqués.
 - [ ] **Go bloquant** — Observabilité minimale opérationnelle : `/health`, `/ready`, alertes 5xx et backlog retries, métriques feedback/providers.
@@ -30,23 +32,23 @@ En cas d'un seul critère non tenu, la décision est **No-Go**.
 
 | Domaine | Prototype | Beta | Commercialisable |
 | --- | --- | --- | --- |
-| **Auth** | Authentification basique, non robuste en production. | Auth optionnelle ou partiellement persistée, session et rôles basiques. | Auth Supabase/IdP imposée en prod, sessions sécurisées, rôles `viewer`/`member`/`admin`/`owner` et scope workspace systématique. |
-| **Données** | Stockage mémoire/fichier simple pour feedbacks et statut. | Persistance partielle avec migration de données vers PostgreSQL. | Stockage production complet par workspace: feedbacks, statuts, projets, destinations, intégrations, logs métier + migrations et rollback documentés. |
-| **Widget** | Intégration démo, flux non garanti en conditions réelles. | Widget public utilisable avec script d'installation et checks de base. | Widget public versionné (`/widget.js` + `/widget.global.js`), validation d'origine, compatibilité navigateur, fallback documenté, performance budgétée. |
-| **Intégrations** | Intégrations manuelles / localisées, souvent hardcodées. | Création d'issue et callbacks stables sur un provider principal. | Flux GitHub/GitLab opérationnels (installation/token, rotation, pagination, erreurs), relances + idempotence + sécurisation provider. |
-| **Support** | Pas de workflow support dédié. | Journal de logs + docs minimales. | Runbooks opérationnels, `/health` + `/ready`, monitoring, alerte 5xx/backlog retries, FAQ/support produit, export et suppression data client. |
+| **Auth** | Auth locale dev. | Supabase Auth obligatoire pour la beta prod, signup public fermé. | Auth/IdP stable, sessions sécurisées, rôles `viewer`/`member`/`admin`/`owner` et scope workspace systématique. |
+| **Données** | Fichier local pour dev. | `DATA_STORE=supabase` pour sites, feedbacks, statuts, intégrations et credentials; smoke réel à valider. | Stockage production complet + migrations, backup/restore, rollback documentés. |
+| **Widget** | Démo locale. | Widget public servi par `/widget.js` + `/widget.global.js`, script d'installation et checks de base. | Widget versionné, compatibilité navigateur, performance budgétée, fallback documenté. |
+| **Intégrations** | Tokens/env locaux. | GitHub/GitLab workspace-backed partiels, création manuelle d'issue depuis l'inbox. | Flux GitHub/GitLab complets (installation/token, refresh, webhooks, rotation, pagination), relances + idempotence + sécurisation provider. |
+| **Support** | Docs minimales. | `/api/health`, `/api/ready`, guides client et Go base réelle. | Runbooks opérationnels, monitoring, alerte 5xx/backlog retries, FAQ/support produit, export et suppression data client. |
 | **Billing** | Aucun modèle commercial opérationnel. | Positionnement et pricing documentés. | Plans et limites définis, trial actif/expiré, règles de blocage explicites et UX de statut billing visible dans le produit. |
 
 ## 2) Priorité absolue: persistance durable
 
-Le projet indique déjà que la principale limite actuelle est le stockage en mémoire de la session Next.js.
+La principale limite n'est plus le store local pur: le mode Supabase existe. La prochaine validation consiste à appliquer les migrations sur une vraie instance, exécuter le smoke `widget -> inbox`, puis fermer les risques de stockage screenshot/rate limit/retry.
 
 Livrables :
 
-1. Implémenter un repository persistant (Supabase/Postgres) pour les feedbacks.
-2. Garder `/projects` branché sur l'abstraction repository (pas sur des mocks).
-3. Ajouter un cycle de statut explicite (`raw`, `sent_to_provider`, `failed`).
-4. Créer une stratégie de migration et rollback SQL versionnée.
+1. Valider `DATA_STORE=supabase` sur staging/prod.
+2. Garder `/projects` branché sur l'abstraction repository.
+3. Ajouter les index dashboard/retry manquants.
+4. Créer une stratégie de backup/restore et rollback SQL versionnée.
 
 Definition of Done :
 
@@ -71,7 +73,7 @@ Definition of Done :
 
 ## 4) Captures d'écran et pièces jointes durables
 
-Les screenshots sont acceptés mais pas durables dans l'état actuel.
+Les screenshots sont persistés transitoirement en DB sous forme de data URL. C'est durable mais pas acceptable commercialement à volume réel.
 
 Livrables :
 
@@ -141,10 +143,10 @@ Gates CI recommandés :
 
 ## 10) Prochaine action immédiate (ordre conseillé)
 
-1. Brancher le repository Supabase/Postgres.
-2. Ajouter la colonne de statut et l'historique d'état.
-3. Exposer dans l'inbox une action manuelle de création d'issue.
-4. Ajouter retries/idempotence et logs structurés.
+1. Appliquer les migrations Supabase sur staging et valider `npm run prod:check`.
+2. Faire un smoke réel `widget -> inbox -> issue`.
+3. Déplacer les screenshots vers stockage objet ou désactiver la capture en beta.
+4. Ajouter rate limit partagé, idempotence/verrou provider et logs structurés.
 5. Lancer un pilote staging avec un client réel.
 
 ---

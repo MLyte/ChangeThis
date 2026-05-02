@@ -2,6 +2,10 @@
 
 Date: 2026-04-30
 
+Mise a jour 2026-05-02: ce document est historique pour la cible OVH/auth native. Le chemin beta actuellement implemente est Railway pour l'app, Supabase Auth/DB avec `AUTH_MODE=supabase` + `DATA_STORE=supabase`, et OVH pour DNS. Le code actuel ne consomme pas `DATABASE_URL`.
+
+Etat actuel beta: voir [current-state.fr.md](current-state.fr.md).
+
 ## Etat actuel deploye
 
 - Domaine principal retenu: `changethis.dev`.
@@ -16,16 +20,17 @@ Date: 2026-04-30
 
 ## Decisions deja prises
 
-- Auth production cible a terme: native applicative, pas Supabase Auth.
+- Auth production cible a terme: native applicative, pas Supabase Auth. Cette cible n'est pas le chemin beta actuel.
 - UX signup cible: e-mail d'abord.
 - Premier ecran signup: pas de nom d'organisation, pas de mot de passe.
 - Activation: l'utilisateur recoit un e-mail avec lien securise, avec code court possible en fallback.
 - Premiere connexion: l'utilisateur choisit son mot de passe.
 - Hebergement hors OVH accepte si c'est plus simple, moins risque et peu couteux.
-- Stack recommandee pour la beta: Railway + PostgreSQL + Brevo.
+- Stack recommandee pour la beta actuelle: Railway app + Supabase Auth/DB + OVH DNS.
 - Moteur de base de donnees valide: PostgreSQL.
-- Fournisseur PostgreSQL beta: Railway integre.
-- Stockage screenshots production retenu: Cloudflare R2.
+- Fournisseur PostgreSQL beta actuel: Supabase Postgres via REST/service role.
+- Railway PostgreSQL integre: non consomme par le code actuel.
+- Stockage screenshots production cible: objet prive type Cloudflare R2 ou Supabase Storage; non implemente actuellement.
 - Duree de session cible retenue: 7 jours.
 - Pendant la beta: signup public ferme.
 - A la reouverture du signup public: lien e-mail obligatoire + captcha anti-abus + rate limit.
@@ -59,18 +64,16 @@ Il faut remplacer progressivement la dependance Supabase Auth par une auth appli
 
 ## Ordre d'implementation recommande
 
-1. Creer le projet Railway.
-2. Ajouter une base PostgreSQL integree a Railway.
-3. Ajouter les migrations auth minimales.
-4. Ajouter le provider e-mail Brevo.
-5. Implementer le signup e-mail-first natif applicatif.
-6. Implementer la verification du lien/code e-mail.
-7. Implementer le choix du mot de passe a la premiere connexion.
-8. Implementer les sessions applicatives.
-9. Adapter `getCurrentSession` pour lire les sessions PostgreSQL.
-10. Creer automatiquement le workspace apres verification e-mail.
-11. Garder le login password comme fallback simple.
-12. Bloquer le mode local et les stores fichier en production.
+1. Pour la beta actuelle: Railway app + Supabase Auth/DB + migrations `0001` a `0007`.
+2. Valider `npm run prod:check`, `/api/health`, `/api/ready`.
+3. Faire un smoke reel `widget -> inbox -> issue`.
+4. Ensuite seulement, planifier l'eventuelle auth native applicative:
+   - tables utilisateurs/sessions/tokens;
+   - hash password;
+   - e-mail via Brevo;
+   - adaptation `getCurrentSession`;
+   - migration hors Supabase Auth.
+5. Bloquer le mode local et les stores fichier en production.
 
 ## Questions restantes a poser une par une
 
@@ -82,7 +85,7 @@ Aucune a ce stade.
 
 ## Notes de prudence
 
-- L'implementation actuelle email-first ajoutee dans l'app reste compatible avec Supabase Auth. Elle ne constitue pas encore l'auth native applicative cible.
+- L'implementation actuelle email-first reste compatible avec Supabase Auth. Elle ne constitue pas encore l'auth native applicative cible.
 - PostgreSQL seul ne fournit pas d'auth, de magic link, de hash password, ni de sessions.
 - Pour une mise en production rapide, la priorite est de livrer un chemin minimal robuste plutot qu'un systeme complet de billing/workspaces multi-org.
-- L'app actuellement en ligne est un etat beta transitoire: Railway + domaine reel + PostgreSQL cree, mais auth encore Supabase et certains flux prod restent a finaliser.
+- L'app beta cible est un etat transitoire volontaire: Railway + domaine reel + Supabase Auth/DB. Certains flux prod restent a finaliser, notamment screenshots objet, rate limit partage, idempotence provider et backup/restore.

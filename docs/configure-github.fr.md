@@ -1,5 +1,7 @@
 # Configurer GitHub pour ChangeThis
 
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
 Ce guide décrit le chemin bêta pour connecter GitHub à un workspace ChangeThis et créer des issues depuis les feedbacks.
 
 ## Pré-requis
@@ -14,6 +16,11 @@ Ce guide décrit le chemin bêta pour connecter GitHub à un workspace ChangeThi
 Ouvrir `/settings/git-connections`, puis choisir GitHub.
 
 En bêta privée, GitHub est le provider prioritaire. Si plusieurs modes de connexion sont disponibles, privilégier le chemin GitHub App quand il est activé pour l'environnement. Le token serveur reste utile en local ou pour une intégration pilote simple.
+
+Deux chemins existent aujourd'hui:
+
+- **GitHub App**: l'UI démarre l'installation via `GITHUB_APP_SLUG`; le serveur utilise `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` et l'installation stockée pour créer un token d'installation.
+- **Token serveur/local**: `GITHUB_TOKEN` ou `CHANGETHIS_GITHUB_TOKEN` reste un fallback utile en local ou pilote. Le bouton de génération de token ouvre GitHub, mais ne connecte pas automatiquement un token dans l'UI.
 
 ## 2. Vérifier les dépôts accessibles
 
@@ -77,3 +84,4 @@ ISSUE_PROVIDER_TIMEOUT_MS=10000
 - Ne jamais exposer de token GitHub au navigateur ou dans le snippet widget.
 - Ne pas stocker de token dans un fichier versionné.
 - En production SaaS, préférer une GitHub App avec installation par workspace plutôt qu'un token partagé.
+- Les webhooks provider et la synchronisation entrante complète restent des limites beta.

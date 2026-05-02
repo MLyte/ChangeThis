@@ -1,6 +1,8 @@
 # Roadmap beta ChangeThis
 
-Ce document transforme le plan de production en piste executable pour une beta publique ou semi-publique.
+Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+
+Ce document transforme le plan de production en piste executable pour la beta privee actuelle. Le chemin beta reel est Railway pour l'app, OVH pour le DNS et Supabase Auth/DB avec `AUTH_MODE=supabase` + `DATA_STORE=supabase`.
 
 ## Phase 1 - Stabilisation locale
 
@@ -21,6 +23,8 @@ Ce document transforme le plan de production en piste executable pour une beta p
 ## Phase 3 - Staging connecte
 
 - Creer des secrets separes pour `local`, `staging` et `production`.
+- Appliquer les migrations Supabase `0001` a `0007`.
+- Valider `npm run migrations:check`, `npm run env:check` et `npm run prod:check`.
 - Configurer un depot GitHub/GitLab de test pour les issues beta.
 - Restreindre les `allowedOrigins` aux domaines pilotes.
 - Tester la persistance apres redemarrage.
@@ -28,22 +32,22 @@ Ce document transforme le plan de production en piste executable pour une beta p
 
 ## Phase 4 - Donnees et securite
 
-- Garder le store fichier uniquement pour beta single-instance controlee.
-- Migrer vers Supabase/Postgres avant beta multi-client ou multi-instance.
+- Interdire `DATA_STORE=file` en production beta.
+- Utiliser Supabase REST/Postgres pour la beta reelle.
 - Deplacer les captures vers un stockage objet avant volume public.
 - Remplacer le rate limit memoire par un stockage partage si plusieurs instances servent l'API.
 - Verifier RLS, backups, rotation de secrets et absence de secrets reels dans Git.
 
 ## Phase 5 - Domaine et beta
 
-- Acheter le domaine quand staging est vert et reproductible.
-- Pointer `staging.<domaine>` vers l'environnement staging.
-- Pointer `app.<domaine>` vers l'environnement beta.
+- Domaine cible courant: `https://app.changethis.dev`.
+- Railway heberge l'app, OVH gere la zone DNS.
+- Pointer `app.changethis.dev` vers la cible Railway.
 - Verifier TLS, redirections HTTPS, CORS et configuration `NEXT_PUBLIC_APP_URL`.
 - Activer uptime check et alertes sur 5xx, latence p95, echecs provider et feedbacks bloques en `retrying`.
 
 ## Go/No-Go
 
-Go si les gates locaux et GitHub passent, si staging est deploye depuis GitHub, si un feedback reel cree une issue externe, si DNS/TLS sont valides et si les alertes minimales sont actives.
+Go si les gates locaux et GitHub passent, si `AUTH_MODE=supabase`, `DATA_STORE=supabase`, `ENABLE_PUBLIC_SIGNUP=false`, `npm run prod:check` est vert, les migrations sont appliquees, `/api/health` et `/api/ready` sont verts, un feedback reel arrive dans `/projects`, DNS/TLS sont valides et les alertes minimales sont actives.
 
-No-Go si le store fichier sert une beta multi-instance, si staging et production partagent des secrets, si les origines autorisees sont ouvertes trop largement, ou si une exception securite n'est pas documentee.
+No-Go si `DATA_STORE=file` ou `AUTH_MODE=local` sert la production beta, si les migrations Supabase ne sont pas appliquees, si staging et production partagent des secrets, si les origines autorisees sont ouvertes trop largement, ou si une exception securite n'est pas documentee.
