@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { findConfiguredProjectByKey } from "../../../../lib/project-registry";
 import { requestOriginFrom } from "../../../../lib/request-origin";
 import { isProductionRuntime } from "../../../../lib/runtime";
+import type { ChangeThisProject } from "../../../../lib/demo-project";
+
+type WidgetConfigResponse = {
+  projectKey: string;
+  name: string;
+  modes: Array<"comment" | "pin" | "screenshot">;
+  locale: ChangeThisProject["widgetLocale"];
+  buttonPosition: ChangeThisProject["widgetButtonPosition"];
+  buttonVariant: ChangeThisProject["widgetButtonVariant"];
+  endpoint: "/api/public/feedback";
+};
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -21,7 +32,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403 });
   }
 
-  return NextResponse.json({
+  return NextResponse.json(widgetConfigResponse(project));
+}
+
+function widgetConfigResponse(project: ChangeThisProject): WidgetConfigResponse {
+  return {
     projectKey: project.publicKey,
     name: project.name,
     modes: ["comment", "pin", "screenshot"],
@@ -29,5 +44,5 @@ export async function GET(request: Request) {
     buttonPosition: project.widgetButtonPosition,
     buttonVariant: project.widgetButtonVariant,
     endpoint: "/api/public/feedback"
-  });
+  };
 }

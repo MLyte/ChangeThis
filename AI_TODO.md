@@ -86,7 +86,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [x] Ajouter un état vide guidé pour `/projects` quand aucun site réel n'est configuré.
 - [x] Ajouter un état vide guidé pour `/settings/connected-sites` quand aucun site n'existe.
 - [ ] Ajouter une action "Créer un site" avec nom, domaine autorisé et clé publique générée.
-- [ ] Ajouter une validation visible des origines autorisées avant de fournir le script widget.
+- [x] Ajouter une validation visible des origines autorisées avant de fournir le script widget.
 - [ ] Ajouter un test de feedback depuis un site configuré, distinct de la page `/demo`.
 - [ ] Ajouter une confirmation de fin d'onboarding quand un feedback réel crée une issue externe.
 - [ ] Ajouter une vue "inviter un développeur ou collègue" pour les usages agence et équipe.
@@ -124,7 +124,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [x] Ajouter des tests unitaires widget pour `inferEndpoint` depuis `data-endpoint`, `script.src` et fallback.
 - [x] Ajouter des tests unitaires widget pour `inferLocale` depuis attribut, localStorage et langue document.
 - [ ] Ajouter des tests widget pour le rendu Shadow DOM sans collision avec CSS hôte.
-- [ ] Ajouter des tests widget pour ouverture/fermeture sans doublonner `changethis-widget-root`.
+- [x] Ajouter des tests widget pour ouverture/fermeture sans doublonner `changethis-widget-root`.
 - [ ] Ajouter des tests widget pour échappement HTML des labels, messages et métadonnées.
 - [ ] Ajouter des tests widget pour masquage temporaire des champs sensibles pendant capture.
 - [ ] Ajouter des tests widget pour restauration des champs sensibles après échec de capture.
@@ -198,7 +198,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter un verrou distribué pour éviter deux créations d'issues concurrentes sur le même feedback.
 - [x] Ajouter un timeout explicite sur tous les appels GitHub.
 - [x] Ajouter un timeout explicite sur tous les appels GitLab.
-- [ ] Ajouter un timeout explicite sur tous les appels Supabase REST.
+- [x] Ajouter un timeout explicite sur tous les appels Supabase REST.
 - [ ] Ajouter un circuit breaker simple par provider.
 - [ ] Ajouter une stratégie de backoff avec jitter.
 - [ ] Ajouter une vue `failed` pour traiter les feedbacks en erreur.
@@ -219,7 +219,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [x] Ajouter une protection CSRF sur les POST privés du dashboard.
 - [x] Vérifier que toutes les actions privées exigent une session workspace.
 - [x] Ajouter une validation d'origine stricte pour `/api/widget/config`.
-- [ ] Ne pas exposer `issueTarget` complet dans `/api/widget/config` si non nécessaire au widget.
+- [x] Ne pas exposer `issueTarget` complet dans `/api/widget/config` si non nécessaire au widget.
 - [ ] Ajouter une limite de longueur sur les champs texte dans les routes privées.
 - [x] Ajouter une validation MIME réelle des screenshots côté serveur.
 - [ ] Ajouter un scan ou une stratégie de quarantaine pour les uploads image.
@@ -419,6 +419,9 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-02] Micro-tâche onboarding sites: ajout d'une validation visible des origines autorisées dans la modale de création et sur chaque site connecté; le snippet widget n'est affiché/copiable que si les origines configurées sont valides. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK.
+- [2026-05-02] Tests widget commerciaux: ajout d'un test ciblé vérifiant que `initChangeThis` ne crée ni n'ajoute un second root quand `changethis-widget-root` existe déjà. Validation ciblée: `npm run test --workspace @changethis/widget` OK; `npm run typecheck --workspace @changethis/widget` OK.
+- [2026-05-02] Sécurité widget config: ajout d'un contrat de réponse allowlisté et d'un test API ciblé qui vérifie que `/api/widget/config` ne renvoie que les champs nécessaires au widget, sans exposer `issueTarget` ni champ interne. Validation ciblée: `npx tsx --test test/widget-config-route.test.ts` OK; `npm run typecheck --workspace @changethis/web` OK.
 - [2026-05-02] Sécurité publique minimale screenshots: `validateFeedbackPayload` n'accepte plus que les screenshots data URL base64 `image/png`, `image/jpeg` et `image/webp`, avec refus des MIME dangereux ou data URLs malformées. Validation ciblée: `npm run test --workspace @changethis/shared` OK; `npm run typecheck` OK.
 - [2026-05-02] Micro-tâche widget public: le bundle réel servi par `/widget.js` et `/widget.global.js` reçoit désormais des headers JavaScript avec cache public court, `stale-while-revalidate`, `ETag` et `X-ChangeThis-Widget-Version` dérivés du contenu, tandis que le fallback absent reste `no-store`. Test ciblé ajouté pour prouver que les deux routes servent `packages/widget/dist/widget.global.js` en JS quand il est présent. Validation ciblée: `npx tsx --test test/widget-bundle.test.ts` OK; `npm run typecheck --workspace @changethis/web` OK après intégration de l'état vide `/projects`.
 - [2026-05-02] Widget public installable: `/widget.js` et `/widget.global.js` servent désormais un fallback JavaScript exécutable si `packages/widget/dist/widget.global.js` est absent, avec badge UX discret, console error, état global `missing-widget-bundle`, option `data-fallback="silent"` et header `X-ChangeThis-Widget-Fallback`. Validation ciblée: `npx tsx --test test/widget-bundle.test.ts` OK; `npm run test --workspace @changethis/web` OK; `npm run typecheck --workspace @changethis/web` OK.
@@ -547,3 +550,4 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [2026-05-02] Migration DB provider integrations: ajout de `supabase/migrations/0007_provider_integrations_workspace_storage.sql` pour durcir stockage workspace/provider (status `needs_setup`, checks, index, unicités partielles, trigger `updated_at`) et stocker les credentials chiffrés (`ciphertext`/`iv`/`tag`). Validation: `git diff --check` OK sur le scope migration.
 - [2026-05-02] P0 provider integrations Supabase: ajout des chemins async Supabase pour lister/créer/connecter/désactiver les intégrations provider par workspace, stocker et relire les credentials chiffrés, et utiliser ces connexions dans les routes settings/sites/issue-targets/providers. Validation: `npm run test --workspace @changethis/web` OK, `npm test` OK, `npm run typecheck` OK.
 - [2026-05-02] Micro-tâche onboarding `/projects`: ajout d'un état vide guidé quand aucun site réel n'est configuré, avec étapes connexion Git, création site, script widget et feedback test. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK.
+- [2026-05-02] Fiabilité Supabase REST: timeout central ajouté sur `supabaseServiceRest`/`supabaseRest`, configurable via `SUPABASE_REST_TIMEOUT_MS` avec défaut 10s. Validation ciblée: `npx tsx --test test/supabase-server.test.ts test/project-registry-supabase.test.ts test/feedback-repository-supabase.test.ts test/provider-integrations-supabase.test.ts` OK, `npm run typecheck --workspace @changethis/web` OK.

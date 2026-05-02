@@ -4081,6 +4081,32 @@ dd {
   padding: 10px 12px;
 }
 
+.origin-create-status {
+  align-self: center;
+  background: var(--primary-softer);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+  grid-column: 1;
+  line-height: 1.4;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.origin-create-status.success {
+  background: var(--success-soft);
+  border-color: var(--success-border);
+  color: var(--success);
+}
+
+.origin-create-status.error {
+  background: var(--danger-soft);
+  border-color: var(--danger-border);
+  color: var(--coral);
+}
+
 .site-create-actions {
   align-items: center;
   display: flex;
@@ -4366,6 +4392,21 @@ dd {
   white-space: nowrap;
 }
 
+.site-script-placeholder {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
+  border-radius: 7px;
+  color: var(--coral);
+  display: block;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.4;
+  overflow: hidden;
+  padding: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .site-script-actions {
   align-items: center;
   display: inline-flex;
@@ -4377,6 +4418,20 @@ dd {
   font-size: 12px;
   font-weight: 850;
   line-height: 1.35;
+}
+
+.origin-check-result {
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.origin-check-result.success {
+  color: var(--success);
+}
+
+.origin-check-result.error {
+  color: var(--coral);
 }
 
 .script-check-result.success {
@@ -4403,6 +4458,12 @@ dd {
 
 .inline-action:hover {
   color: var(--ink);
+}
+
+.inline-action:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .repo-destination div {

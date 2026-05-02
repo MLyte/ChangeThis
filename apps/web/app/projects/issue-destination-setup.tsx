@@ -94,6 +94,12 @@ type InstallCheckResult = {
   message: string;
 };
 
+type OriginValidation = {
+  ok: boolean;
+  message: string;
+  normalizedOrigin?: string;
+};
+
 export function IssueDestinationSetup({
   projects,
   integrations,
@@ -1196,6 +1202,7 @@ function ConnectedSitesSection({
   const isRepositorySelectDisabled = !isSelectedProviderConnected || repositoryLoadState === "loading" || repositoryOptions.length === 0;
   const connectedIntegrations = Array.from(connectedProviders);
   const hasConnectedProvider = connectedIntegrations.length > 0;
+  const siteOriginValidation = validateAllowedOrigin(siteOrigin);
 
   return (
     <section className="settings-section linked-sites" aria-labelledby="linked-sites-title">
@@ -1263,6 +1270,7 @@ function ConnectedSitesSection({
             const issueTarget = project.issueTarget;
             const providerConnected = connectedProviders.has(issueTarget.provider);
             const isReady = providerConnected && issueTarget.namespace && issueTarget.project;
+            const originValidation = validateAllowedOrigins(project.allowedOrigins);
 
             return (
               <article className="site-repo-row connected-site-row" key={project.publicKey}>
@@ -1349,12 +1357,19 @@ function ConnectedSitesSection({
                   </div>
                   <div className="site-script">
                     <strong>Script widget</strong>
-                    <code>{project.installSnippet ?? installSnippet(project)}</code>
+                    {originValidation.ok ? (
+                      <code>{project.installSnippet ?? installSnippet(project)}</code>
+                    ) : (
+                      <span className="site-script-placeholder">Origine autorisée à corriger avant installation.</span>
+                    )}
                     <div className="site-script-actions">
-                      <button className="inline-action" onClick={() => onCopyInstallSnippet(project)} type="button">
+                      <button className="inline-action" disabled={!originValidation.ok} onClick={() => onCopyInstallSnippet(project)} type="button">
                         <Copy aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
                         Copier
                       </button>
+                      <span className={`origin-check-result ${originValidation.ok ? "success" : "error"}`} role="status">
+                        {originValidation.message}
+                      </span>
                       {installChecks[project.publicKey] ? (
                         <span className={`script-check-result ${installChecks[project.publicKey].ok ? "success" : "error"}`}>
                           {installChecks[project.publicKey].message}
@@ -1431,6 +1446,9 @@ function ConnectedSitesSection({
                   </span>
                   <input name="siteOrigin" onChange={(event) => setSiteOrigin(event.target.value)} placeholder="https://www.exemple.be" value={siteOrigin} />
                 </label>
+                <p className={`origin-create-status ${siteOriginValidation.ok ? "success" : siteOrigin.trim() ? "error" : ""}`} role="status">
+                  {siteOriginValidation.message}
+                </p>
                 <label>
                   Service Git
                   <select name="provider" value={selectedProvider} onChange={(event) => onSelectProvider(event.target.value as IssueProvider)}>
@@ -1458,7 +1476,7 @@ function ConnectedSitesSection({
                   {message}
                 </p>
                 <div className="site-create-actions">
-                  <button className="button" disabled={isPending || !siteOrigin || !selectedRepositoryId || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
+                  <button className="button" disabled={isPending || !siteOriginValidation.ok || !selectedRepositoryId || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
                     <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                     {isPending ? "Création..." : "Créer le site"}
                   </button>
@@ -1530,6 +1548,69 @@ function repositorySelectPlaceholder(state: RepositoryLoadState, isProviderConne
   }
 
   return "Choisir un dépôt";
+}
+
+function validateAllowedOrigins(origins: string[]): OriginValidation {
+  if (origins.length === 0) {
+    return {
+      ok: false,
+      message: "Aucune origine autorisée configurée."
+    };
+  }
+
+  const invalidOrigin = origins.find((origin) => !normalizeAllowedOrigin(origin));
+
+  if (invalidOrigin) {
+    return {
+      ok: false,
+      message: `Origine invalide: ${invalidOrigin}`
+    };
+  }
+
+  return {
+    ok: true,
+    message: `Origine autorisée validée: ${origins.join(", ")}`
+  };
+}
+
+function validateAllowedOrigin(value: string): OriginValidation {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return {
+      ok: false,
+      message: "Saisissez l'URL du site pour valider l'origine autorisée."
+    };
+  }
+
+  const normalizedOrigin = normalizeAllowedOrigin(trimmedValue);
+
+  if (!normalizedOrigin) {
+    return {
+      ok: false,
+      message: "Origine invalide: utilisez une URL http(s), par exemple https://www.exemple.be."
+    };
+  }
+
+  return {
+    ok: true,
+    message: `Origine valide: ${normalizedOrigin}. Le script sera limité à ce domaine.`,
+    normalizedOrigin
+  };
+}
+
+function normalizeAllowedOrigin(value: string): string | undefined {
+  try {
+    const url = new URL(value.trim());
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return undefined;
+    }
+
+    return url.origin;
+  } catch {
+    return undefined;
+  }
 }
 
 function parseRepositoryOptions(value: unknown, provider: IssueProvider): RepositoryOption[] {

@@ -21,6 +21,8 @@ type OrganizationRow = {
   name: string;
 };
 
+const DEFAULT_SUPABASE_REST_TIMEOUT_MS = 10_000;
+
 type SupabaseAuthTokenResponse = {
   access_token?: unknown;
   refresh_token?: unknown;
@@ -99,6 +101,18 @@ function getSupabaseAnonKey(): string | undefined {
 
 function getSupabaseServiceRoleKey(): string | undefined {
   return process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
+
+function getSupabaseRestTimeoutMs(): number {
+  const rawValue = process.env.SUPABASE_REST_TIMEOUT_MS;
+  if (!rawValue) {
+    return DEFAULT_SUPABASE_REST_TIMEOUT_MS;
+  }
+
+  const timeoutMs = Number(rawValue);
+  return Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? Math.floor(timeoutMs)
+    : DEFAULT_SUPABASE_REST_TIMEOUT_MS;
 }
 
 export function isSupabaseAuthConfigured(): boolean {
@@ -665,7 +679,7 @@ async function supabaseRest<T>(path: string, init: RequestInit = {}): Promise<T>
     throw new Error("Supabase service role is not configured");
   }
 
-  const response = await fetch(`${getSupabaseUrl()}${path}`, {
+  const response = await fetchSupabaseRest(`${getSupabaseUrl()}${path}`, {
     ...init,
     headers: {
       apikey: getSupabaseServiceRoleKey()!,
@@ -690,6 +704,40 @@ async function supabaseRest<T>(path: string, init: RequestInit = {}): Promise<T>
 
 export async function supabaseServiceRest<T>(path: string, init: RequestInit = {}): Promise<T> {
   return supabaseRest<T>(path, init);
+}
+
+async function fetchSupabaseRest(input: string, init: RequestInit): Promise<Response> {
+  const timeoutMs = getSupabaseRestTimeoutMs();
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  const inputSignal = init.signal;
+  const abortFromInputSignal = () => controller.abort(inputSignal?.reason);
+  if (inputSignal?.aborted) {
+    clearTimeout(timeout);
+    throw new Error("Supabase REST request was aborted");
+  }
+  inputSignal?.addEventListener("abort", abortFromInputSignal, { once: true });
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (timedOut) {
+      throw new Error(`Supabase REST request timed out after ${timeoutMs}ms`);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    inputSignal?.removeEventListener("abort", abortFromInputSignal);
+  }
 }
 
 async function toWorkspaceMemberSummary(member: WorkspaceMemberRow & { user_id: string }): Promise<WorkspaceMemberSummary> {
