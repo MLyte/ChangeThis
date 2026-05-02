@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock3, GitPullRequestCreate, Inbox, RotateCcw, Workflow, type LucideIcon } from "lucide-react";
+import { GitPullRequestCreate, MessageSquare, MousePointerClick, Workflow } from "lucide-react";
 import { T } from "./i18n";
 import { ProviderBadge } from "./provider-badge";
 
@@ -17,11 +17,11 @@ type PreviewFeedback = {
   receivedAt: string;
 };
 
-const statusConfig: Record<PreviewFeedbackStatus, { badgeClass: string; label: string; metricTone: "ok" | "warning" | "danger" }> = {
-  raw: { badgeClass: "needs_setup", label: "Nouveau", metricTone: "warning" },
-  issue_creation_pending: { badgeClass: "issue_creation_pending", label: "En file", metricTone: "warning" },
-  retrying: { badgeClass: "retrying", label: "À revoir", metricTone: "warning" },
-  sent_to_provider: { badgeClass: "connected", label: "Créée", metricTone: "ok" }
+const statusConfig: Record<PreviewFeedbackStatus, { badgeClass: string; label: string }> = {
+  raw: { badgeClass: "needs_setup", label: "Nouveau" },
+  issue_creation_pending: { badgeClass: "issue_creation_pending", label: "En file" },
+  retrying: { badgeClass: "retrying", label: "À revoir" },
+  sent_to_provider: { badgeClass: "connected", label: "Créée" }
 };
 
 const previewFeedbacks: PreviewFeedback[] = [
@@ -48,18 +48,6 @@ const previewFeedbacks: PreviewFeedback[] = [
     issueState: "En cours",
     provider: "gitlab",
     receivedAt: "09:24"
-  },
-  {
-    id: "fb-preview-3",
-    title: "Note sur /demo",
-    message: "Crénage du titre à vérifier sur grand écran.",
-    site: "Atelier Nova",
-    path: "/demo",
-    type: "note",
-    status: "retrying",
-    issueState: "À relancer",
-    provider: "github",
-    receivedAt: "08:58"
   }
 ];
 
@@ -82,9 +70,7 @@ const previewRoutes = [
 ];
 
 export function MarketingConsolePreview() {
-  const activeCount = previewFeedbacks.filter((feedback) => feedback.status !== "sent_to_provider").length;
-  const queuedCount = previewFeedbacks.filter((feedback) => feedback.status === "issue_creation_pending").length;
-  const reviewCount = previewFeedbacks.filter((feedback) => feedback.status === "retrying").length;
+  const activeFeedback = previewFeedbacks[0];
 
   return (
     <div className="console-preview dashboard-preview-console" aria-label="Aperçu de la console ChangeThis">
@@ -97,35 +83,19 @@ export function MarketingConsolePreview() {
       </div>
 
       <div className="dashboard-preview-workbench">
-        <section className="inbox-panel compact-inbox dashboard-preview-inbox" aria-labelledby="preview-inbox-title">
-          <div className="inbox-hero compact-inbox-header">
+        <section className="dashboard-preview-inbox" aria-labelledby="preview-inbox-title">
+          <div className="dashboard-preview-header">
             <div>
-              <p className="eyebrow">Inbox</p>
+              <p className="eyebrow"><T k="home.preview.badge" /></p>
               <h2 id="preview-inbox-title"><T k="home.preview.header" /></h2>
             </div>
-            <span className="status-badge needs_setup">{previewFeedbacks.length} <T k="home.preview.recent" /></span>
+            <span className="status-badge needs_setup"><T k="home.preview.private" /></span>
           </div>
 
-          <nav className="dashboard-view-tabs" aria-label="Vue de démonstration">
-            <span className="view-tab active">File active <span>{activeCount}</span></span>
-            <span className="view-tab">Historique <span>8</span></span>
-            <span className="view-tab">Tous <span>11</span></span>
-          </nav>
-
-          <div className="dashboard-preview-filter-row" aria-hidden="true">
-            <span>Recherche</span>
-            <span>Statut: action requise</span>
-            <span>Site: tous</span>
-          </div>
-
-          <div className="feedback-table-head" aria-hidden="true">
-            <span />
-            <span>Feedback</span>
-            <span>Site / page</span>
-            <span>Statut</span>
-            <span>Issue</span>
-            <span>Reçu</span>
-            <span>Actions</span>
+          <div className="dashboard-preview-metrics" aria-hidden="true">
+            <span><strong>1</strong> <T k="home.preview.metric.signal" /></span>
+            <span><strong>390</strong> <T k="home.preview.metric.viewport" /></span>
+            <span><strong>Git</strong> <T k="home.preview.metric.destination" /></span>
           </div>
 
           <div className="feedback-list" role="list" aria-label="Retours récents">
@@ -134,28 +104,38 @@ export function MarketingConsolePreview() {
         </section>
 
         <aside className="dashboard-side-panel dashboard-preview-side" aria-label="Synthèse ChangeThis">
-          <section className="side-panel-section status-side-section">
-            <div className="side-panel-heading">
-              <p className="eyebrow">Synthèse</p>
-              <h2>File actuelle</h2>
+          <section className="preview-detail-card">
+            <div className="preview-detail-heading">
+              <span className="preview-detail-icon" aria-hidden="true">
+                <MousePointerClick size={17} strokeWidth={2.2} />
+              </span>
+              <div>
+                <p className="eyebrow"><T k="home.preview.draft.eyebrow" /></p>
+                <h2>{activeFeedback.title}</h2>
+              </div>
             </div>
-            <div className="side-status-stack">
-              <PreviewMetric icon={Inbox} label="À traiter" tone="warning" value={activeCount} />
-              <PreviewMetric icon={Clock3} label="En file" tone="warning" value={queuedCount} />
-              <PreviewMetric icon={RotateCcw} label="Relances" tone="warning" value={1} />
-              <PreviewMetric icon={RotateCcw} label="À revoir" tone="warning" value={reviewCount} />
-              <PreviewMetric icon={CheckCircle2} label="Résolus" tone="ok" value={8} />
+            <p>{activeFeedback.message}</p>
+            <div className="preview-context-grid">
+              <span><strong><T k="home.preview.context.page" /></strong>{activeFeedback.path}</span>
+              <span><strong><T k="home.preview.context.viewport" /></strong>390 x 844</span>
+              <span><strong><T k="home.preview.context.type" /></strong>{activeFeedback.type}</span>
+              <span><strong><T k="home.preview.context.received" /></strong>{activeFeedback.receivedAt}</span>
+            </div>
+            <div className="preview-capture-card" aria-hidden="true">
+              <span className="preview-pin">1</span>
+              <div />
+              <div />
             </div>
           </section>
 
-          <section className="side-panel-section">
-            <div className="side-panel-heading">
-              <p className="eyebrow">Routage</p>
-              <h2>Sites connectés</h2>
+          <section className="preview-route-card">
+            <div className="preview-route-heading">
+              <p className="eyebrow"><T k="home.preview.route.eyebrow" /></p>
+              <h2><T k="home.preview.route.title" /></h2>
             </div>
-            <div className="route-summary">
-              <strong>3/3</strong>
-              <span>sites prêts à créer des issues</span>
+            <div className="preview-issue-line">
+              <GitPullRequestCreate aria-hidden="true" size={17} strokeWidth={2.2} />
+              <span>[Feedback] /checkout - bouton trop bas</span>
             </div>
             <div className="site-route-list">
               {previewRoutes.map((route) => (
@@ -179,65 +159,22 @@ function PreviewFeedbackRow({ feedback }: { feedback: PreviewFeedback }) {
   const status = statusConfig[feedback.status];
 
   return (
-    <article className={`feedback-card compact-feedback-row dashboard-preview-feedback-row ${feedback.status}`} role="listitem">
-      <span className="feedback-select" aria-hidden="true">
-        <span className="dashboard-preview-checkbox" />
+    <article className={`dashboard-preview-feedback-row ${feedback.status}`} role="listitem">
+      <span className="preview-feedback-type" aria-hidden="true">
+        {feedback.type === "note" ? <MessageSquare size={15} strokeWidth={2.2} /> : <MousePointerClick size={15} strokeWidth={2.2} />}
       </span>
       <div className="feedback-main">
-        <div className="feedback-tags mobile-feedback-tags" aria-label="Métadonnées du feedback">
-          <span className="status-badge connected">{feedback.type}</span>
-          <span className={`status-badge ${status.badgeClass}`}>{status.label}</span>
-          <ProviderBadge provider={feedback.provider} />
-        </div>
         <h2>{feedback.title}</h2>
         <p>{feedback.message}</p>
         <div className="feedback-meta">
           <span>{feedback.site}</span>
           <span>{feedback.path}</span>
-          <span>{feedback.type}</span>
         </div>
       </div>
-      <div className="feedback-site-cell">
-        <strong>{feedback.site}</strong>
-        <span>{feedback.path}</span>
-      </div>
-      <div className="feedback-status-cell">
-        <span className={`status-dot ${feedback.status}`} aria-hidden="true" />
+      <div className="preview-feedback-state">
         <span className={`status-badge ${status.badgeClass}`}>{status.label}</span>
-      </div>
-      <div className="feedback-issue-cell">
         <ProviderBadge provider={feedback.provider} />
-        <span>{feedback.issueState}</span>
       </div>
-      <div className="feedback-received-cell">
-        <span>{feedback.receivedAt}</span>
-      </div>
-      <div className="feedback-actions">
-        <span className="button secondary-button dashboard-preview-action">
-          <GitPullRequestCreate aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-          Issue
-        </span>
-      </div>
-    </article>
-  );
-}
-
-function PreviewMetric({
-  icon: Icon,
-  label,
-  tone,
-  value
-}: {
-  icon: LucideIcon;
-  label: string;
-  tone: "ok" | "warning" | "danger";
-  value: number;
-}) {
-  return (
-    <article className={`status-metric ${tone}`}>
-      <Icon aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-      <span>{label}</span>
-      <strong>{value}</strong>
     </article>
   );
 }
