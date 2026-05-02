@@ -33,6 +33,7 @@
   --bg: #f7f8ff;
   --ink: #172033;
   --muted: #647084;
+  --muted-strong: var(--secondary-ink);
   --line: #d6daf0;
   --panel: #ffffff;
   --soft: var(--primary-50);
@@ -1986,8 +1987,8 @@ dd {
 
 .step-icon {
   align-items: center;
-  background: white;
-  border: 1px solid var(--line);
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
   border-radius: 7px;
   color: var(--accent);
   display: inline-flex;
@@ -6338,7 +6339,7 @@ code {
 }
 
 .workflow-band {
-  border-block: 1px solid var(--line);
+  border-block: 1px solid var(--primary-border);
   max-width: none;
   width: 100%;
 }
@@ -6353,8 +6354,8 @@ code {
 }
 
 .step {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: var(--primary-softer);
+  border: 1px solid var(--primary-border);
   border-top: 2px solid var(--primary-main);
   min-height: 240px;
   padding: clamp(18px, 2.4vw, 28px);
@@ -6372,7 +6373,7 @@ code {
 }
 
 .beta-scope-title small {
-  color: var(--muted-strong);
+  color: var(--secondary-ink);
   display: block;
   font-size: clamp(20px, 2vw, 30px);
   font-weight: 500;
@@ -6394,9 +6395,10 @@ code {
 
 .beta-scope-list li {
   align-items: start;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--panel);
+  border: 1px solid var(--secondary-border);
   border-radius: 7px;
-  color: var(--muted-strong);
+  color: var(--secondary-ink);
   display: grid;
   font-size: 15px;
   font-weight: 800;
@@ -6411,7 +6413,7 @@ code {
 }
 
 .beta-scope-list svg {
-  color: var(--secondary-dark);
+  color: var(--primary);
   margin-top: 2px;
 }
 
