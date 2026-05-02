@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { methodNotAllowed } from "../../../../../../lib/api-security";
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
 import { logInfo, logWarn, requestIdFrom } from "../../../../../../lib/logger";
 import { findConfiguredProjectByKey, isKnownOrigin } from "../../../../../../lib/project-registry";
@@ -8,6 +9,13 @@ type RouteContext = {
     id: string;
   }>;
 };
+
+const unsupportedMethod = methodNotAllowed(["POST", "OPTIONS"]);
+
+export const GET = unsupportedMethod;
+export const PUT = unsupportedMethod;
+export const PATCH = unsupportedMethod;
+export const DELETE = unsupportedMethod;
 
 function corsHeaders(origin: string | null): HeadersInit {
   if (!origin) {

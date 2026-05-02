@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { methodNotAllowed } from "../../../../lib/api-security";
 import { findConfiguredProjectByKey } from "../../../../lib/project-registry";
 import { requestOriginFrom } from "../../../../lib/request-origin";
 import { isProductionRuntime } from "../../../../lib/runtime";
@@ -13,6 +14,13 @@ type WidgetConfigResponse = {
   buttonVariant: ChangeThisProject["widgetButtonVariant"];
   endpoint: "/api/public/feedback";
 };
+
+const unsupportedMethod = methodNotAllowed(["GET", "HEAD"]);
+
+export const POST = unsupportedMethod;
+export const PUT = unsupportedMethod;
+export const PATCH = unsupportedMethod;
+export const DELETE = unsupportedMethod;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

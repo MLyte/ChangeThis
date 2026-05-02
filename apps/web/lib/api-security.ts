@@ -28,6 +28,22 @@ export function requireJsonRequest(request: Request): NextResponse | undefined {
   return NextResponse.json({ error: "Content-Type application/json is required" }, { status: 415 });
 }
 
+export function methodNotAllowed(allowedMethods: readonly string[]) {
+  const allow = allowedMethods.join(", ");
+
+  return function methodNotAllowedHandler(_request?: Request): NextResponse {
+    return NextResponse.json(
+      { error: "Method not allowed" },
+      {
+        status: 405,
+        headers: {
+          Allow: allow
+        }
+      }
+    );
+  };
+}
+
 export function appOrigin(): string | undefined {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 

@@ -11,21 +11,20 @@
 Cette priorisation remanie les tâches restantes selon **importance produit/sécurité**, **facilité technique** et **rapidité de livraison**. Elle sert de guide de choix avant l'ordre historique des sections.
 
 ### P0 - Chemin critique beta vendable
-1. **Persistance production workspace-backed**: repositories Postgres/Railway pour sites/projets, feedbacks, événements, destinations d'issues et intégrations provider; activer `DATA_STORE=supabase`; lire les clés publiques depuis la base; supprimer la dépendance production à `demo-project.ts`.
-2. **Onboarding premier site**: terminer le flux qui crée organisation, workspace, owner et premier site, ou à minima livrer l'action manuelle "Créer un site" avec domaine autorisé et clé publique.
-3. **États vides et checklist onboarding courte**: guider `/projects` et `/settings/connected-sites` quand aucun site réel n'existe, puis afficher les étapes compte Git, site, script, feedback test et issue créée.
-4. **Widget public installable**: servir/versionner `/widget.js` ou `/widget.global.js`, ajouter fallback si bundle absent, smoke test page HTML externe, cache headers et vérification origine/endpoint.
-5. **GitHub workspace-backed pour beta**: prioriser GitHub avant GitLab; finaliser installation App, token installation, stockage par workspace, association issue target à l'intégration et validation dépôt.
-6. **Sécurité publique minimale**: ne pas exposer `issueTarget` complet dans `/api/widget/config`, limiter les champs texte, valider MIME screenshot, vérifier exclusions Git (`.env*`, `.changethis-data`, logs) et décider screenshot beta (désactivable par site ou stockage objet).
-7. **Fiabilité issue minimale**: timeout GitHub, idempotence/verrou anti double issue, relance manuelle propre et statut terminal simple avant queue durable complète.
-8. **Documentation client minimale**: démarrage rapide, installer le widget, configurer GitHub, FAQ beta privée et checklist smoke staging.
+1. **Onboarding premier site**: terminer le flux qui crée organisation, workspace, owner et premier site, ou à minima livrer l'action manuelle "Créer un site" avec domaine autorisé et clé publique.
+2. **Checklist onboarding courte**: afficher les étapes compte Git, site, script, feedback test et issue créée.
+3. **Widget public installable**: ajouter une version publique du widget dans le bundle servi, smoke test page HTML externe, budget de taille et vérification compatibilité navigateur.
+4. **GitHub workspace-backed pour beta**: finaliser installation App, token installation, association issue target à l'intégration et validation dépôt.
+5. **Sécurité publique minimale restante**: limiter les champs texte des routes privées, décider screenshot beta (désactivable par site ou stockage objet) et ajouter stratégie scan/quarantaine.
+6. **Fiabilité issue minimale restante**: idempotence/verrou anti double issue, relance manuelle propre, statut terminal simple, circuit breaker et backoff jitter.
+7. **Documentation client minimale restante**: installer le widget, configurer GitHub, FAQ beta privée et checklist smoke staging.
 
 ### P1 - Beta confortable et sûre
-1. CI `test/typecheck/lint/build` et tests ciblés widget (`inferEndpoint`, `inferLocale`, Shadow DOM, doublon root, échappement HTML).
+1. Tests ciblés widget restants (Shadow DOM, messages/métadonnées HTML, champs sensibles, sélection, scroll/resize).
 2. Stockage objet screenshots avec chemin/URL signée et hash de contenu.
 3. Observabilité minimale: `request_id`, métriques API/provider/widget, audit log destinations/providers/membres, messages d'erreur actionnables.
 4. Retry durable ou semi-durable: backoff jitter, maximum configurable, worker/cron protégé, circuit breaker simple.
-5. Support léger: lien support visible, page aide intégrée, collecte contexte support.
+5. Support léger: page aide intégrée, formulaire support et collecte contexte support.
 6. Export CSV et pagination/tri serveur seulement après volume réel.
 
 ### P2 - Après beta privée
@@ -36,70 +35,25 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 5. Accessibilité/cross-browser exhaustive, budgets/perf widget p50/p95.
 6. Procédures complètes backup/restore/export/suppression définitive et conformité élargie.
 
-### Quick wins à intercaler sans casser le chemin critique
-- Vérifier les exclusions Git sensibles (`.changethis-data`, `.env*`, logs).
-- Ajouter/documenter `npm audit --audit-level=high`.
-- Ajouter tests widget `inferEndpoint` puis `inferLocale`.
-- Ajouter fallback UX si bundle widget absent.
-- Ajouter états vides guidés `/settings/connected-sites` puis `/projects`.
-- Ajouter lien support visible.
-
 ### Décisions gelées pour avancer vite
 - Beta privée invitation-only.
 - GitHub prioritaire au lancement beta; GitLab peut rester "coming soon" sauf client pilote.
 - Création d'issue manuelle depuis l'inbox avant automatisation par job.
 - Railway + PostgreSQL intégré reste le chemin par défaut.
 
-- [x] Créer le script de lancement Windows `start-service.bat` pour NSSM.
-## 1. Socle commercialisable immédiat
-- [x] Créer un document `docs/commercial-readiness-map.md` qui décrit les blocs manquants pour passer du prototype local au SaaS vendable.
-- [x] Ajouter une checklist Go/No-Go commerciale dans `docs/production-readiness-plan.fr.md`.
-- [x] Ajouter une matrice "prototype / beta / commercialisable" pour auth, données, widget, intégrations, support et billing.
-- [x] Vérifier que `README.md` explique clairement le produit, le public cible et le flux `widget -> inbox -> issue`.
-- [x] Mettre à jour `docs/local-env-minimal.md` avec les variables réellement nécessaires aujourd'hui.
-- [x] Ajouter un fichier `.env.production.example` sans secrets avec toutes les variables de production attendues.
-- [x] Ajouter un script de validation env qui échoue si `AUTH_MODE`, `DATA_STORE`, `NEXT_PUBLIC_APP_URL` ou les secrets requis manquent.
-- [x] Ajouter une garde qui refuse `AUTH_MODE=local` en production.
-- [x] Ajouter une garde qui refuse `DATA_STORE=file` en production.
-- [x] Ajouter une garde qui refuse les project keys de fallback en production.
-
-## 2. Auth, workspaces et rôles
-- [x] Implémenter le login Supabase réel sur `/login` avec email/password ou magic link.
-- [x] Créer une route callback/session Supabase qui pose un cookie serveur sécurisé.
-- [x] Remplacer la session locale par une session Supabase obligatoire en production.
-- [x] Lier chaque requête dashboard à un `workspaceId` issu de la session.
-- [x] Filtrer toutes les lectures de feedbacks par workspace.
-- [x] Filtrer toutes les lectures de projets/sites par workspace.
-- [x] Filtrer toutes les intégrations provider par workspace.
-- [x] Appliquer les rôles `viewer`, `member`, `admin` et `owner` sur chaque route API privée.
-- [x] Restreindre la modification des destinations d'issues aux rôles `admin` et `owner`.
-- [x] Restreindre les relances de retries aux rôles `admin` et `owner`.
+## 1. Auth, workspaces et rôles
 - [ ] Ajouter un flux d'onboarding qui crée l'organisation, le workspace, l'owner et le premier site.
-- [x] Ajouter une page de gestion des membres du workspace.
-- [x] Ajouter une invitation membre avec statut `invited`.
-- [x] Ajouter une désactivation membre avec statut `disabled`.
 - [ ] Ajouter un sélecteur de workspace si un utilisateur appartient à plusieurs organisations.
 
-## 3. Onboarding produit
+## 2. Onboarding produit
 - [ ] Définir le parcours premier utilisateur de `signup/login` jusqu'au premier feedback reçu.
 - [ ] Créer une checklist onboarding affichée dans l'app avec étapes compte Git, site, script, feedback test et issue créée.
-- [x] Ajouter un état vide guidé pour `/projects` quand aucun site réel n'est configuré.
-- [x] Ajouter un état vide guidé pour `/settings/connected-sites` quand aucun site n'existe.
 - [ ] Ajouter une action "Créer un site" avec nom, domaine autorisé et clé publique générée.
-- [x] Ajouter une validation visible des origines autorisées avant de fournir le script widget.
 - [ ] Ajouter un test de feedback depuis un site configuré, distinct de la page `/demo`.
 - [ ] Ajouter une confirmation de fin d'onboarding quand un feedback réel crée une issue externe.
 - [ ] Ajouter une vue "inviter un développeur ou collègue" pour les usages agence et équipe.
 
-## 4. Données et stockage production
-- [x] Implémenter un repository Supabase/Postgres pour les feedbacks.
-- [x] Implémenter un repository Supabase/Postgres pour les événements de statut.
-- [x] Implémenter un repository Supabase/Postgres pour les projets/sites.
-- [x] Implémenter un repository Supabase/Postgres pour les destinations d'issues.
-- [x] Implémenter un repository Supabase/Postgres pour les intégrations provider.
-- [x] Ajouter un switch `DATA_STORE=supabase` qui utilise uniquement Postgres en production.
-- [x] Lire les project public keys actifs depuis la base plutôt que depuis des constantes locales.
-- [x] Supprimer la dépendance production aux projets codés en dur dans `demo-project.ts`.
+## 3. Données et stockage production
 - [ ] Ajouter une rotation des project public keys via `project_public_keys`.
 - [ ] Migrer les screenshots depuis les data URLs vers Supabase Storage ou stockage objet.
 - [ ] Stocker uniquement un chemin d'objet ou une URL signée pour chaque screenshot.
@@ -115,17 +69,12 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter une procédure d'export client des feedbacks d'un workspace.
 - [ ] Ajouter une procédure de suppression définitive workspace/projet/feedback.
 
-## 5. Widget commercial
+## 4. Widget commercial
 - [ ] Ajouter une version publique du widget dans le bundle servi.
-- [x] Ajouter des cache headers versionnés pour `/widget.js` et `/widget.global.js`.
 - [ ] Ajouter une option widget pour désactiver la capture screenshot par site.
 - [ ] Ajouter une vérification de compatibilité navigateur du widget.
-- [x] Ajouter un fallback UX si le bundle widget n'est pas construit.
-- [x] Ajouter des tests unitaires widget pour `inferEndpoint` depuis `data-endpoint`, `script.src` et fallback.
-- [x] Ajouter des tests unitaires widget pour `inferLocale` depuis attribut, localStorage et langue document.
 - [ ] Ajouter des tests widget pour le rendu Shadow DOM sans collision avec CSS hôte.
-- [x] Ajouter des tests widget pour ouverture/fermeture sans doublonner `changethis-widget-root`.
-- [ ] Ajouter des tests widget pour échappement HTML des labels, messages et métadonnées.
+- [ ] Ajouter des tests widget pour échappement HTML des messages et métadonnées.
 - [ ] Ajouter des tests widget pour masquage temporaire des champs sensibles pendant capture.
 - [ ] Ajouter des tests widget pour restauration des champs sensibles après échec de capture.
 - [ ] Ajouter des tests widget pour sélection de zone minimale ignorée.
@@ -136,7 +85,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Mesurer le coût d'initialisation du widget sur page externe.
 - [ ] Mesurer le temps de capture screenshot p50/p95 sur desktop et mobile.
 
-## 6. Intégrations GitHub/GitLab
+## 5. Intégrations GitHub/GitLab
 - [ ] Finaliser le flux GitHub App installation avec récupération et stockage de l'installation par workspace.
 - [ ] Finaliser la création de token GitHub installation par intégration workspace.
 - [ ] Associer chaque issue target GitHub à une intégration provider explicite.
@@ -158,7 +107,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter une synchronisation minimale du statut externe issue open/closed.
 - [ ] Ajouter des webhooks provider pour détecter installation supprimée ou token révoqué.
 
-## 7. Inbox, settings et analytics
+## 6. Inbox, settings et analytics
 - [ ] Ajouter la création, modification et suppression d'un site connecté depuis l'interface.
 - [ ] Ajouter la modification des domaines autorisés par site.
 - [ ] Ajouter la rotation de clé publique widget par site.
@@ -188,7 +137,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter un suivi d'activation onboarding par workspace.
 - [ ] Ajouter un suivi des limites de plan consommées.
 
-## 8. Fiabilité et jobs
+## 7. Fiabilité et jobs
 - [ ] Transformer la création d'issue en job asynchrone après réception feedback.
 - [ ] Ajouter une file de jobs durable pour les créations d'issues.
 - [ ] Ajouter un worker de retries indépendant des requêtes dashboard.
@@ -196,9 +145,6 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter un maximum de retries configurable.
 - [ ] Ajouter un statut terminal après dépassement du maximum de retries.
 - [ ] Ajouter un verrou distribué pour éviter deux créations d'issues concurrentes sur le même feedback.
-- [x] Ajouter un timeout explicite sur tous les appels GitHub.
-- [x] Ajouter un timeout explicite sur tous les appels GitLab.
-- [x] Ajouter un timeout explicite sur tous les appels Supabase REST.
 - [ ] Ajouter un circuit breaker simple par provider.
 - [ ] Ajouter une stratégie de backoff avec jitter.
 - [ ] Ajouter une vue `failed` pour traiter les feedbacks en erreur.
@@ -210,50 +156,29 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter un test de charge léger sur `POST /api/public/feedback` avec origines autorisées.
 - [ ] Vérifier que les screenshots volumineux ne bloquent pas durablement le serveur Next.js.
 
-## 9. Sécurité
-- [x] Ajouter des headers de sécurité Next.js dans `next.config.ts`.
-- [x] Ajouter une CSP compatible widget/dashboard.
-- [x] Ajouter `X-Frame-Options` ou `frame-ancestors` adapté au dashboard.
-- [x] Ajouter HSTS, Referrer-Policy, Permissions-Policy et X-Content-Type-Options.
-- [ ] Ajouter une validation stricte des méthodes HTTP sur toutes les routes API.
-- [x] Ajouter une protection CSRF sur les POST privés du dashboard.
-- [x] Vérifier que toutes les actions privées exigent une session workspace.
-- [x] Ajouter une validation d'origine stricte pour `/api/widget/config`.
-- [x] Ne pas exposer `issueTarget` complet dans `/api/widget/config` si non nécessaire au widget.
+## 8. Sécurité
+- [ ] Étendre la validation stricte des méthodes HTTP à toutes les routes API restantes.
 - [ ] Ajouter une limite de longueur sur les champs texte dans les routes privées.
-- [x] Ajouter une validation MIME réelle des screenshots côté serveur.
 - [ ] Ajouter un scan ou une stratégie de quarantaine pour les uploads image.
-- [x] Redacter les secrets et tokens dans tous les logs d'erreur.
 - [ ] Ajouter une rotation documentée de `CHANGETHIS_SECRET_KEY`.
 - [ ] Remplacer le stockage local chiffré des credentials provider par un coffre compatible production.
-- [x] Ajouter une vérification d'âge et d'intégrité du `state` OAuth provider.
-- [x] Signer le `state` OAuth avec HMAC.
 - [ ] Ajouter la vérification des webhooks GitHub avec `GITHUB_WEBHOOK_SECRET`.
 - [ ] Ajouter la vérification des webhooks GitLab avec `GITLAB_WEBHOOK_SECRET`.
 - [ ] Ajouter une politique RLS d'insertion publique contrôlée pour les feedbacks si l'API écrit directement via Supabase.
 - [ ] Ajouter des tests RLS pour owner, admin, member, viewer et utilisateur externe.
-- [x] Ajouter `npm audit --audit-level=high` comme gate documenté.
-- [x] Documenter chaque exception `npm audit` avec package, CVE, impact et plan de correction.
 - [ ] Ajouter un scan de secrets local/CI sur l'historique et le workspace courant.
-- [x] Vérifier que `.changethis-data`, `.env*` et logs locaux restent exclus Git.
 
-## 10. Tests et accessibilité
-- [ ] Ajouter une CI qui exécute `npm test`, `npm run typecheck`, `npm run lint` et `npm run build`.
+## 9. Tests et accessibilité
 - [ ] Ajouter des tests unitaires pour `auth.ts`.
-- [ ] Ajouter des tests unitaires pour `provider-integrations.ts`.
 - [ ] Ajouter des tests unitaires pour `credential-store.ts`.
-- [ ] Ajouter des tests unitaires pour `issue-providers.ts` avec fetch mocké.
 - [ ] Ajouter des tests unitaires pour `issue-workflow.ts`.
-- [ ] Ajouter des tests unitaires pour `project-registry.ts`.
 - [ ] Ajouter des tests API pour `/api/public/feedback`.
-- [ ] Ajouter des tests API pour `/api/widget/config`.
 - [ ] Ajouter des tests API pour `/api/projects/issue-targets`.
 - [ ] Ajouter des tests API pour `/api/projects/feedbacks/[id]/issue`.
 - [ ] Ajouter des tests API pour `/api/projects/feedbacks/[id]/ignore`.
 - [ ] Ajouter des tests API pour `/api/projects/retries`.
 - [ ] Ajouter des tests API pour `/api/integrations/[provider]/repositories`.
 - [ ] Ajouter des tests API pour les callbacks GitHub et GitLab.
-- [ ] Ajouter des tests d'intégration Supabase repository.
 - [ ] Ajouter des tests d'intégration Supabase Storage screenshots.
 - [ ] Ajouter un scénario E2E `/demo` -> widget comment -> `/projects` visible.
 - [ ] Ajouter un scénario E2E widget mode pin avec coordonnées persistées.
@@ -273,9 +198,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Tester les écrans critiques en viewport mobile 390px sans chevauchement de texte.
 - [ ] Tester les écrans critiques en zoom navigateur 200%.
 
-## 11. Observabilité et support
-- [x] Ajouter un endpoint `/api/health` sans secret.
-- [x] Ajouter un endpoint `/api/ready` qui vérifie DB, storage et provider config.
+## 10. Observabilité et support
 - [ ] Ajouter des métriques API: latence, taux 2xx/4xx/5xx, refus validation, refus origine et rate limit.
 - [ ] Ajouter des métriques provider: succès, échecs, rate limits, retries dus et retries bloqués.
 - [ ] Ajouter des métriques widget: erreurs d'envoi, temps de capture et version bundle.
@@ -294,13 +217,12 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter des alertes sur queue bloquée au-delà du SLO.
 - [ ] Ajouter des alertes sur expiration prochaine des credentials provider.
 - [ ] Ajouter une page aide intégrée avec installation widget, connexions Git et résolution d'erreurs.
-- [ ] Ajouter un lien support visible dans le footer ou les paramètres.
 - [ ] Ajouter un formulaire de contact support depuis l'app.
 - [ ] Ajouter une collecte de contexte support incluant workspace, site, statut provider et request id.
 - [ ] Ajouter des messages d'erreur actionnables pour OAuth, token manquant, origine refusée et rate limit.
 - [ ] Ajouter une page interne de diagnostic par feedback ID avec événements et issue externe.
 
-## 12. Billing, trial et plans
+## 11. Billing, trial et plans
 - [ ] Définir en code une structure de plans commerciaux avec limites sites, feedbacks, membres et stockage.
 - [ ] Ajouter une page pricing publique alignée sur les plans définis.
 - [ ] Ajouter un écran billing dans les paramètres.
@@ -312,8 +234,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter un suivi des limites de plan consommées.
 - [ ] Ajouter une matrice des fonctionnalités par plan dans la documentation.
 
-## 13. Documentation client et release
-- [ ] Créer une documentation "Démarrage rapide" orientée client SaaS.
+## 12. Documentation client et release
 - [ ] Créer une documentation "Installer le widget sur un site".
 - [ ] Créer une documentation "Configurer GitHub".
 - [ ] Créer une documentation "Configurer GitLab".
@@ -367,7 +288,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] (P1) Ajouter une première couche de sécurité web: headers de sécurité HTTP, CSP, validation méthode/origine, CSRF sur POST dashboard.
 - [ ] (P1) Migrer définitivement les screenshots hors data URL persistées, vers stockage objet + TTL de rétention.
 - [ ] (P1) Finaliser onboarding réel du 1er feedback: création de site, script intégré, destination issue sélectionnée, confirmation issue créée.
-- [ ] (P2) Publier pages commerciales minimales: pricing, démarrage rapide, installation widget, FAQ commerciale.
+- [ ] (P2) Publier pages commerciales minimales: pricing, installation widget, FAQ commerciale.
 - [ ] (P2) Construire la logique de limites de plans (quotas) et d’impact visible dans le produit, sans encore verrouiller le fournisseur de paiement.
 - [ ] (P2) Ajouter les fonctions de sortie client: export feedback, suppression définitive workspace/site/feedback, diagnostic par feedback ID.
 - [ ] (P2) Formaliser conformité opérationnelle: privacy/RGPD, retention, DPA, politique cookies si analytics marketing.
@@ -419,6 +340,11 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-02] Documentation client minimale: ajout de `docs/quick-start-client.fr.md` pour guider un client bêta de la connexion console jusqu'au premier feedback transformé en issue. Validation: documentation Markdown relue, pas de test code requis.
+- [2026-05-02] Support léger: ajout d'un lien Support visible dans le footer global vers `support@changethis.dev`, avec libellés FR/EN. Validation ciblée agent: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK.
+- [2026-05-02] Tests widget commerciaux: ajout d'un test ciblé vérifiant que les labels configurables du bouton widget sont échappés avant injection Shadow DOM. Validation ciblée agent: `npm run test --workspace @changethis/widget` OK; `npm run typecheck --workspace @changethis/widget` OK.
+- [2026-05-02] Sécurité API méthodes HTTP: ajout d'un helper `methodNotAllowed` et refus 405 explicite avec header `Allow` sur `/api/public/feedback`, `/api/public/feedback/[id]/cancel` et `/api/widget/config`. Validation ciblée agent: `npx tsx --test test/api-methods.test.ts` OK; `npm run typecheck --workspace @changethis/web` OK. Reste à étendre aux autres routes API.
+- [2026-05-02] CI existante vérifiée: `.github/workflows/ci.yml` exécute déjà `npm run lint`, `npm test`, `npm run typecheck` et `npm run build` sur push/PR main avec Node 22; tâche retirée du backlog actif sans changement de code.
 - [2026-05-02] Micro-tâche onboarding sites: ajout d'une validation visible des origines autorisées dans la modale de création et sur chaque site connecté; le snippet widget n'est affiché/copiable que si les origines configurées sont valides. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK.
 - [2026-05-02] Tests widget commerciaux: ajout d'un test ciblé vérifiant que `initChangeThis` ne crée ni n'ajoute un second root quand `changethis-widget-root` existe déjà. Validation ciblée: `npm run test --workspace @changethis/widget` OK; `npm run typecheck --workspace @changethis/widget` OK.
 - [2026-05-02] Sécurité widget config: ajout d'un contrat de réponse allowlisté et d'un test API ciblé qui vérifie que `/api/widget/config` ne renvoie que les champs nécessaires au widget, sans exposer `issueTarget` ni champ interne. Validation ciblée: `npx tsx --test test/widget-config-route.test.ts` OK; `npm run typecheck --workspace @changethis/web` OK.

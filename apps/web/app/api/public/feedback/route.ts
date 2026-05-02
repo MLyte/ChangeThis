@@ -1,5 +1,6 @@
 import { buildIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
+import { methodNotAllowed } from "../../../../lib/api-security";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
 import { ensureIssueTargetConfigured, findConfiguredProjectByKey, isKnownOrigin } from "../../../../lib/project-registry";
@@ -10,6 +11,12 @@ const rateLimitWindowMs = 60_000;
 const rateLimitMaxRequests = 20;
 
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+const unsupportedMethod = methodNotAllowed(["POST", "OPTIONS"]);
+
+export const GET = unsupportedMethod;
+export const PUT = unsupportedMethod;
+export const PATCH = unsupportedMethod;
+export const DELETE = unsupportedMethod;
 
 function corsHeaders(origin: string | null): HeadersInit {
   if (!origin) {

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Database, LogOut, ShieldCheck, UserRound } from "lucide-react";
+import { Database, LifeBuoy, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { getCurrentSession } from "../lib/auth";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
@@ -48,6 +48,10 @@ export async function AppFooter() {
           </div>
         ) : null}
         <nav aria-label="Footer">
+          <a href="mailto:support@changethis.dev">
+            <LifeBuoy aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+            <T k="footer.support" />
+          </a>
           <a href="https://mathieuluyten.be" rel="noreferrer" target="_blank">
             <T k="footer.creator" />
           </a>
