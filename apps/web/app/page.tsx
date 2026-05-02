@@ -1,13 +1,13 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { CheckCircle2, GitBranch, GitPullRequestCreate, Inbox, Mail, MessageSquare, MousePointerClick, Route, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
+import { CalendarClock, CheckCircle2, FileText, GitBranch, GitPullRequestCreate, Inbox, Mail, MessageSquare, MonitorCheck, MousePointerClick, Route, ShieldCheck, Smartphone, Sparkles, Users, type LucideIcon } from "lucide-react";
 import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
 import logoChangeThis from "./assets/logoChangeThis.png";
-import { T } from "./i18n";
+import { T, TRich } from "./i18n";
 import { MarketingConsolePreview } from "./marketing-console-preview";
-import { ProviderIcon } from "./provider-badge";
+import { ProviderBadge, ProviderIcon } from "./provider-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +24,22 @@ const waitlistPoints: Array<{ key: string; Icon: LucideIcon }> = [
   { key: "home.waitlist.point.3", Icon: Sparkles }
 ];
 
-const problemPoints = [
-  "home.problem.point.1",
-  "home.problem.point.2",
-  "home.problem.point.3"
+const problemPoints: Array<{ sourceKey: string; realityKey: string; consequenceKey: string }> = [
+  {
+    sourceKey: "home.problem.example.1.source",
+    realityKey: "home.problem.example.1.reality",
+    consequenceKey: "home.problem.example.1.consequence"
+  },
+  {
+    sourceKey: "home.problem.example.2.source",
+    realityKey: "home.problem.example.2.reality",
+    consequenceKey: "home.problem.example.2.consequence"
+  },
+  {
+    sourceKey: "home.problem.example.3.source",
+    realityKey: "home.problem.example.3.reality",
+    consequenceKey: "home.problem.example.3.consequence"
+  }
 ];
 
 const workflowSteps: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
@@ -36,11 +48,17 @@ const workflowSteps: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon
   { titleKey: "home.workflow.issue.title", copyKey: "home.workflow.issue.copy", Icon: GitPullRequestCreate }
 ];
 
-const betaNotes = [
-  "home.beta.note.1",
-  "home.beta.note.2",
-  "home.beta.note.3",
-  "home.beta.note.4"
+const betaNotes: Array<{ key: string; Icon: LucideIcon }> = [
+  { key: "home.beta.note.1", Icon: MousePointerClick },
+  { key: "home.beta.note.2", Icon: Users },
+  { key: "home.beta.note.3", Icon: GitBranch },
+  { key: "home.beta.note.4", Icon: CalendarClock }
+];
+
+const mobileProofPoints: Array<{ key: string; Icon: LucideIcon }> = [
+  { key: "home.mobile.point.visitor", Icon: Smartphone },
+  { key: "home.mobile.point.team", Icon: MonitorCheck },
+  { key: "home.mobile.point.context", Icon: FileText }
 ];
 
 type HomePageProps = {
@@ -78,11 +96,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <p className="eyebrow"><T k="home.hero.eyebrow" /></p>
           <h1 id="product-title" className="product-title">
             <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
-            <span>ChangeThis</span>
+            <span className="brand-wordmark hero-wordmark" aria-label="ChangeThis">
+              <span>Change</span><span className="brand-wordmark-accent">This</span>
+            </span>
           </h1>
           <HeroStatement />
           <p className="lede">
-            <T k="home.hero.lede" />
+            <TRich k="home.hero.lede" />
           </p>
           <WaitlistForm action={waitlistAction} waitlistStatus={waitlistStatus} />
         </div>
@@ -92,16 +112,23 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
       </section>
 
-      <section className="home-section problem-section">
+      <section className="home-section problem-section problem-editorial">
         <div className="home-section-header">
           <p className="eyebrow"><T k="home.problem.eyebrow" /></p>
-          <h2><T k="home.problem.title" /></h2>
+          <h2><T k="home.problem.question" /></h2>
+          <p className="problem-intro"><T k="home.problem.intro" /></p>
         </div>
-        <div className="problem-list">
-          {problemPoints.map((key) => (
-            <article className="problem-item" key={key}>
-              <span aria-hidden="true" />
-              <p><T k={key} /></p>
+        <div className="problem-list problem-quotes">
+          {problemPoints.map(({ sourceKey, realityKey, consequenceKey }) => (
+            <article className="problem-item problem-quote" key={realityKey}>
+              <div className="problem-item-copy">
+                <p className="problem-source"><T k={sourceKey} /></p>
+                <blockquote>
+                  <span className="quote-mark" aria-hidden="true">“</span>
+                  <p><TRich k={realityKey} /></p>
+                </blockquote>
+                <p className="problem-consequence"><TRich k={consequenceKey} /></p>
+              </div>
             </article>
           ))}
         </div>
@@ -119,7 +146,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <Icon size={22} strokeWidth={2.2} />
               </span>
               <h3><T k={titleKey} /></h3>
-              <p><T k={copyKey} /></p>
+              <p><TRich k={copyKey} /></p>
             </article>
           ))}
         </div>
@@ -140,7 +167,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <Icon size={22} strokeWidth={2.2} />
               </span>
               <h3><T k={titleKey} /></h3>
-              <p><T k={copyKey} /></p>
+              <p><TRich k={copyKey} /></p>
             </article>
           ))}
         </div>
@@ -152,10 +179,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <h2><T k="home.beta.scope.title" /></h2>
         </div>
         <ul className="beta-scope-list">
-          {betaNotes.map((key) => (
+          {betaNotes.map(({ key, Icon }) => (
             <li key={key}>
-              <CheckCircle2 size={17} strokeWidth={2.4} aria-hidden="true" />
-              <span><T k={key} /></span>
+              <Icon size={17} strokeWidth={2.4} aria-hidden="true" />
+              <span><TRich k={key} /></span>
             </li>
           ))}
         </ul>
@@ -163,10 +190,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <section className="home-section waitlist-closing-section">
         <div>
+          <span className="closing-icon" aria-hidden="true">
+            <Sparkles size={22} strokeWidth={2.3} />
+          </span>
           <p className="eyebrow"><T k="home.closing.eyebrow" /></p>
           <h2><T k="home.closing.title" /></h2>
           <p className="lede">
-            <T k="home.closing.copy" />
+            <TRich k="home.closing.copy" />
           </p>
         </div>
         <WaitlistForm action={waitlistAction} compact waitlistStatus={waitlistStatus} />
@@ -193,14 +223,20 @@ function MobilePreviewSection() {
     <section className="home-section mobile-proof-section" aria-labelledby="mobile-proof-title">
       <div className="mobile-proof-copy">
         <p className="eyebrow"><T k="home.mobile.eyebrow" /></p>
-        <h2 id="mobile-proof-title"><T k="home.mobile.title" /></h2>
+        <h2 id="mobile-proof-title">
+          <span className="mobile-title-intro"><T k="home.mobile.title.intro" /></span>
+          <span className="mobile-title-impact"><T k="home.mobile.title.impact" /></span>
+        </h2>
         <p className="lede">
-          <T k="home.mobile.copy" />
+          <TRich k="home.mobile.copy" />
         </p>
         <div className="mobile-proof-points">
-          <span><T k="home.mobile.point.visitor" /></span>
-          <span><T k="home.mobile.point.team" /></span>
-          <span><T k="home.mobile.point.context" /></span>
+          {mobileProofPoints.map(({ key, Icon }) => (
+            <span key={key}>
+              <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
+              <T k={key} />
+            </span>
+          ))}
         </div>
       </div>
 
@@ -226,18 +262,18 @@ function MobilePreviewSection() {
               </div>
               <div className="mobile-widget-panel">
                 <div className="mobile-widget-header">
-                  <strong>Feedback</strong>
+                  <strong>Retour</strong>
                   <span>Capture</span>
                 </div>
                 <div className="mobile-widget-tabs">
                   <span>Note</span>
-                  <span className="active">Pin</span>
-                  <span>Shot</span>
+                  <span className="active">Repère</span>
+                  <span>Capture</span>
                 </div>
                 <div className="mobile-widget-text">Le bouton devis est trop bas sur mobile.</div>
                 <button type="button">Envoyer</button>
               </div>
-              <button className="mobile-feedback-button" type="button">Feedback</button>
+              <button className="mobile-feedback-button" type="button">Retour</button>
             </div>
           </div>
         </div>
@@ -250,40 +286,67 @@ function MobilePreviewSection() {
               <div className="mobile-browser-bar">
                 <span>app.changethis.dev</span>
               </div>
-              <div className="mobile-admin-console">
-                <div className="mobile-admin-header">
-                  <span className="mobile-demo-kicker">Inbox</span>
-                  <strong>Retours entrants</strong>
+              <div className="mobile-admin-console mobile-dashboard-shell">
+                <div className="mobile-dashboard-header">
+                  <div>
+                    <span className="mobile-demo-kicker">Console opérationnelle</span>
+                    <strong>Retours ChangeThis</strong>
+                  </div>
+                  <button type="button">Tester</button>
                 </div>
-                <div className="mobile-admin-tabs">
-                  <span className="active">À traiter</span>
-                  <span>À revoir</span>
+                <div className="mobile-dashboard-tabs" aria-hidden="true">
+                  <span className="active">File active <strong>3</strong></span>
+                  <span>Historique <strong>8</strong></span>
+                  <span>Tous <strong>11</strong></span>
                 </div>
-                <article className="mobile-admin-feedback active">
-                  <div>
-                    <strong>Pin sur /checkout</strong>
-                    <span>Cabinet Orion · mobile</span>
+                <div className="mobile-dashboard-filters" aria-hidden="true">
+                  <span>Statut: action requise</span>
+                  <span>Site: tous</span>
+                  <span>Git: tous</span>
+                </div>
+                <div className="mobile-dashboard-feedback-list">
+                  <article className="mobile-dashboard-feedback active">
+                    <div className="mobile-dashboard-feedback-main">
+                      <div className="mobile-dashboard-tags">
+                        <span className="status-badge needs_setup">À créer</span>
+                        <ProviderBadge provider="github" />
+                      </div>
+                      <strong>Repère sur /checkout</strong>
+                      <p>Le bouton devis est trop bas sur mobile.</p>
+                      <span>Cabinet Orion · /checkout · il y a 4 min</span>
+                    </div>
+                    <div className="mobile-dashboard-issue">
+                      <span>Brouillon, destination et contexte</span>
+                      <strong>cabinet-orion/booking-flow</strong>
+                    </div>
+                  </article>
+                  <article className="mobile-dashboard-feedback">
+                    <div className="mobile-dashboard-feedback-main">
+                      <div className="mobile-dashboard-tags">
+                        <span className="status-badge issue_creation_pending">En file</span>
+                        <ProviderBadge provider="gitlab" />
+                      </div>
+                      <strong>Capture sur /pricing</strong>
+                      <p>La carte Pro masque le détail du tarif annuel.</p>
+                      <span>Studio Lumen · /pricing · il y a 18 min</span>
+                    </div>
+                  </article>
+                </div>
+                <div className="mobile-dashboard-summary">
+                  <div className="mobile-dashboard-summary-header">
+                    <span>Synthèse</span>
+                    <strong>File actuelle</strong>
                   </div>
-                  <em>À créer</em>
-                </article>
-                <article className="mobile-admin-feedback">
-                  <div>
-                    <strong>Capture sur /pricing</strong>
-                    <span>Studio Lumen · GitLab</span>
+                  <div className="mobile-dashboard-metric-row">
+                    <span className="warning"><strong>1</strong> À traiter</span>
+                    <span><strong>1</strong> En file</span>
+                    <span className="ok"><strong>1</strong> Résolu</span>
                   </div>
-                  <em>En file</em>
-                </article>
-                <article className="mobile-admin-feedback review">
-                  <div>
-                    <strong>Note sur /demo</strong>
-                    <span>Atelier Nova · GitHub</span>
+                  <div className="mobile-dashboard-route">
+                    <span>Sites connectés</span>
+                    <strong>3/3</strong>
+                    <em>GitHub prêt · GitLab configuré</em>
                   </div>
-                  <em>À revoir</em>
-                </article>
-                <div className="mobile-admin-issue-card">
-                  <span>Destination</span>
-                  <strong>atelier-nova/portal-staging</strong>
-                  <button type="button">Créer l’issue</button>
                 </div>
               </div>
             </div>
@@ -309,7 +372,7 @@ function WaitlistForm({ action, compact = false, waitlistStatus }: WaitlistFormP
         </span>
         <div>
           <strong><T k="home.waitlist.callout.title" /></strong>
-          <p><T k="home.waitlist.callout.copy" /></p>
+          <p><TRich k="home.waitlist.callout.copy" /></p>
         </div>
       </div>
       <div className="waitlist-controls">
@@ -350,8 +413,7 @@ function HeroStatement() {
       <span className="hero-provider gitlab">
         <ProviderIcon provider="gitlab" className="hero-provider-icon" />
         <span>GitLab</span>
-      </span>{" "}
-      <strong><T k="home.hero.statement.suffix" /></strong>
+      </span>.
     </p>
   );
 }

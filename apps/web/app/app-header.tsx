@@ -38,7 +38,9 @@ export async function AppHeader({
   return (
     <header className="topbar app-header">
       <Link className="brand" href="/">
-        <span>ChangeThis</span>
+        <span className="brand-wordmark" aria-label="ChangeThis">
+          <span>Change</span><span className="brand-wordmark-accent">This</span>
+        </span>
         <Image src={logoChangeThis} alt="" aria-hidden="true" className="brand-logo" priority />
       </Link>
 

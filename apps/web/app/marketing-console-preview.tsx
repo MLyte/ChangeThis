@@ -1,180 +1,174 @@
-import { GitPullRequestCreate, MessageSquare, MousePointerClick, Workflow } from "lucide-react";
-import { T } from "./i18n";
+"use client";
+
+import {
+  Archive,
+  Camera,
+  CheckCircle2,
+  Code2,
+  GitBranch,
+  GitPullRequestCreate,
+  Inbox,
+  MapPin,
+  MessageSquare,
+  Send,
+  Settings2
+} from "lucide-react";
+import { useLanguage } from "./i18n";
 import { ProviderBadge } from "./provider-badge";
 
-type PreviewFeedbackStatus = "raw" | "issue_creation_pending" | "retrying" | "sent_to_provider";
-
-type PreviewFeedback = {
-  id: string;
-  title: string;
-  message: string;
-  site: string;
-  path: string;
-  type: "pin" | "capture" | "note";
-  status: PreviewFeedbackStatus;
-  issueState: string;
-  provider: "github" | "gitlab";
-  receivedAt: string;
-};
-
-const statusConfig: Record<PreviewFeedbackStatus, { badgeClass: string; label: string }> = {
-  raw: { badgeClass: "needs_setup", label: "Nouveau" },
-  issue_creation_pending: { badgeClass: "issue_creation_pending", label: "En file" },
-  retrying: { badgeClass: "retrying", label: "À revoir" },
-  sent_to_provider: { badgeClass: "connected", label: "Créée" }
-};
-
-const previewFeedbacks: PreviewFeedback[] = [
+const feedbackItems = [
   {
-    id: "fb-preview-1",
-    title: "Pin sur /checkout",
-    message: "Patrick: le bouton devis descend sous le pli mobile.",
-    site: "Cabinet Orion",
-    path: "/checkout",
-    type: "pin",
-    status: "raw",
-    issueState: "Non créée",
-    provider: "github",
-    receivedAt: "09:41"
+    titleKey: "home.loop.feedback.1.title",
+    copyKey: "home.loop.feedback.1.copy",
+    metaKey: "home.loop.feedback.1.meta",
+    Icon: MapPin
   },
   {
-    id: "fb-preview-2",
-    title: "Capture sur /pricing",
-    message: "Jean-Pierre: l’espace entre les cartes paraît trop grand.",
-    site: "Studio Lumen",
-    path: "/pricing",
-    type: "capture",
-    status: "issue_creation_pending",
-    issueState: "En cours",
-    provider: "gitlab",
-    receivedAt: "09:24"
-  }
-];
-
-const previewRoutes = [
-  {
-    name: "Cabinet Orion",
-    repo: "cabinet-orion/booking-portal",
-    provider: "github" as const
+    titleKey: "home.loop.feedback.2.title",
+    copyKey: "home.loop.feedback.2.copy",
+    metaKey: "home.loop.feedback.2.meta",
+    Icon: Camera
   },
   {
-    name: "Studio Lumen",
-    repo: "studio-lumen/shopfront",
-    provider: "gitlab" as const
-  },
-  {
-    name: "Atelier Nova",
-    repo: "atelier-nova/portal-staging",
-    provider: "github" as const
+    titleKey: "home.loop.feedback.3.title",
+    copyKey: "home.loop.feedback.3.copy",
+    metaKey: "home.loop.feedback.3.meta",
+    Icon: MessageSquare
   }
 ];
 
 export function MarketingConsolePreview() {
-  const activeFeedback = previewFeedbacks[0];
+  const { t } = useLanguage();
 
   return (
-    <div className="console-preview dashboard-preview-console" aria-label="Aperçu de la console ChangeThis">
-      <div className="preview-topline">
-        <span className="window-dot coral" />
-        <span className="window-dot amber" />
-        <span className="window-dot green" />
-        <Workflow className="preview-title-icon" aria-hidden="true" size={16} strokeWidth={2.2} />
-        <strong>Console ChangeThis</strong>
-      </div>
-
-      <div className="dashboard-preview-workbench">
-        <section className="dashboard-preview-inbox" aria-labelledby="preview-inbox-title">
-          <div className="dashboard-preview-header">
+    <div className="product-loop-preview" aria-label={t("home.loop.aria")}>
+      <div className="product-loop-board">
+        <section className="loop-panel loop-setup-panel" aria-labelledby="preview-setup-title">
+          <div className="loop-panel-heading">
             <div>
-              <p className="eyebrow"><T k="home.preview.badge" /></p>
-              <h2 id="preview-inbox-title"><T k="home.preview.header" /></h2>
+              <p className="eyebrow">{t("home.loop.setup.eyebrow")}</p>
+              <h2 id="preview-setup-title">{t("home.loop.setup.title")}</h2>
             </div>
-            <span className="status-badge needs_setup"><T k="home.preview.private" /></span>
           </div>
 
-          <div className="dashboard-preview-metrics" aria-hidden="true">
-            <span><strong>1</strong> <T k="home.preview.metric.signal" /></span>
-            <span><strong>390</strong> <T k="home.preview.metric.viewport" /></span>
-            <span><strong>Git</strong> <T k="home.preview.metric.destination" /></span>
-          </div>
+          <div className="loop-panel-visual">
+            <div className="loop-script-card" aria-label={t("home.loop.script.aria")}>
+              <div className="loop-script-card-bar">
+                <Code2 aria-hidden="true" size={15} strokeWidth={2.2} />
+                <span>client-site.dev</span>
+              </div>
+              <code>{`<script src="https://app.changethis.dev/widget.js"
+  data-project="cabinet-orion">
+</script>`}</code>
+            </div>
 
-          <div className="feedback-list" role="list" aria-label="Retours récents">
-            {previewFeedbacks.map((feedback) => <PreviewFeedbackRow feedback={feedback} key={feedback.id} />)}
+            <div className="loop-git-config-card">
+              <div className="loop-git-config-header">
+                <Settings2 aria-hidden="true" size={16} strokeWidth={2.2} />
+                <strong>{t("home.loop.git.title")}</strong>
+              </div>
+              <div className="loop-git-provider-row">
+                <ProviderBadge provider="github" />
+                <span>cabinet-orion/booking-portal</span>
+                <CheckCircle2 aria-hidden="true" size={15} strokeWidth={2.2} />
+              </div>
+              <div className="loop-git-provider-row">
+                <ProviderBadge provider="gitlab" />
+                <span>studio-lumen/shopfront</span>
+                <CheckCircle2 aria-hidden="true" size={15} strokeWidth={2.2} />
+              </div>
+            </div>
           </div>
         </section>
 
-        <aside className="dashboard-side-panel dashboard-preview-side" aria-label="Synthèse ChangeThis">
-          <section className="preview-detail-card">
-            <div className="preview-detail-heading">
-              <span className="preview-detail-icon" aria-hidden="true">
-                <MousePointerClick size={17} strokeWidth={2.2} />
-              </span>
-              <div>
-                <p className="eyebrow"><T k="home.preview.draft.eyebrow" /></p>
-                <h2>{activeFeedback.title}</h2>
-              </div>
+        <section className="loop-panel loop-visitor-panel" aria-labelledby="preview-visitor-title">
+          <div className="loop-panel-heading">
+            <div>
+              <p className="eyebrow">{t("home.loop.visitor.eyebrow")}</p>
+              <h2 id="preview-visitor-title">{t("home.loop.visitor.title")}</h2>
             </div>
-            <p>{activeFeedback.message}</p>
-            <div className="preview-context-grid">
-              <span><strong><T k="home.preview.context.page" /></strong>{activeFeedback.path}</span>
-              <span><strong><T k="home.preview.context.viewport" /></strong>390 x 844</span>
-              <span><strong><T k="home.preview.context.type" /></strong>{activeFeedback.type}</span>
-              <span><strong><T k="home.preview.context.received" /></strong>{activeFeedback.receivedAt}</span>
-            </div>
-            <div className="preview-capture-card" aria-hidden="true">
-              <span className="preview-pin">1</span>
-              <div />
-              <div />
-            </div>
-          </section>
+          </div>
 
-          <section className="preview-route-card">
-            <div className="preview-route-heading">
-              <p className="eyebrow"><T k="home.preview.route.eyebrow" /></p>
-              <h2><T k="home.preview.route.title" /></h2>
+          <div className="loop-panel-visual loop-site-feedback-stage" aria-hidden="true">
+            <div className="loop-fake-site-header">
+              <span />
+              <span />
+              <span />
             </div>
-            <div className="preview-issue-line">
-              <GitPullRequestCreate aria-hidden="true" size={17} strokeWidth={2.2} />
-              <span>[Feedback] /checkout - bouton trop bas</span>
+            <div className="loop-fake-site-hero">
+              <strong>{t("home.loop.fakeSite.title")}</strong>
+              <span>{t("home.loop.fakeSite.subtitle")}</span>
             </div>
-            <div className="site-route-list">
-              {previewRoutes.map((route) => (
-                <article className="site-route-row" key={route.repo}>
+            <div className="loop-fake-site-grid">
+              <span />
+              <span />
+              <span />
+            </div>
+            <span className="loop-feedback-pin">1</span>
+            <div className="loop-feedback-widget-card">
+              <div className="loop-feedback-widget-tabs">
+                <span>{t("home.loop.widget.note")}</span>
+                <span className="active">{t("home.loop.widget.marker")}</span>
+                <span>{t("home.loop.widget.capture")}</span>
+              </div>
+              <p>{t("home.loop.widget.copy")}</p>
+              <button type="button">
+                <Send aria-hidden="true" size={13} strokeWidth={2.2} />
+                {t("home.loop.widget.send")}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="loop-panel loop-developer-panel" aria-labelledby="preview-developer-title">
+          <div className="loop-panel-heading">
+            <div>
+              <p className="eyebrow">{t("home.loop.developer.eyebrow")}</p>
+              <h2 id="preview-developer-title">{t("home.loop.developer.title")}</h2>
+            </div>
+          </div>
+
+          <div className="loop-panel-visual developer-inbox-card">
+            <div className="developer-inbox-toolbar">
+              <span>
+                <Inbox aria-hidden="true" size={15} strokeWidth={2.2} />
+                {t("home.loop.inbox.active")}
+              </span>
+              <strong>3</strong>
+            </div>
+
+            <div className="developer-feedback-list">
+              {feedbackItems.map(({ titleKey, copyKey, metaKey, Icon }, index) => (
+                <article className={index === 0 ? "developer-feedback-item active" : "developer-feedback-item"} key={titleKey}>
+                  <Icon aria-hidden="true" size={16} strokeWidth={2.2} />
                   <div>
-                    <strong>{route.name}</strong>
-                    <span>{route.repo}</span>
+                    <strong>{t(titleKey)}</strong>
+                    <span>{t(copyKey)}</span>
                   </div>
-                  <ProviderBadge provider={route.provider} />
+                  <em>{t(metaKey)}</em>
                 </article>
               ))}
             </div>
-          </section>
-        </aside>
+
+            <div className="developer-decision-card">
+              <div>
+                <GitBranch aria-hidden="true" size={16} strokeWidth={2.2} />
+                <span>cabinet-orion/booking-portal</span>
+              </div>
+              <div className="loop-developer-actions">
+                <span className="button dashboard-preview-action">
+                  <GitPullRequestCreate aria-hidden="true" size={14} strokeWidth={2.2} />
+                  {t("home.loop.actions.task")}
+                </span>
+                <span className="button secondary-button dashboard-preview-action">
+                  <Archive aria-hidden="true" size={14} strokeWidth={2.2} />
+                  {t("home.loop.actions.archive")}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
-  );
-}
-
-function PreviewFeedbackRow({ feedback }: { feedback: PreviewFeedback }) {
-  const status = statusConfig[feedback.status];
-
-  return (
-    <article className={`dashboard-preview-feedback-row ${feedback.status}`} role="listitem">
-      <span className="preview-feedback-type" aria-hidden="true">
-        {feedback.type === "note" ? <MessageSquare size={15} strokeWidth={2.2} /> : <MousePointerClick size={15} strokeWidth={2.2} />}
-      </span>
-      <div className="feedback-main">
-        <h2>{feedback.title}</h2>
-        <p>{feedback.message}</p>
-        <div className="feedback-meta">
-          <span>{feedback.site}</span>
-          <span>{feedback.path}</span>
-        </div>
-      </div>
-      <div className="preview-feedback-state">
-        <span className={`status-badge ${status.badgeClass}`}>{status.label}</span>
-        <ProviderBadge provider={feedback.provider} />
-      </div>
-    </article>
   );
 }
