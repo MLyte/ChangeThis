@@ -8,6 +8,7 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 
 - ChangeThis est en beta privee invitation-only.
 - Le signup public reste ferme par defaut avec `ENABLE_PUBLIC_SIGNUP=false`.
+- Branche dev `codex/full-live-signup`: le signup public classique est ouvert avec `ENABLE_PUBLIC_SIGNUP=true` et `/signup` demande e-mail + mot de passe avant creation immediate du workspace.
 - La boucle produit actuelle est: site connecte -> widget public -> feedback -> inbox `/projects` -> creation manuelle d'issue GitHub/GitLab.
 - La page `/demo` reste une demo produit distincte d'un vrai test d'installation client.
 - Le dashboard admin/app peut rester large; les pages publiques doivent eviter les layouts full-width non controles.
