@@ -7,6 +7,7 @@ import {
   Code2,
   GitBranch,
   GitPullRequestCreate,
+  Globe2,
   Inbox,
   MapPin,
   MessageSquare,
@@ -35,6 +36,12 @@ const feedbackItems = [
     metaKey: "home.loop.feedback.3.meta",
     Icon: MessageSquare
   }
+];
+
+const visitorFeedbackPoints = [
+  { key: "home.loop.visitor.point.page", Icon: Globe2 },
+  { key: "home.loop.visitor.point.capture", Icon: Camera },
+  { key: "home.loop.visitor.point.pin", Icon: MapPin }
 ];
 
 export function MarketingConsolePreview() {
@@ -85,7 +92,15 @@ export function MarketingConsolePreview() {
           <div className="loop-panel-heading">
             <div>
               <p className="eyebrow">{t("home.loop.visitor.eyebrow")}</p>
-              <h2 id="preview-visitor-title">{t("home.loop.visitor.title")}</h2>
+              <p className="loop-panel-kicker" id="preview-visitor-title">{t("home.loop.visitor.title")}</p>
+              <ol className="loop-feedback-points">
+                {visitorFeedbackPoints.map(({ key, Icon }) => (
+                  <li key={key}>
+                    <Icon aria-hidden="true" size={15} strokeWidth={2.25} />
+                    <span>{t(key)}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
           </div>
 
