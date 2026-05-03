@@ -79,7 +79,7 @@ export function missingWidgetBundleFallback(): string {
     badge.setAttribute("aria-live", "polite");
     badge.textContent = "Feedback indisponible";
     badge.title = message;
-    badge.style.cssText = "position:fixed;right:20px;bottom:20px;z-index:2147483647;padding:10px 14px;border-radius:999px;background:#111827;color:#fff;font:600 13px/1.2 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 10px 24px rgba(17,24,39,.25);";
+    badge.style.cssText = "position:fixed;right:20px;bottom:20px;z-index:2147483647;padding:10px 14px;border-radius:999px;background:#171717;color:#fff;font:600 13px/1.2 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 10px 24px rgba(23,23,23,.25);";
     document.body.appendChild(badge);
   };
 

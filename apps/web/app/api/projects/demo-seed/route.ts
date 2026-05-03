@@ -426,15 +426,15 @@ function demoScreenshotDataUrl(title: string, path: string, width: number, heigh
   const safeTitle = escapeSvg(title);
   const safePath = escapeSvg(path);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-  <rect width="100%" height="100%" fill="#f6f8fb"/>
-  <rect x="24" y="24" width="${Math.max(220, width - 48)}" height="54" rx="8" fill="#ffffff" stroke="#d8dee8"/>
-  <text x="44" y="58" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#172033">${safeTitle}</text>
-  <rect x="24" y="104" width="${Math.max(220, width - 48)}" height="${Math.max(180, height - 150)}" rx="10" fill="#ffffff" stroke="#d8dee8"/>
-  <text x="44" y="142" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#2563eb">Capture demo ChangeThis</text>
-  <text x="44" y="172" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#172033">${safePath}</text>
-  <rect x="${Math.max(44, width * 0.58)}" y="${Math.max(190, height * 0.58)}" width="140" height="42" rx="8" fill="#2563eb"/>
+  <rect width="100%" height="100%" fill="#f7f7f7"/>
+  <rect x="24" y="24" width="${Math.max(220, width - 48)}" height="54" rx="8" fill="#ffffff" stroke="#dadada"/>
+  <text x="44" y="58" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#171717">${safeTitle}</text>
+  <rect x="24" y="104" width="${Math.max(220, width - 48)}" height="${Math.max(180, height - 150)}" rx="10" fill="#ffffff" stroke="#dadada"/>
+  <text x="44" y="142" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#3f51b5">Capture demo ChangeThis</text>
+  <text x="44" y="172" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#171717">${safePath}</text>
+  <rect x="${Math.max(44, width * 0.58)}" y="${Math.max(190, height * 0.58)}" width="140" height="42" rx="8" fill="#3f51b5"/>
   <text x="${Math.max(64, width * 0.58 + 20)}" y="${Math.max(216, height * 0.58 + 26)}" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">Action cible</text>
-  <circle cx="${Math.max(38, width * 0.78)}" cy="${Math.max(120, height * 0.42)}" r="16" fill="#dc2626"/>
+  <circle cx="${Math.max(38, width * 0.78)}" cy="${Math.max(120, height * 0.42)}" r="16" fill="#3f51b5"/>
   <text x="${Math.max(33, width * 0.78 - 5)}" y="${Math.max(126, height * 0.42 + 6)}" font-family="Arial, sans-serif" font-size="16" font-weight="800" fill="#ffffff">1</text>
 </svg>`;
 
