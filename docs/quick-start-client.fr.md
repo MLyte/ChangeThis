@@ -21,7 +21,7 @@ Si le workspace est neuf, vérifier d'abord que le nom du workspace et le compte
 
 Aller dans `/settings/git-connections`, puis connecter le provider prévu pour ce client.
 
-Pour la bêta privée, GitHub est prioritaire. GitLab peut rester en attente sauf si le client pilote en a besoin.
+Pour la bêta privée, GitHub et GitLab sont présentés au même niveau. Le bon provider est celui qui correspond au dépôt réel de l'équipe.
 
 ## 3. Créer le site connecté
 
@@ -60,7 +60,7 @@ Retourner dans `/projects` et vérifier que le feedback apparaît dans l'inbox.
 
 Depuis `/projects`, ouvrir le feedback puis créer l'issue externe.
 
-En beta actuelle, cette étape est manuelle: ChangeThis prépare le contexte et le brouillon d'issue, mais ne crée pas automatiquement une issue dès la réception du feedback.
+En beta actuelle, cette étape est manuelle : ChangeThis prépare le contexte et le brouillon d'issue, mais ne crée pas automatiquement une issue dès la réception du feedback.
 
 La première boucle est validée quand :
 

@@ -12,6 +12,8 @@ sur Railway + Supabase Auth/DB à une version SaaS commercialisable.
   - ICP et critères de succès de premier achat
   - Proposition de valeur : de la réception de feedback au suivi d’issue
 - **Activation de la vente**
+  - Vitrine actuelle : hero + waitlist, problème court, parcours `Installer > Capturer > Trier`, preuve contexte, preuve mobile, réassurance IT/DPO, CTA final
+  - Charte vitrine verrouillée : primary mauve conservée, secondary gris désaturé, exceptions de marque GitHub/GitLab contrôlées par `npm run color:check`
   - Page pricing minimale (plans, limites, trial)
   - Page “Démarrage rapide” client
   - Processus d’onboarding du premier feedback réel

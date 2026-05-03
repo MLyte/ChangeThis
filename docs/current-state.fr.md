@@ -1,6 +1,6 @@
 # Etat actuel ChangeThis
 
-Date de reference: 2026-05-02
+Date de reference: 2026-05-04
 
 Ce document sert de source courte pour synchroniser les autres fichiers Markdown du repo.
 
@@ -8,9 +8,13 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 
 - ChangeThis est en beta privee invitation-only.
 - Le signup public reste ferme par defaut avec `ENABLE_PUBLIC_SIGNUP=false`.
+- La page publique `/` est une vitrine de liste d'attente, pas un flux d'inscription ouvert.
+- La vitrine actuelle suit l'ordre: promesse + waitlist -> probleme -> parcours `Installer > Capturer > Trier` -> contexte capture reduit -> preuve mobile -> validation IT/DPO -> waitlist finale.
+- La section validation IT/DPO reste neutre: elle explicite l'absence de token Git dans le script ou le navigateur, le cadrage RGPD documentable, les captures configurables et le perimetre pilote controlable.
 - La boucle produit actuelle est: site connecte -> widget public -> feedback -> inbox `/projects` -> creation manuelle d'issue GitHub/GitLab.
 - La page `/demo` reste une demo produit distincte d'un vrai test d'installation client.
 - Le dashboard admin/app peut rester large; les pages publiques doivent eviter les layouts full-width non controles.
+- La charte couleur publique est verrouillee: primary mauve historique conservee, secondary 100% desaturee, exceptions de marque conservees pour GitHub/GitLab, controle par `npm run color:check`.
 
 ## Stack actuelle
 

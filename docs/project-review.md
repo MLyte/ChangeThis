@@ -8,8 +8,11 @@ ChangeThis is no longer only a prototype. The widget, public API, dashboard inbo
 
 The product value remains clear: clients report page-specific feedback without an account, and the team triages those returns into GitHub/GitLab issues from one inbox.
 
+The public homepage now matches the private-beta posture: it is a waitlist-focused marketing page, with a short problem statement, a compact `Install -> Capture -> Sort` product path, reduced context proof, mobile proof, IT/DPO reassurance, and a closing waitlist CTA. It should not imply open signup or automatic issue creation.
+
 ## Current Strengths
 
+- Public waitlist homepage aligned with the private beta and current color policy.
 - Public widget bundle served by `/widget.js` and `/widget.global.js`.
 - Feedback modes: note, pin, multiple pins and screenshot/capture.
 - `/projects` inbox with filters, status metrics and actions.
@@ -17,6 +20,7 @@ The product value remains clear: clients report page-specific feedback without a
 - Supabase beta path for sites, public keys, feedbacks, status events, issue attempts, external issues and provider integrations.
 - Private beta auth posture with `AUTH_MODE=supabase` and `ENABLE_PUBLIC_SIGNUP=false`.
 - Production checks: `env:check`, `migrations:check`, `prod:check`, `/api/health`, `/api/ready`.
+- Homepage color guard: `npm run color:check` allows the preserved primary ramp, desaturated neutrals, and GitHub/GitLab brand exceptions.
 
 ## Current Gaps
 

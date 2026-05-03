@@ -9,9 +9,23 @@ Clients click a fixed feedback button, add a note, pin one or more page elements
 - **Audience:** freelancers, small web agencies, studios, and product/design teams shipping client websites.
 - **Model:** source-available/open-core. The widget and shared protocol are permissive; hosted dashboard, managed provider integrations, storage, teams, and AI triage stay in the commercial hosted layer.
 - **Promise:** clients point at what needs changing; teams receive actionable feedback, decide whether to create an issue, and keep a traceable history.
-- **Current beta posture:** private beta, `ENABLE_PUBLIC_SIGNUP=false`, Railway app hosting, Supabase Auth/DB for the real beta path, OVH DNS for `app.changethis.dev`.
+- **Current beta posture:** private beta, `ENABLE_PUBLIC_SIGNUP=false`, public homepage focused on waitlist signup, Railway app hosting, Supabase Auth/DB for the real beta path, OVH DNS for `app.changethis.dev`.
 
 See [docs/current-state.fr.md](docs/current-state.fr.md) for the synchronized current-state snapshot used by the documentation.
+
+## Public Homepage State
+
+The `/` page is currently a marketing/waitlist page, not an open signup flow. Its live structure is:
+
+1. Hero promise and waitlist form.
+2. Short problem section about scattered, under-contextualized website feedback.
+3. Product path: `Install -> Capture -> Sort`, showing the script, visitor feedback modes, and team decision flow.
+4. Reduced context proof: page, device/screen, marker or capture, and review destination.
+5. Mobile proof with visitor/team previews.
+6. IT/DPO reassurance: no Git token in the site script or browser, GDPR framing can be documented, screenshots are configurable, and the pilot perimeter can stay controlled.
+7. Closing waitlist CTA.
+
+Homepage color policy is intentionally strict: the original primary purple ramp stays unchanged, secondary colors are fully desaturated neutrals, and GitHub/GitLab brand colors are preserved as explicit provider exceptions. Use `npm run color:check` after visual changes.
 
 ## Current Product Loop
 
@@ -83,7 +97,7 @@ The local web app runs on `http://localhost:3000` by default. If the port is occ
 
 Useful local routes:
 
-- `/` landing page with product CTAs.
+- `/` public marketing/waitlist page for the private beta.
 - `/signup` account/workspace creation entry point, gated by `ENABLE_PUBLIC_SIGNUP`.
 - `/login` authenticated console entry point.
 - `/demo` test page that loads the real widget bundle against the local API.
