@@ -105,7 +105,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     <main className="shell app-home">
       <AppHeader suppressAuthActions={!publicSignupEnabled} suppressSession={!publicSignupEnabled} />
 
-      <section className="home-section home-hero home-grid" aria-labelledby="product-title">
+      <section className="home-section home-hero" aria-labelledby="product-title">
         <div className="home-hero-copy">
           <p className="eyebrow"><T k="home.hero.eyebrow" /></p>
           <h1 id="product-title" className="product-title">
@@ -118,16 +118,24 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <p className="lede">
             <TRich k="home.hero.lede" />
           </p>
+        </div>
+
+        <div className="home-hero-action">
           {publicSignupEnabled ? (
             <SignupAccessCard />
           ) : (
             <WaitlistForm action={waitlistAction} waitlistStatus={waitlistStatus} />
           )}
         </div>
+      </section>
 
-        <div className="home-hero-preview">
-          <MarketingConsolePreview />
+      <section className="home-section product-loop-section" aria-labelledby="product-loop-title">
+        <div className="home-section-header compact">
+          <p className="eyebrow"><T k="home.loop.section.eyebrow" /></p>
+          <h2 id="product-loop-title"><T k="home.loop.section.title" /></h2>
+          <p className="section-lede"><T k="home.loop.section.copy" /></p>
         </div>
+        <MarketingConsolePreview />
       </section>
 
       <section className="home-section problem-section problem-editorial">
@@ -236,10 +244,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <h2 className="closing-title">
             <small>
               <T k="home.closing.title.small" />
-              <Sparkles className="closing-title-icon" size={24} strokeWidth={2.3} aria-hidden="true" />
             </small>
             <br />
             <T k="home.closing.title.main" />
+            <Sparkles className="closing-title-icon" size={24} strokeWidth={2.3} aria-hidden="true" />
           </h2>
           <p className="lede">
             <TRich k="home.closing.copy" />

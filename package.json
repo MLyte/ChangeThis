@@ -12,6 +12,7 @@
     "dev": "npm run build --workspace @changethis/shared && npm run dev --workspace @changethis/web",
     "build": "npm run build --workspace @changethis/shared && npm run build --workspace @changethis/widget && npm run build --workspace @changethis/web",
     "build:prod": "npm run env:check && npm run migrations:check && npm run build",
+    "color:check": "node scripts/check-color-policy.mjs",
     "env:check": "node scripts/check-env.mjs",
     "lint": "npm run lint --workspace @changethis/shared && npm run build --workspace @changethis/shared && npm run lint --workspace @changethis/widget && npm run lint --workspace @changethis/web",
     "migrations:check": "node scripts/check-supabase-migrations.mjs",

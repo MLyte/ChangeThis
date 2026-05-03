@@ -163,8 +163,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.mobile.eyebrow": "Boucle mobile",
     "home.mobile.title": "Le retour commence souvent sur mobile. Le contexte doit suivre.",
     "home.mobile.title.intro": "Les clients utilisent aussi leur mobile.",
-    "home.mobile.title.impact": "Les retours doivent fonctionner sur chaque appareil.",
-    "home.mobile.copy": "Côté visiteur, le bouton de retour reste compact. Côté équipe, chaque signal conserve la page, le statut et la destination Git sans devenir un outil lourd.",
+    "home.mobile.title.impact": "ChangeThis garde chaque retour exploitable.",
+    "home.mobile.copy": "Le bouton reste compact côté visiteur. Côté équipe, le retour arrive avec la page, le statut et la destination Git, prêt à traiter.",
     "home.mobile.point.visitor": "Visiteur sans compte",
     "home.mobile.point.team": "Tri côté équipe",
     "home.mobile.point.context": "Contexte prêt à traiter",
@@ -234,6 +234,9 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.preview.empty.copy": "Envoyez un retour depuis la démo pour alimenter cet espace.",
     "home.preview.ready": "prêt",
     "home.loop.aria": "Aperçu du parcours ChangeThis",
+    "home.loop.section.eyebrow": "Parcours produit",
+    "home.loop.section.title": "De l'installation au tri, le retour suit le même chemin.",
+    "home.loop.section.copy": "Chaque étape garde la même logique: installer le bouton, recevoir un retour contextualisé, puis décider quoi en faire.",
     "home.loop.setup.eyebrow": "Installer",
     "home.loop.setup.title": "Code à ajouter sur le site, Git connecté dans l'espace équipe.",
     "home.loop.script.aria": "Exemple de script ChangeThis",
@@ -563,8 +566,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.mobile.eyebrow": "Mobile loop",
     "home.mobile.title": "Feedback often starts on mobile. The context should follow.",
     "home.mobile.title.intro": "Clients also use their phones.",
-    "home.mobile.title.impact": "Feedback should work on every device.",
-    "home.mobile.copy": "For visitors, the feedback button stays compact. For teams, each signal keeps the page, status, and Git destination without becoming a heavy tool.",
+    "home.mobile.title.impact": "ChangeThis keeps every signal actionable.",
+    "home.mobile.copy": "The button stays compact for visitors. For teams, each feedback arrives with the page, status, and Git destination, ready to handle.",
     "home.mobile.point.visitor": "Visitor without account",
     "home.mobile.point.team": "Team triage",
     "home.mobile.point.context": "Context ready to handle",
@@ -634,6 +637,9 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.preview.empty.copy": "Send feedback from the demo to populate this space.",
     "home.preview.ready": "ready",
     "home.loop.aria": "ChangeThis journey preview",
+    "home.loop.section.eyebrow": "Product path",
+    "home.loop.section.title": "From install to triage, feedback follows one clear path.",
+    "home.loop.section.copy": "Each step keeps the same logic: install the button, receive contextual feedback, then decide what to do with it.",
     "home.loop.setup.eyebrow": "Install",
     "home.loop.setup.title": "Add the code to the site, connect Git in the team space.",
     "home.loop.script.aria": "ChangeThis script example",
@@ -962,7 +968,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
     case "home.beta.access.copy":
       return <>Chaque site peut pointer vers <strong>le bon dépôt GitHub ou GitLab</strong>.</>;
     case "home.mobile.copy":
-      return <>Côté visiteur, le bouton de retour reste compact. Côté équipe, chaque signal conserve <strong>la page, le statut et la destination Git</strong> sans devenir un outil lourd.</>;
+      return <>Le bouton reste compact côté visiteur. Côté équipe, le retour arrive avec <strong>la page, le statut et la destination Git</strong>, prêt à traiter.</>;
     case "home.workflow.capture.copy":
       return <>Il ajoute une note, pointe une zone ou demande une capture <strong>sans créer de compte</strong>.</>;
     case "home.workflow.triage.copy":
