@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { CalendarClock, Camera, CheckCircle2, FileText, GitBranch, GitPullRequestCreate, Globe2, Inbox, Mail, MessageSquare, MonitorCheck, MousePointerClick, Pin, Route, Ruler, ShieldCheck, Smartphone, Sparkles, Type, Users, type LucideIcon } from "lucide-react";
+import { Accessibility, CheckCircle2, ClipboardCheck, FileText, GitBranch, Globe2, Mail, MonitorCheck, Pin, ShieldCheck, SlidersHorizontal, Sparkles, type LucideIcon } from "lucide-react";
 import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
@@ -11,28 +11,16 @@ import { ProviderBadge, ProviderIcon } from "./provider-badge";
 
 export const dynamic = "force-dynamic";
 
-const betaBlocks: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
-  { titleKey: "home.beta.capture.title", copyKey: "home.beta.capture.copy", Icon: MousePointerClick },
-  { titleKey: "home.beta.inbox.title", copyKey: "home.beta.inbox.copy", Icon: Inbox },
-  { titleKey: "home.beta.routing.title", copyKey: "home.beta.routing.copy", Icon: Route },
-  { titleKey: "home.beta.access.title", copyKey: "home.beta.access.copy", Icon: ShieldCheck }
-];
-
 const feedbackContextItems: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
   { titleKey: "home.context.page.title", copyKey: "home.context.page.copy", Icon: Globe2 },
   { titleKey: "home.context.device.title", copyKey: "home.context.device.copy", Icon: MonitorCheck },
-  { titleKey: "home.context.viewport.title", copyKey: "home.context.viewport.copy", Icon: Ruler },
-  { titleKey: "home.context.message.title", copyKey: "home.context.message.copy", Icon: Type },
   { titleKey: "home.context.pin.title", copyKey: "home.context.pin.copy", Icon: Pin },
-  { titleKey: "home.context.capture.title", copyKey: "home.context.capture.copy", Icon: Camera },
-  { titleKey: "home.context.element.title", copyKey: "home.context.element.copy", Icon: MousePointerClick },
   { titleKey: "home.context.routing.title", copyKey: "home.context.routing.copy", Icon: GitBranch }
 ];
 
 const waitlistPoints: Array<{ key: string; Icon: LucideIcon }> = [
   { key: "home.waitlist.point.1", Icon: CheckCircle2 },
-  { key: "home.waitlist.point.2", Icon: GitBranch },
-  { key: "home.waitlist.point.3", Icon: Sparkles }
+  { key: "home.waitlist.point.2", Icon: GitBranch }
 ];
 
 const problemPoints: Array<{ sourceKey: string; realityKey: string; consequenceKey: string }> = [
@@ -53,23 +41,23 @@ const problemPoints: Array<{ sourceKey: string; realityKey: string; consequenceK
   }
 ];
 
-const workflowSteps: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
-  { titleKey: "home.workflow.capture.title", copyKey: "home.workflow.capture.copy", Icon: MessageSquare },
-  { titleKey: "home.workflow.triage.title", copyKey: "home.workflow.triage.copy", Icon: Inbox },
-  { titleKey: "home.workflow.issue.title", copyKey: "home.workflow.issue.copy", Icon: GitPullRequestCreate }
+const publicSectorThemes: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
+  { titleKey: "home.publicSector.theme.accessibility.title", copyKey: "home.publicSector.theme.accessibility.copy", Icon: Accessibility },
+  { titleKey: "home.publicSector.theme.data.title", copyKey: "home.publicSector.theme.data.copy", Icon: ShieldCheck },
+  { titleKey: "home.publicSector.theme.pilot.title", copyKey: "home.publicSector.theme.pilot.copy", Icon: SlidersHorizontal }
 ];
 
-const betaNotes: Array<{ key: string; Icon: LucideIcon }> = [
-  { key: "home.beta.note.1", Icon: MousePointerClick },
-  { key: "home.beta.note.2", Icon: Users },
-  { key: "home.beta.note.3", Icon: GitBranch },
-  { key: "home.beta.note.4", Icon: CalendarClock }
+const publicSectorDoesNotReplace = [
+  "home.publicSector.notReplace.audit",
+  "home.publicSector.notReplace.support",
+  "home.publicSector.notReplace.certification"
 ];
 
-const mobileProofPoints: Array<{ key: string; Icon: LucideIcon }> = [
-  { key: "home.mobile.point.visitor", Icon: Smartphone },
-  { key: "home.mobile.point.team", Icon: MonitorCheck },
-  { key: "home.mobile.point.context", Icon: FileText }
+const publicSectorPilotScope = [
+  "home.publicSector.pilotScope.pages",
+  "home.publicSector.pilotScope.screenshots",
+  "home.publicSector.pilotScope.retention",
+  "home.publicSector.pilotScope.review"
 ];
 
 type HomePageProps = {
@@ -122,15 +110,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
       </section>
 
-      <section className="home-section product-loop-section" aria-labelledby="product-loop-title">
-        <div className="home-section-header compact">
-          <p className="eyebrow"><T k="home.loop.section.eyebrow" /></p>
-          <h2 id="product-loop-title"><T k="home.loop.section.title" /></h2>
-          <p className="section-lede"><T k="home.loop.section.copy" /></p>
-        </div>
-        <MarketingConsolePreview />
-      </section>
-
       <section className="home-section problem-section problem-editorial">
         <div className="home-section-header">
           <p className="eyebrow"><T k="home.problem.eyebrow" /></p>
@@ -153,22 +132,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
       </section>
 
-      <section className="home-section product-section">
+      <section className="home-section product-loop-section" aria-labelledby="product-loop-title">
         <div className="home-section-header compact">
-          <p className="eyebrow"><T k="home.beta.eyebrow" /></p>
-          <h2><T k="home.beta.title" /></h2>
+          <p className="eyebrow"><T k="home.loop.section.eyebrow" /></p>
+          <h2 id="product-loop-title"><T k="home.loop.section.title" /></h2>
+          <p className="section-lede"><T k="home.loop.section.copy" /></p>
         </div>
-        <div className="home-card-grid product-grid">
-          {betaBlocks.map(({ titleKey, copyKey, Icon }) => (
-            <article className="product-block" key={titleKey}>
-              <span className="product-icon" aria-hidden="true">
-                <Icon size={22} strokeWidth={2.2} />
-              </span>
-              <h3><T k={titleKey} /></h3>
-              <p><TRich k={copyKey} /></p>
-            </article>
-          ))}
-        </div>
+        <MarketingConsolePreview />
       </section>
 
       <section className="home-section feedback-context-section" aria-labelledby="feedback-context-title">
@@ -194,42 +164,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <MobilePreviewSection />
 
-      <section className="home-section workflow-band">
-        <div className="home-section-header">
-          <p className="eyebrow"><T k="home.workflow.eyebrow" /></p>
-          <h2><T k="home.workflow.title" /></h2>
-        </div>
-        <div className="steps">
-          {workflowSteps.map(({ titleKey, copyKey, Icon }, index) => (
-            <article className="step" key={titleKey}>
-              <span className="step-index">{String.fromCharCode(65 + index)}</span>
-              <span className="step-icon" aria-hidden="true">
-                <Icon size={22} strokeWidth={2.2} />
-              </span>
-              <h3><T k={titleKey} /></h3>
-              <p><TRich k={copyKey} /></p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="home-section beta-scope-section">
-        <div className="home-section-header compact">
-          <p className="eyebrow"><T k="home.beta.scope.eyebrow" /></p>
-          <h2 className="beta-scope-title">
-            <T k="home.beta.scope.title.main" />
-            <small><T k="home.beta.scope.title.small" /></small>
-          </h2>
-        </div>
-        <ul className="beta-scope-list">
-          {betaNotes.map(({ key, Icon }) => (
-            <li key={key}>
-              <Icon size={17} strokeWidth={2.4} aria-hidden="true" />
-              <span><TRich k={key} /></span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <PublicSectorSection />
 
       <section className="home-section waitlist-closing-section">
         <div>
@@ -265,6 +200,58 @@ function normalizeWaitlistStatus(value?: string): "joined" | "existing" | "error
   return undefined;
 }
 
+function PublicSectorSection() {
+  return (
+    <section className="home-section public-sector-section" aria-labelledby="public-sector-title">
+      <div className="public-sector-inner">
+        <div className="public-sector-copy">
+          <p className="eyebrow"><T k="home.publicSector.eyebrow" /></p>
+          <h2 id="public-sector-title"><T k="home.publicSector.title" /></h2>
+          <p className="section-lede"><T k="home.publicSector.lede" /></p>
+        </div>
+
+        <div className="public-sector-theme-grid">
+          {publicSectorThemes.map(({ titleKey, copyKey, Icon }) => (
+            <article className="public-sector-theme" key={titleKey}>
+              <span className="public-sector-icon" aria-hidden="true">
+                <Icon size={20} strokeWidth={2.3} />
+              </span>
+              <h3><T k={titleKey} /></h3>
+              <p><T k={copyKey} /></p>
+            </article>
+          ))}
+        </div>
+
+        <div className="public-sector-scope-grid">
+          <section className="public-sector-scope" aria-labelledby="public-sector-not-replace">
+            <div className="public-sector-scope-heading">
+              <FileText size={18} strokeWidth={2.3} aria-hidden="true" />
+              <h3 id="public-sector-not-replace"><T k="home.publicSector.notReplace.title" /></h3>
+            </div>
+            <ul>
+              {publicSectorDoesNotReplace.map((key) => (
+                <li key={key}><T k={key} /></li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="public-sector-scope" aria-labelledby="public-sector-pilot-scope">
+            <div className="public-sector-scope-heading">
+              <ClipboardCheck size={18} strokeWidth={2.3} aria-hidden="true" />
+              <h3 id="public-sector-pilot-scope"><T k="home.publicSector.pilotScope.title" /></h3>
+            </div>
+            <ul>
+              {publicSectorPilotScope.map((key) => (
+                <li key={key}><T k={key} /></li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function MobilePreviewSection() {
   return (
     <section className="home-section mobile-proof-section" aria-labelledby="mobile-proof-title">
@@ -277,14 +264,6 @@ function MobilePreviewSection() {
         <p className="lede">
           <TRich k="home.mobile.copy" />
         </p>
-        <div className="mobile-proof-points">
-          {mobileProofPoints.map(({ key, Icon }) => (
-            <span key={key}>
-              <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
-              <T k={key} />
-            </span>
-          ))}
-        </div>
       </div>
 
       <div className="mobile-device-pair" aria-label="Aperçus mobiles ChangeThis côté visiteur et côté équipe">
