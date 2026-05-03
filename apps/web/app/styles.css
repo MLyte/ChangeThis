@@ -6085,7 +6085,7 @@ code {
   --home-radius-md: 8px;
   --home-surface: rgba(255, 255, 255, 0.92);
   --home-surface-raised: rgba(255, 255, 255, 0.96);
-  --home-surface-muted: rgba(244, 244, 244, 0.78);
+  --home-surface-muted: rgba(255, 255, 255, 0.82);
   --home-hairline: rgba(142, 142, 142, 0.34);
   --home-shadow-soft: 0 10px 28px rgba(23, 23, 23, 0.08);
   --home-shadow-float: 0 18px 46px rgba(23, 23, 23, 0.12);
@@ -6105,8 +6105,7 @@ code {
   --home-gutter: clamp(20px, 4vw, 56px);
   --home-section-y: clamp(56px, 8vw, 104px);
   --home-grid-gap: clamp(24px, 4vw, 56px);
-  background:
-    linear-gradient(180deg, var(--cement-100) 0%, var(--cement-0) 42%, var(--cement-100) 100%);
+  background: #ffffff;
 }
 
 .home-section {
@@ -6448,7 +6447,7 @@ code {
 }
 
 .beta-scope-list {
-  background: var(--home-surface-muted);
+  background: #ffffff;
   border: 1px solid var(--secondary-border);
   border-radius: var(--home-radius-md);
   box-shadow: var(--home-shadow-soft), var(--glass-highlight);
@@ -6462,7 +6461,7 @@ code {
 .beta-scope-list li {
   align-items: start;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(244, 244, 244, 0.72));
+    linear-gradient(180deg, #ffffff, rgba(250, 250, 250, 0.72));
   border: 1px solid var(--secondary-border);
   border-radius: var(--home-radius-sm);
   color: var(--secondary-ink);
@@ -6520,7 +6519,7 @@ code {
 
 .waitlist-form {
   background:
-    linear-gradient(180deg, var(--home-surface-raised), var(--home-surface-muted));
+    linear-gradient(180deg, #ffffff, rgba(250, 250, 250, 0.72));
   --waitlist-control-offset: calc((12px * 1.2) + 8px);
   border-color: var(--secondary-border);
   backdrop-filter: blur(18px);
@@ -6600,8 +6599,7 @@ code {
 
 .app-home .mobile-proof-section {
   align-items: center;
-  background:
-    linear-gradient(180deg, #ffffff 0%, var(--secondary-soft) 100%);
+  background: #ffffff;
   border-block: 1px solid var(--secondary-border);
   color: var(--ink);
   display: grid;
@@ -6687,7 +6685,7 @@ code {
 
 .app-home .mobile-device-pair {
   align-items: center;
-  background: var(--home-surface-muted);
+  background: #ffffff;
   border: 1px solid var(--secondary-border);
   border-radius: var(--home-radius-md);
   box-shadow: var(--home-shadow-soft), var(--glass-highlight);
@@ -8317,7 +8315,7 @@ code {
   background:
     linear-gradient(90deg, rgba(142, 142, 142, 0.18) 1px, transparent 1px),
     linear-gradient(rgba(142, 142, 142, 0.18) 1px, transparent 1px),
-    var(--cement-50);
+    #ffffff;
   background-size: 28px 28px;
   counter-reset: loop-step;
   display: grid;
