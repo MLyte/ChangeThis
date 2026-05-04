@@ -63,7 +63,7 @@ export async function AppHeader({
             <Link className="link" href="/login">
               <T k="nav.login" />
             </Link>
-            {publicSignupEnabled ? (
+            {showAuthLinks || publicSignupEnabled ? (
               <Link className="button" href="/signup">
                 <T k="nav.signup" />
               </Link>

@@ -39,6 +39,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
   return (
     <>
       <button
+        aria-label="Voir la capture"
         className="screenshot-thumb"
         onClick={() => setIsOpen(true)}
         type="button"
@@ -54,12 +55,9 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
           {pinPositions.map((position, index) => (
             <span className="screenshot-pin" key={index} style={position}>{index + 1}</span>
           ))}
-        </span>
-        <span className="screenshot-thumb-overlay" aria-hidden="true">
-          <Eye className="ui-icon" size={20} strokeWidth={2.4} />
-        </span>
-        <span className="screenshot-thumb-label">
-          <T k="projects.feedback.capture" /> - {sizeKo} Ko
+          <span className="screenshot-thumb-overlay" aria-hidden="true">
+            <Eye className="ui-icon" size={20} strokeWidth={2.4} />
+          </span>
         </span>
       </button>
 

@@ -163,16 +163,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                     )}
                   </div>
                 ) : (
-                  <BulkIssueForm>
-                    <div className="feedback-table-head" aria-hidden="true">
-                      <span />
-                      <span>Feedback</span>
-                      <span>Site / page</span>
-                      <span>Statut</span>
-                      <span>Issue</span>
-                      <span>Reçu</span>
-                      <span>Actions</span>
-                    </div>
+                  <BulkIssueForm showTableHead>
                     <div className="feedback-list" role="list" aria-label="Retours à traiter">
                       {filteredFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
                     </div>
@@ -566,6 +557,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const canBulkCreateIssue = feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
   const issueLabel = feedback.externalIssue?.url ? "Créée" : feedback.status === "issue_creation_pending" ? "En cours" : "Non créée";
+  const errorSeverity = feedback.status === "failed" ? "danger" : "warning";
 
   return (
     <article className={`feedback-card compact-feedback-row ${feedback.status}`} role="listitem">
@@ -589,7 +581,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
         <h2>{cardTitle}</h2>
         <p>{displayMessage.message || <T k="projects.feedback.noMessage" />}</p>
         {feedback.lastError ? (
-          <div className="error-callout compact-callout">
+          <div className={`error-callout compact-callout error-callout--${errorSeverity}`}>
             <strong><T k="projects.feedback.issueError" /></strong>
             <span>{feedback.lastError}</span>
           </div>
@@ -641,25 +633,33 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           <T k={statusLabelKeys[feedback.status]} />
         </span>
       </div>
-      <div className="feedback-issue-cell">
-        <ProviderBadge provider={feedback.issueTarget.provider} />
-        <span>{issueLabel}</span>
+      <div className="feedback-capture-cell">
         {feedback.screenshotAsset ? (
-          <ScreenshotPreview
-            asset={feedback.screenshotAsset}
-            feedback={{
-              createdAt: feedback.createdAt,
-              issueTarget: feedback.issueTarget,
-              message: feedback.payload.message,
-              projectName: feedback.projectName,
-              status: feedback.status,
-              title: feedback.issueDraft.title
-            }}
-            metadata={feedback.payload.metadata}
-            pin={feedback.payload.pin}
-            pins={feedback.payload.pins}
-          />
-        ) : null}
+          <div className="feedback-capture-preview">
+            <ScreenshotPreview
+              asset={feedback.screenshotAsset}
+              feedback={{
+                createdAt: feedback.createdAt,
+                issueTarget: feedback.issueTarget,
+                message: feedback.payload.message,
+                projectName: feedback.projectName,
+                status: feedback.status,
+                title: feedback.issueDraft.title
+              }}
+              metadata={feedback.payload.metadata}
+              pin={feedback.payload.pin}
+              pins={feedback.payload.pins}
+            />
+          </div>
+        ) : (
+          <span className="feedback-capture-empty">—</span>
+        )}
+      </div>
+      <div className="feedback-issue-cell">
+        <div className="feedback-issue-destination">
+          <ProviderBadge provider={feedback.issueTarget.provider} />
+          <span>{issueLabel}</span>
+        </div>
       </div>
       <div className="feedback-received-cell">
         <span>{formatDate(feedback.createdAt)}</span>

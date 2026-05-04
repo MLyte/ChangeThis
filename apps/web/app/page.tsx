@@ -91,7 +91,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <main className="shell app-home">
-      <AppHeader suppressAuthActions={!publicSignupEnabled} suppressSession={!publicSignupEnabled} />
+      <AppHeader showAuthLinks suppressSession={!publicSignupEnabled} />
 
       <section className="home-section home-hero" aria-labelledby="product-title">
         <div className="home-hero-copy">

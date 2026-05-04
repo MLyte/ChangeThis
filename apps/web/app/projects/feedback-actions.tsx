@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { type ChangeEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Archive, ExternalLink, RotateCcw, Send, BookmarkCheck } from "lucide-react";
+import { ExternalLink, RotateCcw, Send } from "lucide-react";
 import type { FeedbackStatus, IssueDraft } from "@changethis/shared";
 import { T, useLanguage } from "../i18n";
 
@@ -133,6 +133,29 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
     run(`/api/projects/feedbacks/${feedbackId}/ignore`, "ignore");
   }
 
+  function handleMoreAction(event: ChangeEvent<HTMLSelectElement>) {
+    const action = event.currentTarget.value;
+    event.currentTarget.value = "";
+
+    if (isPending || action === "") {
+      return;
+    }
+
+    if (action === "sync") {
+      run(`/api/projects/feedbacks/${feedbackId}/sync`, "sync");
+      return;
+    }
+
+    if (action === "keep") {
+      run(`/api/projects/feedbacks/${feedbackId}/keep`, "keep");
+      return;
+    }
+
+    if (action === "ignore") {
+      ignoreFeedback();
+    }
+  }
+
   if ((status === "sent_to_provider" || status === "resolved") && externalIssueUrl) {
     return (
       <div className="feedback-actions">
@@ -141,20 +164,20 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
           <T k="actions.issue.view" />
         </a>
         {status === "sent_to_provider" ? (
-          <details className="feedback-action-menu">
-            <summary className="button secondary-button">Plus</summary>
-            <div className="feedback-action-menu-panel">
-              <button
-                className="button secondary-button"
-                disabled={isPending}
-                onClick={() => run(`/api/projects/feedbacks/${feedbackId}/sync`, "sync")}
-                type="button"
-              >
-                <RotateCcw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                {isPending ? <T k="actions.processing" /> : <T k="actions.issue.sync" />}
-              </button>
-            </div>
-          </details>
+          <select
+            aria-label="Actions"
+            className="feedback-action-select"
+            disabled={isPending}
+            defaultValue=""
+            onChange={handleMoreAction}
+          >
+            <option disabled value="">
+              Plus
+            </option>
+            <option value="sync">
+              {isPending ? t("actions.processing") : t("actions.issue.sync")}
+            </option>
+          </select>
         ) : null}
       </div>
     );
@@ -187,29 +210,23 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
         )}
         {isPending ? <T k="actions.processing" /> : <T k={createLabelKey} />}
       </button>
-      <details className="feedback-action-menu">
-        <summary className="button secondary-button">Plus</summary>
-        <div className="feedback-action-menu-panel">
-          <button
-            className="button secondary-button"
-            disabled={isPending}
-            onClick={() => run(`/api/projects/feedbacks/${feedbackId}/keep`, "keep")}
-            type="button"
-          >
-            <BookmarkCheck aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            <T k="actions.keepFeedback" />
-          </button>
-          <button
-            className="button danger-button"
-            disabled={isPending}
-            onClick={ignoreFeedback}
-            type="button"
-          >
-            <Archive aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            <T k="actions.ignore" />
-          </button>
-        </div>
-      </details>
+      <select
+        aria-label="Actions"
+        className="feedback-action-select"
+        disabled={isPending}
+        defaultValue=""
+        onChange={handleMoreAction}
+      >
+        <option disabled value="">
+          Plus
+        </option>
+        <option value="keep">
+          <T k="actions.keepFeedback" />
+        </option>
+        <option value="ignore">
+          <T k="actions.ignore" />
+        </option>
+      </select>
       {error ? <span className="action-error" role="alert">{error}</span> : null}
       {isComposerOpen ? (
         <div className="issue-composer" role="dialog" aria-modal="true" aria-labelledby={`issue-composer-${feedbackId}`}>

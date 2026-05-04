@@ -11,6 +11,7 @@ import {
   Info,
   Link2,
   Mail,
+  FileCode2,
   Plus,
   RefreshCw,
   ShieldCheck,
@@ -758,7 +759,7 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
           repositoryCount: repositories.length,
           checkedAt: new Date(),
           message: repositories.length > 0
-            ? `${repositories.length} dépôt(s) accessible(s).`
+            ? ""
             : "Connexion active, mais aucun dépôt accessible avec ce token."
         }
       }));
@@ -1021,12 +1022,13 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               <div className={`connection-health ${connectionState.state}`} role="status">
                 <div>
                   <strong>{connectionHealthTitle(connectionState.state)}</strong>
-                  <span>{connectionState.message}</span>
+                  {connectionState.message ? <span>{connectionState.message}</span> : null}
                 </div>
                 {typeof connectionState.repositoryCount === "number" ? (
                   <span className="connection-metric">
                     {connectionState.repositoryCount}
-                    <small>dépôts</small>
+                    {" "}
+                    <small>{connectionState.repositoryCount === 1 ? "dépôt" : "dépôts"}</small>
                   </span>
                 ) : null}
               </div>
@@ -1198,11 +1200,16 @@ function ConnectedSitesSection({
   siteOrigin: string;
 }) {
   const isSelectedProviderConnected = connectedProviders.has(selectedProvider);
+  const [openScriptForProject, setOpenScriptForProject] = useState<string | null>(null);
   const shouldShowRepositoryStatus = isSelectedProviderConnected && repositoryLoadState !== "idle";
   const isRepositorySelectDisabled = !isSelectedProviderConnected || repositoryLoadState === "loading" || repositoryOptions.length === 0;
   const connectedIntegrations = Array.from(connectedProviders);
   const hasConnectedProvider = connectedIntegrations.length > 0;
   const siteOriginValidation = validateAllowedOrigin(siteOrigin);
+
+  function toggleScriptPanel(projectKey: string) {
+    setOpenScriptForProject((current) => (current === projectKey ? null : projectKey));
+  }
 
   return (
     <section className="settings-section linked-sites" aria-labelledby="linked-sites-title">
@@ -1358,15 +1365,20 @@ function ConnectedSitesSection({
                   <div className="site-script">
                     <strong>Script widget</strong>
                     {originValidation.ok ? (
-                      <code>{project.installSnippet ?? installSnippet(project)}</code>
+                      <button
+                        className="inline-action site-script-toggle"
+                        aria-controls={`site-script-${project.publicKey}`}
+                        aria-expanded={openScriptForProject === project.publicKey}
+                        onClick={() => toggleScriptPanel(project.publicKey)}
+                        type="button"
+                      >
+                        <FileCode2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
+                        {openScriptForProject === project.publicKey ? "Masquer le script" : "Voir le script"}
+                      </button>
                     ) : (
                       <span className="site-script-placeholder">Origine autorisée à corriger avant installation.</span>
                     )}
                     <div className="site-script-actions">
-                      <button className="inline-action" disabled={!originValidation.ok} onClick={() => onCopyInstallSnippet(project)} type="button">
-                        <Copy aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-                        Copier
-                      </button>
                       <span className={`origin-check-result ${originValidation.ok ? "success" : "error"}`} role="status">
                         {originValidation.message}
                       </span>
@@ -1376,6 +1388,24 @@ function ConnectedSitesSection({
                         </span>
                       ) : null}
                     </div>
+                    {originValidation.ok ? (
+                      <div
+                        id={`site-script-${project.publicKey}`}
+                        className={`site-script-panel${openScriptForProject === project.publicKey ? " is-open" : ""}`}
+                        hidden={openScriptForProject !== project.publicKey}
+                      >
+                        <p className="site-script-instructions">
+                          Placez cette balise sur les pages du site autorisé (généralement juste avant &lt;/body&gt;). Le script créera le bouton de feedback avec la configuration du site.
+                        </p>
+                        <pre className="site-script-code">
+                          <code>{project.installSnippet ?? installSnippet(project)}</code>
+                        </pre>
+                        <button className="inline-action" disabled={!originValidation.ok} onClick={() => onCopyInstallSnippet(project)} type="button">
+                          <Copy aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
+                          Copier le script
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </article>
