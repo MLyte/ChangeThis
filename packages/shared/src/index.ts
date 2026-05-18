@@ -117,6 +117,7 @@ export type FeedbackPayload = {
   pins?: PinTarget[];
   captureArea?: CaptureArea;
   screenshotDataUrl?: string;
+  screenshotThumbnailDataUrl?: string;
 };
 
 export type IssueTarget = {
@@ -179,6 +180,7 @@ const feedbackTypes = ["comment", "pin", "screenshot"] as const;
 const issueProviders = ["github", "gitlab"] as const;
 const defaultMaxMessageLength = 5000;
 const defaultMaxScreenshotBytes = 2_000_000;
+const defaultMaxScreenshotThumbnailBytes = 250_000;
 const maxPins = 20;
 const allowedScreenshotMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -246,6 +248,19 @@ export function validateFeedbackPayload(
     }
   }
 
+  const screenshotThumbnailDataUrl = value.screenshotThumbnailDataUrl;
+  const normalizedScreenshotThumbnailDataUrl = typeof screenshotThumbnailDataUrl === "string" ? screenshotThumbnailDataUrl : undefined;
+  if (screenshotThumbnailDataUrl !== undefined) {
+    const thumbnail = validateScreenshotDataUrl(screenshotThumbnailDataUrl, "screenshotThumbnailDataUrl");
+    if (!thumbnail.ok) {
+      return thumbnail;
+    }
+
+    if (thumbnail.bytes > defaultMaxScreenshotThumbnailBytes) {
+      return invalid(`screenshotThumbnailDataUrl must be less than ${defaultMaxScreenshotThumbnailBytes} bytes`);
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -256,7 +271,8 @@ export function validateFeedbackPayload(
       pin: normalizedPin,
       pins: normalizedPins,
       captureArea: captureArea.value,
-      screenshotDataUrl: normalizedScreenshotDataUrl
+      screenshotDataUrl: normalizedScreenshotDataUrl,
+      screenshotThumbnailDataUrl: normalizedScreenshotThumbnailDataUrl
     }
   };
 }
@@ -712,24 +728,24 @@ function validateCaptureArea(value: unknown): CaptureAreaValidationResult {
   };
 }
 
-function validateScreenshotDataUrl(value: unknown): { ok: true; bytes: number } | { ok: false; error: string } {
+function validateScreenshotDataUrl(value: unknown, fieldName = "screenshotDataUrl"): { ok: true; bytes: number } | { ok: false; error: string } {
   if (typeof value !== "string") {
-    return invalid("screenshotDataUrl must be an image data URL");
+    return invalid(`${fieldName} must be an image data URL`);
   }
 
   const match = /^data:([^;,]+);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
   if (!match) {
-    return invalid("screenshotDataUrl must be a base64 image data URL");
+    return invalid(`${fieldName} must be a base64 image data URL`);
   }
 
   const mimeType = match[1].toLowerCase();
   if (!allowedScreenshotMimeTypes.has(mimeType)) {
-    return invalid("screenshotDataUrl must be a PNG, JPEG, or WebP image");
+    return invalid(`${fieldName} must be a PNG, JPEG, or WebP image`);
   }
 
   const base64 = match[2];
   if (base64.length === 0 || base64.length % 4 === 1) {
-    return invalid("screenshotDataUrl must contain valid base64 image data");
+    return invalid(`${fieldName} must contain valid base64 image data`);
   }
 
   const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;

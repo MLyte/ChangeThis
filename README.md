@@ -85,6 +85,7 @@ Useful local routes:
 
 - `/` landing page with product CTAs.
 - `/signup` account/workspace creation entry point, gated by `ENABLE_PUBLIC_SIGNUP`.
+- `/api/cron/storage-cleanup` protected weekly cleanup for screenshot lifecycle (`Authorization: Bearer $CHANGETHIS_CRON_SECRET`).
 - `/login` authenticated console entry point.
 - `/demo` widget sandbox page that loads the real widget bundle against the current API.
 - `/projects` designer/product inbox.

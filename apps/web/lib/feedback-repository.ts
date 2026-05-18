@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { buildIssueDraft, validateFeedbackPayload, validateIssueTarget } from "@changethis/shared";
 import type {
   ExternalIssueRef,
@@ -36,8 +37,28 @@ export type StoredAsset = {
   feedbackId: string;
   mimeType: string;
   bytes: number;
-  dataUrl: string;
+  dataUrl?: string;
+  thumbnailDataUrl?: string;
+  storagePath?: string;
+  hash?: string;
+  status: "active" | "archived" | "deleted";
+  lastUsedAt?: string;
+  usageCount: number;
+  archivedAt?: string;
+  deletedAt?: string;
   createdAt: string;
+};
+
+export type ScreenshotCleanupPolicy = {
+  archiveAfterDays?: number;
+  deleteAfterDays?: number;
+  minArchiveBytes?: number;
+  now?: Date;
+};
+
+export type ScreenshotCleanupResult = {
+  archived: number;
+  deleted: number;
 };
 
 export type FeedbackEvent = {
@@ -102,8 +123,17 @@ type SupabaseFeedbackRow = {
   issue_draft_description?: string | null;
   issue_draft_labels?: string[] | null;
   screenshot_data_url?: string | null;
+  screenshot_thumbnail_data_url?: string | null;
   screenshot_mime_type?: string | null;
   screenshot_bytes?: number | null;
+  screenshot_original_bytes?: number | null;
+  screenshot_hash?: string | null;
+  screenshot_status?: string | null;
+  screenshot_storage_path?: string | null;
+  screenshot_last_used_at?: string | null;
+  screenshot_usage_count?: number | null;
+  screenshot_archived_at?: string | null;
+  screenshot_deleted_at?: string | null;
   created_at: string;
   updated_at?: string | null;
 };
@@ -170,6 +200,7 @@ export type FeedbackRepository = {
   dueForRetry(filters?: Date | { workspaceId?: string; now?: Date }): Promise<StoredFeedback[]>;
   events(feedbackId: string, filters?: { workspaceId?: string }): Promise<FeedbackEvent[]>;
   clearWorkspace(workspaceId: string): Promise<{ feedbacks: number; events: number }>;
+  cleanupScreenshotAssets?(policy?: ScreenshotCleanupPolicy): Promise<ScreenshotCleanupResult>;
 };
 
 const defaultStore: DataStore = {
@@ -204,7 +235,7 @@ export class FileFeedbackRepository implements FeedbackRepository {
       const now = new Date().toISOString();
       const id = crypto.randomUUID();
       const screenshotAsset = input.screenshotDataUrl
-        ? createScreenshotAsset(id, input.screenshotDataUrl, now)
+        ? createScreenshotAsset(id, input.screenshotDataUrl, input.payload.screenshotThumbnailDataUrl, now)
         : undefined;
       const feedback: StoredFeedback = {
         id,
@@ -394,6 +425,54 @@ export class FileFeedbackRepository implements FeedbackRepository {
     });
   }
 
+  async cleanupScreenshotAssets(policy: ScreenshotCleanupPolicy = {}): Promise<ScreenshotCleanupResult> {
+    const now = policy.now ?? new Date();
+    const archiveBefore = now.getTime() - (policy.archiveAfterDays ?? 30) * 24 * 60 * 60 * 1000;
+    const deleteBefore = now.getTime() - (policy.deleteAfterDays ?? 90) * 24 * 60 * 60 * 1000;
+    const minArchiveBytes = policy.minArchiveBytes ?? 1_000_000;
+
+    return this.update((store) => {
+      let archived = 0;
+      let deleted = 0;
+
+      for (const feedback of store.feedbacks) {
+        const asset = feedback.screenshotAsset;
+        if (!asset || !canCleanupFeedbackStatus(feedback.status)) {
+          continue;
+        }
+
+        if (
+          (asset.status ?? "active") === "active"
+          && asset.dataUrl
+          && asset.bytes > minArchiveBytes
+          && Date.parse(asset.lastUsedAt ?? asset.createdAt) <= archiveBefore
+        ) {
+          asset.status = "archived";
+          asset.archivedAt = now.toISOString();
+          asset.dataUrl = undefined;
+          asset.bytes = asset.thumbnailDataUrl ? estimateDataUrlBytes(asset.thumbnailDataUrl) : 0;
+          feedback.updatedAt = now.toISOString();
+          archived += 1;
+        }
+
+        if (
+          asset.status === "archived"
+          && Date.parse(asset.archivedAt ?? asset.createdAt) <= deleteBefore
+        ) {
+          asset.status = "deleted";
+          asset.deletedAt = now.toISOString();
+          asset.dataUrl = undefined;
+          asset.thumbnailDataUrl = undefined;
+          asset.bytes = 0;
+          feedback.updatedAt = now.toISOString();
+          deleted += 1;
+        }
+      }
+
+      return { archived, deleted };
+    });
+  }
+
   private async read(): Promise<DataStore> {
     try {
       const raw = await readFile(this.filePath, "utf8");
@@ -455,7 +534,7 @@ export class SupabaseFeedbackRepository implements FeedbackRepository {
     await insertSupabaseFeedbackEvent(feedbackRow.id, undefined, "raw", "feedback_received");
 
     const screenshotAsset = input.screenshotDataUrl
-      ? createScreenshotAsset(feedbackRow.id, input.screenshotDataUrl, feedbackRow.created_at)
+      ? createScreenshotAsset(feedbackRow.id, input.screenshotDataUrl, input.payload.screenshotThumbnailDataUrl, feedbackRow.created_at)
       : undefined;
     const feedback = mapSupabaseFeedback(
       feedbackRow,
@@ -674,6 +753,76 @@ export class SupabaseFeedbackRepository implements FeedbackRepository {
     return {
       feedbacks: feedbackIds.length,
       events: eventRows.length
+    };
+  }
+
+  async cleanupScreenshotAssets(policy: ScreenshotCleanupPolicy = {}): Promise<ScreenshotCleanupResult> {
+    ensureSupabaseFeedbackRepositoryConfigured();
+
+    const now = policy.now ?? new Date();
+    const nowIso = now.toISOString();
+    const archiveBeforeIso = new Date(now.getTime() - (policy.archiveAfterDays ?? 30) * 24 * 60 * 60 * 1000).toISOString();
+    const deleteBeforeIso = new Date(now.getTime() - (policy.deleteAfterDays ?? 90) * 24 * 60 * 60 * 1000).toISOString();
+    const minArchiveBytes = policy.minArchiveBytes ?? 1_000_000;
+    const cleanupStatuses = ["ignored", "resolved"];
+
+    const archiveParams = new URLSearchParams({
+      select: "id,screenshot_thumbnail_data_url",
+      status: inFilter(cleanupStatuses),
+      screenshot_status: "eq.active",
+      screenshot_bytes: `gt.${minArchiveBytes}`,
+      screenshot_last_used_at: `lt.${archiveBeforeIso}`
+    });
+    const rowsToArchive = await supabaseServiceRest<Array<Pick<SupabaseFeedbackRow, "id" | "screenshot_thumbnail_data_url">>>(
+      `/rest/v1/feedbacks?${archiveParams.toString()}`
+    );
+
+    for (const row of rowsToArchive) {
+      await supabaseServiceRest(`/rest/v1/feedbacks?id=eq.${encodeURIComponent(row.id)}`, {
+        method: "PATCH",
+        headers: {
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({
+          screenshot_status: "archived",
+          screenshot_archived_at: nowIso,
+          screenshot_data_url: null,
+          screenshot_bytes: row.screenshot_thumbnail_data_url ? estimateDataUrlBytes(row.screenshot_thumbnail_data_url) : null,
+          updated_at: nowIso
+        })
+      });
+    }
+
+    const deleteParams = new URLSearchParams({
+      select: "id",
+      status: inFilter(cleanupStatuses),
+      screenshot_status: "eq.archived",
+      screenshot_archived_at: `lt.${deleteBeforeIso}`
+    });
+    const rowsToDelete = await supabaseServiceRest<Array<Pick<SupabaseFeedbackRow, "id">>>(
+      `/rest/v1/feedbacks?${deleteParams.toString()}`
+    );
+
+    for (const row of rowsToDelete) {
+      await supabaseServiceRest(`/rest/v1/feedbacks?id=eq.${encodeURIComponent(row.id)}`, {
+        method: "PATCH",
+        headers: {
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({
+          screenshot_status: "deleted",
+          screenshot_deleted_at: nowIso,
+          screenshot_data_url: null,
+          screenshot_thumbnail_data_url: null,
+          screenshot_bytes: null,
+          updated_at: nowIso
+        })
+      });
+    }
+
+    return {
+      archived: rowsToArchive.length,
+      deleted: rowsToDelete.length
     };
   }
 
@@ -989,6 +1138,8 @@ function toSupabaseFeedbackInsert(input: CreateFeedbackInput, projectId: string,
   const pin = input.payload.pin ?? input.payload.pins?.[0];
   const screenshotMimeType = input.screenshotDataUrl ? parseDataUrlMimeType(input.screenshotDataUrl) : undefined;
   const screenshotBytes = input.screenshotDataUrl ? estimateDataUrlBytes(input.screenshotDataUrl) : undefined;
+  const screenshotHash = input.screenshotDataUrl ? hashDataUrl(input.screenshotDataUrl) : undefined;
+  const now = new Date().toISOString();
 
   return {
     project_id: projectId,
@@ -1011,15 +1162,23 @@ function toSupabaseFeedbackInsert(input: CreateFeedbackInput, projectId: string,
     element_selector: pin?.selector,
     element_text: pin?.text,
     screenshot_data_url: input.screenshotDataUrl,
+    screenshot_thumbnail_data_url: input.payload.screenshotThumbnailDataUrl,
     screenshot_mime_type: screenshotMimeType,
-    screenshot_bytes: screenshotBytes
+    screenshot_bytes: screenshotBytes,
+    screenshot_original_bytes: screenshotBytes,
+    screenshot_hash: screenshotHash,
+    screenshot_status: input.screenshotDataUrl ? "active" : undefined,
+    screenshot_storage_path: input.screenshotDataUrl ? `hot/${projectId}/${crypto.randomUUID()}.${extensionFromMimeType(screenshotMimeType)}` : undefined,
+    screenshot_last_used_at: input.screenshotDataUrl ? now : undefined,
+    screenshot_usage_count: input.screenshotDataUrl ? 1 : undefined
   };
 }
 
 function sanitizeFeedbackPayload(payload: FeedbackPayload): FeedbackPayload {
   return {
     ...payload,
-    screenshotDataUrl: undefined
+    screenshotDataUrl: undefined,
+    screenshotThumbnailDataUrl: undefined
   };
 }
 
@@ -1032,7 +1191,8 @@ function mapSupabaseStoredPayload(value: unknown, projectKey: string): FeedbackP
   return {
     ...validation.value,
     projectKey,
-    screenshotDataUrl: undefined
+    screenshotDataUrl: undefined,
+    screenshotThumbnailDataUrl: undefined
   };
 }
 
@@ -1122,16 +1282,31 @@ function mapSupabaseIssueDraft(row: SupabaseFeedbackRow): IssueDraft | undefined
 }
 
 function mapSupabaseScreenshotAsset(row: SupabaseFeedbackRow): StoredAsset | undefined {
-  if (typeof row.screenshot_data_url !== "string" || row.screenshot_data_url.length === 0) {
+  const dataUrl = typeof row.screenshot_data_url === "string" && row.screenshot_data_url.length > 0
+    ? row.screenshot_data_url
+    : undefined;
+  const thumbnailDataUrl = typeof row.screenshot_thumbnail_data_url === "string" && row.screenshot_thumbnail_data_url.length > 0
+    ? row.screenshot_thumbnail_data_url
+    : undefined;
+
+  if (!dataUrl && !thumbnailDataUrl) {
     return undefined;
   }
 
   return {
     id: `screenshot_${row.id}`,
     feedbackId: row.id,
-    mimeType: row.screenshot_mime_type ?? parseDataUrlMimeType(row.screenshot_data_url),
-    bytes: row.screenshot_bytes ?? estimateDataUrlBytes(row.screenshot_data_url),
-    dataUrl: row.screenshot_data_url,
+    mimeType: row.screenshot_mime_type ?? parseDataUrlMimeType(dataUrl ?? thumbnailDataUrl ?? ""),
+    bytes: row.screenshot_bytes ?? estimateDataUrlBytes(dataUrl ?? thumbnailDataUrl ?? ""),
+    dataUrl,
+    thumbnailDataUrl,
+    storagePath: row.screenshot_storage_path ?? row.screenshot_path ?? undefined,
+    hash: row.screenshot_hash ?? undefined,
+    status: parseAssetStatus(row.screenshot_status),
+    lastUsedAt: row.screenshot_last_used_at ?? undefined,
+    usageCount: row.screenshot_usage_count ?? 0,
+    archivedAt: row.screenshot_archived_at ?? undefined,
+    deletedAt: row.screenshot_deleted_at ?? undefined,
     createdAt: row.created_at
   };
 }
@@ -1285,8 +1460,17 @@ function supabaseFeedbackSelect(): string {
     "issue_draft_description",
     "issue_draft_labels",
     "screenshot_data_url",
+    "screenshot_thumbnail_data_url",
     "screenshot_mime_type",
     "screenshot_bytes",
+    "screenshot_original_bytes",
+    "screenshot_hash",
+    "screenshot_status",
+    "screenshot_storage_path",
+    "screenshot_last_used_at",
+    "screenshot_usage_count",
+    "screenshot_archived_at",
+    "screenshot_deleted_at",
     "created_at",
     "updated_at"
   ].join(",");
@@ -1311,6 +1495,14 @@ function parseFeedbackStatus(value: string): FeedbackStatus {
   }
 
   return "raw";
+}
+
+function parseAssetStatus(value: string | null | undefined): StoredAsset["status"] {
+  return value === "archived" || value === "deleted" ? value : "active";
+}
+
+function canCleanupFeedbackStatus(status: FeedbackStatus): boolean {
+  return status === "ignored" || status === "resolved";
 }
 
 function parseFeedbackType(value: string): FeedbackType {
@@ -1374,13 +1566,18 @@ function cloneIssueDraft(issueDraft: IssueDraft): IssueDraft {
   };
 }
 
-function createScreenshotAsset(feedbackId: string, dataUrl: string, now: string): StoredAsset {
+function createScreenshotAsset(feedbackId: string, dataUrl: string, thumbnailDataUrl: string | undefined, now: string): StoredAsset {
   return {
     id: crypto.randomUUID(),
     feedbackId,
     mimeType: parseDataUrlMimeType(dataUrl),
     bytes: estimateDataUrlBytes(dataUrl),
     dataUrl,
+    thumbnailDataUrl,
+    hash: hashDataUrl(dataUrl),
+    status: "active",
+    lastUsedAt: now,
+    usageCount: 1,
     createdAt: now
   };
 }
@@ -1435,6 +1632,24 @@ function parseDataUrlMimeType(value: string): string {
 function estimateDataUrlBytes(value: string): number {
   const commaIndex = value.indexOf(",");
   return commaIndex === -1 ? value.length : Math.ceil((value.length - commaIndex - 1) * 0.75);
+}
+
+function hashDataUrl(value: string): string {
+  const commaIndex = value.indexOf(",");
+  const payload = commaIndex === -1 ? value : value.slice(commaIndex + 1);
+  return createHash("sha256").update(payload).digest("hex");
+}
+
+function extensionFromMimeType(mimeType: string | undefined): string {
+  if (mimeType === "image/webp") {
+    return "webp";
+  }
+
+  if (mimeType === "image/png") {
+    return "png";
+  }
+
+  return "jpg";
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

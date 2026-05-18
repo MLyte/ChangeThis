@@ -74,6 +74,7 @@ test("Supabase repository covers feedback lifecycle with workspace scope", async
   assert.equal(created.payload.screenshotDataUrl, undefined);
   assert.equal(created.payload.metadata.language, "fr-BE");
   assert.equal(created.screenshotAsset?.mimeType, "image/png");
+  assert.equal(created.screenshotAsset?.status, "active");
   const listed = await repository.list({ workspaceId });
   assert.deepEqual(listed.map((feedback) => feedback.id), [created.id]);
   assert.equal(listed[0].payload.metadata.language, "fr-BE");
@@ -131,6 +132,42 @@ test("Supabase repository covers feedback lifecycle with workspace scope", async
     events: events.length
   });
   assert.deepEqual(await repository.list({ workspaceId }), []);
+});
+
+test("Supabase repository archives old heavy ignored screenshots and keeps thumbnails", async () => {
+  const fake = createFakeSupabase();
+  globalThis.fetch = fake.fetch;
+  const repository = new SupabaseFeedbackRepository();
+  const payload = feedbackPayload({
+    screenshotDataUrl: "data:image/png;base64,QUFBQQ==",
+    screenshotThumbnailDataUrl: "data:image/webp;base64,AAAA"
+  });
+  const draft = buildIssueDraft(payload);
+
+  const created = await repository.create({
+    projectKey,
+    projectName: "Client Portal",
+    issueTarget,
+    payload,
+    issueDraft: draft,
+    screenshotDataUrl: payload.screenshotDataUrl,
+    workspaceId
+  });
+  await repository.markIgnored(created.id, { workspaceId });
+
+  const result = await repository.cleanupScreenshotAssets?.({
+    minArchiveBytes: 1,
+    archiveAfterDays: 30,
+    deleteAfterDays: 90,
+    now: new Date("2026-07-15T00:00:00.000Z")
+  });
+
+  assert.deepEqual(result, { archived: 1, deleted: 0 });
+
+  const archived = await repository.get(created.id, { workspaceId });
+  assert.equal(archived?.screenshotAsset?.status, "archived");
+  assert.equal(archived?.screenshotAsset?.dataUrl, undefined);
+  assert.equal(archived?.screenshotAsset?.thumbnailDataUrl, "data:image/webp;base64,AAAA");
 });
 
 function feedbackPayload(overrides: Partial<FeedbackPayload> = {}): FeedbackPayload {
@@ -316,6 +353,14 @@ function filterRows<T extends Record<string, unknown>>(rows: T[], params: URLSea
       }
 
       if (value.startsWith("in.") && !stripIn(value).includes(String(row[key]))) {
+        return false;
+      }
+
+      if (value.startsWith("gt.") && !(Number(row[key]) > Number(value.slice(3)))) {
+        return false;
+      }
+
+      if (value.startsWith("lt.") && !(String(row[key]) < value.slice(3))) {
         return false;
       }
     }

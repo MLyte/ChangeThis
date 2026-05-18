@@ -59,7 +59,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter une rotation des project public keys via `project_public_keys`.
 - [ ] Migrer les screenshots depuis les data URLs vers Supabase Storage ou stockage objet.
 - [ ] Stocker uniquement un chemin d'objet ou une URL signée pour chaque screenshot.
-- [ ] Ajouter une table ou colonne pour le hash de contenu des screenshots.
+- [x] Ajouter une table ou colonne pour le hash de contenu des screenshots.
 - [ ] Ajouter une migration pour les index nécessaires aux listes feedbacks par projet, statut et date.
 - [ ] Ajouter une migration pour les timestamps `updated_at` automatiques.
 - [ ] Ajouter une migration pour conserver le raw payload provider des créations d'issues.
@@ -342,6 +342,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-19] Economie DB screenshots: compression widget en WebP max 1600px + miniature 400px, ajout des metadonnees Supabase `screenshot_status`, `last_used_at`, `usage_count`, `storage_path`, `hash`, et route cron protegee `/api/cron/storage-cleanup` pour archiver les gros screenshots ignores/resolus apres 30 jours puis supprimer les archives apres 90 jours.
 - [2026-05-19] Passage beta ouverte par defaut: `ENABLE_PUBLIC_SIGNUP` devient un interrupteur de pause (`false`/`0`) plutot qu'un prerequis d'ouverture, la home/header/login/signup sont alignes sur `Inscription`/`Connexion`, le fallback waitlist devient "inscriptions en pause" et la creation workspace Supabase renvoie proprement une erreur signup au lieu d'une 500 si le service role/REST manque.
 - [2026-05-19] Hygiene branches Git: l'ancienne branche de travail `codex/full-live-signup` a ete renommee en `dev`, consolidee et poussee; `origin/main` a ete merge dans `dev`; les branches remote `codex/*` obsoletes ont ete supprimees/prunees. Etat final attendu: branches locales/remotes limitees a `main` et `dev`.
 - [2026-05-19] Ajustement hero vitrine: l'image gant du titre `ChangeThis` passe apres le wordmark sur la meme ligne et recoit une animation verticale de pointage vers le bas, avec respect du mode reduction des animations. Validation ciblee: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK; `git diff --check -- apps/web/app/page.tsx apps/web/app/styles.css` OK avec avertissements CRLF existants; verification visuelle locale du premier pli OK.

@@ -32,9 +32,16 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
   const [isOpen, setIsOpen] = useState(false);
   const titleId = useId();
   const sizeKo = Math.round(asset.bytes / 1024);
+  const assetStatus = asset.status ?? "active";
+  const previewUrl = asset.thumbnailDataUrl ?? asset.dataUrl;
+  const fullImageUrl = asset.dataUrl ?? asset.thumbnailDataUrl;
   const viewport = `${metadata.viewport.width} x ${metadata.viewport.height}`;
   const isMobileCapture = metadata.viewport.width < 700 && metadata.viewport.height > metadata.viewport.width;
   const pinPositions = (pins?.length ? pins : pin ? [pin] : []).map((item) => pinImagePosition(item, metadata));
+
+  if (!previewUrl || !fullImageUrl) {
+    return null;
+  }
 
   return (
     <>
@@ -48,7 +55,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
           <Image
             alt=""
             height={72}
-            src={asset.dataUrl}
+            src={previewUrl}
             unoptimized
             width={112}
           />
@@ -92,7 +99,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
                   alt=""
                   className="screenshot-modal-image"
                   height={1080}
-                  src={asset.dataUrl}
+                  src={fullImageUrl}
                   unoptimized
                   width={1920}
                 />
@@ -139,7 +146,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
                   </div>
                   <div>
                     <dt>Fichier</dt>
-                    <dd>{asset.mimeType} - {sizeKo} Ko</dd>
+                    <dd>{asset.mimeType} - {sizeKo} Ko - {assetStatus}</dd>
                   </div>
                 </dl>
               </aside>

@@ -56,6 +56,10 @@ const rootId = "changethis-widget-root";
 const sentPinsStorageKeyPrefix = "changethis:sentPins:";
 const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
 const productWebsiteUrl = "https://app.changethis.dev";
+const maxScreenshotDimension = 1600;
+const maxThumbnailDimension = 400;
+const screenshotQuality = 0.8;
+const thumbnailQuality = 0.74;
 const lucideIcons = {
   camera: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>',
   "map-pin": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -1492,6 +1496,9 @@ async function submitFeedback(params: {
     : params.type === "pin"
       ? await captureViewport()
       : undefined;
+  const screenshotThumbnailDataUrl = screenshotDataUrl
+    ? await createImageThumbnail(screenshotDataUrl)
+    : undefined;
 
   const payload: FeedbackPayload = {
     projectKey: params.projectKey,
@@ -1501,6 +1508,7 @@ async function submitFeedback(params: {
     pins: params.pins?.length ? params.pins : undefined,
     captureArea: params.captureArea,
     screenshotDataUrl,
+    screenshotThumbnailDataUrl,
     metadata: {
       url: window.location.href,
       origin: httpOrigin(window.location.origin),
@@ -1748,10 +1756,65 @@ async function captureViewport(area?: CaptureArea): Promise<string | undefined> 
       useCORS: true
     });
     const output = area ? cropCanvas(canvas, area) : canvas;
-    return output.toDataURL("image/jpeg", 0.82);
+    const resized = resizeCanvasToMax(output, maxScreenshotDimension);
+    return encodeCanvas(resized, screenshotQuality);
   } finally {
     maskSensitiveFields(false);
   }
+}
+
+async function createImageThumbnail(dataUrl: string): Promise<string | undefined> {
+  const image = new Image();
+  image.decoding = "async";
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Unable to load screenshot thumbnail source"));
+      image.src = dataUrl;
+    });
+  } catch {
+    return undefined;
+  }
+
+  const canvas = document.createElement("canvas");
+  const ratio = Math.min(1, maxThumbnailDimension / Math.max(image.naturalWidth, image.naturalHeight, 1));
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return undefined;
+  }
+
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return encodeCanvas(canvas, thumbnailQuality);
+}
+
+function resizeCanvasToMax(source: HTMLCanvasElement, maxDimension: number): HTMLCanvasElement {
+  const ratio = Math.min(1, maxDimension / Math.max(source.width, source.height, 1));
+  if (ratio >= 1) {
+    return source;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(source.width * ratio));
+  canvas.height = Math.max(1, Math.round(source.height * ratio));
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return source;
+  }
+
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+function encodeCanvas(canvas: HTMLCanvasElement, quality: number): string {
+  const webp = canvas.toDataURL("image/webp", quality);
+  return webp.startsWith("data:image/webp;base64,")
+    ? webp
+    : canvas.toDataURL("image/jpeg", quality);
 }
 
 function cropCanvas(source: HTMLCanvasElement, area: CaptureArea): HTMLCanvasElement {

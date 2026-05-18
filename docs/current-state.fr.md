@@ -45,7 +45,7 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 
 ## Limites connues avant production commerciale
 
-- Les screenshots restent transitoirement stockes en data URL; Supabase Storage ou stockage objet reste a brancher.
+- Les screenshots entrants sont reduits cote widget (WebP, dimension max 1600px, miniature 400px) avant envoi. Ils restent transitoirement stockes en data URL, avec metadonnees de cycle de vie `active/archive/deleted`; Supabase Storage ou stockage objet reste a brancher.
 - Le rate limit public reste memoire et doit passer sur un store partage pour multi-instance.
 - L'idempotence provider et les verrous anti double issue doivent etre renforces.
 - Les retries ne remplacent pas encore une queue durable.

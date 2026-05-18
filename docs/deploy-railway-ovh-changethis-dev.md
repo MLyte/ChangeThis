@@ -106,6 +106,7 @@ DATA_STORE=supabase
 # Optionnel: false met les inscriptions en pause; absent ou true ouvre la beta.
 ENABLE_PUBLIC_SIGNUP=true
 CHANGETHIS_SECRET_KEY=<secret-long-aleatoire>
+CHANGETHIS_CRON_SECRET=<secret-long-aleatoire-pour-cron>
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
@@ -224,7 +225,7 @@ No-Go si:
 
 ## Risques beta acceptes temporairement
 
-- Les screenshots sont encore transitoirement stockes en data URL tant que Supabase Storage n'est pas branche.
+- Les screenshots entrants sont compresses cote widget et suivis par cycle de vie. Configurer un cron hebdomadaire `GET /api/cron/storage-cleanup` avec `Authorization: Bearer CHANGETHIS_CRON_SECRET` pour archiver les gros screenshots ignores/resolus apres 30 jours et supprimer les archives apres 90 jours.
 - Le rate limit public n'est pas encore un store partage.
 - La creation d'issue reste manuelle et doit etre surveillee.
 - Les retries provider ne remplacent pas encore une vraie queue durable.

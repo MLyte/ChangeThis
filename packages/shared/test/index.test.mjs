@@ -79,6 +79,15 @@ test("validateFeedbackPayload accepts safe screenshot MIME types", () => {
   }
 });
 
+test("validateFeedbackPayload accepts bounded screenshot thumbnails", () => {
+  const result = validateFeedbackPayload(validPayload({
+    screenshotThumbnailDataUrl: "data:image/webp;base64,AAAA"
+  }));
+
+  assert.equal(result.ok, true);
+  assert.equal(result.ok ? result.value.screenshotThumbnailDataUrl : undefined, "data:image/webp;base64,AAAA");
+});
+
 test("validateFeedbackPayload rejects unsafe or malformed screenshot data URLs", () => {
   for (const screenshotDataUrl of [
     "data:image/svg+xml;base64,AAAA",
@@ -91,6 +100,15 @@ test("validateFeedbackPayload rejects unsafe or malformed screenshot data URLs",
     assert.equal(result.ok, false);
     assert.match(result.error, /screenshotDataUrl/);
   }
+});
+
+test("validateFeedbackPayload rejects malformed screenshot thumbnails", () => {
+  const result = validateFeedbackPayload(validPayload({
+    screenshotThumbnailDataUrl: "data:image/svg+xml;base64,AAAA"
+  }));
+
+  assert.equal(result.ok, false);
+  assert.match(result.ok ? "" : result.error, /screenshotThumbnailDataUrl/);
 });
 
 test("buildIssueDraft creates a concise provider-neutral issue draft", () => {
