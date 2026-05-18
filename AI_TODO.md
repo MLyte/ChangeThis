@@ -342,6 +342,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-19] Rework UX/UI closing home: la section CTA beta ouverte devient un panneau d'activation plus concret, avec preuves courtes, trois etapes apres inscription et CTA integres au flux, au lieu d'une carte vide avec seulement deux boutons. Validation ciblee: typecheck web OK, lint web OK, build web OK, controle visuel local OK.
 - [2026-05-19] Placement checklist activation: le composant `Checklist activation` de la colonne `/projects` est deplace juste apres la section `Synthese / File actuelle`, pour suivre la lecture de la feuille courante. Validation ciblee: typecheck web OK, lint web OK, build web OK.
 - [2026-05-19] Curseur interactif global: ajout d'une classe utilitaire `.cursor-pointer` et d'une regle CSS globale pour appliquer le curseur pointer aux liens, boutons et controles interactifs non desactives, avec `not-allowed` conserve pour les etats disabled. Validation ciblee: typecheck web OK, lint web OK, build web OK.
 - [2026-05-19] Correction page login connectee: `/login` redirige maintenant une session workspace existante vers la destination demandee ou `/projects`, au lieu d'afficher le formulaire alors que le header indique deja l'utilisateur connecte. Validation ciblee: typecheck web OK, lint web OK, build web OK.

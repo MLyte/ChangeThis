@@ -209,6 +209,17 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.closing.title.small": "Créez votre accès",
     "home.closing.title.main": "dès maintenant",
     "home.closing.copy": "Créez votre espace pour préparer votre premier site\u00a0: script à installer, retours à qualifier, tâches Git à envoyer.",
+    "home.closing.proof.beta": "Bêta ouverte contrôlée",
+    "home.closing.proof.visitors": "Retours sans compte visiteur",
+    "home.closing.proof.git": "GitHub ou GitLab",
+    "home.closing.panel.title": "Activez un vrai site, pas une démo.",
+    "home.closing.panel.copy": "Le parcours commence dans la console avec les trois réglages qui rendent le feedback exploitable.",
+    "home.closing.step.site.title": "Site connecté",
+    "home.closing.step.site.copy": "Ajoutez le domaine autorisé et récupérez la balise widget.",
+    "home.closing.step.git.title": "Dépôt Git choisi",
+    "home.closing.step.git.copy": "Reliez chaque site au repository qui recevra ses issues.",
+    "home.closing.step.feedback.title": "Premier retour reçu",
+    "home.closing.step.feedback.copy": "Envoyez un test, vérifiez le contexte et créez l'issue.",
     "home.ops.label": "État opérationnel",
     "home.product.eyebrow": "Première vue utilisable",
     "home.product.title": "Tout ce qu'il faut pour passer du signal client à l'action.",
@@ -637,6 +648,17 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.closing.title.small": "Create your access",
     "home.closing.title.main": "now",
     "home.closing.copy": "Create your workspace to prepare your first site: script to install, feedback to review, Git tasks to send.",
+    "home.closing.proof.beta": "Controlled open beta",
+    "home.closing.proof.visitors": "Visitor feedback without account",
+    "home.closing.proof.git": "GitHub or GitLab",
+    "home.closing.panel.title": "Activate a real site, not a demo.",
+    "home.closing.panel.copy": "The flow starts in the console with the three settings that make feedback actionable.",
+    "home.closing.step.site.title": "Connected site",
+    "home.closing.step.site.copy": "Add the allowed domain and get the widget tag.",
+    "home.closing.step.git.title": "Git repo selected",
+    "home.closing.step.git.copy": "Link each site to the repository that will receive its issues.",
+    "home.closing.step.feedback.title": "First feedback received",
+    "home.closing.step.feedback.copy": "Send a test, check the context, and create the issue.",
     "home.ops.label": "Operational status",
     "home.product.eyebrow": "Ready-to-use view",
     "home.product.title": "Everything you need to turn customer signals into action.",
@@ -974,7 +996,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
       case "home.beta.note.3":
         return <>Works on <strong>desktop, mobile, and tablet</strong>.</>;
       case "home.closing.copy":
-        return <>Leave your email to join the beta or prepare your access: <strong>site to connect, feedback to review, Git tasks to prepare</strong>.</>;
+        return <>Create your workspace to prepare your first site: <strong>script to install, feedback to review, Git tasks to send</strong>.</>;
       default:
         return undefined;
     }
@@ -1030,7 +1052,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
     case "home.beta.note.3":
       return <>Fonctionnel sur <strong>desktop, mobile et tablette</strong>.</>;
     case "home.closing.copy":
-      return <>Laissez votre e-mail pour rejoindre la bêta ou préparer votre accès{"\u00a0"}: <strong>site à connecter, retours à qualifier, tâches Git à préparer</strong>.</>;
+      return <>Créez votre espace pour préparer votre premier site{"\u00a0"}: <strong>script à installer, retours à qualifier, tâches Git à envoyer</strong>.</>;
     default:
       return undefined;
   }

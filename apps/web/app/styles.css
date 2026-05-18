@@ -6767,11 +6767,16 @@ code {
 }
 
 .waitlist-closing-section {
-  align-items: center;
+  align-items: stretch;
   display: grid;
   gap: clamp(24px, 4vw, 56px);
   grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
   padding-bottom: clamp(70px, 10vw, 124px);
+}
+
+.closing-copy {
+  align-self: center;
+  max-width: 660px;
 }
 
 .closing-title {
@@ -6798,6 +6803,115 @@ code {
   position: relative;
   top: 0.08em;
   width: 0.82em;
+}
+
+.closing-proof-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.closing-proof-row span {
+  background: var(--secondary-soft);
+  border: 1px solid var(--secondary-border);
+  border-radius: 7px;
+  color: var(--muted-strong);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+  padding: 8px 10px;
+}
+
+.closing-access-panel {
+  align-self: center;
+  background:
+    linear-gradient(180deg, #ffffff, rgba(250, 250, 250, 0.82));
+  border: 1px solid var(--secondary-border);
+  border-radius: 8px;
+  box-shadow: var(--home-shadow-float), var(--glass-highlight);
+  display: grid;
+  gap: 16px;
+  padding: clamp(18px, 2.2vw, 26px);
+}
+
+.closing-access-heading {
+  align-items: start;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.closing-access-icon {
+  align-items: center;
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  border-radius: 8px;
+  color: var(--primary);
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.closing-access-heading strong {
+  color: var(--ink);
+  display: block;
+  font-size: clamp(18px, 2vw, 24px);
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.closing-access-heading p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+  margin-top: 5px;
+}
+
+.closing-activation-list {
+  display: grid;
+  gap: 10px;
+}
+
+.closing-activation-item {
+  align-items: start;
+  background: var(--secondary-soft);
+  border: 1px solid var(--secondary-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 12px;
+}
+
+.closing-activation-item svg {
+  color: var(--primary);
+  margin-top: 2px;
+}
+
+.closing-activation-item strong {
+  color: var(--ink);
+  display: block;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.closing-activation-item p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 3px;
+}
+
+.closing-access-panel .signup-access-card,
+.closing-access-panel .waitlist-form.compact {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin-top: 0;
+  padding: 0;
 }
 
 .waitlist-form {

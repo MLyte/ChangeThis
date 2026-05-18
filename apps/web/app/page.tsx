@@ -62,6 +62,12 @@ const publicSectorPilotScope = [
   "home.publicSector.pilotScope.review"
 ];
 
+const closingActivationItems: Array<{ titleKey: string; copyKey: string; Icon: LucideIcon }> = [
+  { titleKey: "home.closing.step.site.title", copyKey: "home.closing.step.site.copy", Icon: Globe2 },
+  { titleKey: "home.closing.step.git.title", copyKey: "home.closing.step.git.copy", Icon: GitBranch },
+  { titleKey: "home.closing.step.feedback.title", copyKey: "home.closing.step.feedback.copy", Icon: ClipboardCheck }
+];
+
 type HomePageProps = {
   searchParams?: Promise<{
     waitlist?: string;
@@ -185,7 +191,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <PublicSectorSection />
 
       <section className="home-section waitlist-closing-section">
-        <div>
+        <div className="closing-copy">
           <p className="eyebrow"><T k="home.closing.eyebrow" /></p>
           <h2 className="closing-title">
             <small>
@@ -198,12 +204,39 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <p className="lede">
             <TRich k="home.closing.copy" />
           </p>
+          <div className="closing-proof-row" aria-label="Repères bêta ouverte">
+            <span><T k="home.closing.proof.beta" /></span>
+            <span><T k="home.closing.proof.visitors" /></span>
+            <span><T k="home.closing.proof.git" /></span>
+          </div>
         </div>
-        {publicSignupEnabled ? (
-          <SignupAccessCard compact />
-        ) : (
-          <WaitlistForm action={waitlistAction} compact waitlistStatus={waitlistStatus} />
-        )}
+        <div className="closing-access-panel">
+          <div className="closing-access-heading">
+            <span className="closing-access-icon" aria-hidden="true">
+              <Sparkles size={20} strokeWidth={2.3} />
+            </span>
+            <div>
+              <strong><T k="home.closing.panel.title" /></strong>
+              <p><T k="home.closing.panel.copy" /></p>
+            </div>
+          </div>
+          <div className="closing-activation-list" aria-label="Étapes après inscription">
+            {closingActivationItems.map(({ titleKey, copyKey, Icon }) => (
+              <article className="closing-activation-item" key={titleKey}>
+                <Icon aria-hidden="true" size={18} strokeWidth={2.3} />
+                <div>
+                  <strong><T k={titleKey} /></strong>
+                  <p><T k={copyKey} /></p>
+                </div>
+              </article>
+            ))}
+          </div>
+          {publicSignupEnabled ? (
+            <SignupAccessCard compact isSignedIn={isSignedIn} />
+          ) : (
+            <WaitlistForm action={waitlistAction} compact waitlistStatus={waitlistStatus} />
+          )}
+        </div>
       </section>
       <AppFooter suppressSession={!publicSignupEnabled} />
     </main>
