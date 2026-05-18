@@ -10,9 +10,11 @@ process.env.GITLAB_OAUTH_APP_SECRET = "gitlab-app-secret";
 
 type ProviderIntegrationsModule = typeof import("../lib/provider-integrations.ts");
 type CredentialStoreModule = typeof import("../lib/credential-store.ts");
+type ProviderIntegrationStateModule = typeof import("../lib/provider-integration-state.ts");
 
 const providerModule = await import(`${new URL("../lib/provider-integrations.ts", import.meta.url).href}?provider-supabase-test`) as ProviderIntegrationsModule;
 const credentialModule = await import(`${new URL("../lib/credential-store.ts", import.meta.url).href}?credential-supabase-test`) as CredentialStoreModule;
+const providerStateModule = await import(`${new URL("../lib/provider-integration-state.ts", import.meta.url).href}?provider-state-supabase-test`) as ProviderIntegrationStateModule;
 
 const originalFetch = globalThis.fetch;
 
@@ -111,6 +113,26 @@ test("Supabase connected integration readback does not depend on credential list
   assert.equal(github?.status, "connected");
   assert.equal(github?.credentialConfigured, true);
   assert.equal(github?.credentialAvailable, true);
+});
+
+test("Supabase provider integration state updates standard UUID rows", async () => {
+  const fake = createFakeSupabase([{
+    id: integrationId,
+    organization_id: workspaceId,
+    provider: "github",
+    auth_type: "github_app",
+    external_account_id: null,
+    installation_id: null,
+    base_url: "https://github.com",
+    status: "needs_setup",
+    created_at: "2026-05-02T09:00:00.000Z",
+    updated_at: "2026-05-02T09:00:00.000Z"
+  }]);
+  globalThis.fetch = fake.fetch;
+
+  await providerStateModule.enableProviderIntegrationAsync("github", integrationId, workspaceId);
+
+  assert.equal(fake.integrations[0].status, "connected");
 });
 
 function createFakeSupabase(initialIntegrations: Array<Record<string, unknown>>): {

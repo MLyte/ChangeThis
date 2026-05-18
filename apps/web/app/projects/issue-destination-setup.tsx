@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type FormEvent, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
@@ -112,8 +113,12 @@ export function IssueDestinationSetup({
 }: Props) {
   const { t } = useLanguage();
   const [projectViews, setProjectViews] = useState<ProjectView[]>(projects);
-  const [integrationViews, setIntegrationViews] = useState<ProviderIntegrationSummary[]>(integrations);
+  const [integrationOverrides, setIntegrationOverrides] = useState<Partial<Record<IssueProvider, ProviderIntegrationSummary>>>({});
   const [workspaceUsers, setWorkspaceUsers] = useState<WorkspaceUserView[]>(users);
+  const integrationViews = useMemo(
+    () => integrations.map((integration) => integrationOverrides[integration.provider] ?? integration),
+    [integrationOverrides, integrations]
+  );
   const firstConnectedProvider = integrationViews.find((integration) => integration.status === "connected")?.provider ?? "github";
   const [selectedProvider, setSelectedProvider] = useState<IssueProvider>(firstConnectedProvider);
   const [message, setMessage] = useState(t("destinations.message.initial"));
@@ -519,9 +524,10 @@ export function IssueDestinationSetup({
         <div className="settings-content">
           {section === "git-connections" ? (
             <GitConnectionsSection integrations={integrationViews} onIntegrationUpdate={(updatedIntegration) => {
-              setIntegrationViews((current) => current.map((integration) => (
-                integration.provider === updatedIntegration.provider ? updatedIntegration : integration
-              )));
+              setIntegrationOverrides((current) => ({
+                ...current,
+                [updatedIntegration.provider]: updatedIntegration
+              }));
             }} />
           ) : null}
 
@@ -701,6 +707,7 @@ function GitConnectionsSection({
   integrations: ProviderIntegrationSummary[];
   onIntegrationUpdate: (integration: ProviderIntegrationSummary) => void;
 }) {
+  const router = useRouter();
   const [disabledProviders, setDisabledProviders] = useState<Set<IssueProvider>>(
     () => new Set(integrations.filter((integration) => integration.disabled).map((integration) => integration.provider))
   );
@@ -827,6 +834,7 @@ function GitConnectionsSection({
       }
 
       setDisabledProviders((current) => new Set(current).add(integration.provider));
+      router.refresh();
       setConnectionStates((current) => ({
         ...current,
         [integration.provider]: {
@@ -852,7 +860,7 @@ function GitConnectionsSection({
         description: errorMessage
       });
     }
-  }, []);
+  }, [router]);
 
   const enableConnection = useCallback(async (integration: ProviderIntegrationSummary) => {
     setConnectionStates((current) => ({
@@ -893,6 +901,7 @@ function GitConnectionsSection({
         next.delete(integration.provider);
         return next;
       });
+      router.refresh();
       await refreshConnection(integration, undefined, true);
       toast.success(`${integration.name} réactivé`, {
         description: "La connexion Git peut à nouveau être utilisée."
@@ -911,7 +920,7 @@ function GitConnectionsSection({
         description: errorMessage
       });
     }
-  }, [refreshConnection]);
+  }, [refreshConnection, router]);
 
   const saveProviderToken = useCallback(async (integration: ProviderIntegrationSummary) => {
     const token = tokenInputs[integration.provider]?.trim() ?? "";
@@ -980,6 +989,7 @@ function GitConnectionsSection({
         return next;
       });
       onIntegrationUpdate(updatedIntegration);
+      router.refresh();
       await refreshConnection(updatedIntegration, undefined, true);
       toast.success(`${integration.name} connecté`, {
         description: "Le token est enregistré et la liste des dépôts est vérifiée."
@@ -1000,7 +1010,7 @@ function GitConnectionsSection({
     } finally {
       setSavingTokenProvider(undefined);
     }
-  }, [onIntegrationUpdate, refreshConnection, tokenInputs]);
+  }, [onIntegrationUpdate, refreshConnection, router, tokenInputs]);
 
   useEffect(() => {
     const abortController = new AbortController();
