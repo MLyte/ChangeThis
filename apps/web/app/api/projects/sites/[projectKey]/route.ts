@@ -42,8 +42,12 @@ export async function PATCH(
     return NextResponse.json({ error: "Request body must be valid JSON" }, { status: 400 });
   }
 
-  if (!isRecord(body) || !isWidgetLocale(body.widgetLocale) || !isWidgetButtonPosition(body.widgetButtonPosition) || !isWidgetButtonVariant(body.widgetButtonVariant)) {
-    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition and widgetButtonVariant are required" }, { status: 422 });
+  if (!isRecord(body)
+    || !isWidgetLocale(body.widgetLocale)
+    || !isWidgetButtonPosition(body.widgetButtonPosition)
+    || !isWidgetButtonVariant(body.widgetButtonVariant)
+    || !isWidgetReporterFields(body.widgetReporterFields)) {
+    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant and widgetReporterFields are required" }, { status: 422 });
   }
 
   const { projectKey } = await context.params;
@@ -53,7 +57,8 @@ export async function PATCH(
       projectKey,
       widgetLocale: body.widgetLocale,
       widgetButtonPosition: body.widgetButtonPosition,
-      widgetButtonVariant: body.widgetButtonVariant
+      widgetButtonVariant: body.widgetButtonVariant,
+      widgetReporterFields: body.widgetReporterFields
     }, session.workspace.id);
 
     return NextResponse.json({
@@ -113,4 +118,8 @@ function isWidgetButtonPosition(value: unknown): value is "bottom-right" | "bott
 
 function isWidgetButtonVariant(value: unknown): value is "default" | "subtle" {
   return value === "default" || value === "subtle";
+}
+
+function isWidgetReporterFields(value: unknown): value is "hidden" | "optional" | "required" {
+  return value === "hidden" || value === "optional" || value === "required";
 }

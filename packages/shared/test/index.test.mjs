@@ -38,6 +38,33 @@ test("validateFeedbackPayload accepts a complete feedback payload", () => {
   assert.equal(result.value.metadata.path, "/contact");
 });
 
+test("validateFeedbackPayload accepts reporter contact details", () => {
+  const result = validateFeedbackPayload(validPayload({
+    reporter: {
+      name: "Mathieu Luyten",
+      email: "mathieu@example.com"
+    }
+  }));
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value.reporter, {
+    name: "Mathieu Luyten",
+    email: "mathieu@example.com"
+  });
+});
+
+test("validateFeedbackPayload rejects invalid reporter email", () => {
+  const result = validateFeedbackPayload(validPayload({
+    reporter: {
+      name: "Mathieu",
+      email: "not-an-email"
+    }
+  }));
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /reporter.email/);
+});
+
 test("validateFeedbackPayload accepts multiple pins and keeps first pin compatibility", () => {
   const result = validateFeedbackPayload(validPayload({
     pin: undefined,
@@ -120,6 +147,22 @@ test("buildIssueDraft creates a concise provider-neutral issue draft", () => {
   assert.equal(draft.title, "[Feedback] /contact - Make the call to action more visible");
   assert.deepEqual(draft.labels, ["source:client-feedback", "status:raw", "type:feedback", "mode:pin"]);
   assert.match(draft.description, /Element probable: `\.hero-cta`/);
+});
+
+test("buildIssueDraft includes reporter contact details when present", () => {
+  const validation = validateFeedbackPayload(validPayload({
+    reporter: {
+      name: "Mathieu Luyten",
+      email: "mathieu@example.com"
+    }
+  }));
+  assert.equal(validation.ok, true);
+
+  const draft = buildIssueDraft(validation.value);
+
+  assert.match(draft.description, /Auteur du feedback/);
+  assert.match(draft.description, /Nom: Mathieu Luyten/);
+  assert.match(draft.description, /E-mail: mathieu@example.com/);
 });
 
 test("buildIssueDraft numbers multiple pins in the issue description", () => {

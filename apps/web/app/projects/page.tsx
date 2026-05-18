@@ -575,7 +575,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const viewport = `${feedback.payload.metadata.viewport.width} x ${feedback.payload.metadata.viewport.height}`;
   const appEnvironment = feedback.payload.metadata.app;
   const appEnvironmentSummary = formatAppEnvironmentSummary(appEnvironment);
-  const displayMessage = formatFeedbackMessage(feedback.payload.message);
+  const displayMessage = formatFeedbackMessage(feedback);
   const cardTitle = formatFeedbackCardTitle(feedback);
   const canBulkCreateIssue = feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
@@ -895,7 +895,13 @@ function isFeedbackStatus(value?: string): value is FeedbackStatus {
     || value === "ignored";
 }
 
-function formatFeedbackMessage(message: string): { message: string; reporter?: string } {
+function formatFeedbackMessage(feedback: StoredFeedback): { message: string; reporter?: string } {
+  const message = feedback.payload.message;
+  const reporter = formatFeedbackReporter(feedback.payload.reporter);
+  if (reporter) {
+    return { message, reporter };
+  }
+
   const match = message.match(/^([A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ' -]{1,48}):\s+(.+)$/);
 
   if (!match) {
@@ -906,6 +912,18 @@ function formatFeedbackMessage(message: string): { message: string; reporter?: s
     reporter: match[1].trim(),
     message: match[2].trim()
   };
+}
+
+function formatFeedbackReporter(reporter: StoredFeedback["payload"]["reporter"]): string | undefined {
+  if (!reporter?.name && !reporter?.email) {
+    return undefined;
+  }
+
+  if (reporter.name && reporter.email) {
+    return `${reporter.name} <${reporter.email}>`;
+  }
+
+  return reporter.name ?? reporter.email;
 }
 
 function formatFeedbackCardTitle(feedback: StoredFeedback): string {

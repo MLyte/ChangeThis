@@ -12,6 +12,7 @@ type WidgetConfigResponse = {
   locale: ChangeThisProject["widgetLocale"];
   buttonPosition: ChangeThisProject["widgetButtonPosition"];
   buttonVariant: ChangeThisProject["widgetButtonVariant"];
+  reporterFields: ChangeThisProject["widgetReporterFields"];
   endpoint: "/api/public/feedback";
 };
 
@@ -51,6 +52,7 @@ function widgetConfigResponse(project: ChangeThisProject): WidgetConfigResponse 
     locale: project.widgetLocale,
     buttonPosition: project.widgetButtonPosition,
     buttonVariant: project.widgetButtonVariant,
+    reporterFields: project.widgetReporterFields,
     endpoint: "/api/public/feedback"
   };
 }

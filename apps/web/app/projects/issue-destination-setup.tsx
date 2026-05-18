@@ -19,7 +19,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import type { IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale } from "@changethis/shared";
+import type { IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetReporterFields } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
@@ -86,6 +86,12 @@ const widgetPositionOptions: Array<{ label: string; value: WidgetButtonPosition 
 const widgetVariantOptions: Array<{ label: string; value: WidgetButtonVariant }> = [
   { label: "Standard", value: "default" },
   { label: "Discret production", value: "subtle" }
+];
+
+const widgetReporterFieldOptions: Array<{ label: string; value: WidgetReporterFields }> = [
+  { label: "Nom/e-mail optionnels", value: "optional" },
+  { label: "Nom/e-mail requis", value: "required" },
+  { label: "Masquer", value: "hidden" }
 ];
 
 type InstallCheckResult = {
@@ -279,7 +285,7 @@ export function IssueDestinationSetup({
     });
   }
 
-  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant">>) {
+  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">>) {
     const project = projectViews.find((item) => item.publicKey === projectKey);
     if (!project) {
       return;
@@ -288,7 +294,8 @@ export function IssueDestinationSetup({
     const nextSettings = {
       widgetLocale: update.widgetLocale ?? project.widgetLocale,
       widgetButtonPosition: update.widgetButtonPosition ?? project.widgetButtonPosition,
-      widgetButtonVariant: update.widgetButtonVariant ?? project.widgetButtonVariant
+      widgetButtonVariant: update.widgetButtonVariant ?? project.widgetButtonVariant,
+      widgetReporterFields: update.widgetReporterFields ?? project.widgetReporterFields
     };
 
     setProjectViews((current) => current.map((item) => item.publicKey === projectKey
@@ -1335,7 +1342,7 @@ function ConnectedSitesSection({
   onCopyInstallSnippet: (project: ProjectView) => void;
   onOpenSiteModal: () => void;
   onSelectProvider: (provider: IssueProvider) => void;
-  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant">>) => void;
+  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">>) => void;
   projects: ProjectView[];
   repositoryLoadMessage: string;
   repositoryLoadState: RepositoryLoadState;
@@ -1506,6 +1513,18 @@ function ConnectedSitesSection({
                         value={project.widgetButtonPosition}
                       >
                         {widgetPositionOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Identité visiteur</span>
+                      <select
+                        disabled={isPending}
+                        onChange={(event) => onUpdateWidgetSettings(project.publicKey, { widgetReporterFields: event.target.value as WidgetReporterFields })}
+                        value={project.widgetReporterFields}
+                      >
+                        {widgetReporterFieldOptions.map((option) => (
                           <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
                       </select>
@@ -1873,8 +1892,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function installSnippet(project: Pick<ProjectView, "publicKey" | "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant">): string {
+function installSnippet(project: Pick<ProjectView, "publicKey" | "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">): string {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const variant = project.widgetButtonVariant !== "default" ? ` data-button-variant="${project.widgetButtonVariant}"` : "";
-  return `<script src="${origin}/widget.js" data-project="${project.publicKey}" data-locale="${project.widgetLocale}" data-position="${project.widgetButtonPosition}"${variant}></script>`;
+  const reporterFields = project.widgetReporterFields !== "hidden" ? ` data-reporter-fields="${project.widgetReporterFields}"` : "";
+  return `<script src="${origin}/widget.js" data-project="${project.publicKey}" data-locale="${project.widgetLocale}" data-position="${project.widgetButtonPosition}"${variant}${reporterFields}></script>`;
 }

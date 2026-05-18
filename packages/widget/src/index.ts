@@ -1,5 +1,5 @@
 import html2canvas from "html2canvas";
-import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackType, PinTarget } from "@changethis/shared";
+import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackReporter, FeedbackType, PinTarget, WidgetReporterFields } from "@changethis/shared";
 import { inferEndpoint, inferLocale } from "./inference.js";
 
 const capturePage = html2canvas as unknown as typeof import("html2canvas").default;
@@ -11,6 +11,7 @@ type WidgetOptions = {
   buttonStateLabel?: string;
   buttonVariant?: "default" | "dev" | "prod" | "review" | "subtle";
   buttonPosition?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
+  reporterFields?: WidgetReporterFields;
   locale?: "fr" | "en";
   visible?: boolean;
   environment?: string;
@@ -55,6 +56,7 @@ type StoredSentFeedback = {
 const rootId = "changethis-widget-root";
 const sentPinsStorageKeyPrefix = "changethis:sentPins:";
 const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
+const reporterStorageKeyPrefix = "changethis:reporter:";
 const productWebsiteUrl = "https://app.changethis.dev";
 const maxScreenshotDimension = 1600;
 const maxThumbnailDimension = 400;
@@ -115,7 +117,13 @@ const widgetCopy = {
     noDraftFeedback: "Aucun feedback en brouillon sur cette page.",
     canceled: "Feedback annulé.",
     sent: "Feedback envoyé. Merci.",
-    alertError: "Impossible d'envoyer le feedback. Réessaie dans un instant."
+    alertError: "Impossible d'envoyer le feedback. Réessaie dans un instant.",
+    reporterTitle: "Vos coordonnées",
+    reporterOptional: "Optionnel, mais utile pour vous recontacter.",
+    reporterRequired: "Requis pour envoyer ce feedback.",
+    reporterName: "Nom",
+    reporterEmail: "E-mail",
+    reporterEmailInvalid: "E-mail invalide."
   },
   en: {
     button: "Feedback",
@@ -159,7 +167,13 @@ const widgetCopy = {
     noDraftFeedback: "No draft feedback on this page.",
     canceled: "Feedback canceled.",
     sent: "Feedback sent. Thank you.",
-    alertError: "Unable to send feedback. Try again in a moment."
+    alertError: "Unable to send feedback. Try again in a moment.",
+    reporterTitle: "Your details",
+    reporterOptional: "Optional, but useful if we need to follow up.",
+    reporterRequired: "Required to send this feedback.",
+    reporterName: "Name",
+    reporterEmail: "Email",
+    reporterEmailInvalid: "Invalid email."
   }
 };
 
@@ -174,9 +188,12 @@ export function initChangeThis(options: WidgetOptions): void {
   const buttonStateLabel = options.buttonStateLabel;
   const buttonVariant = options.buttonVariant ?? "default";
   const buttonPosition = options.buttonPosition ?? "bottom-right";
+  const reporterFields = options.reporterFields ?? "optional";
   const appEnvironment = buildAppEnvironment(options);
   const sentPinsStorageKey = `${sentPinsStorageKeyPrefix}${options.projectKey}`;
   const sentFeedbacksStorageKey = `${sentFeedbacksStorageKeyPrefix}${options.projectKey}`;
+  const reporterStorageKey = `${reporterStorageKeyPrefix}${options.projectKey}`;
+  const storedReporter = readStoredReporter(reporterStorageKey);
   const currentPins = loadSentPinsForView(sentPinsStorageKey, currentViewKey());
   const currentSentFeedbacks = loadSentFeedbacksForView(sentFeedbacksStorageKey, currentViewKey());
   const root = document.createElement("div");
@@ -200,6 +217,8 @@ export function initChangeThis(options: WidgetOptions): void {
     sending: false,
     noteMessage: "",
     captureMessage: "",
+    reporterName: storedReporter.name ?? "",
+    reporterEmail: storedReporter.email ?? "",
     managerOpen: false,
     notice: "",
     focusPinIndex: undefined as number | undefined
@@ -358,7 +377,10 @@ export function initChangeThis(options: WidgetOptions): void {
       + state.pins.filter((pin) => pin.status === "draft" && pin.message.trim()).length
       + (state.captureArea && state.captureMessage.trim() ? 1 : 0);
     const readyDraftFeedbackCount = getReadyDraftFeedbackCount();
-    const canSend = !state.sending && readyDraftFeedbackCount > 0;
+    const reporter = currentReporter(state.reporterName, state.reporterEmail);
+    const reporterEmailInvalid = Boolean(state.reporterEmail.trim()) && !isValidEmail(state.reporterEmail.trim());
+    const reporterReady = reporterFields !== "required" || Boolean(reporter?.name && reporter.email && !reporterEmailInvalid);
+    const canSend = !state.sending && readyDraftFeedbackCount > 0 && reporterReady && !reporterEmailInvalid;
     const sendLabel = state.sending
       ? copy.sending
       : readyDraftFeedbackCount > 1
@@ -544,6 +566,59 @@ export function initChangeThis(options: WidgetOptions): void {
           font-size: 14px;
           line-height: 1.4;
           padding: 10px;
+        }
+        .reporter-fields {
+          border: 1px solid #e5e7eb;
+          border-radius: 7px;
+          display: grid;
+          gap: 8px;
+          margin-bottom: 12px;
+          padding: 10px;
+        }
+        .reporter-fields-header {
+          display: grid;
+          gap: 2px;
+        }
+        .reporter-fields-header strong {
+          color: #111827;
+          font-size: 12px;
+          font-weight: 900;
+        }
+        .reporter-fields-header span,
+        .field-error {
+          color: #6b7280;
+          font-size: 11px;
+          font-weight: 750;
+          line-height: 1.3;
+        }
+        .field-error {
+          color: #b91c1c;
+        }
+        .reporter-grid {
+          display: grid;
+          gap: 8px;
+          grid-template-columns: 1fr 1fr;
+        }
+        .reporter-field {
+          display: grid;
+          gap: 4px;
+          min-width: 0;
+        }
+        .reporter-field span {
+          color: #374151;
+          font-size: 11px;
+          font-weight: 850;
+        }
+        .reporter-field input {
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          color: #111827;
+          font-size: 13px;
+          font-weight: 700;
+          min-height: 34px;
+          min-width: 0;
+          padding: 8px 9px;
+          width: 100%;
         }
         .meta {
           color: #6b7280;
@@ -920,7 +995,8 @@ export function initChangeThis(options: WidgetOptions): void {
             flex-direction: column;
           }
           .manager-stats,
-          .manager-item {
+          .manager-item,
+          .reporter-grid {
             grid-template-columns: 1fr;
           }
           .manager-actions {
@@ -952,6 +1028,25 @@ export function initChangeThis(options: WidgetOptions): void {
             <button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>
             <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>
           </div>
+          ${reporterFields !== "hidden" ? `
+            <div class="reporter-fields">
+              <div class="reporter-fields-header">
+                <strong>${escapeHtml(copy.reporterTitle)}</strong>
+                <span>${escapeHtml(reporterFields === "required" ? copy.reporterRequired : copy.reporterOptional)}</span>
+              </div>
+              <div class="reporter-grid">
+                <label class="reporter-field">
+                  <span>${escapeHtml(copy.reporterName)}</span>
+                  <input data-reporter-name autocomplete="name" value="${escapeHtml(state.reporterName)}" ${reporterFields === "required" ? "required" : ""}>
+                </label>
+                <label class="reporter-field">
+                  <span>${escapeHtml(copy.reporterEmail)}</span>
+                  <input data-reporter-email autocomplete="email" inputmode="email" type="email" value="${escapeHtml(state.reporterEmail)}" ${reporterFields === "required" ? "required" : ""}>
+                </label>
+              </div>
+              ${reporterEmailInvalid ? `<span class="field-error">${escapeHtml(copy.reporterEmailInvalid)}</span>` : ""}
+            </div>
+          ` : ""}
           ${state.type === "comment" ? `
             <textarea data-note-message placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.noteMessage)}</textarea>
             <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
@@ -1128,15 +1223,19 @@ export function initChangeThis(options: WidgetOptions): void {
     `;
 
     const refreshDraftSendControls = () => {
+      const reporter = currentReporter(state.reporterName, state.reporterEmail);
+      const reporterEmailInvalid = Boolean(state.reporterEmail.trim()) && !isValidEmail(state.reporterEmail.trim());
+      const reporterReady = reporterFields !== "required" || Boolean(reporter?.name && reporter.email && !reporterEmailInvalid);
+      const canSubmit = !state.sending && reporterReady && !reporterEmailInvalid;
       const mainSendButton = shadow.querySelector<HTMLButtonElement>("[data-action='send']");
       if (mainSendButton) {
-        mainSendButton.disabled = state.sending || getReadyDraftFeedbackCount() === 0;
+        mainSendButton.disabled = !canSubmit || getReadyDraftFeedbackCount() === 0;
       }
 
       shadow.querySelectorAll<HTMLButtonElement>("[data-action='send-pin']").forEach((button) => {
         const index = Number(button.dataset.pinIndex);
         const pin = state.pins[index];
-        button.disabled = state.sending || !pin || pin.status === "sent" || !pin.message.trim();
+        button.disabled = !canSubmit || !pin || pin.status === "sent" || !pin.message.trim();
       });
     };
 
@@ -1286,12 +1385,25 @@ export function initChangeThis(options: WidgetOptions): void {
       submitReadyFeedbackFromKeyboard(event, shadow.querySelector<HTMLButtonElement>("[data-action='send']"));
     });
 
+    shadow.querySelector<HTMLInputElement>("[data-reporter-name]")?.addEventListener("input", (event) => {
+      state.reporterName = (event.target as HTMLInputElement).value;
+      persistReporter(reporterStorageKey, currentReporter(state.reporterName, state.reporterEmail));
+      refreshDraftSendControls();
+    });
+
+    shadow.querySelector<HTMLInputElement>("[data-reporter-email]")?.addEventListener("input", (event) => {
+      state.reporterEmail = (event.target as HTMLInputElement).value;
+      persistReporter(reporterStorageKey, currentReporter(state.reporterName, state.reporterEmail));
+      refreshDraftSendControls();
+    });
+
     shadow.querySelectorAll<HTMLButtonElement>("[data-action='send-pin']").forEach((button) => {
       button.addEventListener("click", async () => {
         syncDraftView();
         const index = Number(button.dataset.pinIndex);
         const draft = state.pins[index];
-        if (!draft || draft.status === "sent" || !draft.message.trim()) return;
+        const reporter = currentReporter(state.reporterName, state.reporterEmail);
+        if (!draft || draft.status === "sent" || !draft.message.trim() || !canSubmitWithReporter(reporterFields, reporter)) return;
 
         state.sending = true;
         render();
@@ -1302,6 +1414,7 @@ export function initChangeThis(options: WidgetOptions): void {
             type: "pin",
             message: draft.message,
             pins: [draft.target],
+            reporter,
             appEnvironment
           });
           const sentAt = new Date().toISOString();
@@ -1368,8 +1481,9 @@ export function initChangeThis(options: WidgetOptions): void {
       const pendingCapture = state.captureArea && state.captureMessage.trim()
         ? { message: state.captureMessage, captureArea: state.captureArea }
         : undefined;
+      const reporter = currentReporter(state.reporterName, state.reporterEmail);
 
-      if (!pendingNoteMessage && pendingPins.length === 0 && !pendingCapture) {
+      if ((!pendingNoteMessage && pendingPins.length === 0 && !pendingCapture) || !canSubmitWithReporter(reporterFields, reporter)) {
         return;
       }
 
@@ -1382,6 +1496,7 @@ export function initChangeThis(options: WidgetOptions): void {
             projectKey: options.projectKey,
             type: "comment",
             message: pendingNoteMessage,
+            reporter,
             appEnvironment
           });
 
@@ -1407,6 +1522,7 @@ export function initChangeThis(options: WidgetOptions): void {
             type: "pin",
             message: pin.message,
             pins: [pin.target],
+            reporter,
             appEnvironment
           });
           const sentAt = new Date().toISOString();
@@ -1426,6 +1542,7 @@ export function initChangeThis(options: WidgetOptions): void {
             type: "screenshot",
             message: pendingCapture.message,
             captureArea: pendingCapture.captureArea,
+            reporter,
             appEnvironment
           });
 
@@ -1487,6 +1604,7 @@ async function submitFeedback(params: {
   projectKey: string;
   type: FeedbackType;
   message: string;
+  reporter?: FeedbackReporter;
   pins?: PinTarget[];
   captureArea?: CaptureArea;
   appEnvironment?: FeedbackAppEnvironment;
@@ -1504,6 +1622,7 @@ async function submitFeedback(params: {
     projectKey: params.projectKey,
     type: params.type,
     message: params.message,
+    reporter: params.reporter,
     pin: params.pins?.[0],
     pins: params.pins?.length ? params.pins : undefined,
     captureArea: params.captureArea,
@@ -1865,6 +1984,62 @@ function currentViewKey(): string {
   return `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
+function currentReporter(name: string, email: string): FeedbackReporter | undefined {
+  const trimmedName = name.trim();
+  const trimmedEmail = email.trim();
+
+  if (!trimmedName && !trimmedEmail) {
+    return undefined;
+  }
+
+  return {
+    name: trimmedName || undefined,
+    email: trimmedEmail || undefined
+  };
+}
+
+function canSubmitWithReporter(mode: WidgetReporterFields, reporter: FeedbackReporter | undefined): boolean {
+  if (reporter?.email && !isValidEmail(reporter.email)) {
+    return false;
+  }
+
+  return mode !== "required" || Boolean(reporter?.name && reporter.email);
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function readStoredReporter(storageKey: string): FeedbackReporter {
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    const value = raw ? JSON.parse(raw) : undefined;
+    if (!isRecord(value)) {
+      return {};
+    }
+
+    return {
+      name: safeDataValue(typeof value.name === "string" ? value.name : undefined),
+      email: safeDataValue(typeof value.email === "string" ? value.email : undefined)
+    };
+  } catch {
+    return {};
+  }
+}
+
+function persistReporter(storageKey: string, reporter: FeedbackReporter | undefined): void {
+  try {
+    if (!reporter?.name && !reporter?.email) {
+      window.localStorage.removeItem(storageKey);
+      return;
+    }
+
+    window.localStorage.setItem(storageKey, JSON.stringify(reporter));
+  } catch {
+    // Ignore storage failures: reporter details are still sent with the current feedback.
+  }
+}
+
 function footerAvoidanceOffset(): number {
   const candidates = Array.from(document.querySelectorAll<HTMLElement>("footer, [role='contentinfo'], [data-changethis-footer]"));
   const viewportHeight = window.innerHeight;
@@ -2214,6 +2389,7 @@ const projectKey = currentScript?.dataset.project;
 if (projectKey) {
   const variant = currentScript?.dataset.buttonVariant;
   const position = currentScript?.dataset.position;
+  const reporterFields = currentScript?.dataset.reporterFields;
 
   initChangeThis({
     projectKey,
@@ -2222,6 +2398,7 @@ if (projectKey) {
     buttonStateLabel: currentScript?.dataset.buttonState,
     buttonVariant: variant === "dev" || variant === "prod" || variant === "review" || variant === "subtle" ? variant : undefined,
     buttonPosition: position === "bottom-right" || position === "bottom-left" || position === "top-right" || position === "top-left" ? position : undefined,
+    reporterFields: reporterFields === "hidden" || reporterFields === "optional" || reporterFields === "required" ? reporterFields : undefined,
     locale: currentScript?.dataset.locale === "fr" || currentScript?.dataset.locale === "en" ? currentScript.dataset.locale : undefined,
     visible: currentScript?.dataset.visible !== "false",
     environment: currentScript?.dataset.environment,

@@ -36,6 +36,7 @@ test("lists Supabase projects with active keys, issue targets, and workspace sco
         widget_locale: "en",
         widget_button_position: "bottom-left",
         widget_button_variant: "subtle",
+        widget_reporter_fields: "required",
         created_at: "2026-05-02T08:00:00.000Z",
         updated_at: "2026-05-02T09:00:00.000Z"
       }]);
@@ -84,6 +85,7 @@ test("lists Supabase projects with active keys, issue targets, and workspace sco
     widgetLocale: "en",
     widgetButtonPosition: "bottom-left",
     widgetButtonVariant: "subtle",
+    widgetReporterFields: "required",
     issueTarget: {
       provider: "github",
       namespace: "agency",

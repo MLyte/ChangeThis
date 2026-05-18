@@ -7,6 +7,7 @@ export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_rec
 export type WidgetLocale = "fr" | "en";
 export type WidgetButtonPosition = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 export type WidgetButtonVariant = "default" | "subtle";
+export type WidgetReporterFields = "hidden" | "optional" | "required";
 
 export type Workspace = {
   id: string;
@@ -35,6 +36,7 @@ export type Site = {
   widgetLocale: WidgetLocale;
   widgetButtonPosition: WidgetButtonPosition;
   widgetButtonVariant: WidgetButtonVariant;
+  widgetReporterFields: WidgetReporterFields;
   createdAt: string;
   updatedAt: string;
 };
@@ -108,10 +110,16 @@ export type FeedbackMetadata = {
   createdAt: string;
 };
 
+export type FeedbackReporter = {
+  name?: string;
+  email?: string;
+};
+
 export type FeedbackPayload = {
   projectKey: string;
   type: FeedbackType;
   message: string;
+  reporter?: FeedbackReporter;
   metadata: FeedbackMetadata;
   pin?: PinTarget;
   pins?: PinTarget[];
@@ -176,6 +184,10 @@ type CaptureAreaValidationResult =
   | { ok: true; value?: CaptureArea }
   | { ok: false; error: string };
 
+type ReporterValidationResult =
+  | { ok: true; value?: FeedbackReporter }
+  | { ok: false; error: string };
+
 const feedbackTypes = ["comment", "pin", "screenshot"] as const;
 const issueProviders = ["github", "gitlab"] as const;
 const defaultMaxMessageLength = 5000;
@@ -211,6 +223,11 @@ export function validateFeedbackPayload(
 
   if (typeof value.message !== "string" || value.message.length > maxMessageLength) {
     return invalid(`message must be a string up to ${maxMessageLength} characters`);
+  }
+
+  const reporter = validateReporter(value.reporter);
+  if (!reporter.ok) {
+    return reporter;
   }
 
   const metadata = validateMetadata(value.metadata);
@@ -267,6 +284,7 @@ export function validateFeedbackPayload(
       projectKey: value.projectKey,
       type: value.type,
       message: value.message,
+      reporter: reporter.value,
       metadata: metadata.value,
       pin: normalizedPin,
       pins: normalizedPins,
@@ -348,11 +366,14 @@ export function validateIssueTarget(value: unknown): IssueTargetValidationResult
 function buildIssueDescription(feedback: FeedbackPayload): string {
   const pins = getFeedbackPins(feedback);
   const appEnvironmentLines = formatAppEnvironmentForIssue(feedback.metadata.app);
+  const reporterLines = formatReporterForIssue(feedback.reporter);
   const lines = [
     "## Feedback client",
     "",
     feedback.message ? `> ${feedback.message}` : "> Aucun message fourni.",
     "",
+    ...reporterLines,
+    ...(reporterLines.length ? [""] : []),
     "## Contexte",
     "",
     `- Page: ${feedback.metadata.url}`,
@@ -381,6 +402,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
       {
         projectKey: feedback.projectKey,
         type: feedback.type,
+        reporter: feedback.reporter ?? null,
         metadata: feedback.metadata,
         pin: feedback.pin ?? null,
         pins,
@@ -418,6 +440,19 @@ function getFeedbackPins(feedback: FeedbackPayload): PinTarget[] {
   }
 
   return feedback.pin ? [feedback.pin] : [];
+}
+
+function formatReporterForIssue(reporter: FeedbackReporter | undefined): string[] {
+  if (!reporter?.name && !reporter?.email) {
+    return [];
+  }
+
+  return [
+    "## Auteur du feedback",
+    "",
+    reporter.name ? `- Nom: ${reporter.name}` : undefined,
+    reporter.email ? `- E-mail: ${reporter.email}` : undefined
+  ].filter((line): line is string => typeof line === "string");
 }
 
 function formatPinsForIssue(pins: PinTarget[]): string[] {
@@ -593,6 +628,43 @@ function validateAppEnvironment(value: unknown): { ok: true; value: FeedbackAppE
   }
 
   return { ok: true, value: app };
+}
+
+function validateReporter(value: unknown): ReporterValidationResult {
+  if (value === undefined || value === null) {
+    return { ok: true, value: undefined };
+  }
+
+  if (!isRecord(value)) {
+    return invalid("reporter must be a JSON object");
+  }
+
+  const name = normalizeOptionalString(value.name, 120);
+  const email = normalizeOptionalString(value.email, 254);
+
+  if (name === false) {
+    return invalid("reporter.name must be a string up to 120 characters");
+  }
+
+  if (email === false) {
+    return invalid("reporter.email must be a string up to 254 characters");
+  }
+
+  if (email && !isEmail(email)) {
+    return invalid("reporter.email must be a valid email address");
+  }
+
+  if (!name && !email) {
+    return { ok: true, value: undefined };
+  }
+
+  return {
+    ok: true,
+    value: {
+      name: name || undefined,
+      email: email || undefined
+    }
+  };
 }
 
 function validateOrigin(value: unknown): string | undefined {
@@ -773,6 +845,23 @@ function isIssueProvider(value: unknown): value is IssueProvider {
 
 function isNonEmptyString(value: unknown, maxLength: number): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= maxLength;
+}
+
+function normalizeOptionalString(value: unknown, maxLength: number): string | false | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== "string" || value.length > maxLength) {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function isEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function isHttpUrl(value: string): boolean {

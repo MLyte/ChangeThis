@@ -342,6 +342,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-19] Ajout auteur feedback structure: configuration par site `Identite visiteur` (`hidden`, `optional`, `required`), champs nom/e-mail dans le widget, validation serveur `reporter`, affichage dashboard et inclusion dans les brouillons d'issues. Migration Supabase ajoute `projects.widget_reporter_fields`. Validation ciblee: tests shared/widget/web OK, typecheck OK, lint OK, migrations check OK, build OK, controle DOM widget local OK.
 - [2026-05-19] Correction UI inbox capture: la vignette de capture garde une hauteur fixe dans les lignes compactes, meme quand l'accordeon `Brouillon, destination et contexte` est ouvert, pour eviter le resize visuel. Validation ciblee: typecheck web OK, lint web OK, build web OK.
 - [2026-05-19] Rework UX/UI closing home: la section CTA beta ouverte devient un panneau d'activation plus concret, avec preuves courtes, trois etapes apres inscription et CTA integres au flux, au lieu d'une carte vide avec seulement deux boutons. Validation ciblee: typecheck web OK, lint web OK, build web OK, controle visuel local OK.
 - [2026-05-19] Placement checklist activation: le composant `Checklist activation` de la colonne `/projects` est deplace juste apres la section `Synthese / File actuelle`, pour suivre la lecture de la feuille courante. Validation ciblee: typecheck web OK, lint web OK, build web OK.

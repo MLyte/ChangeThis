@@ -7,7 +7,8 @@ import {
   type Site,
   type WidgetButtonPosition,
   type WidgetButtonVariant,
-  type WidgetLocale
+  type WidgetLocale,
+  type WidgetReporterFields
 } from "@changethis/shared";
 import { demoProject, localWorkspace, type ChangeThisProject } from "./demo-project";
 import { getDataStoreMode } from "./runtime";
@@ -30,6 +31,7 @@ type SupabaseProjectRow = {
   widget_locale: unknown;
   widget_button_position: unknown;
   widget_button_variant: unknown;
+  widget_reporter_fields: unknown;
   created_at: string;
   updated_at: string;
 };
@@ -60,6 +62,7 @@ export type CreateConnectedSiteInput = {
   widgetLocale?: WidgetLocale;
   widgetButtonPosition?: WidgetButtonPosition;
   widgetButtonVariant?: WidgetButtonVariant;
+  widgetReporterFields?: WidgetReporterFields;
 };
 
 export type ProjectIssueTargetUpdate = {
@@ -75,6 +78,7 @@ export type ProjectWidgetSettingsUpdate = {
   widgetLocale: WidgetLocale;
   widgetButtonPosition: WidgetButtonPosition;
   widgetButtonVariant: WidgetButtonVariant;
+  widgetReporterFields: WidgetReporterFields;
 };
 
 const defaultStore: SiteRegistryStore = {
@@ -144,6 +148,7 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
     widgetLocale: input.widgetLocale ?? "fr",
     widgetButtonPosition: input.widgetButtonPosition ?? "bottom-right",
     widgetButtonVariant: input.widgetButtonVariant ?? "default",
+    widgetReporterFields: input.widgetReporterFields ?? "optional",
     issueTarget,
     createdAt: now,
     updatedAt: now
@@ -178,6 +183,7 @@ export async function updateProjectWidgetSettings(
         widgetLocale: update.widgetLocale,
         widgetButtonPosition: update.widgetButtonPosition,
         widgetButtonVariant: update.widgetButtonVariant,
+        widgetReporterFields: update.widgetReporterFields,
         updatedAt: now
       };
 
@@ -301,17 +307,19 @@ export function ensureIssueTargetConfigured(project: ChangeThisProject): IssueTa
   return validation.value;
 }
 
-export function installSnippet(project: string | Pick<ChangeThisProject, "publicKey" | "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant">): string {
+export function installSnippet(project: string | Pick<ChangeThisProject, "publicKey" | "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">): string {
   const projectKey = typeof project === "string" ? project : project.publicKey;
   const locale = typeof project === "string" ? undefined : project.widgetLocale;
   const position = typeof project === "string" ? undefined : project.widgetButtonPosition;
   const variant = typeof project === "string" ? undefined : project.widgetButtonVariant;
+  const reporterFields = typeof project === "string" ? undefined : project.widgetReporterFields;
   const attributes = [
     `src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget.js"`,
     `data-project="${projectKey}"`,
     locale ? `data-locale="${locale}"` : undefined,
     position ? `data-position="${position}"` : undefined,
-    variant && variant !== "default" ? `data-button-variant="${variant}"` : undefined
+    variant && variant !== "default" ? `data-button-variant="${variant}"` : undefined,
+    reporterFields && reporterFields !== "hidden" ? `data-reporter-fields="${reporterFields}"` : undefined
   ].filter(Boolean).join(" ");
 
   return `<script ${attributes}></script>`;
@@ -345,7 +353,7 @@ async function listSupabaseConfiguredProjects(workspaceId?: string): Promise<Cha
   }
 
   const params = new URLSearchParams({
-    select: supabaseProjectSelect(),
+    select: supabaseProjectSelect(true),
     order: "created_at.desc"
   });
 
@@ -353,7 +361,7 @@ async function listSupabaseConfiguredProjects(workspaceId?: string): Promise<Cha
     params.set("organization_id", `eq.${workspaceId}`);
   }
 
-  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`);
+  const projectRows = await fetchSupabaseProjectRows(params);
   return hydrateSupabaseProjects(projectRows);
 }
 
@@ -382,7 +390,7 @@ async function findSupabaseConfiguredProjectByKey(
 
   const projectParams = new URLSearchParams({
     id: `eq.${activeKey.project_id}`,
-    select: supabaseProjectSelect(),
+    select: supabaseProjectSelect(true),
     limit: "1"
   });
 
@@ -390,7 +398,7 @@ async function findSupabaseConfiguredProjectByKey(
     projectParams.set("organization_id", `eq.${workspaceId}`);
   }
 
-  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${projectParams.toString()}`);
+  const projectRows = await fetchSupabaseProjectRows(projectParams);
   return (await hydrateSupabaseProjects(projectRows, [activeKey]))[0];
 }
 
@@ -418,7 +426,8 @@ async function createSupabaseConnectedSite(
       allowed_origins: [allowedOrigin],
       widget_locale: input.widgetLocale ?? "fr",
       widget_button_position: input.widgetButtonPosition ?? "bottom-right",
-      widget_button_variant: input.widgetButtonVariant ?? "default"
+      widget_button_variant: input.widgetButtonVariant ?? "default",
+      widget_reporter_fields: input.widgetReporterFields ?? "optional"
     })
   });
   const projectRow = projectRows[0];
@@ -487,7 +496,8 @@ async function updateSupabaseProjectWidgetSettings(
     body: JSON.stringify({
       widget_locale: update.widgetLocale,
       widget_button_position: update.widgetButtonPosition,
-      widget_button_variant: update.widgetButtonVariant
+      widget_button_variant: update.widgetButtonVariant,
+      widget_reporter_fields: update.widgetReporterFields
     })
   });
   const updatedProject = mapSupabaseProject(projectRows[0], project.publicKey, toSupabaseIssueTargetRow(project.id, project.issueTarget));
@@ -669,6 +679,7 @@ function mapSupabaseProject(
     widgetLocale: parseWidgetLocale(projectRow.widget_locale),
     widgetButtonPosition: parseWidgetButtonPosition(projectRow.widget_button_position),
     widgetButtonVariant: parseWidgetButtonVariant(projectRow.widget_button_variant),
+    widgetReporterFields: parseWidgetReporterFields(projectRow.widget_reporter_fields),
     issueTarget,
     createdAt: projectRow.created_at,
     updatedAt: projectRow.updated_at
@@ -713,8 +724,22 @@ function toSupabaseIssueTargetRow(projectId: string, issueTarget: IssueTarget): 
   };
 }
 
-function supabaseProjectSelect(): string {
-  return [
+async function fetchSupabaseProjectRows(params: URLSearchParams): Promise<SupabaseProjectRow[]> {
+  try {
+    return await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`);
+  } catch (error) {
+    if (!params.get("select")?.includes("widget_reporter_fields")) {
+      throw error;
+    }
+
+    const fallbackParams = new URLSearchParams(params);
+    fallbackParams.set("select", supabaseProjectSelect(false));
+    return supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${fallbackParams.toString()}`);
+  }
+}
+
+function supabaseProjectSelect(includeReporterFields = true): string {
+  const fields = [
     "id",
     "organization_id",
     "name",
@@ -723,9 +748,12 @@ function supabaseProjectSelect(): string {
     "widget_locale",
     "widget_button_position",
     "widget_button_variant",
+    includeReporterFields ? "widget_reporter_fields" : undefined,
     "created_at",
     "updated_at"
-  ].join(",");
+  ].filter(Boolean);
+
+  return fields.join(",");
 }
 
 function inFilter(values: string[]): string {
@@ -813,6 +841,10 @@ function parseWidgetButtonVariant(value: unknown): WidgetButtonVariant {
   return value === "subtle" ? "subtle" : "default";
 }
 
+function parseWidgetReporterFields(value: unknown): WidgetReporterFields {
+  return value === "hidden" || value === "required" ? value : "optional";
+}
+
 function normalizeSiteName(value: string | undefined): string | undefined {
   const name = value?.trim();
   return name ? name.slice(0, 120) : undefined;
@@ -889,6 +921,7 @@ function sanitizeStore(value: unknown): SiteRegistryStore {
         widgetLocale: parseWidgetLocale(site.widgetLocale),
         widgetButtonPosition: parseWidgetButtonPosition(site.widgetButtonPosition),
         widgetButtonVariant: parseWidgetButtonVariant(site.widgetButtonVariant),
+        widgetReporterFields: parseWidgetReporterFields(site.widgetReporterFields),
         issueTarget: issueTarget.value,
         createdAt: site.createdAt,
         updatedAt: site.updatedAt
