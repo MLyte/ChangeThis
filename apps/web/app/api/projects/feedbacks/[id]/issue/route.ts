@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import type { IssueDraft } from "@changethis/shared";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
-import { methodNotAllowed, requirePrivateMutationOrigin } from "../../../../../../lib/api-security";
+import { methodNotAllowed, parsePrivateTextField, requirePrivateMutationOrigin } from "../../../../../../lib/api-security";
 import { resolveFeedbackForAction } from "../../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../../lib/logger";
+
+const issueDraftTitleMaxLength = 240;
+const issueDraftDescriptionMaxLength = 12000;
+const issueDraftLabelMaxLength = 64;
 
 type RouteContext = {
   params: Promise<{
@@ -85,24 +89,63 @@ async function readIssueDraftOverride(request: Request): Promise<{ ok: true; val
   }
 
   const { issueDraft } = body;
-  if (typeof issueDraft.title !== "string" || !issueDraft.title.trim()) {
+  const title = parsePrivateTextField(issueDraft.title, {
+    name: "Issue title",
+    required: true,
+    maxLength: issueDraftTitleMaxLength
+  });
+
+  if (!title.ok) {
+    return title;
+  }
+
+  const titleValue = title.value;
+  if (!titleValue) {
     return { ok: false, error: "Issue title is required" };
   }
 
-  if (typeof issueDraft.description !== "string" || !issueDraft.description.trim()) {
+  const description = parsePrivateTextField(issueDraft.description, {
+    name: "Issue description",
+    required: true,
+    maxLength: issueDraftDescriptionMaxLength
+  });
+
+  if (!description.ok) {
+    return description;
+  }
+
+  const descriptionValue = description.value;
+  if (!descriptionValue) {
     return { ok: false, error: "Issue description is required" };
   }
 
-  if (!Array.isArray(issueDraft.labels) || !issueDraft.labels.every((label) => typeof label === "string")) {
+  if (!Array.isArray(issueDraft.labels)) {
     return { ok: false, error: "Issue labels must be a string array" };
+  }
+
+  const labels: string[] = [];
+
+  for (const label of issueDraft.labels) {
+    const parsedLabel = parsePrivateTextField(label, {
+      name: "Issue label",
+      maxLength: issueDraftLabelMaxLength
+    });
+
+    if (!parsedLabel.ok) {
+      return parsedLabel;
+    }
+
+    if (parsedLabel.value) {
+      labels.push(parsedLabel.value);
+    }
   }
 
   return {
     ok: true,
     value: {
-      title: issueDraft.title.trim().slice(0, 240),
-      description: issueDraft.description.trim().slice(0, 12000),
-      labels: issueDraft.labels.map((label) => label.trim()).filter(Boolean).slice(0, 20)
+      title: titleValue,
+      description: descriptionValue,
+      labels: labels.slice(0, 20)
     }
   };
 }

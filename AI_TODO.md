@@ -13,7 +13,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 État courant synchronisé: voir `docs/current-state.fr.md`. Le chemin beta réelle est Railway app + Supabase Auth/DB + OVH DNS, avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`. `DATA_STORE=file` reste local/dev uniquement.
 
 ### P0 - Chemin critique beta vendable
-1. **Onboarding premier site**: le signup crée déjà organisation/workspace/owner et l'action manuelle "Créer un site" existe; terminer surtout la checklist guidée Git -> site -> script -> feedback test.
+1. **Onboarding premier site**: le signup peut créer organisation/workspace/owner en bêta ouverte contrôlée et l'action manuelle "Créer un site" existe; terminer surtout la checklist guidée Git -> site -> script -> feedback test.
 2. **Checklist onboarding courte**: afficher les étapes compte Git, site, script, feedback test et issue créée.
 3. **Widget public installable**: le bundle public est servi; ajouter smoke page HTML externe, vérification compatibilité navigateur et signal d'installation réel.
 4. **GitHub workspace-backed pour beta**: flux App/tokens partiel; finaliser validation dépôt contre intégration, pagination et reconnect.
@@ -38,7 +38,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 6. Procédures complètes backup/restore/export/suppression définitive et conformité élargie.
 
 ### Décisions gelées pour avancer vite
-- Beta privée invitation-only.
+- Bêta ouverte contrôlée: signup activable par environnement, accès surveillé et réversible.
 - Connexions GitHub et GitLab prévues dans le parcours bêta selon la configuration de chaque équipe; ne pas présenter GitHub comme prioritaire par défaut.
 - Création d'issue manuelle depuis l'inbox avant automatisation par job.
 - Railway app + Supabase Auth/DB + OVH DNS est le chemin beta par défaut; Railway PostgreSQL natif n'est pas consommé par le code actuel.
@@ -49,7 +49,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 
 ## 2. Onboarding produit
 - [ ] Définir le parcours premier utilisateur de `signup/login` jusqu'au premier feedback reçu.
-- [ ] Créer une checklist onboarding affichée dans l'app avec étapes compte Git, site, script, feedback test et issue créée.
+- [x] Créer une checklist onboarding affichée dans l'app avec étapes compte Git, site, script, feedback test et issue créée.
 - [ ] Ajouter une action "Créer un site" avec nom, domaine autorisé et clé publique générée.
 - [ ] Ajouter un test de feedback depuis un site configuré, distinct de la page `/demo`.
 - [ ] Ajouter une confirmation de fin d'onboarding quand un feedback réel crée une issue externe.
@@ -242,8 +242,8 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Créer une documentation "FAQ commerciale".
 - [ ] Ajouter des captures d'écran produit à la documentation.
 - [ ] Ajouter une page changelog publique.
-- [ ] Ajouter une checklist smoke staging après déploiement.
-- [ ] Ajouter une checklist smoke production après déploiement.
+- [x] Ajouter une checklist smoke staging après déploiement.
+- [x] Ajouter une checklist smoke production après déploiement.
 - [ ] Ajouter versioning du widget et endpoint exposant la version déployée.
 - [ ] Ajouter changelog release avec migrations, env vars et risques connus.
 - [ ] Ajouter procédure rollback application.
@@ -289,6 +289,11 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] (P2) Construire la logique de limites de plans (quotas) et d’impact visible dans le produit, sans encore verrouiller le fournisseur de paiement.
 - [ ] (P2) Ajouter les fonctions de sortie client: export feedback, suppression définitive workspace/site/feedback, diagnostic par feedback ID.
 - [ ] (P2) Formaliser conformité opérationnelle: privacy/RGPD, retention, DPA, politique cookies si analytics marketing.
+
+## Workflow IA / blocages
+- [2026-05-19] Passage beta ouverte production: `https://app.changethis.dev/signup` affiche encore l'etat beta privee; l'environnement local n'a ni `railway` CLI ni `RAILWAY_TOKEN`, donc la variable production `ENABLE_PUBLIC_SIGNUP=true` ne peut pas etre appliquee depuis cette session.
+- [2026-05-18] Smoke beta controlee: `npm run smoke:widget -- --base-url https://app.changethis.dev` bloque correctement sur `/api/ready` en `503`; health et bundles widget sont OK. Il faut une app ready `200` et une cle publique + origine de smoke pour valider le POST reel.
+- [2026-05-18] Validation locale beta controlee: `npm run prod:check` bloque sur `env:check` car le shell courant n'exporte pas `AUTH_MODE`, `DATA_STORE` et `NEXT_PUBLIC_APP_URL`. Relancer avec les variables staging/production beta avant Go/No-Go.
 
 ## Intervention utilisateur requise
 - [ ] (depuis Audit Investisseur) Valider la proposition de valeur commerciale et définir l'ICP prioritaire (freelance, agence, studio).
@@ -337,6 +342,15 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-19] Ajustement hero vitrine: l'image gant du titre `ChangeThis` passe apres le wordmark sur la meme ligne et recoit une animation verticale de pointage vers le bas, avec respect du mode reduction des animations. Validation ciblee: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK; `git diff --check -- apps/web/app/page.tsx apps/web/app/styles.css` OK avec avertissements CRLF existants; verification visuelle locale du premier pli OK.
+- [2026-05-19] Verification beta ouverte prod: `/api/health` est OK sur `main` commit `428c0e870cc2e4c582d3540eaa1f24c842122759`, mais `/signup` reste ferme en beta privee. Action restante: activer `ENABLE_PUBLIC_SIGNUP=true` dans Railway production puis redeployer si necessaire.
+- [2026-05-19] Instructions token GitHub: ajout d'une checklist visible dans la carte Connexions GitHub pour créer un fine-grained token (resource owner, repository access, Issues read/write), redirection du lien GitHub vers la création de fine-grained token et mise à jour de `docs/configure-github.fr.md`. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK; `npm run test --workspace @changethis/web` OK; `git diff --check -- AI_TODO.md apps/web/app/projects/issue-destination-setup.tsx apps/web/app/styles.css apps/web/lib/provider-integrations.ts docs/configure-github.fr.md` OK avec avertissements CRLF existants.
+- [2026-05-19] Nettoyage beta ouverte: suppression du generateur de simulation realiste du dashboard (`DemoSeedButton`, routes `demo-seed`/`demo-reset` et styles associes), mise a jour du footer en posture beta ouverte/production, suppression de docs historiques obsoletes, et actualisation des docs utiles vers beta ouverte controlee. Validation ciblee: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK; `npm run test --workspace @changethis/web` OK; `npm run build --workspace @changethis/web` OK; `git diff --check` OK avec avertissements CRLF existants.
+- [2026-05-18] Diagnostic CSP installation widget: le test serveur du script ne retourne plus de faux positif quand le snippet est présent mais bloqué par la Content Security Policy du site hôte; il vérifie `script-src`, `connect-src` et `style-src 'unsafe-inline'`, puis renvoie les directives à ajouter. Validation ciblée: `npm run test --workspace @changethis/web -- script-test-route.test.ts` OK; `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK.
+- [2026-05-18] Smoke beta controlee ops/docs: ajout d'une checklist staging/production, d'une page HTML externe pour charger le widget public et d'un script `npm run smoke:widget` qui verifie health/ready/bundles/CORS, avec POST reel uniquement via `--send`. Validation ciblee: `node --check scripts/smoke-widget-public.mjs` OK; `npm run smoke:widget -- --help` OK; `git diff --check -- docs/smoke-beta-controlee.fr.md docs/widget-external-smoke.html scripts/smoke-widget-public.mjs package.json AI_TODO.md` OK avec avertissements CRLF existants; smoke public sans cle OK avec `--skip-ready`, bloque sans skip sur `/api/ready` 503.
+- [2026-05-18] Checklist onboarding `/projects`: ajout d'une checklist beta visible dans le panneau latéral et réutilisée dans l'état vide, avec progression Git -> site -> script -> feedback test -> issue créée calculée depuis les sites et feedbacks existants. Validation ciblée: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK; `git diff --check -- apps/web/app/projects/page.tsx apps/web/app/styles.css` OK avec avertissements CRLF existants.
+- [2026-05-18] Sécurité API privée: ajout d'un helper `parsePrivateTextField` et validation explicite des overrides `issueDraft` sur `/api/projects/feedbacks/[id]/issue` (titre 240, description 12000, label 64 caractères) pour refuser les champs trop longs au lieu de les tronquer silencieusement. Validation ciblée: `npx tsx --test test/api-security.test.ts` OK; `npx eslint lib/api-security.ts 'app/api/projects/feedbacks/[id]/issue/route.ts' test/api-security.test.ts` OK; typecheck web relancé après intégration UI et OK.
+- [2026-05-18] Intégration finale beta contrôlée: alignement docs sur migrations `0001` à `0009`, validation monorepo `npm run typecheck` OK, `npm test` OK, `npm run migrations:check` OK avec warning connu `screenshot storage path/hash`, `git diff --check` OK avec avertissements CRLF existants. Smoke non destructif `npm run smoke:widget -- --base-url https://app.changethis.dev --skip-ready` OK pour health et bundles; smoke complet bloque sur `/api/ready` 503 comme attendu tant que le déploiement n'est pas ready.
 - [2026-05-02] Ajustement copy vitrine production: le bloc produit ne parle plus de beta/test (`La beta va tester trois choses`) mais vend la valeur finale de ChangeThis: capturer un retour precis, le qualifier en equipe, puis envoyer une tache exploitable vers Git. Les mentions beta restent reservees aux blocs d'acces/liste d'attente. Validation lancee apres changement.
 - [2026-05-02] Ajustement couleur secondaire vitrine: ciment encore eclairci (`#aeb5b1`, soft `#f6f7f6`) sans supprimer la presence des pictos/aplats; ombres adoucies. Validation lancee apres changement.
 - [2026-05-02] Ajustement couleur secondaire vitrine: ciment eclairci pour mieux se distinguer du texte noir (`#9ba19e`, light `#c7ccc9`, soft `#f2f4f3`) et ombres alignees. Validation lancee apres changement.

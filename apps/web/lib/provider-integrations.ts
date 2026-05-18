@@ -251,7 +251,7 @@ function getRuntimeProviderIntegrations(workspaceId?: string): RuntimeProviderIn
       disabled: githubDisabled,
       connectionConfigKeys: ["GITHUB_APP_SLUG", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"],
       credentialConfigKeys: ["GITHUB_TOKEN", "GITHUB_INSTALLATION_ID"],
-      managePath: process.env.GITHUB_MANAGE_URL ?? "https://github.com/settings/tokens",
+      managePath: process.env.GITHUB_MANAGE_URL ?? "https://github.com/settings/personal-access-tokens/new?name=ChangeThis",
       baseUrl: "https://github.com",
       callbackPath: "/api/integrations/github/callback",
       oauthScopes: [],
@@ -368,7 +368,7 @@ function mapSupabaseProviderIntegration(row: SupabaseProviderIntegrationRow, cre
     connectionConfigKeys: provider === "github" ? ["GITHUB_APP_SLUG", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"] : ["GITLAB_OAUTH_APP_ID", "GITLAB_OAUTH_APP_SECRET"],
     credentialConfigKeys: provider === "github" ? ["GITHUB_TOKEN", "GITHUB_INSTALLATION_ID"] : ["GITLAB_TOKEN"],
     managePath: provider === "github"
-      ? process.env.GITHUB_MANAGE_URL ?? "https://github.com/settings/tokens"
+      ? process.env.GITHUB_MANAGE_URL ?? "https://github.com/settings/personal-access-tokens/new?name=ChangeThis"
       : process.env.GITLAB_MANAGE_URL ?? `${baseUrl}/-/user_settings/personal_access_tokens`,
     baseUrl,
     callbackPath: `/api/integrations/${provider}/callback`,

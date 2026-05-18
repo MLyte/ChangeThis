@@ -1,4 +1,4 @@
-# Guide debutant: mettre ChangeThis en beta reelle
+# Guide debutant: mettre ChangeThis en beta ouverte
 
 Ce guide sert a brancher `app.changethis.dev` sur une vraie base et une vraie connexion.
 
@@ -28,7 +28,7 @@ npm run prod:check
 npm run typecheck --workspace @changethis/web
 ```
 
-Si `npm run prod:check` affiche seulement un warning sur les screenshots, ce n'est pas bloquant pour une beta privee.
+Si `npm run prod:check` affiche seulement un warning sur les screenshots, ce n'est pas bloquant pour une beta ouverte controlee.
 
 ## 2. Creer le projet Supabase
 
@@ -107,7 +107,7 @@ APP_URL=https://app.changethis.dev
 
 AUTH_MODE=supabase
 DATA_STORE=supabase
-ENABLE_PUBLIC_SIGNUP=false
+ENABLE_PUBLIC_SIGNUP=true
 
 NEXT_PUBLIC_SUPABASE_URL=https://PROJECT_REF.supabase.co
 SUPABASE_URL=https://PROJECT_REF.supabase.co
@@ -170,17 +170,17 @@ Attendu:
 
 - `/api/health` doit repondre `ok`.
 - `/api/ready` doit etre `ok` si Supabase, les migrations et les variables sont corrects.
-- `/login` doit afficher l'ecran de connexion beta.
+- `/login` doit afficher l'ecran de connexion beta et `/signup` doit suivre l'etat choisi pour `ENABLE_PUBLIC_SIGNUP`.
 
 ## 8. Smoke test beta
 
 Checklist manuelle:
 
-- Se connecter ou creer un compte beta selon le flux active.
+- Se connecter ou creer un compte beta selon le flux actif.
 - Verifier qu'un workspace existe.
 - Creer un site connecte.
 - Copier le script widget.
-- Ouvrir `/demo` ou une page client de test.
+- Ouvrir la page client de test sur l'origine autorisee.
 - Envoyer un feedback.
 - Verifier que le feedback apparait dans `/projects`.
 - Tester la creation d'issue GitHub si un token ou une App GitHub est configure.
@@ -204,11 +204,11 @@ Dans ce cas, donne-moi seulement:
 
 ## 10. Definition de fini
 
-La beta reelle est prete quand:
+La beta ouverte est prete quand:
 
 - `AUTH_MODE=supabase`;
 - `DATA_STORE=supabase`;
-- les migrations `0001` a `0008` sont appliquees;
+- les migrations `0001` a `0009` sont appliquees;
 - `app.changethis.dev` pointe vers Railway en HTTPS;
 - `/api/health` et `/api/ready` sont OK;
 - un feedback reel cree depuis le widget arrive dans `/projects`;

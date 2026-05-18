@@ -34,18 +34,17 @@ CHANGETHIS_DATA_DIR=.changethis-data
 | `NEXT_PUBLIC_SUPABASE_URL` | Expérimenter le mode Supabase | Active le client Supabase public. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Expérimenter le mode Supabase | Clé anonyme Supabase côté client. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Expérimenter le mode Supabase | Requis pour les appels REST serveur Supabase. |
-| `NEXT_PUBLIC_*_PROJECT_KEY` | Utiliser vos propres clés de demo-project | Remplace les clés fallback de démonstration. |
 
 ## Variables de production à connaître (références)
 
-- Chemin beta actuel: `AUTH_MODE=supabase`, `DATA_STORE=supabase`, Railway app, Supabase Auth/DB.
+- Chemin beta/prod actuel: `AUTH_MODE=supabase`, `DATA_STORE=supabase`, Railway app, Supabase Auth/DB.
 - `CHANGETHIS_SECRET_KEY` (obligatoire en production pour le stockage credential sécurisé).
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 - `SUPABASE_REST_TIMEOUT_MS=10000` optionnel.
 - Variables `GITHUB_APP_*`, `GITHUB_INSTALLATION_ID`, `GITLAB_OAUTH_*`, `*_WEBHOOK_SECRET` quand les intégrations OAuth/App sont activées.
 - Intégrations par workspace: `*_PROVIDER_INTEGRATION_ID` et connexions persistées.
 
-No-go production beta:
+No-go production:
 
 - `AUTH_MODE=local`
 - `DATA_STORE=file`

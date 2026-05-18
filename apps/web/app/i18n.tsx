@@ -30,14 +30,17 @@ const dictionaries: Record<Locale, Dictionary> = {
     "settings.gitConnections.title": "Connexions Git",
     "settings.users.title": "Utilisateurs",
     "settings.users.copy": "Les clients peuvent toujours envoyer un feedback sans compte. Ces accès servent uniquement à consulter et traiter les retours dans la console.",
-    "footer.copy": "Retours, connexions Git et code d'installation au même endroit.",
+    "footer.copy": "Bêta ouverte pour installer un bouton de feedback relié à GitHub ou GitLab.",
     "footer.support": "Support",
     "footer.license": "Licence",
     "footer.creator": "mathieuluyten.be",
     "footer.gitAccounts": "Comptes Git",
-    "login.eyebrow": "Accès console · bêta privée",
+    "footer.status.openBeta": "Bêta ouverte",
+    "footer.runtime.production": "Production",
+    "footer.runtime.local": "Local",
+    "login.eyebrow": "Accès console · bêta ouverte",
     "login.title": "Connexion ChangeThis",
-    "login.lede": "Connectez-vous pour accéder à la console privée. Les inscriptions publiques sont fermées pendant la bêta.",
+    "login.lede": "Connectez-vous pour accéder à la console. Les inscriptions peuvent être ouvertes ou temporairement fermées selon l'environnement.",
     "login.email": "E-mail professionnel",
     "login.password": "Mot de passe",
     "login.submit": "Continuer",
@@ -47,8 +50,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     "login.error": "Connexion impossible pour le moment. Vérifiez vos informations puis réessayez.",
     "login.redirectHint": "Vous serez redirigé vers la page demandée après connexion.",
     "login.noBackend": "Authentification serveur indisponible dans cet environnement.",
-    "login.privateBeta.title": "Bêta privée",
-    "login.privateBeta.copy": "Les inscriptions sont fermées pour le moment. L'accès à la console se fait uniquement sur invitation ou avec un compte déjà créé.",
+    "login.privateBeta.title": "Bêta ouverte contrôlée",
+    "login.privateBeta.copy": "Les inscriptions peuvent être temporairement fermées pendant une opération. Connectez-vous avec un compte existant ou réessayez plus tard.",
     "auth.confirm.title": "Connexion sécurisée en cours.",
     "auth.confirm.copy": "Nous vérifions le lien reçu par e-mail avant de finaliser votre compte.",
     "signup.eyebrow": "Créer un compte",
@@ -91,28 +94,28 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.workflow.3.strong": "Tâche prête.",
     "home.siteState.ready": "Prêt",
     "home.siteState.configure": "À configurer",
-    "home.hero.eyebrow": "Disponible prochainement",
+    "home.hero.eyebrow": "Bêta ouverte",
     "home.hero.statement": "Transformez les retours clients de vos sites en tâches prêtes à envoyer vers GitHub ou GitLab.",
     "home.hero.statement.prefix": "Transformez les retours clients de vos sites en tâches prêtes à envoyer vers",
     "home.hero.statement.or": "ou",
     "home.hero.statement.suffix": "",
-    "home.hero.lede": "ChangeThis est en développement. Les premiers accès ouvriront progressivement.",
+    "home.hero.lede": "ChangeThis est en bêta ouverte contrôlée. Les accès restent progressifs pour garder un support propre.",
     "home.hero.primary": "Traiter les retours",
     "home.hero.signup": "Accéder à la bêta",
     "home.hero.login": "J'ai déjà un compte",
     "home.hero.secondary": "Envoyer un retour test",
     "home.hero.trust": "Les visiteurs envoient des retours sans compte. Seul votre espace d'équipe est protégé.",
-    "home.hero.privateBeta": "Bêta privée\u00a0: les inscriptions sont actuellement fermées. Utilisez un compte existant pour accéder à la console.",
-    "home.waitlist.callout.title": "Recevoir une invitation",
-    "home.waitlist.callout.copy": "Entrez votre e-mail professionnel pour être prévenu quand un accès bêta correspondra à votre usage.",
+    "home.hero.privateBeta": "Bêta ouverte contrôlée\u00a0: les inscriptions peuvent être temporairement fermées pendant une opération.",
+    "home.waitlist.callout.title": "Rejoindre la bêta",
+    "home.waitlist.callout.copy": "Entrez votre e-mail professionnel pour démarrer ou recevoir un accès dès qu'une place est disponible.",
     "home.signup.callout.title": "Accès ouvert",
     "home.signup.callout.copy": "Créez votre espace équipe et commencez à connecter vos sites dès maintenant.",
     "home.waitlist.label": "E-mail professionnel",
-    "home.waitlist.submit": "S'inscrire à la bêta",
+    "home.waitlist.submit": "Rejoindre la bêta",
     "home.waitlist.status.joined": "C'est noté. Nous vous préviendrons dès que l'accès public ouvre.",
     "home.waitlist.status.existing": "Cet e-mail est déjà dans la liste. Votre demande est bien enregistrée.",
     "home.waitlist.status.error": "Inscription impossible pour le moment. Vérifiez l'e-mail puis réessayez.",
-    "home.waitlist.point.1": "Inscrivez-vous à la waiting list dès maintenant.",
+    "home.waitlist.point.1": "Créez votre accès ou laissez votre e-mail.",
     "home.waitlist.point.2": "Pensé pour GitHub ou GitLab.",
     "home.problem.eyebrow": "Pourquoi ChangeThis",
     "home.problem.title": "Les retours web utiles se perdent avant d'arriver au bon endroit.",
@@ -193,15 +196,15 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.workflow.triage.copy": "L'espace d'équipe regroupe les retours par site, état et destination pour décider vite.",
     "home.workflow.issue.title": "La tâche part au bon endroit",
     "home.workflow.issue.copy": "Le contexte utile accompagne la tâche Git, au lieu de rester perdu dans un fil de discussion.",
-    "home.beta.scope.eyebrow": "Cadre bêta",
-    "home.beta.scope.title.main": "Disponible prochainement.",
+    "home.beta.scope.eyebrow": "Cadre bêta ouverte",
+    "home.beta.scope.title.main": "Ouverte progressivement.",
     "home.beta.note.1": "Les visiteurs n'ont pas besoin de compte pour envoyer un retour.",
     "home.beta.note.2": "Retrouvez vos repos dans le dashboard pour lier correctement vos sites et projets.",
     "home.beta.note.3": "Fonctionnel sur desktop, mobile et tablette.",
     "home.closing.eyebrow": "Liste d'attente",
     "home.closing.title.small": "Réservez votre accès",
     "home.closing.title.main": "dès maintenant",
-    "home.closing.copy": "Laissez votre e-mail pour être invité quand la bêta pourra couvrir votre cas\u00a0: site à connecter, retours à qualifier, tâches Git à préparer.",
+    "home.closing.copy": "Laissez votre e-mail pour rejoindre la bêta ou préparer votre accès\u00a0: site à connecter, retours à qualifier, tâches Git à préparer.",
     "home.ops.label": "État opérationnel",
     "home.product.eyebrow": "Première vue utilisable",
     "home.product.title": "Tout ce qu'il faut pour passer du signal client à l'action.",
@@ -220,8 +223,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.workflow.eyebrow": "Flux produit",
     "home.workflow.title": "As easy as A, B, C",
     "home.signup.eyebrow": "Bêta privée",
-    "home.signup.title": "Accès sur invitation, espace privé, bouton de retour testable.",
-    "home.signup.copy": "La démo reste publique pour tester le bouton de retour. L'accès à l'espace d'équipe est limité aux comptes déjà créés pendant la phase bêta.",
+    "home.signup.title": "Espace équipe, sites connectés, bouton de retour prêt à installer.",
+    "home.signup.copy": "La bêta ouverte permet de créer un compte quand l'environnement autorise les inscriptions. La démo reste un bac à sable, pas une preuve d'installation client.",
     "home.signup.primary": "Se connecter",
     "home.signup.secondary": "Voir la démo",
     "home.install.eyebrow": "Installation",
@@ -246,7 +249,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.preview.header": "Retours entrants",
     "home.preview.recent": "récents",
     "home.preview.empty.title": "Aucun retour pour le moment",
-    "home.preview.empty.copy": "Envoyez un retour depuis la démo pour alimenter cet espace.",
+    "home.preview.empty.copy": "Installez le widget sur un site connecté pour alimenter cet espace.",
     "home.preview.ready": "prêt",
     "home.loop.aria": "Aperçu du parcours ChangeThis",
     "home.loop.section.eyebrow": "Parcours produit",
@@ -358,7 +361,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "projects.queue.done": "Traités",
     "projects.queue.done.copy": "issues déjà envoyées.",
     "projects.empty.title": "Aucun retour actif",
-    "projects.empty.copy": "Envoyez un retour depuis la démo pour créer une première carte dans la boîte de réception. Les retours ignorés restent archivés et les nouveaux retours réapparaîtront ici.",
+    "projects.empty.copy": "Installez le widget sur un site connecté, envoyez un premier retour, puis traitez-le depuis cette boîte de réception. Les retours ignorés restent archivés et les nouveaux retours réapparaîtront ici.",
     "projects.ops.eyebrow": "États et reprise",
     "projects.ops.title": "Ce que ChangeThis garde visible",
     "projects.ops.provider.title": "Erreur fournisseur",
@@ -451,14 +454,17 @@ const dictionaries: Record<Locale, Dictionary> = {
     "settings.gitConnections.title": "Git connections",
     "settings.users.title": "Users",
     "settings.users.copy": "Clients can still submit feedback without an account. These accounts only control access to the console and feedback processing.",
-    "footer.copy": "Feedback, Git connections, and install code in one place.",
+    "footer.copy": "Open beta for installing a feedback button connected to GitHub or GitLab.",
     "footer.support": "Support",
     "footer.license": "License",
     "footer.creator": "mathieuluyten.be",
     "footer.gitAccounts": "Git accounts",
-    "login.eyebrow": "Console access · private beta",
+    "footer.status.openBeta": "Open beta",
+    "footer.runtime.production": "Production",
+    "footer.runtime.local": "Local",
+    "login.eyebrow": "Console access · open beta",
     "login.title": "Sign in to ChangeThis",
-    "login.lede": "Sign in to access the private console. Public signups are closed during the beta.",
+    "login.lede": "Sign in to access the console. Signups can be open or temporarily closed depending on the environment.",
     "login.email": "Work email",
     "login.password": "Password",
     "login.submit": "Continue",
@@ -468,8 +474,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     "login.error": "Sign-in is not available right now. Check your details and try again.",
     "login.redirectHint": "You will be redirected to the requested page after sign-in.",
     "login.noBackend": "Server authentication is unavailable in this environment.",
-    "login.privateBeta.title": "Private beta",
-    "login.privateBeta.copy": "Signups are currently closed. Console access is limited to invited users or accounts that already exist.",
+    "login.privateBeta.title": "Controlled open beta",
+    "login.privateBeta.copy": "Signups can be temporarily closed during operations. Sign in with an existing account or try again later.",
     "auth.confirm.title": "Secure sign-in in progress.",
     "auth.confirm.copy": "We are verifying the email link before finalizing your account.",
     "signup.eyebrow": "Create an account",
@@ -512,25 +518,25 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.workflow.3.strong": "Ready task.",
     "home.siteState.ready": "Ready",
     "home.siteState.configure": "Needs setup",
-    "home.hero.eyebrow": "Available soon",
+    "home.hero.eyebrow": "Open beta",
     "home.hero.statement": "Turn website customer feedback into tasks ready for GitHub or GitLab.",
     "home.hero.statement.prefix": "Turn website customer feedback into tasks ready for",
     "home.hero.statement.or": "or",
     "home.hero.statement.suffix": "",
-    "home.hero.lede": "ChangeThis is in development. Early access will open gradually.",
+    "home.hero.lede": "ChangeThis is in controlled open beta. Access stays progressive so support remains clean.",
     "home.hero.primary": "Review feedback",
     "home.hero.signup": "Access the beta",
     "home.hero.login": "I already have an account",
     "home.hero.secondary": "Send test feedback",
     "home.hero.trust": "Visitors send feedback without an account. Only your team space is protected.",
-    "home.hero.privateBeta": "Private beta: signups are currently closed. Use an existing account to access the console.",
-    "home.waitlist.callout.title": "Get an invitation",
-    "home.waitlist.callout.copy": "Enter your work email to be notified when a beta seat matches your use case.",
+    "home.hero.privateBeta": "Controlled open beta: signups can be temporarily closed during operations.",
+    "home.waitlist.callout.title": "Join the beta",
+    "home.waitlist.callout.copy": "Enter your work email to start or receive access as soon as a seat is available.",
     "home.signup.callout.title": "Access is open",
     "home.signup.callout.copy": "Create your team space and start connecting your sites now.",
     "home.waitlist.label": "Work email",
     "home.waitlist.submit": "Join the beta",
-    "home.waitlist.status.joined": "You're on the list. We will let you know when public access opens.",
+    "home.waitlist.status.joined": "You're on the list. We will let you know as soon as access is ready.",
     "home.waitlist.status.existing": "This email is already on the list. You're safely in.",
     "home.waitlist.status.error": "We cannot add this email right now. Check it and try again.",
     "home.waitlist.point.1": "Join the waiting list now.",
@@ -614,15 +620,15 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.workflow.triage.copy": "The team space groups feedback by site, state, and destination so decisions stay quick.",
     "home.workflow.issue.title": "The task lands correctly",
     "home.workflow.issue.copy": "Useful context follows the Git task instead of getting lost in a chat thread.",
-    "home.beta.scope.eyebrow": "Beta scope",
-    "home.beta.scope.title.main": "Available soon.",
+    "home.beta.scope.eyebrow": "Open beta scope",
+    "home.beta.scope.title.main": "Opening progressively.",
     "home.beta.note.1": "Visitors do not need an account to send feedback.",
     "home.beta.note.2": "Find your repos in the dashboard to connect each site to the right project.",
     "home.beta.note.3": "Works on desktop, mobile, and tablet.",
     "home.closing.eyebrow": "Waitlist",
     "home.closing.title.small": "Reserve your access",
     "home.closing.title.main": "now",
-    "home.closing.copy": "Leave your email to be invited when the beta can cover your case: site to connect, feedback to review, Git tasks to prepare.",
+    "home.closing.copy": "Leave your email to join the beta or prepare your access: site to connect, feedback to review, Git tasks to prepare.",
     "home.ops.label": "Operational status",
     "home.product.eyebrow": "Ready-to-use view",
     "home.product.title": "Everything you need to turn customer signals into action.",
@@ -640,9 +646,9 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.product.retry.copy": "API failures are visible, manually replayable, then automatable through the retries route.",
     "home.workflow.eyebrow": "Product flow",
     "home.workflow.title": "As easy as A, B, C",
-    "home.signup.eyebrow": "Private beta",
-    "home.signup.title": "Invite-only access, private team space, testable feedback button.",
-    "home.signup.copy": "The demo stays public to test the feedback button. Team-space access is limited to accounts that were already created during the beta phase.",
+    "home.signup.eyebrow": "Open beta",
+    "home.signup.title": "Team space, connected sites, feedback button ready to install.",
+    "home.signup.copy": "The open beta can accept new accounts when signups are enabled for the environment. The demo remains a sandbox, not proof of a customer install.",
     "home.signup.primary": "Sign in",
     "home.signup.secondary": "View demo",
     "home.install.eyebrow": "Installation",
@@ -651,7 +657,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.install.copy": "The test code follows the same path as production. The demo page lets you test the full flow without a customer account.",
     "home.preview.label": "ChangeThis console preview",
     "home.preview.badge": "Beta preview",
-    "home.preview.private": "Private access",
+    "home.preview.private": "Open beta access",
     "home.preview.metric.signal": "client signal",
     "home.preview.metric.viewport": "mobile",
     "home.preview.metric.destination": "prepared",
@@ -667,7 +673,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.preview.header": "Incoming feedback",
     "home.preview.recent": "recent",
     "home.preview.empty.title": "No feedback yet",
-    "home.preview.empty.copy": "Send feedback from the demo to populate this space.",
+    "home.preview.empty.copy": "Install the widget on a connected site to populate this space.",
     "home.preview.ready": "ready",
     "home.loop.aria": "ChangeThis journey preview",
     "home.loop.section.eyebrow": "Product path",
@@ -779,7 +785,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "projects.queue.done": "Processed",
     "projects.queue.done.copy": "issues already sent.",
     "projects.empty.title": "No active feedback",
-    "projects.empty.copy": "Send feedback from the demo to create the first inbox card. Ignored feedback stays archived and new feedback will reappear here.",
+    "projects.empty.copy": "Install the widget on a connected site, send the first feedback, then process it from this inbox. Ignored feedback stays archived and new feedback will reappear here.",
     "projects.ops.eyebrow": "States and recovery",
     "projects.ops.title": "What ChangeThis keeps visible",
     "projects.ops.provider.title": "Provider error",
@@ -912,9 +918,9 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
   if (locale === "en") {
     switch (key) {
       case "home.hero.lede":
-        return <>ChangeThis is <strong>in development</strong>. Early access will open gradually.</>;
+        return <>ChangeThis is in <strong>controlled open beta</strong>. Access stays progressive so support remains clean.</>;
       case "home.waitlist.callout.copy":
-        return <>Enter your work email to be notified when <strong>a beta seat matches your use case</strong>.</>;
+        return <>Enter your work email to start or receive access <strong>as soon as a seat is available</strong>.</>;
       case "home.signup.callout.copy":
         return <>Create your team space and start connecting <strong>your sites</strong> now.</>;
       case "home.problem.point.1":
@@ -960,7 +966,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
       case "home.beta.note.3":
         return <>Works on <strong>desktop, mobile, and tablet</strong>.</>;
       case "home.closing.copy":
-        return <>Leave your email to be invited when the beta can cover your case: <strong>site to connect, feedback to review, Git tasks to prepare</strong>.</>;
+        return <>Leave your email to join the beta or prepare your access: <strong>site to connect, feedback to review, Git tasks to prepare</strong>.</>;
       default:
         return undefined;
     }
@@ -968,9 +974,9 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
 
   switch (key) {
     case "home.hero.lede":
-      return <>ChangeThis est <strong>en développement</strong>. Les premiers accès ouvriront progressivement.</>;
+      return <>ChangeThis est en <strong>bêta ouverte contrôlée</strong>. Les accès restent progressifs pour garder un support propre.</>;
     case "home.waitlist.callout.copy":
-      return <>Entrez votre e-mail professionnel pour être prévenu quand <strong>un accès bêta correspondra à votre usage</strong>.</>;
+      return <>Entrez votre e-mail professionnel pour démarrer ou recevoir un accès <strong>dès qu&apos;une place est disponible</strong>.</>;
     case "home.signup.callout.copy":
       return <>Créez votre espace équipe et commencez à connecter <strong>vos sites</strong> dès maintenant.</>;
     case "home.problem.point.1":
@@ -1016,7 +1022,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
     case "home.beta.note.3":
       return <>Fonctionnel sur <strong>desktop, mobile et tablette</strong>.</>;
     case "home.closing.copy":
-      return <>Laissez votre e-mail pour être invité quand la bêta pourra couvrir votre cas{"\u00a0"}: <strong>site à connecter, retours à qualifier, tâches Git à préparer</strong>.</>;
+      return <>Laissez votre e-mail pour rejoindre la bêta ou préparer votre accès{"\u00a0"}: <strong>site à connecter, retours à qualifier, tâches Git à préparer</strong>.</>;
     default:
       return undefined;
   }

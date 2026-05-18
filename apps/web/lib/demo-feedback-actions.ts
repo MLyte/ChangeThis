@@ -36,6 +36,5 @@ export async function resolveFeedbackForAction(
 export function isDemoFeedback(feedback: StoredFeedback): boolean {
   const testRunId = feedback.payload.metadata.app?.testRunId;
 
-  return testRunId?.startsWith("manual-demo-") === true
-    || testRunId?.startsWith("realistic-demo-seed-") === true;
+  return testRunId?.startsWith("manual-demo-") === true;
 }

@@ -13,7 +13,6 @@ import { ProviderBadge } from "../provider-badge";
 import { FeedbackActions } from "./feedback-actions";
 import { BulkIssueForm } from "./bulk-issue-form";
 import { DashboardFilterAutoSubmit } from "./dashboard-filter-auto-submit";
-import { DemoSeedButton } from "./demo-seed-button";
 import { RetryDueButton } from "./retry-due-button";
 import { ScreenshotPreview } from "./screenshot-preview";
 
@@ -37,6 +36,18 @@ type DashboardFilters = {
   site: string;
   status: DashboardStatusFilter;
   type: "all" | "comment" | "pin" | "screenshot";
+};
+
+type OnboardingStepStatus = "done" | "current" | "pending";
+
+type OnboardingChecklistStep = {
+  actionHref?: string;
+  actionLabel?: string;
+  copy: string;
+  icon: LucideIcon;
+  index: string;
+  status: OnboardingStepStatus;
+  title: string;
 };
 
 const statusLabelKeys: Record<FeedbackStatus, string> = {
@@ -86,7 +97,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const filters = parseDashboardFilters(params);
   const projects = await listConfiguredProjects(workspaceId);
   const feedbacks = await getFeedbackRepository().list({ workspaceId });
-  const hasLiveDemo = feedbacks.some(isSeedDemoFeedback);
   const filteredFeedbacks = feedbacks.filter((feedback) => matchesDashboardFilters(feedback, filters));
   const activeFeedbacks = feedbacks.filter(isActiveFeedback);
   const historyFeedbacks = feedbacks.filter(isHistoryFeedback);
@@ -103,6 +113,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const readyProjects = projects.filter((project) => project.issueTarget.namespace && project.issueTarget.project).length;
   const hasActiveFilters = isFilteringDashboard(filters);
   const hasConfiguredSite = projects.length > 0;
+  const onboardingSteps = buildOnboardingChecklist(projects, feedbacks);
 
   return (
     <main className="shell">
@@ -123,14 +134,13 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 <h2 id="local-inbox-title"><T k="projects.inbox.title" /></h2>
             </div>
             <div className="inbox-toolbar">
-              <DemoSeedButton hasLiveDemo={hasLiveDemo} />
               {retryFeedbacks.length > 1 ? <RetryDueButton count={retryFeedbacks.length} /> : null}
               <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
             </div>
           </div>
 
             {!hasConfiguredSite ? (
-              <ProjectsOnboardingEmptyState />
+              <ProjectsOnboardingEmptyState steps={onboardingSteps} />
             ) : (
               <>
                 <DashboardViewTabs
@@ -174,6 +184,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           </section>
 
           <aside className="dashboard-side-panel" aria-label="Contexte ChangeThis">
+            <ProjectsOnboardingChecklist steps={onboardingSteps} />
+
             <section className="side-panel-section status-side-section" aria-labelledby="status-side-title">
               <div className="side-panel-heading">
                 <p className="eyebrow">Synthèse</p>
@@ -272,7 +284,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   );
 }
 
-function ProjectsOnboardingEmptyState() {
+function ProjectsOnboardingEmptyState({ steps }: { steps: OnboardingChecklistStep[] }) {
   return (
     <div className="empty-state compact-empty-state projects-onboarding-empty">
       <div>
@@ -281,30 +293,7 @@ function ProjectsOnboardingEmptyState() {
         <p>Connectez Git, créez un site autorisé, installez le script puis envoyez un feedback test depuis ce site pour vérifier le circuit complet.</p>
       </div>
       <div className="onboarding-steps projects-onboarding-steps" aria-label="Étapes pour activer la file de retours">
-        <OnboardingStep
-          icon={GitBranch}
-          index="1"
-          title="Connexion Git"
-          copy="Activez GitHub ou GitLab pour que chaque retour puisse devenir une issue."
-        />
-        <OnboardingStep
-          icon={Globe2}
-          index="2"
-          title="Site réel"
-          copy="Créez le site, choisissez son domaine autorisé et le dépôt cible."
-        />
-        <OnboardingStep
-          icon={Code2}
-          index="3"
-          title="Script widget"
-          copy="Copiez la balise générée sur le site puis lancez le test d'installation."
-        />
-        <OnboardingStep
-          icon={MessageSquareText}
-          index="4"
-          title="Feedback test"
-          copy="Envoyez un retour depuis le site configuré pour alimenter cette file."
-        />
+        {steps.map((step) => <OnboardingStep key={step.index} {...step} />)}
       </div>
       <div className="empty-state-actions">
         <Link className="button" href="/settings/git-connections">
@@ -324,26 +313,60 @@ function ProjectsOnboardingEmptyState() {
   );
 }
 
+function ProjectsOnboardingChecklist({ steps }: { steps: OnboardingChecklistStep[] }) {
+  const completedCount = steps.filter((step) => step.status === "done").length;
+
+  return (
+    <section className="side-panel-section beta-onboarding-checklist" aria-labelledby="beta-onboarding-title">
+      <div className="side-panel-heading">
+        <p className="eyebrow">Bêta privée</p>
+        <h2 id="beta-onboarding-title">Checklist activation</h2>
+      </div>
+      <div className="route-summary beta-onboarding-progress" aria-label={`${completedCount} étapes terminées sur ${steps.length}`}>
+        <strong>{completedCount}/{steps.length}</strong>
+        <span>boucle Git - site - script - feedback - issue</span>
+      </div>
+      <div className="onboarding-steps beta-onboarding-steps" aria-label="Checklist onboarding beta">
+        {steps.map((step) => <OnboardingStep key={step.index} {...step} compact />)}
+      </div>
+    </section>
+  );
+}
+
 function OnboardingStep({
+  actionHref,
+  actionLabel,
+  compact = false,
   copy,
   icon: Icon,
   index,
+  status,
   title
 }: {
+  actionHref?: string;
+  actionLabel?: string;
+  compact?: boolean;
   copy: string;
   icon: LucideIcon;
   index: string;
+  status?: OnboardingStepStatus;
   title: string;
 }) {
+  const statusLabel = status === "done" ? "Fait" : status === "current" ? "À faire" : "En attente";
+
   return (
-    <div className="onboarding-step">
+    <div className={`onboarding-step${status ? ` ${status}` : ""}${compact ? " compact-onboarding-step" : ""}`}>
       <span aria-hidden="true">{index}</span>
       <div>
         <strong>
           <Icon aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
           {title}
+          {status ? <small className="onboarding-step-status">{statusLabel}</small> : null}
         </strong>
         <p>{copy}</p>
+        {actionHref && actionLabel && status !== "done" ? (
+          <Link className="inline-link onboarding-step-action" href={actionHref}>{actionLabel}</Link>
+        ) : null}
       </div>
     </div>
   );
@@ -674,6 +697,71 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   );
 }
 
+function buildOnboardingChecklist(projects: ChangeThisProject[], feedbacks: StoredFeedback[]): OnboardingChecklistStep[] {
+  const clientFeedbacks = feedbacks;
+  const hasGitRoute = projects.some((project) => project.issueTarget.namespace && project.issueTarget.project);
+  const hasSite = projects.length > 0;
+  const hasFeedbackTest = clientFeedbacks.length > 0;
+  const hasCreatedIssue = clientFeedbacks.some((feedback) =>
+    Boolean(feedback.externalIssue?.url) || feedback.status === "sent_to_provider" || feedback.status === "resolved"
+  );
+  const doneStates = [hasGitRoute, hasSite, hasFeedbackTest, hasFeedbackTest, hasCreatedIssue];
+  const currentIndex = doneStates.findIndex((isDone) => !isDone);
+  const statusFor = (index: number): OnboardingStepStatus => {
+    if (doneStates[index]) {
+      return "done";
+    }
+
+    return index === currentIndex ? "current" : "pending";
+  };
+
+  return [
+    {
+      actionHref: "/settings/git-connections",
+      actionLabel: "Connecter Git",
+      copy: "Connectez GitHub ou GitLab, puis choisissez le dépôt qui recevra les issues.",
+      icon: GitBranch,
+      index: "1",
+      status: statusFor(0),
+      title: "Git connecté"
+    },
+    {
+      actionHref: "/settings/connected-sites",
+      actionLabel: "Créer le site",
+      copy: "Créez un site avec une origine autorisée et une destination Git valide.",
+      icon: Globe2,
+      index: "2",
+      status: statusFor(1),
+      title: "Site configuré"
+    },
+    {
+      actionHref: "/settings/connected-sites",
+      actionLabel: "Voir le script",
+      copy: "Installez la balise widget générée avec la clé publique du site.",
+      icon: Code2,
+      index: "3",
+      status: statusFor(2),
+      title: "Script installé"
+    },
+    {
+      copy: "Envoyez un feedback test depuis le site configuré et vérifiez qu'il arrive ici.",
+      icon: MessageSquareText,
+      index: "4",
+      status: statusFor(3),
+      title: "Feedback reçu"
+    },
+    {
+      actionHref: "/projects?status=active",
+      actionLabel: "Créer l'issue",
+      copy: "Créez l'issue externe depuis le feedback pour valider la boucle complète.",
+      icon: CheckCircle2,
+      index: "5",
+      status: statusFor(4),
+      title: "Issue créée"
+    }
+  ];
+}
+
 function parseDashboardFilters(params?: {
   provider?: string;
   q?: string;
@@ -772,10 +860,6 @@ function countFeedbackStatuses(feedbacks: StoredFeedback[]): Record<FeedbackStat
     resolved: 0,
     ignored: 0
   });
-}
-
-function isSeedDemoFeedback(feedback: StoredFeedback): boolean {
-  return feedback.payload.metadata.app?.testRunId?.startsWith("realistic-demo-seed-") === true;
 }
 
 function isActiveFeedback(feedback: StoredFeedback): boolean {

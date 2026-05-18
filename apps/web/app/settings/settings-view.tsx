@@ -31,7 +31,6 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
   const workspaceId = session.workspace.id;
   const projects = await listConfiguredProjects(workspaceId);
   const feedbacks = await getFeedbackRepository().list({ workspaceId });
-  const hasLiveDemo = feedbacks.some((feedback) => feedback.payload.metadata.app?.testRunId?.startsWith("realistic-demo-seed-") === true);
   const projectViews = projects.map((project) => {
     const projectFeedbacks = feedbacks.filter((feedback) => feedback.projectKey === project.publicKey);
     return {
@@ -64,7 +63,6 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
       <section className="dashboard">
         <IssueDestinationSetup
           integrations={providerIntegrations}
-          hasLiveDemo={hasLiveDemo}
           projects={projectViews}
           canManageMembers={session.workspace.role === "admin" || session.workspace.role === "owner"}
           currentUserId={session.user.id}

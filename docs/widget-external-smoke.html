@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChangeThis widget external smoke</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #171717;
+      background: #f5f5f5;
+    }
+
+    main {
+      width: min(960px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 48px 0 80px;
+    }
+
+    header,
+    section {
+      border: 1px solid #d9d9d9;
+      background: #ffffff;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    h1,
+    h2,
+    p {
+      margin-top: 0;
+    }
+
+    code {
+      background: #eeeeee;
+      padding: 2px 5px;
+    }
+
+    .hostile-host-css button,
+    .hostile-host-css textarea {
+      border-radius: 0 !important;
+      font-family: "Times New Roman", serif !important;
+      letter-spacing: 2px !important;
+      text-transform: uppercase !important;
+    }
+
+    .status {
+      display: grid;
+      gap: 8px;
+      padding: 16px;
+      background: #f8f8f8;
+      border: 1px solid #dddddd;
+    }
+  </style>
+</head>
+<body class="hostile-host-css">
+  <main>
+    <header>
+      <h1>Smoke widget public externe</h1>
+      <p>Cette page charge <code>/widget.js</code> depuis une app ChangeThis deployee et simule un site client hors dashboard.</p>
+      <p>Servir cette page depuis une origine autorisee pour le projet teste, puis ajouter <code>?app=APP_URL&amp;project=PROJECT_PUBLIC_KEY</code>.</p>
+    </header>
+
+    <section class="status" aria-live="polite">
+      <strong>Configuration chargee</strong>
+      <span id="smoke-app"></span>
+      <span id="smoke-project"></span>
+      <span id="smoke-origin"></span>
+      <span id="smoke-script"></span>
+    </section>
+
+    <section>
+      <h2>Contenu hote</h2>
+      <p>Le CSS de cette page force volontairement les boutons et champs hote. Le widget doit rester utilisable grace a son Shadow DOM.</p>
+      <form>
+        <label>
+          Champ sensible factice
+          <textarea rows="4" autocomplete="off">Ne pas utiliser de vraie donnee sensible dans un smoke.</textarea>
+        </label>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const appUrl = (params.get("app") || "https://app.changethis.dev").replace(/\/+$/, "");
+    const projectKey = params.get("project") || "";
+    const locale = params.get("locale") || "fr";
+    const position = params.get("position") || "bottom-right";
+    const variant = params.get("variant") || "review";
+    const scriptUrl = `${appUrl}/widget.js`;
+
+    document.getElementById("smoke-app").textContent = `App: ${appUrl}`;
+    document.getElementById("smoke-project").textContent = `Project key: ${projectKey || "(manquante)"}`;
+    document.getElementById("smoke-origin").textContent = `Origin navigateur: ${window.location.origin}`;
+    document.getElementById("smoke-script").textContent = `Script: ${scriptUrl}`;
+
+    if (projectKey) {
+      const script = document.createElement("script");
+      script.src = scriptUrl;
+      script.dataset.project = projectKey;
+      script.dataset.locale = locale;
+      script.dataset.position = position;
+      script.dataset.buttonVariant = variant;
+      script.dataset.environment = "beta-smoke";
+      script.dataset.scenario = "external-widget-smoke";
+      script.dataset.testRunId = `external-smoke-${new Date().toISOString()}`;
+      document.body.appendChild(script);
+    }
+  </script>
+</body>
+</html>

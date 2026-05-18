@@ -97,10 +97,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <div className="home-hero-copy">
           <p className="eyebrow"><T k="home.hero.eyebrow" /></p>
           <h1 id="product-title" className="product-title">
-            <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
             <span className="brand-wordmark hero-wordmark" aria-label="ChangeThis">
               <span>Change</span><span className="brand-wordmark-accent">This</span>
             </span>
+            <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
           </h1>
           <HeroStatement />
           <p className="lede">

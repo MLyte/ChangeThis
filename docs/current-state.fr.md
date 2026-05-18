@@ -1,16 +1,16 @@
 # Etat actuel ChangeThis
 
-Date de reference: 2026-05-02
+Date de reference: 2026-05-19
 
 Ce document sert de source courte pour synchroniser les autres fichiers Markdown du repo.
 
 ## Produit
 
-- ChangeThis est en beta privee invitation-only.
-- Le signup public reste ferme par defaut avec `ENABLE_PUBLIC_SIGNUP=false`.
-- Branche dev `codex/full-live-signup`: le signup public classique est ouvert avec `ENABLE_PUBLIC_SIGNUP=true` et `/signup` demande e-mail + mot de passe avant creation immediate du workspace.
+- ChangeThis est en beta ouverte controlee: le produit peut accueillir de vrais comptes, mais l'acces reste surveille et reversible.
+- Le signup public peut etre ouvert avec `ENABLE_PUBLIC_SIGNUP=true`; garder `false` sur un environnement reserve ou pendant une pause operationnelle.
 - La boucle produit actuelle est: site connecte -> widget public -> feedback -> inbox `/projects` -> creation manuelle d'issue GitHub/GitLab.
-- La page `/demo` reste une demo produit distincte d'un vrai test d'installation client.
+- La page `/demo` reste un bac a sable widget local/public, distinct d'un vrai test d'installation client.
+- Le dashboard ne contient plus de generateur de simulation realiste; la preuve beta passe par un site connecte reel et le test d'installation du script.
 - Le dashboard admin/app peut rester large; les pages publiques doivent eviter les layouts full-width non controles.
 
 ## Stack actuelle
@@ -18,10 +18,10 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 - App web: Next.js App Router dans `apps/web`.
 - Widget public: `packages/widget`, servi par `/widget.js` et `/widget.global.js`.
 - Types/protocole partages: `packages/shared`.
-- Hebergement beta recommande: Railway pour l'app.
+- Hebergement beta/prod: Railway pour l'app.
 - DNS: OVH pour `changethis.dev`, cible app `https://app.changethis.dev`.
-- Auth beta: Supabase Auth avec `AUTH_MODE=supabase`.
-- Store beta reel: Supabase REST/Postgres avec `DATA_STORE=supabase`.
+- Auth beta/prod: Supabase Auth avec `AUTH_MODE=supabase`.
+- Store beta/prod: Supabase REST/Postgres avec `DATA_STORE=supabase`.
 - Store fichier: reserve au dev local avec `DATA_STORE=file`.
 - Railway PostgreSQL natif et `DATABASE_URL`: non consommes par le code actuel.
 
@@ -33,7 +33,7 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 - `npm run build:prod` lance les checks prod puis le build complet.
 - `/api/health` repond minimalement et sans cache.
 - `/api/ready` verifie auth, mode prod, store, secret applicatif, service role et tables Supabase attendues.
-- `AUTH_MODE=local` et `DATA_STORE=file` sont des no-go en production beta.
+- `AUTH_MODE=local` et `DATA_STORE=file` sont des no-go en production.
 
 ## Donnees deja branchees
 
@@ -41,15 +41,15 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 - Sites/projets connectes et cles publiques actives.
 - Feedbacks, statuts, evenements, tentatives provider et issues externes.
 - Integrations provider par workspace et credentials chiffres applicativement.
-- Migrations Supabase `0001` a `0008`.
+- Migrations Supabase `0001` a `0009`.
 
-## Limites connues avant beta plus large
+## Limites connues avant production commerciale
 
 - Les screenshots restent transitoirement stockes en data URL; Supabase Storage ou stockage objet reste a brancher.
 - Le rate limit public reste memoire et doit passer sur un store partage pour multi-instance.
 - L'idempotence provider et les verrous anti double issue doivent etre renforces.
 - Les retries ne remplacent pas encore une queue durable.
-- L'onboarding premier site reste a simplifier et guider.
+- L'onboarding premier site reste a simplifier, mais le chemin Git -> site -> script -> feedback -> issue est utilisable.
 - Les tests RLS reels, backup/restore et rollback migrations restent a valider sur staging.
 
 ## Licences

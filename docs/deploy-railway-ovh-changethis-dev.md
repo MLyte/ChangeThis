@@ -103,7 +103,7 @@ NODE_ENV=production
 NEXT_PUBLIC_APP_URL=https://app.changethis.dev
 AUTH_MODE=supabase
 DATA_STORE=supabase
-ENABLE_PUBLIC_SIGNUP=false
+ENABLE_PUBLIC_SIGNUP=true
 CHANGETHIS_SECRET_KEY=<secret-long-aleatoire>
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
@@ -124,7 +124,6 @@ DATABASE_URL=...
 Ne pas laisser les public keys fallback:
 
 ```env
-NEXT_PUBLIC_DEMO_PROJECT_KEY=demo_project_key
 NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY=changethis_project_key
 NEXT_PUBLIC_ANDENNE_BEARS_PROJECT_KEY=andenne_bears_project_key
 NEXT_PUBLIC_OPTIMASTER_PROJECT_KEY=optimaster_project_key
@@ -211,7 +210,7 @@ Go beta si:
 - `DATA_STORE=supabase`.
 - Un feedback reel arrive depuis le widget et apparait dans le dashboard.
 - Les secrets ne sont pas dans Git ni dans les logs.
-- `ENABLE_PUBLIC_SIGNUP=false` tant que la beta reste privee.
+- `ENABLE_PUBLIC_SIGNUP=true` uniquement si l'environnement doit accepter de nouveaux comptes; remettre `false` pendant une pause operationnelle.
 
 No-Go si:
 

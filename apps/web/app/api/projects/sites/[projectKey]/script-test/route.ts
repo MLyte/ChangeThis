@@ -71,17 +71,40 @@ export async function POST(
 
   const scriptCheck = detectWidgetScript(pageCheck.html, project.publicKey);
 
+  if (!scriptCheck.ok) {
+    return NextResponse.json({
+      ok: false,
+      status: scriptCheck.status,
+      message: scriptCheck.message,
+      installSnippet: installSnippet(project),
+      checkedUrl: pageUrl
+    }, { status: 409 });
+  }
+
+  const cspCheck = detectWidgetCsp(pageCheck.contentSecurityPolicy, url.origin);
+
+  if (!cspCheck.ok) {
+    return NextResponse.json({
+      ok: false,
+      status: cspCheck.status,
+      message: cspCheck.message,
+      installSnippet: installSnippet(project),
+      checkedUrl: pageUrl,
+      cspDirectives: cspCheck.directives
+    }, { status: 409 });
+  }
+
   return NextResponse.json({
-    ok: scriptCheck.ok,
+    ok: true,
     status: scriptCheck.status,
     message: scriptCheck.message,
     installSnippet: installSnippet(project),
     checkedUrl: pageUrl
-  }, { status: scriptCheck.ok ? 200 : 409 });
+  });
 }
 
 async function fetchSitePage(url: string): Promise<
-  | { ok: true; html: string }
+  | { ok: true; html: string; contentSecurityPolicy?: string }
   | { ok: false; status: string; message: string }
 > {
   const controller = new AbortController();
@@ -114,7 +137,8 @@ async function fetchSitePage(url: string): Promise<
 
     return {
       ok: true,
-      html: await response.text()
+      html: await response.text(),
+      contentSecurityPolicy: response.headers.get("content-security-policy") ?? undefined
     };
   } catch (error) {
     return {
@@ -129,7 +153,7 @@ async function fetchSitePage(url: string): Promise<
   }
 }
 
-function detectWidgetScript(html: string, projectKey: string): { ok: boolean; status: string; message: string } {
+export function detectWidgetScript(html: string, projectKey: string): { ok: boolean; status: string; message: string } {
   const scriptTags = html.match(/<script\b[^>]*>/gi) ?? [];
   const widgetScripts = scriptTags.filter((scriptTag) => {
     const src = getHtmlAttribute(scriptTag, "src") ?? "";
@@ -163,6 +187,65 @@ function detectWidgetScript(html: string, projectKey: string): { ok: boolean; st
     status: "script_detected",
     message: "Script widget détecté sur l'URL du site. Les retours peuvent être envoyés."
   };
+}
+
+export function detectWidgetCsp(contentSecurityPolicy: string | undefined, widgetOrigin: string): { ok: true } | { ok: false; status: string; message: string; directives: string[] } {
+  if (!contentSecurityPolicy) {
+    return { ok: true };
+  }
+
+  const directives = parseCspDirectives(contentSecurityPolicy);
+  const missing = [
+    { name: "script-src", fallback: "default-src", required: widgetOrigin },
+    { name: "connect-src", fallback: "default-src", required: widgetOrigin },
+    { name: "style-src", fallback: "default-src", required: "'unsafe-inline'" }
+  ]
+    .filter((directive) => !cspAllows(directives, directive.name, directive.fallback, directive.required))
+    .map((directive) => `${directive.name} ${directive.required}`);
+
+  if (missing.length === 0) {
+    return { ok: true };
+  }
+
+  return {
+    ok: false,
+    status: "csp_blocks_widget",
+    message: `Script détecté, mais la politique CSP du site peut bloquer le widget. Ajoutez ${missing.join(" et ")} à la configuration CSP du site.`,
+    directives: missing
+  };
+}
+
+function parseCspDirectives(contentSecurityPolicy: string): Map<string, string[]> {
+  const directives = new Map<string, string[]>();
+
+  for (const rawDirective of contentSecurityPolicy.split(";")) {
+    const parts = rawDirective.trim().split(/\s+/).filter(Boolean);
+    const name = parts.shift()?.toLowerCase();
+
+    if (name) {
+      directives.set(name, parts);
+    }
+  }
+
+  return directives;
+}
+
+function cspAllows(directives: Map<string, string[]>, directiveName: string, fallbackName: string, requiredSource: string): boolean {
+  const sources = directives.get(directiveName) ?? directives.get(fallbackName);
+
+  if (!sources || sources.length === 0) {
+    return true;
+  }
+
+  if (sources.includes("*") || sources.includes(requiredSource)) {
+    return true;
+  }
+
+  if (requiredSource.startsWith("https://")) {
+    return sources.includes("https:");
+  }
+
+  return false;
 }
 
 function getHtmlAttribute(tag: string, name: string): string | undefined {

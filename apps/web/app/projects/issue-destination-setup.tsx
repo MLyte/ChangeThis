@@ -24,12 +24,10 @@ import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
 import { ProviderBadge } from "../provider-badge";
-import { DemoSeedButton } from "./demo-seed-button";
 
 type Props = {
   projects: ChangeThisProject[];
   integrations: ProviderIntegrationSummary[];
-  hasLiveDemo?: boolean;
   section: SettingsSection;
   users?: WorkspaceUserView[];
   workspaceName?: string;
@@ -104,7 +102,6 @@ type OriginValidation = {
 export function IssueDestinationSetup({
   projects,
   integrations,
-  hasLiveDemo = false,
   section,
   users = [],
   workspaceName,
@@ -493,11 +490,6 @@ export function IssueDestinationSetup({
         <div>
           <h2 id="destinations-title"><T k="settings.title" /></h2>
         </div>
-        {section === "git-connections" || section === "connected-sites" ? (
-          <div className="settings-demo-actions">
-            <DemoSeedButton hasLiveDemo={hasLiveDemo} />
-          </div>
-        ) : null}
       </div>
 
       <div className="settings-layout">
@@ -1035,6 +1027,7 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               {connectionState.checkedAt ? (
                 <p className="connection-last-check">Dernier contrôle: {formatConnectionCheckDate(connectionState.checkedAt)}</p>
               ) : null}
+              {integration.provider === "github" ? <GitHubTokenInstructions /> : null}
               <div className="integration-actions">
                 {credentialConfigured ? (
                   <button className="button danger-button" disabled={connectionState.state === "checking"} onClick={() => void disconnectConnection(integration)} type="button">
@@ -1069,6 +1062,24 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
         })}
       </div>
     </section>
+  );
+}
+
+function GitHubTokenInstructions() {
+  return (
+    <div className="provider-token-help" aria-label="Instructions token GitHub">
+      <div className="provider-token-help-title">
+        <Info aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+        <strong>Token GitHub fine-grained</strong>
+      </div>
+      <ol>
+        <li>Choisissez le bon <strong>Resource owner</strong>.</li>
+        <li>Dans <strong>Repository access</strong>, sélectionnez le dépôt qui recevra les issues, ou tous vos dépôts si vous préférez.</li>
+        <li>Dans <strong>Permissions</strong>, ouvrez <strong>Repository permissions</strong>, ajoutez <strong>Issues</strong>, puis choisissez <strong>Read and write</strong>.</li>
+        <li>Générez le token, copiez-le une seule fois, puis collez-le ici dans ChangeThis.</li>
+      </ol>
+      <p>ChangeThis n&apos;a pas besoin d&apos;accès au code pour créer des issues.</p>
+    </div>
   );
 }
 

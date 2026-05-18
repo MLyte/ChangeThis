@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Database, FileText, LifeBuoy, LogOut, ShieldCheck, UserRound } from "lucide-react";
+import { FileText, LifeBuoy, LogOut, Rocket, ShieldCheck, UserRound } from "lucide-react";
 import { getCurrentSession } from "../lib/auth";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
@@ -11,6 +11,7 @@ type AppFooterProps = {
 export async function AppFooter({ suppressSession = false }: AppFooterProps) {
   const authMode = process.env.AUTH_MODE === "supabase" ? "supabase" : "local";
   const dataStore = process.env.DATA_STORE === "supabase" ? "supabase" : "local";
+  const isProductionReadyRuntime = authMode === "supabase" && dataStore === "supabase";
   const footerSession = suppressSession ? undefined : await loadFooterSession();
 
   return (
@@ -23,16 +24,16 @@ export async function AppFooter({ suppressSession = false }: AppFooterProps) {
       <div className="footer-ops">
         {footerSession ? (
           <div className="runtime-status" aria-label="Environnement">
-            <span className={`runtime-pill ${authMode === "supabase" ? "is-ready" : "is-local"}`}>
-              <ShieldCheck aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
+            <span className="runtime-pill is-ready">
+              <Rocket aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
               <span className="footer-pill-label">
-                <T k={authMode === "supabase" ? "nav.auth.supabase" : "nav.auth.local"} />
+                <T k="footer.status.openBeta" />
               </span>
             </span>
-            <span className={`runtime-pill ${dataStore === "supabase" ? "is-ready" : "is-local"}`}>
-              <Database aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
+            <span className={`runtime-pill ${isProductionReadyRuntime ? "is-ready" : "is-local"}`}>
+              <ShieldCheck aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
               <span className="footer-pill-label">
-                <T k={dataStore === "supabase" ? "nav.storage.database" : "nav.storage.local"} />
+                <T k={isProductionReadyRuntime ? "footer.runtime.production" : "footer.runtime.local"} />
               </span>
             </span>
           </div>

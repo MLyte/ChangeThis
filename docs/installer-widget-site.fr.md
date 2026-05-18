@@ -74,6 +74,16 @@ Depuis `/settings/connected-sites`, utiliser aussi le test d'installation du scr
 
 En local ChangeThis pur, `/demo` reste le smoke test le plus simple : la page charge le widget local et envoie un feedback vers l'API locale.
 
+Sur un site qui utilise une Content Security Policy stricte, autoriser aussi ChangeThis :
+
+```txt
+script-src https://app.changethis.dev
+connect-src https://app.changethis.dev
+style-src 'unsafe-inline'
+```
+
+Ces directives doivent être fusionnées avec la CSP existante du site, pas forcément copiées telles quelles.
+
 ## Erreurs fréquentes
 
 ### Le bouton Feedback ne s'affiche pas
@@ -81,6 +91,7 @@ En local ChangeThis pur, `/demo` reste le smoke test le plus simple : la page ch
 - Vérifier que le snippet est présent dans le HTML final de la page.
 - Vérifier que `https://app.changethis.dev/widget.js` ou `http://localhost:3000/widget.js` répond bien.
 - Vérifier qu'un bloqueur de script ou une règle CSP du site ne bloque pas le domaine ChangeThis.
+- Si le test d'installation signale `csp_blocks_widget`, ajouter les directives CSP affichées par ChangeThis.
 
 ### L'envoi échoue avec `Origin is not allowed for this project`
 
@@ -104,4 +115,5 @@ En local ChangeThis pur, `/demo` reste le smoke test le plus simple : la page ch
 - Vérifier la connexion Git dans `/settings/git-connections`.
 - Vérifier que le dépôt cible est configuré sur le site connecté.
 - Vérifier les permissions GitHub ou GitLab sur le dépôt.
+- Pour GitHub fine-grained PAT, vérifier `Repository access` sur le dépôt cible et `Repository permissions > Issues > Read and write`.
 - En beta actuelle, la création d'issue est déclenchée manuellement depuis `/projects`; elle n'est pas automatique après l'envoi du feedback.

@@ -2,18 +2,18 @@
 
 Etat actuel: voir [current-state.fr.md](current-state.fr.md).
 
-Ce guide aide un workspace en bêta privée à recevoir un premier feedback exploitable depuis un site réel ou de test.
+Ce guide aide un workspace en bêta ouverte contrôlée à recevoir un premier feedback exploitable depuis un site réel ou de test.
 
 ## Pré-requis
 
-- Un accès à la console ChangeThis.
+- Un accès à la console ChangeThis ou un compte créé via le signup ouvert de l'environnement.
 - Un dépôt GitHub ou GitLab qui recevra les issues.
 - L'URL du site où installer le widget, par exemple `https://client.example`.
 - Un rôle `admin` ou `owner` dans le workspace ChangeThis.
 
 ## 1. Se connecter à la console
 
-Ouvrir `/login`, saisir l'e-mail du compte invité et accéder à la console.
+Ouvrir `/login`, ou `/signup` si les inscriptions sont ouvertes, puis accéder à la console.
 
 Si le workspace est neuf, vérifier d'abord que le nom du workspace et le compte owner sont corrects dans les paramètres.
 
@@ -21,7 +21,7 @@ Si le workspace est neuf, vérifier d'abord que le nom du workspace et le compte
 
 Aller dans `/settings/git-connections`, puis connecter le provider prévu pour ce client.
 
-Pour la bêta privée, GitHub est prioritaire. GitLab peut rester en attente sauf si le client pilote en a besoin.
+GitHub et GitLab sont supportés dans le parcours bêta; choisir le provider réellement utilisé par le dépôt cible.
 
 ## 3. Créer le site connecté
 
@@ -73,6 +73,6 @@ La première boucle est validée quand :
 - Si le widget ne s'affiche pas, vérifier que `/widget.js` répond bien en JavaScript.
 - Si l'envoi échoue avec une erreur d'origine, comparer l'origine configurée dans ChangeThis avec `window.location.origin` sur le site client.
 - Si les dépôts ne sont pas listés, vérifier la connexion Git dans `/settings/git-connections`.
-- Si l'issue n'est pas créée, vérifier les permissions du token/provider sur le dépôt cible.
+- Si l'issue n'est pas créée côté GitHub, vérifier que le fine-grained token inclut le dépôt cible dans `Repository access` et la permission `Repository permissions > Issues > Read and write`.
 - Si GitLab OAuth est utilisé, prévoir une reconnexion si le token expire; le refresh automatique complet reste une limite beta.
 - Les screenshots restent une fonctionnalité beta: ils sont acceptés, mais leur stockage objet définitif reste à finaliser.

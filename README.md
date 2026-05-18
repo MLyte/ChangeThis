@@ -9,13 +9,13 @@ Clients click a fixed feedback button, add a note, pin one or more page elements
 - **Audience:** freelancers, small web agencies, studios, and product/design teams shipping client websites.
 - **Model:** source-available/open-core. The widget and shared protocol are permissive; hosted dashboard, managed provider integrations, storage, teams, and AI triage stay in the commercial hosted layer.
 - **Promise:** clients point at what needs changing; teams receive actionable feedback, decide whether to create an issue, and keep a traceable history.
-- **Current beta posture:** private beta, `ENABLE_PUBLIC_SIGNUP=false`, Railway app hosting, Supabase Auth/DB for the real beta path, OVH DNS for `app.changethis.dev`.
+- **Current beta posture:** controlled open beta, Railway app hosting, Supabase Auth/DB for the real path, OVH DNS for `app.changethis.dev`.
 
 See [docs/current-state.fr.md](docs/current-state.fr.md) for the synchronized current-state snapshot used by the documentation.
 
 ## Current Product Loop
 
-1. A workspace owner signs in with a beta account. Public signup stays closed unless explicitly enabled.
+1. A workspace owner signs in or creates an account when public signup is enabled for the environment.
 2. The team connects GitHub and/or GitLab with a server-side token, OAuth flow, or GitHub App setup.
 3. The owner adds a connected site in `/settings/connected-sites`, chooses a provider, selects a real accessible repository, and copies the generated widget script.
 4. A visitor submits feedback from the widget. No visitor account is required.
@@ -58,7 +58,7 @@ In local development, the app serves the same widget route from the web server:
 
 Create the site from `/settings/connected-sites` so the public key, allowed site URL, and Git issue destination are stored together. The public feedback API only accepts requests whose `Origin` matches the connected site URL.
 
-For a quick smoke test, use `/demo`; it loads the real widget bundle and sends feedback to the current app API. It is a product demo, not proof that a customer site is installed correctly.
+For a quick local smoke test, use `/demo`; it loads the real widget bundle and sends feedback to the current app API. A production/beta validation should use a real connected site and the script test in `/settings/connected-sites`.
 
 ## License
 
@@ -86,7 +86,7 @@ Useful local routes:
 - `/` landing page with product CTAs.
 - `/signup` account/workspace creation entry point, gated by `ENABLE_PUBLIC_SIGNUP`.
 - `/login` authenticated console entry point.
-- `/demo` test page that loads the real widget bundle against the local API.
+- `/demo` widget sandbox page that loads the real widget bundle against the current API.
 - `/projects` designer/product inbox.
 - `/settings/git-connections` GitHub/GitLab connection state.
 - `/settings/connected-sites` real connected-site setup and widget script management.
@@ -108,7 +108,7 @@ npm run widget:build
 npm run dev
 ```
 
-Then open `http://localhost:3000/demo` and use the floating Feedback button. Feedback and connected-site data are persisted under `.changethis-data/` by default.
+Then open `http://localhost:3000/demo` and use the floating Feedback button. For beta/prod validation, create a connected site and test the generated snippet on the target origin.
 
 ## Local Configuration
 

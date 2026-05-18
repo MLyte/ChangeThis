@@ -2,13 +2,13 @@
 
 Etat actuel: voir [current-state.fr.md](current-state.fr.md).
 
-Ce document transforme le plan de production en piste executable pour la beta privee actuelle. Le chemin beta reel est Railway pour l'app, OVH pour le DNS et Supabase Auth/DB avec `AUTH_MODE=supabase` + `DATA_STORE=supabase`.
+Ce document transforme le plan de production en piste executable pour la beta ouverte controlee. Le chemin beta/prod reel est Railway pour l'app, OVH pour le DNS et Supabase Auth/DB avec `AUTH_MODE=supabase` + `DATA_STORE=supabase`.
 
 ## Phase 1 - Stabilisation locale
 
 - Installer avec `npm ci`.
 - Valider les gates locaux: `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`, `npm run security:audit`.
-- Verifier un feedback complet depuis `/demo` vers `/projects`.
+- Verifier un feedback complet depuis un site connecte reel vers `/projects`.
 - Verifier une creation d'issue manuelle avec un depot GitHub ou GitLab de test.
 - Documenter toute exception `npm audit` avec package, CVE, impact et plan de correction avant ouverture beta.
 
@@ -23,7 +23,7 @@ Ce document transforme le plan de production en piste executable pour la beta pr
 ## Phase 3 - Staging connecte
 
 - Creer des secrets separes pour `local`, `staging` et `production`.
-- Appliquer les migrations Supabase `0001` a `0008`.
+- Appliquer les migrations Supabase `0001` a `0009`.
 - Valider `npm run migrations:check`, `npm run env:check` et `npm run prod:check`.
 - Configurer un depot GitHub/GitLab de test pour les issues beta.
 - Restreindre les `allowedOrigins` aux domaines pilotes.
@@ -32,8 +32,8 @@ Ce document transforme le plan de production en piste executable pour la beta pr
 
 ## Phase 4 - Donnees et securite
 
-- Interdire `DATA_STORE=file` en production beta.
-- Utiliser Supabase REST/Postgres pour la beta reelle.
+- Interdire `DATA_STORE=file` en production.
+- Utiliser Supabase REST/Postgres pour la beta ouverte.
 - Deplacer les captures vers un stockage objet avant volume public.
 - Remplacer le rate limit memoire par un stockage partage si plusieurs instances servent l'API.
 - Verifier RLS, backups, rotation de secrets et absence de secrets reels dans Git.
@@ -48,6 +48,6 @@ Ce document transforme le plan de production en piste executable pour la beta pr
 
 ## Go/No-Go
 
-Go si les gates locaux et GitHub passent, si `AUTH_MODE=supabase`, `DATA_STORE=supabase`, `ENABLE_PUBLIC_SIGNUP=false`, `npm run prod:check` est vert, les migrations sont appliquees, `/api/health` et `/api/ready` sont verts, un feedback reel arrive dans `/projects`, DNS/TLS sont valides et les alertes minimales sont actives.
+Go si les gates locaux et GitHub passent, si `AUTH_MODE=supabase`, `DATA_STORE=supabase`, `npm run prod:check` est vert, les migrations sont appliquees, `/api/health` et `/api/ready` sont verts, un feedback reel arrive dans `/projects`, DNS/TLS sont valides et les alertes minimales sont actives.
 
 No-Go si `DATA_STORE=file` ou `AUTH_MODE=local` sert la production beta, si les migrations Supabase ne sont pas appliquees, si staging et production partagent des secrets, si les origines autorisees sont ouvertes trop largement, ou si une exception securite n'est pas documentee.
