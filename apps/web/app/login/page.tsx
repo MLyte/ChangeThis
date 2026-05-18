@@ -111,10 +111,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </button>
           </form>
 
-          {!isLocalMode ? (
-            <p className="microcopy"><T k="login.noBackend" /></p>
-          ) : null}
-
           {publicSignupEnabled ? (
             <p className="microcopy">
               <T k="login.signupHint" /> <a className="inline-link" href="/signup"><T k="nav.signup" /></a>

@@ -7,7 +7,7 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 ## Produit
 
 - ChangeThis est en beta ouverte controlee: le produit peut accueillir de vrais comptes, mais l'acces reste surveille et reversible.
-- Le signup public peut etre ouvert avec `ENABLE_PUBLIC_SIGNUP=true`; garder `false` sur un environnement reserve ou pendant une pause operationnelle.
+- Le signup public est ouvert par defaut pour la beta ouverte; definir `ENABLE_PUBLIC_SIGNUP=false` pour reserver un environnement ou mettre les inscriptions en pause operationnelle.
 - La boucle produit actuelle est: site connecte -> widget public -> feedback -> inbox `/projects` -> creation manuelle d'issue GitHub/GitLab.
 - La page `/demo` reste un bac a sable widget local/public, distinct d'un vrai test d'installation client.
 - Le dashboard ne contient plus de generateur de simulation realiste; la preuve beta passe par un site connecte reel et le test d'installation du script.

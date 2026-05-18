@@ -151,6 +151,25 @@ test("workspace role checks enforce the configured hierarchy", async () => {
   assert.equal(auth.requireWorkspaceRole(ownerSession, "admin"), ownerSession);
 });
 
+test("public signup is open by default and can be paused explicitly", async () => {
+  delete process.env.ENABLE_PUBLIC_SIGNUP;
+
+  let auth = await importAuthModule();
+  assert.equal(auth.isPublicSignupEnabled(), true);
+
+  process.env.ENABLE_PUBLIC_SIGNUP = "false";
+  auth = await importAuthModule();
+  assert.equal(auth.isPublicSignupEnabled(), false);
+
+  process.env.ENABLE_PUBLIC_SIGNUP = "0";
+  auth = await importAuthModule();
+  assert.equal(auth.isPublicSignupEnabled(), false);
+
+  process.env.ENABLE_PUBLIC_SIGNUP = "true";
+  auth = await importAuthModule();
+  assert.equal(auth.isPublicSignupEnabled(), true);
+});
+
 async function importAuthModule(): Promise<AuthModule> {
   importCounter += 1;
   return await import(`${pathToFileURL(`${process.cwd()}/lib/auth.ts`).href}?auth-test-${importCounter}`) as AuthModule;

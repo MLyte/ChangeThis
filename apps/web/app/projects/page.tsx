@@ -319,7 +319,7 @@ function ProjectsOnboardingChecklist({ steps }: { steps: OnboardingChecklistStep
   return (
     <section className="side-panel-section beta-onboarding-checklist" aria-labelledby="beta-onboarding-title">
       <div className="side-panel-heading">
-        <p className="eyebrow">Bêta privée</p>
+        <p className="eyebrow">Bêta ouverte</p>
         <h2 id="beta-onboarding-title">Checklist activation</h2>
       </div>
       <div className="route-summary beta-onboarding-progress" aria-label={`${completedCount} étapes terminées sur ${steps.length}`}>

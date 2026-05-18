@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, isPublicSignupEnabled } from "../../lib/auth";
-import { createWorkspaceForUser, signUpWithPassword } from "../../lib/supabase-server";
+import { createWorkspaceForUser, isSupabaseServiceConfigured, signUpWithPassword } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
@@ -59,6 +59,10 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 
     if (authMode === "local") {
       redirect("/settings/connected-sites");
+    }
+
+    if (!isSupabaseServiceConfigured()) {
+      redirect("/signup?error=workspace");
     }
 
     const signUpResult = await signUpWithPassword({

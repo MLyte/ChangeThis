@@ -107,6 +107,7 @@ APP_URL=https://app.changethis.dev
 
 AUTH_MODE=supabase
 DATA_STORE=supabase
+# Optionnel: false met les inscriptions en pause; absent ou true ouvre la beta.
 ENABLE_PUBLIC_SIGNUP=true
 
 NEXT_PUBLIC_SUPABASE_URL=https://PROJECT_REF.supabase.co
@@ -170,7 +171,7 @@ Attendu:
 
 - `/api/health` doit repondre `ok`.
 - `/api/ready` doit etre `ok` si Supabase, les migrations et les variables sont corrects.
-- `/login` doit afficher l'ecran de connexion beta et `/signup` doit suivre l'etat choisi pour `ENABLE_PUBLIC_SIGNUP`.
+- `/login` doit afficher l'ecran de connexion beta et `/signup` doit accepter une creation de compte sauf si `ENABLE_PUBLIC_SIGNUP=false`.
 
 ## 8. Smoke test beta
 

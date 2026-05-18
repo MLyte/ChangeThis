@@ -425,39 +425,43 @@ export async function createWorkspaceForUser(input: {
     return null;
   }
 
-  const name = input.organizationName?.trim() || workspaceNameFromEmail(input.email);
-  const organizations = await supabaseRest<OrganizationRow[]>("/rest/v1/organizations?select=id,name", {
-    method: "POST",
-    headers: {
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify({
-      name,
-      owner_id: input.userId,
-      plan: "free"
-    })
-  });
-  const organization = organizations[0];
+  try {
+    const name = input.organizationName?.trim() || workspaceNameFromEmail(input.email);
+    const organizations = await supabaseRest<OrganizationRow[]>("/rest/v1/organizations?select=id,name", {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({
+        name,
+        owner_id: input.userId,
+        plan: "free"
+      })
+    });
+    const organization = organizations[0];
 
-  if (!organization) {
+    if (!organization) {
+      return null;
+    }
+
+    await supabaseRest("/rest/v1/workspace_members", {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates"
+      },
+      body: JSON.stringify({
+        organization_id: organization.id,
+        user_id: input.userId,
+        role: "owner",
+        status: "active",
+        joined_at: new Date().toISOString()
+      })
+    });
+
+    return organization;
+  } catch {
     return null;
   }
-
-  await supabaseRest("/rest/v1/workspace_members", {
-    method: "POST",
-    headers: {
-      Prefer: "resolution=merge-duplicates"
-    },
-    body: JSON.stringify({
-      organization_id: organization.id,
-      user_id: input.userId,
-      role: "owner",
-      status: "active",
-      joined_at: new Date().toISOString()
-    })
-  });
-
-  return organization;
 }
 
 function workspaceNameFromEmail(email?: string): string {
