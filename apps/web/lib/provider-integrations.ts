@@ -357,8 +357,9 @@ function mapSupabaseProviderIntegration(row: SupabaseProviderIntegrationRow, cre
   const disabled = row.status === "disabled";
   const hasAccessToken = credentials.some((credential) => credential.credential_kind === "oauth_token" && credential.status === "active");
   const hasGitHubInstallation = Boolean(row.installation_id) || credentials.some((credential) => credential.credential_kind === "github_app_installation" && credential.status === "active");
-  const credentialAvailable = provider === "github" ? hasAccessToken || hasGitHubInstallation : hasAccessToken;
-  const credentialConfigured = credentialAvailable && !disabled && row.status === "connected";
+  const connectionRecorded = row.status === "connected";
+  const credentialAvailable = connectionRecorded || (provider === "github" ? hasAccessToken || hasGitHubInstallation : hasAccessToken);
+  const credentialConfigured = credentialAvailable && !disabled && connectionRecorded;
   const baseUrl = provider === "gitlab" ? row.base_url ?? process.env.GITLAB_BASE_URL ?? "https://gitlab.com" : "https://github.com";
 
   return {
