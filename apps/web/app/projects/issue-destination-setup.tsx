@@ -1187,7 +1187,7 @@ function GitConnectionsSection({
                   </div>
                   <p>
                     {integration.provider === "github"
-                      ? "Utilisez un token GitHub autorisé à lire les dépôts et créer des issues dans les dépôts bêta."
+                      ? "Utilisez un fine-grained token GitHub avec le dépôt bêta sélectionné dans Repository access et la permission Repository permissions > Issues > Read and write."
                       : "Utilisez un token GitLab avec le scope api pour lire les projets et créer des issues."}
                   </p>
                 </form>
