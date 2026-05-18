@@ -132,7 +132,7 @@ NEXT_PUBLIC_OPTIMASTER_PROJECT_KEY=optimaster_project_key
 NEXT_PUBLIC_YODA_CARROSSERIE_PROJECT_KEY=yoda_carrosserie_project_key
 ```
 
-GitHub/GitLab peuvent etre ajoutes apres le smoke app + feedback:
+GitHub/GitLab peuvent etre ajoutes apres le smoke app + feedback. Le reglage widget `Identite visiteur` est stocke en base via la migration `0011_widget_reporter_fields.sql` et vaut `optional` par defaut:
 
 ```env
 GITHUB_APP_SLUG=

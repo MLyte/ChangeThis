@@ -339,7 +339,9 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Faire rédiger ou valider Privacy Policy, CGV/Terms, DPA et politique cookies.
 - [ ] Valider les métriques analytics autorisées et leur conformité RGPD.
 - [ ] Valider les clients pilotes et le périmètre du dry-run staging.
+
 ## Journal
+- [2026-05-19] Mise a jour Markdown branches: actualisation des docs beta pour migrations `0001` a `0011`, reglage `Identite visiteur` du widget et rappel du cron screenshots; synchro prevue avec la branche `main`.
 - [2026-05-19] Nettoyage pilotage: les taches ponctuelles `executer smoke complet ou demander l'info manquante` et `mettre a jour AI_TODO avec resultat Go/No-Go` ne sont plus traitees comme actions actives; le Go/No-Go commercial reste un sujet futur de release, pas un blocage beta ouverte courant.
 - [2026-05-19] Ajout auteur feedback structure: configuration par site `Identite visiteur` (`hidden`, `optional`, `required`), champs nom/e-mail dans le widget, validation serveur `reporter`, affichage dashboard et inclusion dans les brouillons d'issues. Migration Supabase ajoute `projects.widget_reporter_fields`. Validation ciblee: tests shared/widget/web OK, typecheck OK, lint OK, migrations check OK, build OK, controle DOM widget local OK.
 - [2026-05-19] Correction UI inbox capture: la vignette de capture garde une hauteur fixe dans les lignes compactes, meme quand l'accordeon `Brouillon, destination et contexte` est ouvert, pour eviter le resize visuel. Validation ciblee: typecheck web OK, lint web OK, build web OK.

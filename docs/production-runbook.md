@@ -77,5 +77,6 @@ Alert on:
 
 - Public rate limiting is still memory-backed.
 - Screenshots are compressed client-side before upload, then tracked with `active`, `archived`, and `deleted` lifecycle metadata while object storage is pending. Run the weekly cleanup cron against `/api/cron/storage-cleanup` with `Authorization: Bearer $CHANGETHIS_CRON_SECRET`.
+- Reporter identity is controlled per site with `widget_reporter_fields` (`hidden`, `optional`, `required`) and defaults to `optional`.
 - Provider retry processing is not a full durable queue yet.
 - Rollback and backup/restore procedures must be validated on staging before wider beta.

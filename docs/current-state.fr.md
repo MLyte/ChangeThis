@@ -9,6 +9,7 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 - ChangeThis est en beta ouverte controlee: le produit peut accueillir de vrais comptes, mais l'acces reste surveille et reversible.
 - Le signup public est ouvert par defaut pour la beta ouverte; definir `ENABLE_PUBLIC_SIGNUP=false` pour reserver un environnement ou mettre les inscriptions en pause operationnelle.
 - La boucle produit actuelle est: site connecte -> widget public -> feedback -> inbox `/projects` -> creation manuelle d'issue GitHub/GitLab.
+- Le widget peut demander l'identite visiteur par site (`hidden`, `optional`, `required`) et remonte `reporter.name` / `reporter.email` dans le dashboard et les brouillons d'issues.
 - La page `/demo` reste un bac a sable widget local/public, distinct d'un vrai test d'installation client.
 - Le dashboard ne contient plus de generateur de simulation realiste; la preuve beta passe par un site connecte reel et le test d'installation du script.
 - Le dashboard admin/app peut rester large; les pages publiques doivent eviter les layouts full-width non controles.
@@ -41,11 +42,12 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 - Sites/projets connectes et cles publiques actives.
 - Feedbacks, statuts, evenements, tentatives provider et issues externes.
 - Integrations provider par workspace et credentials chiffres applicativement.
-- Migrations Supabase `0001` a `0009`.
+- Migrations Supabase `0001` a `0011`.
 
 ## Limites connues avant production commerciale
 
 - Les screenshots entrants sont reduits cote widget (WebP, dimension max 1600px, miniature 400px) avant envoi. Ils restent transitoirement stockes en data URL, avec metadonnees de cycle de vie `active/archive/deleted`; Supabase Storage ou stockage objet reste a brancher.
+- La migration `0011_widget_reporter_fields.sql` doit etre appliquee en Supabase avant de persister le reglage `Identite visiteur` depuis la console.
 - Le rate limit public reste memoire et doit passer sur un store partage pour multi-instance.
 - L'idempotence provider et les verrous anti double issue doivent etre renforces.
 - Les retries ne remplacent pas encore une queue durable.
