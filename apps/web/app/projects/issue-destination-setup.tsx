@@ -112,8 +112,9 @@ export function IssueDestinationSetup({
 }: Props) {
   const { t } = useLanguage();
   const [projectViews, setProjectViews] = useState<ProjectView[]>(projects);
+  const [integrationViews, setIntegrationViews] = useState<ProviderIntegrationSummary[]>(integrations);
   const [workspaceUsers, setWorkspaceUsers] = useState<WorkspaceUserView[]>(users);
-  const firstConnectedProvider = integrations.find((integration) => integration.status === "connected")?.provider ?? "github";
+  const firstConnectedProvider = integrationViews.find((integration) => integration.status === "connected")?.provider ?? "github";
   const [selectedProvider, setSelectedProvider] = useState<IssueProvider>(firstConnectedProvider);
   const [message, setMessage] = useState(t("destinations.message.initial"));
   const [isPending, startTransition] = useTransition();
@@ -129,11 +130,11 @@ export function IssueDestinationSetup({
   const [inviteRole, setInviteRole] = useState<"viewer" | "member" | "admin">("member");
 
   const connectedProviders = useMemo(
-    () => new Set(integrations.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
-    [integrations]
+    () => new Set(integrationViews.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
+    [integrationViews]
   );
 
-  const selectedIntegration = integrations.find((integration) => integration.provider === selectedProvider);
+  const selectedIntegration = integrationViews.find((integration) => integration.provider === selectedProvider);
   const selectedRepository = repositoryOptions.find((repository) => repository.id === selectedRepositoryId);
 
   useEffect(() => {
@@ -517,7 +518,11 @@ export function IssueDestinationSetup({
 
         <div className="settings-content">
           {section === "git-connections" ? (
-            <GitConnectionsSection integrations={integrations} />
+            <GitConnectionsSection integrations={integrationViews} onIntegrationUpdate={(updatedIntegration) => {
+              setIntegrationViews((current) => current.map((integration) => (
+                integration.provider === updatedIntegration.provider ? updatedIntegration : integration
+              )));
+            }} />
           ) : null}
 
           {section === "connected-sites" ? (
@@ -689,7 +694,13 @@ function UsersSection({
   );
 }
 
-function GitConnectionsSection({ integrations }: { integrations: ProviderIntegrationSummary[] }) {
+function GitConnectionsSection({
+  integrations,
+  onIntegrationUpdate
+}: {
+  integrations: ProviderIntegrationSummary[];
+  onIntegrationUpdate: (integration: ProviderIntegrationSummary) => void;
+}) {
   const [disabledProviders, setDisabledProviders] = useState<Set<IssueProvider>>(
     () => new Set(integrations.filter((integration) => integration.disabled).map((integration) => integration.provider))
   );
@@ -704,9 +715,11 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
         : {
             state: "inactive",
             message: "Ajoutez un token serveur pour activer cette connexion."
-          }
+      }
     ])) as Partial<Record<IssueProvider, ConnectionTestResult>>
   ));
+  const [tokenInputs, setTokenInputs] = useState<Partial<Record<IssueProvider, string>>>({});
+  const [savingTokenProvider, setSavingTokenProvider] = useState<IssueProvider | undefined>();
 
   const refreshConnection = useCallback(async (integration: ProviderIntegrationSummary, signal?: AbortSignal, forceEnabled = false) => {
     if ((!integration.credentialConfigured && !forceEnabled) || (!forceEnabled && disabledProviders.has(integration.provider))) {
@@ -899,6 +912,94 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
     }
   }, [refreshConnection]);
 
+  const saveProviderToken = useCallback(async (integration: ProviderIntegrationSummary) => {
+    const token = tokenInputs[integration.provider]?.trim() ?? "";
+
+    if (token.length < 8) {
+      toast.error("Token requis", {
+        description: `Collez un token ${integration.name} valide avant d'enregistrer.`
+      });
+      return;
+    }
+
+    setSavingTokenProvider(integration.provider);
+    setConnectionStates((current) => ({
+      ...current,
+      [integration.provider]: {
+        state: "checking",
+        message: `Enregistrement du token ${integration.name}...`
+      }
+    }));
+
+    try {
+      const response = await fetch(`/api/integrations/${integration.provider}/connection`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ token })
+      });
+      const body = await response.json().catch(() => undefined) as { error?: string; integrationId?: string } | undefined;
+
+      if (!response.ok) {
+        const errorMessage = body?.error ?? `Impossible d'enregistrer le token ${integration.name}.`;
+        setConnectionStates((current) => ({
+          ...current,
+          [integration.provider]: {
+            state: "error",
+            message: errorMessage,
+            checkedAt: new Date()
+          }
+        }));
+        toast.error("Token refusé", {
+          description: errorMessage
+        });
+        return;
+      }
+
+      const updatedIntegration: ProviderIntegrationSummary = {
+        ...integration,
+        id: body?.integrationId ?? integration.id,
+        accountLabel: `${integration.name} connected`,
+        status: "connected",
+        credentialAvailable: true,
+        credentialConfigured: true,
+        disabled: false
+      };
+
+      setTokenInputs((current) => ({
+        ...current,
+        [integration.provider]: ""
+      }));
+      setDisabledProviders((current) => {
+        const next = new Set(current);
+        next.delete(integration.provider);
+        return next;
+      });
+      onIntegrationUpdate(updatedIntegration);
+      await refreshConnection(updatedIntegration, undefined, true);
+      toast.success(`${integration.name} connecté`, {
+        description: "Le token est enregistré et la liste des dépôts est vérifiée."
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : `Impossible d'enregistrer le token ${integration.name}.`;
+      setConnectionStates((current) => ({
+        ...current,
+        [integration.provider]: {
+          state: "error",
+          message: errorMessage,
+          checkedAt: new Date()
+        }
+      }));
+      toast.error("Token refusé", {
+        description: errorMessage
+      });
+    } finally {
+      setSavingTokenProvider(undefined);
+    }
+  }, [onIntegrationUpdate, refreshConnection, tokenInputs]);
+
   useEffect(() => {
     const abortController = new AbortController();
 
@@ -1007,6 +1108,8 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
             message: credentialConfigured ? "Vérification de la connexion active..." : "Ajoutez un token serveur pour activer cette connexion."
           };
           const isConnectionActive = connectionState.state === "active" || connectionState.state === "checking";
+          const isSavingToken = savingTokenProvider === integration.provider;
+          const tokenInputId = `${integration.provider}-server-token`;
 
           return (
             <article className={`integration-card ${isConnectionActive ? "is-active" : ""}`} key={integration.provider}>
@@ -1032,6 +1135,37 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               </div>
               {connectionState.checkedAt ? (
                 <p className="connection-last-check">Dernier contrôle: {formatConnectionCheckDate(connectionState.checkedAt)}</p>
+              ) : null}
+              {!credentialConfigured && !isLocallyDisabled ? (
+                <form className="provider-token-form" onSubmit={(event) => {
+                  event.preventDefault();
+                  void saveProviderToken(integration);
+                }}>
+                  <label htmlFor={tokenInputId}>Token serveur {integration.name}</label>
+                  <div className="provider-token-row">
+                    <input
+                      autoComplete="off"
+                      id={tokenInputId}
+                      name={`${integration.provider}-server-token`}
+                      onChange={(event) => setTokenInputs((current) => ({
+                        ...current,
+                        [integration.provider]: event.target.value
+                      }))}
+                      placeholder={integration.provider === "github" ? "github_pat_..." : "glpat-..."}
+                      type="password"
+                      value={tokenInputs[integration.provider] ?? ""}
+                    />
+                    <button className="button" disabled={isSavingToken} type="submit">
+                      <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                      {isSavingToken ? "Vérification..." : "Enregistrer"}
+                    </button>
+                  </div>
+                  <p>
+                    {integration.provider === "github"
+                      ? "Utilisez un token GitHub autorisé à lire les dépôts et créer des issues dans les dépôts bêta."
+                      : "Utilisez un token GitLab avec le scope api pour lire les projets et créer des issues."}
+                  </p>
+                </form>
               ) : null}
               <div className="integration-actions">
                 {credentialConfigured ? (

@@ -75,6 +75,20 @@ test("Supabase connect URL creates a setup integration instead of using local id
   assert.match(String(connectUrl), /state=/);
 });
 
+test("Supabase manual token setup creates a real workspace integration", async () => {
+  const fake = createFakeSupabase([]);
+  globalThis.fetch = fake.fetch;
+
+  const integration = await providerModule.ensureProviderIntegrationAsync("github", workspaceId);
+
+  assert.ok(integration?.id);
+  assert.notEqual(integration?.id.startsWith("setup-"), true);
+  assert.equal(fake.integrations.length, 1);
+  assert.equal(fake.integrations[0].organization_id, workspaceId);
+  assert.equal(fake.integrations[0].provider, "github");
+  assert.equal(fake.integrations[0].status, "needs_setup");
+});
+
 function createFakeSupabase(initialIntegrations: Array<Record<string, unknown>>): {
   fetch: typeof globalThis.fetch;
   integrations: Array<Record<string, unknown>>;

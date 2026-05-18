@@ -4746,6 +4746,42 @@ dd {
   margin-top: -6px;
 }
 
+.provider-token-form {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.provider-token-form label {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.provider-token-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.provider-token-row input {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  min-width: 0;
+  padding: 10px 11px;
+}
+
+.provider-token-form p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .provider-badge,
 .status-badge {
   align-items: center;
