@@ -10,7 +10,10 @@ export async function GET() {
   const productionAuthSafe = !isProductionRuntime || authMode === "supabase";
   const fileStoreUnsafe = usesUnsafeLocalDataStoreInProduction();
   const supabaseStoreConfigured = dataStore !== "supabase" || isSupabaseServiceConfigured();
-  const databaseReady = dataStore !== "supabase" || await canReachSupabaseDatabase();
+  const database = dataStore === "supabase"
+    ? await probeSupabaseDatabase()
+    : { ok: true, failedTables: [] };
+  const databaseReady = database.ok;
   const providerConfigReady = Boolean(process.env.CHANGETHIS_SECRET_KEY);
   const checks = {
     auth: authReady,
@@ -28,6 +31,9 @@ export async function GET() {
       authMode,
       dataStore,
       checks,
+      diagnostics: {
+        failedTables: database.failedTables
+      },
       timestamp: new Date().toISOString()
     },
     {
@@ -39,25 +45,40 @@ export async function GET() {
   );
 }
 
-async function canReachSupabaseDatabase(): Promise<boolean> {
+async function probeSupabaseDatabase(): Promise<{ ok: boolean; failedTables: string[] }> {
   if (!isSupabaseServiceConfigured()) {
-    return false;
+    return { ok: false, failedTables: ["supabase_service"] };
   }
 
+  const tables = [
+    "organizations",
+    "workspace_members",
+    "projects",
+    "project_public_keys",
+    "feedbacks",
+    "feedback_status_events",
+    "issue_targets",
+    "provider_integrations",
+    "provider_integration_credentials",
+    "provider_issue_attempts",
+    "external_issues",
+    "public_launch_waitlist"
+  ];
+  const results = await Promise.all(tables.map(async (table) => ({
+    ok: await canReachSupabaseTable(table),
+    table
+  })));
+  const failedTables = results.filter((result) => !result.ok).map((result) => result.table);
+
+  return {
+    ok: failedTables.length === 0,
+    failedTables
+  };
+}
+
+async function canReachSupabaseTable(tableName: string): Promise<boolean> {
   try {
-    await Promise.all([
-      probeSupabaseTable("organizations"),
-      probeSupabaseTable("workspace_members"),
-      probeSupabaseTable("projects"),
-      probeSupabaseTable("project_public_keys"),
-      probeSupabaseTable("feedbacks"),
-      probeSupabaseTable("feedback_status_events"),
-      probeSupabaseTable("issue_targets"),
-      probeSupabaseTable("provider_integrations"),
-      probeSupabaseTable("provider_integration_credentials"),
-      probeSupabaseTable("provider_issue_attempts"),
-      probeSupabaseTable("external_issues")
-    ]);
+    await probeSupabaseTable(tableName);
     return true;
   } catch {
     return false;
