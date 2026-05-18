@@ -85,13 +85,14 @@ Useful local routes:
 
 - `/` landing page with product CTAs.
 - `/signup` account/workspace creation entry point, gated by `ENABLE_PUBLIC_SIGNUP`.
+- `/api/cron/storage-cleanup` protected weekly cleanup for screenshot lifecycle (`Authorization: Bearer $CHANGETHIS_CRON_SECRET`).
 - `/login` authenticated console entry point.
 - `/demo` widget sandbox page that loads the real widget bundle against the current API.
 - `/projects` designer/product inbox.
 - `/settings/git-connections` GitHub/GitLab connection state.
 - `/settings/connected-sites` real connected-site setup and widget script management.
 - `/settings/users` workspace members view.
-- `/api/widget/config?project=project_public_key` public widget configuration.
+- `/api/widget/config?project=project_public_key` public widget configuration, including per-site reporter fields.
 - `/api/public/feedback` public feedback ingestion.
 - `/api/public/feedback/:id/cancel` public cancellation endpoint used by the widget.
 - `/api/projects/sites` connected-site API.

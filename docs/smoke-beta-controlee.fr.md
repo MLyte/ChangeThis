@@ -69,8 +69,10 @@ https://smoke.example/widget-external-smoke.html?app=https%3A%2F%2Fapp.changethi
 ## Checklist production
 
 - [ ] Migrations Supabase appliquees avant deploy.
-- [ ] Migrations `supabase/migrations/0001_*.sql` a `0009_*.sql` appliquees.
+- [ ] Migrations `supabase/migrations/0001_*.sql` a `0011_*.sql` appliquees.
 - [ ] `AUTH_MODE=supabase`, `DATA_STORE=supabase`, signup ouvert ou `ENABLE_PUBLIC_SIGNUP=false` volontairement choisi pour une pause.
+- [ ] `CHANGETHIS_CRON_SECRET` configure si le cron de cleanup screenshots est active.
+- [ ] Le reglage widget `Identite visiteur` est dans l'etat attendu pour le site smoke (`optional` par defaut, `required` si l'auteur doit etre obligatoire).
 - [ ] `npm run prod:check` vert avec les variables production.
 - [ ] `npm run smoke:widget -- --base-url https://app.changethis.dev` vert.
 - [ ] `npm run smoke:widget -- --base-url https://app.changethis.dev --project-key PROJECT_PUBLIC_KEY --origin ORIGIN_AUTORISEE` vert.
@@ -83,4 +85,4 @@ https://smoke.example/widget-external-smoke.html?app=https%3A%2F%2Fapp.changethi
 
 - La page `/demo` reste un bac a sable widget, pas une preuve d'installation client externe.
 - Le rate limit public reste en memoire et n'est pas encore ideal pour du multi-instance.
-- Les screenshots restent transitoirement stockes en data URL tant que Supabase Storage ou un stockage objet n'est pas branche.
+- Les screenshots restent transitoirement stockes en data URL tant que Supabase Storage ou un stockage objet n'est pas branche, mais ils sont compresses cote widget et le cron `/api/cron/storage-cleanup` peut archiver/purger les gros assets anciens.

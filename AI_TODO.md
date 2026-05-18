@@ -59,7 +59,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter une rotation des project public keys via `project_public_keys`.
 - [ ] Migrer les screenshots depuis les data URLs vers Supabase Storage ou stockage objet.
 - [ ] Stocker uniquement un chemin d'objet ou une URL signée pour chaque screenshot.
-- [ ] Ajouter une table ou colonne pour le hash de contenu des screenshots.
+- [x] Ajouter une table ou colonne pour le hash de contenu des screenshots.
 - [ ] Ajouter une migration pour les index nécessaires aux listes feedbacks par projet, statut et date.
 - [ ] Ajouter une migration pour les timestamps `updated_at` automatiques.
 - [ ] Ajouter une migration pour conserver le raw payload provider des créations d'issues.
@@ -339,9 +339,20 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Faire rédiger ou valider Privacy Policy, CGV/Terms, DPA et politique cookies.
 - [ ] Valider les métriques analytics autorisées et leur conformité RGPD.
 - [ ] Valider les clients pilotes et le périmètre du dry-run staging.
-- [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-19] Mise a jour Markdown branches: actualisation des docs beta pour migrations `0001` a `0011`, reglage `Identite visiteur` du widget et rappel du cron screenshots; synchro prevue avec la branche `main`.
+- [2026-05-19] Nettoyage pilotage: les taches ponctuelles `executer smoke complet ou demander l'info manquante` et `mettre a jour AI_TODO avec resultat Go/No-Go` ne sont plus traitees comme actions actives; le Go/No-Go commercial reste un sujet futur de release, pas un blocage beta ouverte courant.
+- [2026-05-19] Ajout auteur feedback structure: configuration par site `Identite visiteur` (`hidden`, `optional`, `required`), champs nom/e-mail dans le widget, validation serveur `reporter`, affichage dashboard et inclusion dans les brouillons d'issues. Migration Supabase ajoute `projects.widget_reporter_fields`. Validation ciblee: tests shared/widget/web OK, typecheck OK, lint OK, migrations check OK, build OK, controle DOM widget local OK.
+- [2026-05-19] Correction UI inbox capture: la vignette de capture garde une hauteur fixe dans les lignes compactes, meme quand l'accordeon `Brouillon, destination et contexte` est ouvert, pour eviter le resize visuel. Validation ciblee: typecheck web OK, lint web OK, build web OK.
+- [2026-05-19] Rework UX/UI closing home: la section CTA beta ouverte devient un panneau d'activation plus concret, avec preuves courtes, trois etapes apres inscription et CTA integres au flux, au lieu d'une carte vide avec seulement deux boutons. Validation ciblee: typecheck web OK, lint web OK, build web OK, controle visuel local OK.
+- [2026-05-19] Placement checklist activation: le composant `Checklist activation` de la colonne `/projects` est deplace juste apres la section `Synthese / File actuelle`, pour suivre la lecture de la feuille courante. Validation ciblee: typecheck web OK, lint web OK, build web OK.
+- [2026-05-19] Curseur interactif global: ajout d'une classe utilitaire `.cursor-pointer` et d'une regle CSS globale pour appliquer le curseur pointer aux liens, boutons et controles interactifs non desactives, avec `not-allowed` conserve pour les etats disabled. Validation ciblee: typecheck web OK, lint web OK, build web OK.
+- [2026-05-19] Correction page login connectee: `/login` redirige maintenant une session workspace existante vers la destination demandee ou `/projects`, au lieu d'afficher le formulaire alors que le header indique deja l'utilisateur connecte. Validation ciblee: typecheck web OK, lint web OK, build web OK.
+- [2026-05-19] UX retour console: la home affiche desormais un bouton header `Ouvrir la console` quand une session existe sans navigation applicative, et la carte hero connectee remplace `S'inscrire/Connexion` par `Ouvrir la console` + `Configurer les sites`. Validation ciblee: typecheck web OK, lint web OK, build web OK, verification visuelle locale anonyme OK.
+- [2026-05-19] Connexions Git: ajout d'un input token manuel aussi pour GitLab, instructions GitLab dediees et alignement des cartes provider en haut pour eviter l'etirement vertical entre GitHub et GitLab. Validation lancee apres changement.
+- [2026-05-19] Restriction page Utilisateurs: l'onglet `Parametres > Utilisateurs` est reserve aux roles `owner/admin`, les membres non-admin ne voient plus le lien et un acces direct a `/settings/users` renvoie une page interdite. Validation lancee apres changement.
+- [2026-05-19] Economie DB screenshots: compression widget en WebP max 1600px + miniature 400px, ajout des metadonnees Supabase `screenshot_status`, `last_used_at`, `usage_count`, `storage_path`, `hash`, et route cron protegee `/api/cron/storage-cleanup` pour archiver les gros screenshots ignores/resolus apres 30 jours puis supprimer les archives apres 90 jours.
 - [2026-05-19] Passage beta ouverte par defaut: `ENABLE_PUBLIC_SIGNUP` devient un interrupteur de pause (`false`/`0`) plutot qu'un prerequis d'ouverture, la home/header/login/signup sont alignes sur `Inscription`/`Connexion`, le fallback waitlist devient "inscriptions en pause" et la creation workspace Supabase renvoie proprement une erreur signup au lieu d'une 500 si le service role/REST manque.
 - [2026-05-19] Hygiene branches Git: l'ancienne branche de travail `codex/full-live-signup` a ete renommee en `dev`, consolidee et poussee; `origin/main` a ete merge dans `dev`; les branches remote `codex/*` obsoletes ont ete supprimees/prunees. Etat final attendu: branches locales/remotes limitees a `main` et `dev`.
 - [2026-05-19] Ajustement hero vitrine: l'image gant du titre `ChangeThis` passe apres le wordmark sur la meme ligne et recoit une animation verticale de pointage vers le bas, avec respect du mode reduction des animations. Validation ciblee: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK; `git diff --check -- apps/web/app/page.tsx apps/web/app/styles.css` OK avec avertissements CRLF existants; verification visuelle locale du premier pli OK.
