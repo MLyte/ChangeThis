@@ -89,6 +89,30 @@ test("Supabase manual token setup creates a real workspace integration", async (
   assert.equal(fake.integrations[0].status, "needs_setup");
 });
 
+test("Supabase connected integration readback does not depend on credential list hydration", async () => {
+  const fake = createFakeSupabase([{
+    id: integrationId,
+    organization_id: workspaceId,
+    provider: "github",
+    auth_type: "github_app",
+    external_account_id: null,
+    installation_id: null,
+    base_url: "https://github.com",
+    status: "connected",
+    created_at: "2026-05-02T09:00:00.000Z",
+    updated_at: "2026-05-02T09:00:00.000Z"
+  }]);
+  globalThis.fetch = fake.fetch;
+
+  const integrations = await providerModule.listProviderIntegrationsAsync(workspaceId);
+  const github = integrations.find((integration) => integration.provider === "github");
+
+  assert.equal(github?.id, integrationId);
+  assert.equal(github?.status, "connected");
+  assert.equal(github?.credentialConfigured, true);
+  assert.equal(github?.credentialAvailable, true);
+});
+
 function createFakeSupabase(initialIntegrations: Array<Record<string, unknown>>): {
   fetch: typeof globalThis.fetch;
   integrations: Array<Record<string, unknown>>;
