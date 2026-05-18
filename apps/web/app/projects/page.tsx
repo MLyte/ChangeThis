@@ -184,8 +184,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           </section>
 
           <aside className="dashboard-side-panel" aria-label="Contexte ChangeThis">
-            <ProjectsOnboardingChecklist steps={onboardingSteps} />
-
             <section className="side-panel-section status-side-section" aria-labelledby="status-side-title">
               <div className="side-panel-heading">
                 <p className="eyebrow">Synthèse</p>
@@ -234,6 +232,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 />
               </div>
             </section>
+
+            <ProjectsOnboardingChecklist steps={onboardingSteps} />
 
             <section className="side-panel-section">
               <div className="side-panel-heading">
