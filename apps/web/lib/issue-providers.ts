@@ -125,7 +125,7 @@ function createGitHubClient(resolveToken: TokenResolver): IssueProviderClient {
       const body = await parseResponseBody(response);
 
       if (!response.ok) {
-        throw providerError("github", response.status, body);
+        throw providerError("github", response.status, body, `issue creation on ${validatedTarget.namespace}/${validatedTarget.project}`);
       }
 
       if (!isRecord(body) || typeof body.html_url !== "string") {
@@ -284,7 +284,10 @@ function parseGitLabIssueIid(url: string): number | undefined {
 }
 
 function providerError(provider: IssueProvider, status: number, body: unknown, action = "issue creation"): IssueProviderError {
-  const message = extractProviderMessage(body) ?? `${provider} ${action} failed with HTTP ${status}.`;
+  const providerMessage = extractProviderMessage(body);
+  const message = actionableProviderMessage(provider, status, providerMessage, action)
+    ?? providerMessage
+    ?? `${provider} ${action} failed with HTTP ${status}.`;
 
   if (status === 401) {
     return new IssueProviderError(provider, "auth_failed", message, status);
@@ -307,6 +310,16 @@ function providerError(provider: IssueProvider, status: number, body: unknown, a
   }
 
   return new IssueProviderError(provider, "transient_failure", message, status);
+}
+
+function actionableProviderMessage(provider: IssueProvider, status: number, providerMessage: string | undefined, action: string): string | undefined {
+  if (provider === "github" && status === 403 && providerMessage === "Resource not accessible by personal access token") {
+    const target = action.startsWith("issue creation on ") ? action.replace("issue creation on ", "") : "le dépôt cible";
+
+    return `Le token GitHub n'a pas accès à ${target} ou n'a pas la permission Repository permissions > Issues > Read and write. Modifiez le fine-grained token GitHub, ajoutez ce dépôt aux Repository access, puis réenregistrez le token dans ChangeThis.`;
+  }
+
+  return undefined;
 }
 
 async function parseResponseBody(response: Response): Promise<unknown> {
