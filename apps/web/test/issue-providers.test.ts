@@ -136,6 +136,35 @@ test("creates provider issues with the selected target", async () => {
   });
 });
 
+test("explains GitHub fine-grained token issue permissions failures", async () => {
+  globalThis.fetch = async () => Response.json({
+    message: "Resource not accessible by personal access token"
+  }, { status: 403 });
+
+  const target: IssueTarget = {
+    provider: "github",
+    namespace: "MLyte",
+    project: "OptiMaster",
+    integrationId: "local-github",
+    webUrl: "https://github.com/MLyte/OptiMaster"
+  };
+  const draft: IssueDraft = {
+    title: "Créer une issue depuis un feedback",
+    description: "Feedback client",
+    labels: ["source:client-feedback"]
+  };
+  const client = getIssueProviderClient("github", { token: "github-token", integrationId: target.integrationId });
+
+  await assert.rejects(
+    () => client.createIssue(target, draft),
+    (error) => error instanceof IssueProviderError
+      && error.provider === "github"
+      && error.code === "permission_denied"
+      && error.message.includes("MLyte/OptiMaster")
+      && error.message.includes("Issues > Read and write")
+  );
+});
+
 test("times out provider issue creation as a transient failure", async () => {
   process.env.ISSUE_PROVIDER_TIMEOUT_MS = "1";
   globalThis.fetch = async (_input, init) => {
