@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Accessibility, CheckCircle2, ClipboardCheck, FileText, GitBranch, Globe2, Mail, MonitorCheck, Pin, ShieldCheck, SlidersHorizontal, Sparkles, Users, type LucideIcon } from "lucide-react";
-import { isPublicSignupEnabled } from "../lib/auth";
+import { getCurrentSession, isPublicSignupEnabled } from "../lib/auth";
 import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
@@ -70,6 +70,8 @@ type HomePageProps = {
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const publicSignupEnabled = isPublicSignupEnabled();
+  const session = await getCurrentSession();
+  const isSignedIn = Boolean(session);
   const params = await searchParams;
   const waitlistStatus = normalizeWaitlistStatus(params?.waitlist);
 
@@ -91,7 +93,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <main className="shell app-home">
-      <AppHeader showAuthLinks suppressSession={!publicSignupEnabled} />
+      <AppHeader
+        showAuthLinks
+        suppressSession={!session}
+        session={session ? {
+          email: session.user.email,
+          isLocalMode: session.user.id === "local-dev-user"
+        } : undefined}
+      />
 
       <section className="home-section home-hero" aria-labelledby="product-title">
         <div className="home-hero-copy">
@@ -109,7 +118,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
 
         <div className="home-hero-action">
-          {publicSignupEnabled ? (
+          {isSignedIn ? (
+            <SignupAccessCard isSignedIn />
+          ) : publicSignupEnabled ? (
             <SignupAccessCard />
           ) : (
             <WaitlistForm action={waitlistAction} waitlistStatus={waitlistStatus} />
@@ -394,7 +405,7 @@ function MobilePreviewSection() {
   );
 }
 
-function SignupAccessCard({ compact = false }: { compact?: boolean }) {
+function SignupAccessCard({ compact = false, isSignedIn = false }: { compact?: boolean; isSignedIn?: boolean }) {
   return (
     <div className={`waitlist-form signup-access-card${compact ? " compact" : ""}`}>
       {!compact ? (
@@ -403,14 +414,23 @@ function SignupAccessCard({ compact = false }: { compact?: boolean }) {
             <Users size={18} strokeWidth={2.3} />
           </span>
           <div>
-            <strong><T k="home.signup.callout.title" /></strong>
-            <p><TRich k="home.signup.callout.copy" /></p>
+            <strong><T k={isSignedIn ? "home.console.callout.title" : "home.signup.callout.title"} /></strong>
+            <p><TRich k={isSignedIn ? "home.console.callout.copy" : "home.signup.callout.copy"} /></p>
           </div>
         </div>
       ) : null}
       <div className="hero-actions signup-access-actions">
-        <Link className="button" href="/signup"><T k="home.hero.signup" /></Link>
-        <Link className="button secondary-button" href="/login"><T k="home.hero.login" /></Link>
+        {isSignedIn ? (
+          <>
+            <Link className="button" href="/projects"><T k="home.console.primary" /></Link>
+            <Link className="button secondary-button" href="/settings/connected-sites"><T k="home.console.secondary" /></Link>
+          </>
+        ) : (
+          <>
+            <Link className="button" href="/signup"><T k="home.hero.signup" /></Link>
+            <Link className="button secondary-button" href="/login"><T k="home.hero.login" /></Link>
+          </>
+        )}
       </div>
       {!compact ? (
         <ul className="waitlist-points" aria-label="Détails de l'accès ChangeThis">

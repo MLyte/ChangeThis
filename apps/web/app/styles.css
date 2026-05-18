@@ -194,6 +194,12 @@ textarea,
   gap: 8px;
 }
 
+.header-console-link {
+  min-height: 36px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
 .runtime-status {
   align-items: center;
   display: flex;

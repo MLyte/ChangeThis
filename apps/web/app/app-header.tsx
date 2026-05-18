@@ -32,6 +32,7 @@ export async function AppHeader({
   const publicSignupEnabled = isPublicSignupEnabled();
   const resolvedSession = suppressSession ? undefined : session ?? await loadHeaderSession();
   const showPrimaryNav = resolvedSession && navItems.length > 0;
+  const showConsoleShortcut = resolvedSession && !showPrimaryNav;
   const showPublicAuthActions = !suppressAuthActions && !resolvedSession && (showAuthLinks || navItems.length > 0 || publicSignupEnabled);
   const showHeaderSession = resolvedSession && !resolvedSession.isLocalMode;
 
@@ -54,6 +55,13 @@ export async function AppHeader({
               </AppNavLink>
             ))}
           </nav>
+        ) : null}
+
+        {showConsoleShortcut ? (
+          <Link className="button header-console-link" href="/projects">
+            <Inbox aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            <T k="nav.openConsole" />
+          </Link>
         ) : null}
 
         <LanguageSwitch />
