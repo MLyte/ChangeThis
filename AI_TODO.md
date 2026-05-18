@@ -342,6 +342,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-19] Connexions Git: ajout d'un input token manuel aussi pour GitLab, instructions GitLab dediees et alignement des cartes provider en haut pour eviter l'etirement vertical entre GitHub et GitLab. Validation lancee apres changement.
 - [2026-05-19] Restriction page Utilisateurs: l'onglet `Parametres > Utilisateurs` est reserve aux roles `owner/admin`, les membres non-admin ne voient plus le lien et un acces direct a `/settings/users` renvoie une page interdite. Validation lancee apres changement.
 - [2026-05-19] Economie DB screenshots: compression widget en WebP max 1600px + miniature 400px, ajout des metadonnees Supabase `screenshot_status`, `last_used_at`, `usage_count`, `storage_path`, `hash`, et route cron protegee `/api/cron/storage-cleanup` pour archiver les gros screenshots ignores/resolus apres 30 jours puis supprimer les archives apres 90 jours.
 - [2026-05-19] Passage beta ouverte par defaut: `ENABLE_PUBLIC_SIGNUP` devient un interrupteur de pause (`false`/`0`) plutot qu'un prerequis d'ouverture, la home/header/login/signup sont alignes sur `Inscription`/`Connexion`, le fallback waitlist devient "inscriptions en pause" et la creation workspace Supabase renvoie proprement une erreur signup au lieu d'une 500 si le service role/REST manque.

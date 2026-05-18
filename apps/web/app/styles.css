@@ -4641,6 +4641,7 @@ dd {
 }
 
 .integration-grid {
+  align-items: start;
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4656,6 +4657,7 @@ dd {
 }
 
 .integration-card {
+  align-self: start;
   display: grid;
   gap: 14px;
   padding: 18px;
@@ -4842,6 +4844,50 @@ dd {
   display: grid;
   gap: 10px;
   padding: 12px;
+}
+
+.provider-token-form {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.provider-token-form label {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.provider-token-form > div {
+  align-items: stretch;
+  display: flex;
+  gap: 8px;
+}
+
+.provider-token-form input {
+  background: white;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  color: var(--ink);
+  flex: 1 1 auto;
+  font: inherit;
+  min-height: 38px;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.provider-token-form input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.14);
+  outline: none;
+}
+
+.provider-token-form p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .provider-token-help-title {
