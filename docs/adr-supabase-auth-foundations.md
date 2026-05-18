@@ -15,7 +15,7 @@ ChangeThis needs production authentication without breaking the current local de
 - Keep local development available through `AUTH_MODE=local`.
 - Use `AUTH_MODE=supabase` to force Supabase token validation.
 - Default to local auth outside production and Supabase auth in production when `AUTH_MODE` is unset.
-- Open public signup by default for the controlled open beta; use `PUBLIC_SIGNUP_PAUSED=true` as the explicit pause switch for private or paused environments.
+- Open public signup by default for the controlled open beta; use `ENABLE_PUBLIC_SIGNUP=false` as the explicit pause switch for private or paused environments.
 - Keep `DATA_STORE=file` as the local data-store default. Use `DATA_STORE=supabase` for the real beta path and production-like environments.
 
 ## Consequences

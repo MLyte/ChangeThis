@@ -11,7 +11,6 @@ const originalEnv = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NODE_ENV: process.env.NODE_ENV,
-  PUBLIC_SIGNUP_PAUSED: process.env.PUBLIC_SIGNUP_PAUSED,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   VERCEL_ENV: process.env.VERCEL_ENV
 };
@@ -154,24 +153,19 @@ test("workspace role checks enforce the configured hierarchy", async () => {
 
 test("public signup is open by default and can be paused explicitly", async () => {
   delete process.env.ENABLE_PUBLIC_SIGNUP;
-  delete process.env.PUBLIC_SIGNUP_PAUSED;
 
   let auth = await importAuthModule();
   assert.equal(auth.isPublicSignupEnabled(), true);
 
   process.env.ENABLE_PUBLIC_SIGNUP = "false";
   auth = await importAuthModule();
-  assert.equal(auth.isPublicSignupEnabled(), true);
+  assert.equal(auth.isPublicSignupEnabled(), false);
 
-  process.env.PUBLIC_SIGNUP_PAUSED = "true";
+  process.env.ENABLE_PUBLIC_SIGNUP = "0";
   auth = await importAuthModule();
   assert.equal(auth.isPublicSignupEnabled(), false);
 
-  process.env.PUBLIC_SIGNUP_PAUSED = "1";
-  auth = await importAuthModule();
-  assert.equal(auth.isPublicSignupEnabled(), false);
-
-  process.env.PUBLIC_SIGNUP_PAUSED = "false";
+  process.env.ENABLE_PUBLIC_SIGNUP = "true";
   auth = await importAuthModule();
   assert.equal(auth.isPublicSignupEnabled(), true);
 });
@@ -196,7 +190,6 @@ function restoreEnv(): void {
   restoreEnvValue("NEXT_PUBLIC_SUPABASE_ANON_KEY", originalEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   restoreEnvValue("NEXT_PUBLIC_SUPABASE_URL", originalEnv.NEXT_PUBLIC_SUPABASE_URL);
   restoreEnvValue("NODE_ENV", originalEnv.NODE_ENV);
-  restoreEnvValue("PUBLIC_SIGNUP_PAUSED", originalEnv.PUBLIC_SIGNUP_PAUSED);
   restoreEnvValue("SUPABASE_SERVICE_ROLE_KEY", originalEnv.SUPABASE_SERVICE_ROLE_KEY);
   restoreEnvValue("VERCEL_ENV", originalEnv.VERCEL_ENV);
 }

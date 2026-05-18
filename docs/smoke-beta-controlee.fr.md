@@ -7,7 +7,7 @@ Objectif: verifier apres deploy que la beta ouverte controlee reste exploitable 
 ## Perimetre
 
 - Application beta deployee, par defaut `https://app.changethis.dev`.
-- `AUTH_MODE=supabase`, `DATA_STORE=supabase`; `PUBLIC_SIGNUP_PAUSED=true` uniquement si les inscriptions doivent etre temporairement en pause.
+- `AUTH_MODE=supabase`, `DATA_STORE=supabase`; `ENABLE_PUBLIC_SIGNUP=false` uniquement si les inscriptions doivent etre temporairement en pause.
 - Widget public servi par `/widget.js` et `/widget.global.js`.
 - Un site connecte de smoke avec origine autorisee et cle publique projet.
 - Creation d'issue GitHub ou GitLab declenchee manuellement depuis `/projects`.
@@ -70,7 +70,7 @@ https://smoke.example/widget-external-smoke.html?app=https%3A%2F%2Fapp.changethi
 
 - [ ] Migrations Supabase appliquees avant deploy.
 - [ ] Migrations `supabase/migrations/0001_*.sql` a `0009_*.sql` appliquees.
-- [ ] `AUTH_MODE=supabase`, `DATA_STORE=supabase`, signup ouvert ou `PUBLIC_SIGNUP_PAUSED=true` volontairement choisi pour une pause.
+- [ ] `AUTH_MODE=supabase`, `DATA_STORE=supabase`, signup ouvert ou `ENABLE_PUBLIC_SIGNUP=false` volontairement choisi pour une pause.
 - [ ] `npm run prod:check` vert avec les variables production.
 - [ ] `npm run smoke:widget -- --base-url https://app.changethis.dev` vert.
 - [ ] `npm run smoke:widget -- --base-url https://app.changethis.dev --project-key PROJECT_PUBLIC_KEY --origin ORIGIN_AUTORISEE` vert.
