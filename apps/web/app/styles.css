@@ -589,16 +589,34 @@ h1 {
   align-items: center;
   display: flex;
   font-size: clamp(48px, 5.3vw, 70px);
-  gap: clamp(8px, 1.2vw, 16px);
+  gap: clamp(10px, 1.4vw, 18px);
   line-height: 0.96;
   margin-bottom: 18px;
+  white-space: nowrap;
 }
 
 .product-title-logo {
+  animation: product-title-logo-point 1.55s cubic-bezier(0.34, 0.02, 0.2, 1) infinite;
   flex: 0 0 auto;
   height: clamp(58px, 6.4vw, 82px);
   object-fit: contain;
+  transform-origin: 50% 18%;
   width: clamp(58px, 6.4vw, 82px);
+}
+
+@keyframes product-title-logo-point {
+  0%,
+  100% {
+    transform: translateY(-2px) rotate(-2deg);
+  }
+
+  42% {
+    transform: translateY(8px) rotate(1deg);
+  }
+
+  62% {
+    transform: translateY(4px) rotate(0deg);
+  }
 }
 
 h2 {
@@ -8372,12 +8390,12 @@ code {
   }
 
   .product-title {
-    font-size: clamp(42px, 13vw, 56px);
+    font-size: clamp(36px, 10.8vw, 54px);
   }
 
   .product-title-logo {
-    height: 54px;
-    width: 54px;
+    height: clamp(44px, 13vw, 54px);
+    width: clamp(44px, 13vw, 54px);
   }
 
   .hero-statement {
