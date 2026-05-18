@@ -351,6 +351,34 @@ textarea,
   white-space: nowrap;
 }
 
+.cursor-pointer,
+:where(
+  a[href],
+  button:not(:disabled),
+  summary,
+  label[for],
+  select:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="reset"]:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"])
+) {
+  cursor: pointer;
+}
+
+:where(
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  .disabled-button,
+  [aria-disabled="true"]
+) {
+  cursor: not-allowed;
+}
+
 .link {
   color: var(--muted);
 }
