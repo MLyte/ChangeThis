@@ -82,10 +82,20 @@ export async function POST(
   }
 
   await enableProviderIntegrationAsync(integration.provider, integration.id, workspaceId);
+  const persistedIntegration = await getProviderIntegrationAsync(integration.provider, integration.id, workspaceId);
+
+  if (!persistedIntegration || persistedIntegration.status !== "connected" || !persistedIntegration.credentialConfigured) {
+    return NextResponse.json({
+      error: "Provider token was saved, but the connection state could not be confirmed. Please retry."
+    }, { status: 502 });
+  }
 
   return NextResponse.json({
-    provider: integration.provider,
-    integrationId: integration.id,
+    provider: persistedIntegration.provider,
+    integrationId: persistedIntegration.id,
+    credentialAvailable: persistedIntegration.credentialAvailable,
+    credentialConfigured: persistedIntegration.credentialConfigured,
+    disabled: persistedIntegration.disabled,
     status: tokenInput ? "connected" : "enabled"
   });
 }
