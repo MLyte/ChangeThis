@@ -3205,8 +3205,7 @@ dd {
   border-radius: 7px;
   cursor: pointer;
   display: block;
-  height: 100%;
-  min-height: 76px;
+  height: 76px;
   padding: 0;
   position: relative;
   width: 100%;
@@ -3226,7 +3225,6 @@ dd {
   border-radius: 6px;
   display: block;
   height: 100%;
-  min-height: 76px;
   object-fit: cover;
   width: 100%;
 }
@@ -3965,15 +3963,15 @@ dd {
 }
 
 .feedback-capture-cell {
-  align-items: stretch;
-  align-self: stretch;
+  align-items: start;
+  align-self: start;
   justify-items: stretch;
 }
 
 .feedback-capture-preview {
-  align-self: stretch;
+  align-self: start;
+  height: 76px;
   justify-self: stretch;
-  min-height: 76px;
   width: 100%;
 }
 
@@ -5899,8 +5897,9 @@ code {
     padding: 12px 0 0;
   }
 
+  .feedback-capture-preview,
   .feedback-capture-cell .screenshot-thumb {
-    min-height: 118px;
+    height: 118px;
     width: 100%;
   }
 
