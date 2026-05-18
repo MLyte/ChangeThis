@@ -4782,6 +4782,32 @@ dd {
   line-height: 1.45;
 }
 
+.provider-token-saved {
+  align-items: center;
+  background: rgba(63, 81, 181, 0.08);
+  border: 1px solid rgba(63, 81, 181, 0.18);
+  border-radius: 7px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.provider-token-saved strong {
+  color: var(--accent);
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.provider-token-saved span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: 2px;
+}
+
 .provider-badge,
 .status-badge {
   align-items: center;

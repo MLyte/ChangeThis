@@ -720,6 +720,7 @@ function GitConnectionsSection({
   ));
   const [tokenInputs, setTokenInputs] = useState<Partial<Record<IssueProvider, string>>>({});
   const [savingTokenProvider, setSavingTokenProvider] = useState<IssueProvider | undefined>();
+  const [rotatingTokenProvider, setRotatingTokenProvider] = useState<IssueProvider | undefined>();
 
   const refreshConnection = useCallback(async (integration: ProviderIntegrationSummary, signal?: AbortSignal, forceEnabled = false) => {
     if ((!integration.credentialConfigured && !forceEnabled) || (!forceEnabled && disabledProviders.has(integration.provider))) {
@@ -972,6 +973,7 @@ function GitConnectionsSection({
         ...current,
         [integration.provider]: ""
       }));
+      setRotatingTokenProvider(undefined);
       setDisabledProviders((current) => {
         const next = new Set(current);
         next.delete(integration.provider);
@@ -1109,6 +1111,8 @@ function GitConnectionsSection({
           };
           const isConnectionActive = connectionState.state === "active" || connectionState.state === "checking";
           const isSavingToken = savingTokenProvider === integration.provider;
+          const isRotatingToken = rotatingTokenProvider === integration.provider;
+          const showTokenForm = !isLocallyDisabled && (!credentialConfigured || isRotatingToken);
           const tokenInputId = `${integration.provider}-server-token`;
 
           return (
@@ -1136,12 +1140,23 @@ function GitConnectionsSection({
               {connectionState.checkedAt ? (
                 <p className="connection-last-check">Dernier contrôle: {formatConnectionCheckDate(connectionState.checkedAt)}</p>
               ) : null}
-              {!credentialConfigured && !isLocallyDisabled ? (
+              {credentialConfigured && !isRotatingToken ? (
+                <div className="provider-token-saved">
+                  <div>
+                    <strong>Token serveur enregistré</strong>
+                    <span>Le secret est stocké chiffré et ne sera jamais réaffiché en clair.</span>
+                  </div>
+                  <button className="button secondary-button" onClick={() => setRotatingTokenProvider(integration.provider)} type="button">
+                    Remplacer le token
+                  </button>
+                </div>
+              ) : null}
+              {showTokenForm ? (
                 <form className="provider-token-form" onSubmit={(event) => {
                   event.preventDefault();
                   void saveProviderToken(integration);
                 }}>
-                  <label htmlFor={tokenInputId}>Token serveur {integration.name}</label>
+                  <label htmlFor={tokenInputId}>{credentialConfigured ? "Nouveau token" : "Token serveur"} {integration.name}</label>
                   <div className="provider-token-row">
                     <input
                       autoComplete="off"
@@ -1157,7 +1172,7 @@ function GitConnectionsSection({
                     />
                     <button className="button" disabled={isSavingToken} type="submit">
                       <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                      {isSavingToken ? "Vérification..." : "Enregistrer"}
+                      {isSavingToken ? "Vérification..." : credentialConfigured ? "Remplacer" : "Enregistrer"}
                     </button>
                   </div>
                   <p>
