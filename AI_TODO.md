@@ -337,6 +337,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-18] Correctif beta Connexions Git: ajout d'un champ token serveur GitHub/GitLab dans `/settings/git-connections`, enregistrement chiffre du credential workspace cote API, creation automatique d'une integration Supabase reelle depuis l'etat setup et rafraichissement immediat de la verification depots. Validation: `npm run typecheck --workspace @changethis/web` OK, `npm run lint --workspace @changethis/web` OK, `npm run test --workspace @changethis/web` OK, `npm run build` OK, verification navigateur locale OK sur `http://127.0.0.1:3021/settings/git-connections`.
 - [2026-05-02] Ajustement copy vitrine production: le bloc produit ne parle plus de beta/test (`La beta va tester trois choses`) mais vend la valeur finale de ChangeThis: capturer un retour precis, le qualifier en equipe, puis envoyer une tache exploitable vers Git. Les mentions beta restent reservees aux blocs d'acces/liste d'attente. Validation lancee apres changement.
 - [2026-05-02] Ajustement couleur secondaire vitrine: ciment encore eclairci (`#aeb5b1`, soft `#f6f7f6`) sans supprimer la presence des pictos/aplats; ombres adoucies. Validation lancee apres changement.
 - [2026-05-02] Ajustement couleur secondaire vitrine: ciment eclairci pour mieux se distinguer du texte noir (`#9ba19e`, light `#c7ccc9`, soft `#f2f4f3`) et ombres alignees. Validation lancee apres changement.

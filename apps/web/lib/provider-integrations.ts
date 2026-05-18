@@ -187,6 +187,14 @@ export async function getProviderConnectUrlAsync(provider: IssueProvider, reques
   return getGitLabConnectUrl(integration, callbackUrl, state);
 }
 
+export async function ensureProviderIntegrationAsync(provider: IssueProvider, workspaceId?: string): Promise<RuntimeProviderIntegration | undefined> {
+  if (getDataStoreMode() !== "supabase" || !workspaceId || !isUuid(workspaceId) || !isSupabaseServiceConfigured()) {
+    return getProviderIntegration(provider, undefined, workspaceId);
+  }
+
+  return ensureSupabaseProviderIntegration(provider, workspaceId);
+}
+
 export async function recordProviderConnection(input: {
   provider: IssueProvider;
   workspaceId: string;
