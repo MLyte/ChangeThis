@@ -103,8 +103,8 @@ NODE_ENV=production
 NEXT_PUBLIC_APP_URL=https://app.changethis.dev
 AUTH_MODE=supabase
 DATA_STORE=supabase
-# Optionnel: false met les inscriptions en pause; absent ou true ouvre la beta.
-ENABLE_PUBLIC_SIGNUP=true
+# Optionnel: true met les inscriptions en pause; absent ou false ouvre la beta.
+PUBLIC_SIGNUP_PAUSED=false
 CHANGETHIS_SECRET_KEY=<secret-long-aleatoire>
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
@@ -211,7 +211,7 @@ Go beta si:
 - `DATA_STORE=supabase`.
 - Un feedback reel arrive depuis le widget et apparait dans le dashboard.
 - Les secrets ne sont pas dans Git ni dans les logs.
-- `ENABLE_PUBLIC_SIGNUP=false` uniquement si l'environnement doit refuser de nouveaux comptes; absent ou `true` garde la beta ouverte.
+- `PUBLIC_SIGNUP_PAUSED=true` uniquement si l'environnement doit refuser de nouveaux comptes; absent ou `false` garde la beta ouverte.
 
 No-Go si:
 

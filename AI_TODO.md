@@ -291,7 +291,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] (P2) Formaliser conformité opérationnelle: privacy/RGPD, retention, DPA, politique cookies si analytics marketing.
 
 ## Workflow IA / blocages
-- [2026-05-19] Passage beta ouverte production: le code ouvre maintenant le signup par defaut; si Railway force encore `ENABLE_PUBLIC_SIGNUP=false`, supprimer cette variable ou la passer a `true` dans l'environnement production.
+- [2026-05-19] Passage beta ouverte production: le code ouvre maintenant le signup par defaut et ignore l'ancien `ENABLE_PUBLIC_SIGNUP=false`; utiliser `PUBLIC_SIGNUP_PAUSED=true` uniquement pour suspendre volontairement les inscriptions.
 - [2026-05-18] Smoke beta controlee: `npm run smoke:widget -- --base-url https://app.changethis.dev` bloque correctement sur `/api/ready` en `503`; health et bundles widget sont OK. Il faut une app ready `200` et une cle publique + origine de smoke pour valider le POST reel.
 - [2026-05-18] Validation locale beta controlee: `npm run prod:check` bloque sur `env:check` car le shell courant n'exporte pas `AUTH_MODE`, `DATA_STORE` et `NEXT_PUBLIC_APP_URL`. Relancer avec les variables staging/production beta avant Go/No-Go.
 
@@ -342,7 +342,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
-- [2026-05-19] Passage beta ouverte par defaut: `ENABLE_PUBLIC_SIGNUP` devient un interrupteur de pause (`false`/`0`) plutot qu'un prerequis d'ouverture, la home/header/login/signup sont alignes sur `Inscription`/`Connexion`, le fallback waitlist devient "inscriptions en pause" et la creation workspace Supabase renvoie proprement une erreur signup au lieu d'une 500 si le service role/REST manque.
+- [2026-05-19] Passage beta ouverte par defaut: l'ancien `ENABLE_PUBLIC_SIGNUP=false` n'empêche plus l'ouverture; `PUBLIC_SIGNUP_PAUSED=true` devient l'interrupteur explicite de pause, la home/header/login/signup sont alignes sur `Inscription`/`Connexion`, le fallback waitlist devient "inscriptions en pause" et la creation workspace Supabase renvoie proprement une erreur signup au lieu d'une 500 si le service role/REST manque.
 - [2026-05-19] Hygiene branches Git: l'ancienne branche de travail `codex/full-live-signup` a ete renommee en `dev`, consolidee et poussee; `origin/main` a ete merge dans `dev`; les branches remote `codex/*` obsoletes ont ete supprimees/prunees. Etat final attendu: branches locales/remotes limitees a `main` et `dev`.
 - [2026-05-19] Ajustement hero vitrine: l'image gant du titre `ChangeThis` passe apres le wordmark sur la meme ligne et recoit une animation verticale de pointage vers le bas, avec respect du mode reduction des animations. Validation ciblee: `npm run typecheck --workspace @changethis/web` OK; `npm run lint --workspace @changethis/web` OK; `git diff --check -- apps/web/app/page.tsx apps/web/app/styles.css` OK avec avertissements CRLF existants; verification visuelle locale du premier pli OK.
 - [2026-05-19] Verification beta ouverte prod: `/api/health` est OK sur `main` commit `428c0e870cc2e4c582d3540eaa1f24c842122759`, mais `/signup` reste ferme en beta privee. Action restante: activer `ENABLE_PUBLIC_SIGNUP=true` dans Railway production puis redeployer si necessaire.

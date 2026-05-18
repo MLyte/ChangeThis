@@ -84,7 +84,7 @@ The local web app runs on `http://localhost:3000` by default. If the port is occ
 Useful local routes:
 
 - `/` landing page with product CTAs.
-- `/signup` account/workspace creation entry point, gated by `ENABLE_PUBLIC_SIGNUP`.
+- `/signup` account/workspace creation entry point, open by default and pausable with `PUBLIC_SIGNUP_PAUSED=true`.
 - `/login` authenticated console entry point.
 - `/demo` widget sandbox page that loads the real widget bundle against the current API.
 - `/projects` designer/product inbox.

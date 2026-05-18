@@ -165,8 +165,8 @@ export function getAuthMode(): "local" | "supabase" {
 }
 
 export function isPublicSignupEnabled(): boolean {
-  const signupFlag = process.env.ENABLE_PUBLIC_SIGNUP?.trim().toLowerCase();
-  return signupFlag !== "false" && signupFlag !== "0";
+  const pauseFlag = process.env.PUBLIC_SIGNUP_PAUSED?.trim().toLowerCase();
+  return pauseFlag !== "true" && pauseFlag !== "1";
 }
 
 function toWorkspaceRole(value: string): WorkspaceRole {
