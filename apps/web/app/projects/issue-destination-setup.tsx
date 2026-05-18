@@ -502,10 +502,12 @@ export function IssueDestinationSetup({
             <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
             <T k="settings.sidebar.connectedSites" />
           </a>
-          <a className={section === "users" ? "is-active" : ""} href="/settings/users">
-            <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            <T k="settings.sidebar.users" />
-          </a>
+          {canManageMembers ? (
+            <a className={section === "users" ? "is-active" : ""} href="/settings/users">
+              <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+              <T k="settings.sidebar.users" />
+            </a>
+          ) : null}
         </aside>
 
         <div className="settings-content">
@@ -542,7 +544,7 @@ export function IssueDestinationSetup({
             />
           ) : null}
 
-          {section === "users" ? (
+          {section === "users" && canManageMembers ? (
             <UsersSection
               canManageMembers={canManageMembers}
               currentUserId={currentUserId}

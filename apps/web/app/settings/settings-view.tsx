@@ -29,6 +29,12 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
   }
 
   const workspaceId = session.workspace.id;
+  const canManageMembers = session.workspace.role === "admin" || session.workspace.role === "owner";
+
+  if (section === "users" && !canManageMembers) {
+    forbidden();
+  }
+
   const projects = await listConfiguredProjects(workspaceId);
   const feedbacks = await getFeedbackRepository().list({ workspaceId });
   const projectViews = projects.map((project) => {
@@ -45,11 +51,13 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
     };
   });
   const providerIntegrations = await listProviderIntegrationsAsync(workspaceId);
-  const workspaceUsers = await loadWorkspaceUsers(session.workspace.id, {
-    userId: session.user.id,
-    email: session.user.email,
-    role: session.workspace.role
-  });
+  const workspaceUsers = canManageMembers
+    ? await loadWorkspaceUsers(session.workspace.id, {
+        userId: session.user.id,
+        email: session.user.email,
+        role: session.workspace.role
+      })
+    : [];
 
   return (
     <main className="shell">
@@ -64,7 +72,7 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
         <IssueDestinationSetup
           integrations={providerIntegrations}
           projects={projectViews}
-          canManageMembers={session.workspace.role === "admin" || session.workspace.role === "owner"}
+          canManageMembers={canManageMembers}
           currentUserId={session.user.id}
           section={section}
           users={workspaceUsers}
