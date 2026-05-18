@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getAuthMode, isPublicSignupEnabled } from "../../lib/auth";
+import { getAuthMode, getCurrentSession, isPublicSignupEnabled } from "../../lib/auth";
 import { signInWithPassword } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
@@ -19,6 +19,16 @@ type LoginPageProps = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const nextPath = sanitizeNextPath(params?.next ?? params?.redirect);
+  const currentSession = await getCurrentSession();
+
+  if (currentSession?.workspace) {
+    redirect(nextPath);
+  }
+
+  if (currentSession) {
+    redirect("/signup/set-password");
+  }
+
   const hasError = Boolean(params?.error);
   const isLocalMode = getAuthMode() === "local";
   const publicSignupEnabled = isPublicSignupEnabled();
@@ -124,7 +134,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 }
 
 function sanitizeNextPath(value?: string): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/login") || value.startsWith("/logout")) {
     return "/projects";
   }
 

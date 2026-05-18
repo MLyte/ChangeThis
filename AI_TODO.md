@@ -342,6 +342,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Donner le feu vert final Go/No-Go avant activation commerciale.
 
 ## Journal
+- [2026-05-19] Correction page login connectee: `/login` redirige maintenant une session workspace existante vers la destination demandee ou `/projects`, au lieu d'afficher le formulaire alors que le header indique deja l'utilisateur connecte. Validation ciblee: typecheck web OK, lint web OK, build web OK.
 - [2026-05-19] UX retour console: la home affiche desormais un bouton header `Ouvrir la console` quand une session existe sans navigation applicative, et la carte hero connectee remplace `S'inscrire/Connexion` par `Ouvrir la console` + `Configurer les sites`. Validation ciblee: typecheck web OK, lint web OK, build web OK, verification visuelle locale anonyme OK.
 - [2026-05-19] Connexions Git: ajout d'un input token manuel aussi pour GitLab, instructions GitLab dediees et alignement des cartes provider en haut pour eviter l'etirement vertical entre GitHub et GitLab. Validation lancee apres changement.
 - [2026-05-19] Restriction page Utilisateurs: l'onglet `Parametres > Utilisateurs` est reserve aux roles `owner/admin`, les membres non-admin ne voient plus le lien et un acces direct a `/settings/users` renvoie une page interdite. Validation lancee apres changement.
