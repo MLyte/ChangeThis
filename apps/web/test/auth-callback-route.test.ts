@@ -56,10 +56,12 @@ test("auth callback POST rejects missing token", async () => {
 
 test("auth callback POST exchanges a Supabase token hash for session cookies", async () => {
   let requestUrl = "";
+  let requestHeaders: Headers | undefined;
   let requestBody: unknown;
 
   globalThis.fetch = async (input, init) => {
     requestUrl = String(input);
+    requestHeaders = new Headers(init?.headers);
     requestBody = JSON.parse(String(init?.body));
 
     return Response.json({
@@ -84,6 +86,8 @@ test("auth callback POST exchanges a Supabase token hash for session cookies", a
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { redirectTo: "/signup/set-password" });
   assert.equal(requestUrl, "https://supabase.example.test/auth/v1/verify");
+  assert.equal(requestHeaders?.get("apikey"), "anon-test-key");
+  assert.equal(requestHeaders?.get("authorization"), "Bearer anon-test-key");
   assert.deepEqual(requestBody, {
     token_hash: "signup-token-hash",
     type: "signup"
