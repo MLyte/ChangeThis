@@ -5,6 +5,7 @@ import type { IssueDraft, IssueTarget } from "@changethis/shared";
 
 const originalFetch = globalThis.fetch;
 const originalTimeout = process.env.ISSUE_PROVIDER_TIMEOUT_MS;
+const originalGitLabBaseUrl = process.env.GITLAB_BASE_URL;
 
 test.afterEach(() => {
   globalThis.fetch = originalFetch;
@@ -12,6 +13,11 @@ test.afterEach(() => {
     delete process.env.ISSUE_PROVIDER_TIMEOUT_MS;
   } else {
     process.env.ISSUE_PROVIDER_TIMEOUT_MS = originalTimeout;
+  }
+  if (originalGitLabBaseUrl === undefined) {
+    delete process.env.GITLAB_BASE_URL;
+  } else {
+    process.env.GITLAB_BASE_URL = originalGitLabBaseUrl;
   }
 });
 
@@ -125,6 +131,44 @@ test("resolves a single GitLab project URL with a project access token", async (
   });
 });
 
+test("resolves a self-hosted GitLab project URL against its own API origin", async () => {
+  const requests: Request[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init);
+    requests.push(request);
+
+    return Response.json({
+      id: 287,
+      name: "phytorisk",
+      path_with_namespace: "eau/phytorisk",
+      web_url: "https://gitrural.cra.wallonie.be/eau/phytorisk",
+      visibility: "private",
+      default_branch: "main"
+    });
+  };
+
+  const repository = await getIssueProviderRepositoryFromUrl(
+    "gitlab",
+    "https://gitrural.cra.wallonie.be/eau/phytorisk/",
+    { token: "gitlab-token" }
+  );
+
+  assert.equal(requests[0]?.url, "https://gitrural.cra.wallonie.be/api/v4/projects/eau%2Fphytorisk");
+  assert.equal(requests[0]?.headers.get("private-token"), "gitlab-token");
+  assert.deepEqual(repository, {
+    provider: "gitlab",
+    id: "287",
+    name: "phytorisk",
+    fullName: "eau/phytorisk",
+    namespace: "eau",
+    project: "phytorisk",
+    webUrl: "https://gitrural.cra.wallonie.be/eau/phytorisk",
+    private: true,
+    defaultBranch: "main",
+    externalProjectId: "287"
+  });
+});
+
 test("uses a 30 second default provider timeout", async () => {
   delete process.env.ISSUE_PROVIDER_TIMEOUT_MS;
   const originalSetTimeout = globalThis.setTimeout;
@@ -186,6 +230,53 @@ test("creates provider issues with the selected target", async () => {
     id: undefined,
     number: 12,
     url: "https://github.com/agency/product-site/issues/12",
+    state: "open"
+  });
+});
+
+test("creates GitLab issues on the self-hosted project origin stored in the target", async () => {
+  const requests: Request[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init);
+    requests.push(request);
+
+    return Response.json({
+      id: 34,
+      iid: 7,
+      web_url: "https://gitrural.cra.wallonie.be/eau/phytorisk/-/issues/7",
+      state: "opened"
+    });
+  };
+
+  const target: IssueTarget = {
+    provider: "gitlab",
+    namespace: "eau",
+    project: "phytorisk",
+    externalProjectId: "287",
+    integrationId: "local-gitlab",
+    webUrl: "https://gitrural.cra.wallonie.be/eau/phytorisk"
+  };
+  const draft: IssueDraft = {
+    title: "Clarifier le bouton",
+    description: "Feedback client",
+    labels: ["source:client-feedback"]
+  };
+  const client = getIssueProviderClient("gitlab", { token: "gitlab-token", integrationId: target.integrationId });
+  const issue = await client.createIssue(target, draft, { idempotencyKey: "changethis:test" });
+
+  assert.equal(requests[0]?.url, "https://gitrural.cra.wallonie.be/api/v4/projects/287/issues");
+  assert.equal(requests[0]?.headers.get("private-token"), "gitlab-token");
+  assert.equal(requests[0]?.headers.get("idempotency-key"), "changethis:test");
+  assert.deepEqual(await requests[0]?.json(), {
+    title: draft.title,
+    description: draft.description,
+    labels: "source:client-feedback"
+  });
+  assert.deepEqual(issue, {
+    provider: "gitlab",
+    id: "34",
+    iid: 7,
+    url: "https://gitrural.cra.wallonie.be/eau/phytorisk/-/issues/7",
     state: "open"
   });
 });

@@ -212,7 +212,7 @@ function createGitLabClient(resolveToken: TokenResolver): IssueProviderClient {
       }
 
       const projectId = validatedTarget.externalProjectId ?? encodeURIComponent(`${validatedTarget.namespace}/${validatedTarget.project}`);
-      const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
+      const baseUrl = getGitLabApiBaseUrl(validatedTarget.webUrl);
       const response = await fetchProvider("gitlab", `${baseUrl}/api/v4/projects/${projectId}/issues`, {
         method: "POST",
         headers: {
@@ -260,7 +260,7 @@ function createGitLabClient(resolveToken: TokenResolver): IssueProviderClient {
         throw new IssueProviderError("gitlab", "validation_failed", "GitLab issue IID is missing.");
       }
 
-      const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
+      const baseUrl = getGitLabApiBaseUrl(validatedTarget.webUrl);
       const response = await fetchProvider("gitlab", `${baseUrl}/api/v4/projects/${projectId}/issues/${issueIid}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -516,7 +516,7 @@ async function getGitLabRepositoryFromUrl(repositoryUrl: string, options: IssueP
     }
   }
 
-  const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
+  const baseUrl = getGitLabApiBaseUrl(repositoryPath.origin);
   const encodedProjectPath = encodeURIComponent(repositoryPath.fullName);
   const response = await fetchProvider("gitlab", `${baseUrl}/api/v4/projects/${encodedProjectPath}`, {
     headers: {
@@ -626,7 +626,7 @@ function normalizeGitLabProject(value: unknown): ProviderRepository[] {
   }];
 }
 
-function parseRepositoryUrlPath(repositoryUrl: string, provider: IssueProvider): { fullName: string; namespace: string; project: string } | undefined {
+function parseRepositoryUrlPath(repositoryUrl: string, provider: IssueProvider): { fullName: string; namespace: string; project: string; origin: string } | undefined {
   try {
     const url = new URL(repositoryUrl.trim());
     const parts = url.pathname.split("/").filter(Boolean);
@@ -653,25 +653,58 @@ function parseRepositoryUrlPath(repositoryUrl: string, provider: IssueProvider):
     return {
       fullName: `${namespace}/${project}`,
       namespace,
-      project
+      project,
+      origin: url.origin
     };
   } catch {
     return undefined;
   }
 }
 
-function isAllowedGitLabRepositoryOrigin(url: URL): boolean {
-  const gitlabBaseUrl = process.env.GITLAB_BASE_URL;
-
-  if (gitlabBaseUrl) {
+function getGitLabApiBaseUrl(repositoryOriginOrUrl?: string): string {
+  if (repositoryOriginOrUrl) {
     try {
-      return url.origin === new URL(gitlabBaseUrl).origin;
+      const url = new URL(repositoryOriginOrUrl);
+
+      if (isAllowedGitLabRepositoryOrigin(url)) {
+        return url.origin;
+      }
     } catch {
-      return false;
+      // Fall back to the configured public GitLab instance below.
     }
   }
 
-  return url.hostname === "gitlab.com";
+  return normalizeGitLabBaseUrl(process.env.GITLAB_BASE_URL) ?? "https://gitlab.com";
+}
+
+function isAllowedGitLabRepositoryOrigin(url: URL): boolean {
+  if (url.protocol !== "https:" && url.hostname !== "localhost") {
+    return false;
+  }
+
+  if (url.hostname === "gitlab.com") {
+    return true;
+  }
+
+  const configuredOrigin = normalizeGitLabBaseUrl(process.env.GITLAB_BASE_URL);
+
+  if (configuredOrigin && url.origin === configuredOrigin) {
+    return true;
+  }
+
+  return url.protocol === "https:";
+}
+
+function normalizeGitLabBaseUrl(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
 }
 
 async function requireProviderToken(provider: IssueProvider, resolveToken: TokenResolver): Promise<string> {

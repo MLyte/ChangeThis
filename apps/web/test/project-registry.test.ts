@@ -67,6 +67,32 @@ test("creates a connected GitLab site and preserves the provider project id", as
   assert.equal(site.issueTarget.webUrl, "https://gitrural.cra.wallonie.be/group/subgroup/product-site");
 });
 
+test("accepts a self-hosted GitLab project URL even when no global GitLab base URL is configured", async () => {
+  const gitLabBaseUrl = process.env.GITLAB_BASE_URL;
+  delete process.env.GITLAB_BASE_URL;
+
+  try {
+    const site = await createConnectedSite({
+      name: "PulveMap",
+      allowedOrigin: "http://testurl1.cra.wallonie.be",
+      provider: "gitlab",
+      repositoryUrl: "https://gitrural.cra.wallonie.be/eau/phytorisk/",
+      integrationId: "integration_gitlab_project_token",
+      externalProjectId: "287"
+    });
+
+    assert.equal(site.name, "PulveMap");
+    assert.equal(site.allowedOrigins[0], "http://testurl1.cra.wallonie.be");
+    assert.equal(site.issueTarget.provider, "gitlab");
+    assert.equal(site.issueTarget.namespace, "eau");
+    assert.equal(site.issueTarget.project, "phytorisk");
+    assert.equal(site.issueTarget.externalProjectId, "287");
+    assert.equal(site.issueTarget.webUrl, "https://gitrural.cra.wallonie.be/eau/phytorisk");
+  } finally {
+    process.env.GITLAB_BASE_URL = gitLabBaseUrl;
+  }
+});
+
 test("updates and deletes a connected site", async () => {
   const site = await createConnectedSite({
     name: "Docs",

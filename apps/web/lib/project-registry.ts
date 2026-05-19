@@ -804,17 +804,33 @@ function parseRepositoryUrl(
 }
 
 function isAllowedGitLabRepositoryOrigin(url: URL): boolean {
-  const gitlabBaseUrl = process.env.GITLAB_BASE_URL;
-
-  if (gitlabBaseUrl) {
-    try {
-      return url.origin === new URL(gitlabBaseUrl).origin;
-    } catch {
-      return false;
-    }
+  if (url.protocol !== "https:" && url.hostname !== "localhost") {
+    return false;
   }
 
-  return url.hostname.includes("gitlab");
+  if (url.hostname === "gitlab.com") {
+    return true;
+  }
+
+  const configuredOrigin = normalizeGitLabBaseUrl(process.env.GITLAB_BASE_URL);
+
+  if (configuredOrigin && url.origin === configuredOrigin) {
+    return true;
+  }
+
+  return url.protocol === "https:";
+}
+
+function normalizeGitLabBaseUrl(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
 }
 
 function normalizeAllowedOrigin(value: string): string | undefined {
