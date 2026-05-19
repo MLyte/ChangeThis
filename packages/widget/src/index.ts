@@ -1076,8 +1076,6 @@ export function initChangeThis(options: WidgetOptions): void {
         }
         .notice {
           position: fixed;
-          right: 20px;
-          bottom: calc(76px + var(--ct-footer-offset, 0px));
           z-index: 2147483647;
           border: 1px solid #bbf7d0;
           border-radius: 8px;
@@ -1088,6 +1086,10 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 12px 14px;
           box-shadow: 0 14px 34px rgba(22, 101, 52, 0.16);
         }
+        .notice[data-position="bottom-right"] { right: 20px; bottom: calc(76px + var(--ct-footer-offset, 0px)); }
+        .notice[data-position="bottom-left"] { left: 20px; bottom: calc(76px + var(--ct-footer-offset, 0px)); }
+        .notice[data-position="top-right"] { right: 20px; top: 76px; }
+        .notice[data-position="top-left"] { left: 20px; top: 76px; }
         @media (max-width: 640px) {
           .panel {
             left: 8px !important;
@@ -1102,6 +1104,12 @@ export function initChangeThis(options: WidgetOptions): void {
             bottom: calc(58px + env(safe-area-inset-bottom) + var(--ct-footer-offset, 0px));
           }
           .panel[data-position^="top"] {
+            top: calc(12px + env(safe-area-inset-top));
+          }
+          .notice[data-position^="bottom"] {
+            bottom: calc(58px + env(safe-area-inset-bottom) + var(--ct-footer-offset, 0px));
+          }
+          .notice[data-position^="top"] {
             top: calc(12px + env(safe-area-inset-top));
           }
           .panel-header {
@@ -1185,7 +1193,7 @@ export function initChangeThis(options: WidgetOptions): void {
         }
       </style>
       ${pinMarkers}
-      ${state.notice ? `<div class="notice" role="status">${escapeHtml(state.notice)}</div>` : ""}
+      ${state.notice ? `<div class="notice" data-position="${buttonPosition}" role="status">${escapeHtml(state.notice)}</div>` : ""}
       <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}" aria-label="${escapeHtml(buttonLabel)}" title="${escapeHtml(buttonLabel)}">
         ${isSubtleButton ? lucideIcons.bug : `<span>${escapeHtml(buttonLabel)}</span>`}
         ${buttonStateLabel && !isSubtleButton ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
