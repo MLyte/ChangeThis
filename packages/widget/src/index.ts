@@ -31,6 +31,7 @@ type DraftPin = {
   message: string;
   status: "draft" | "sent";
   feedbackId?: string;
+  reporter?: FeedbackReporter;
   sentAt?: string;
 };
 
@@ -40,6 +41,7 @@ type StoredSentPin = {
   feedbackId: string;
   target: PinTarget;
   message: string;
+  reporter?: FeedbackReporter;
   sentAt: string;
 };
 
@@ -48,6 +50,7 @@ type StoredSentFeedback = {
   feedbackId: string;
   type: Extract<FeedbackType, "comment" | "screenshot">;
   message: string;
+  reporter?: FeedbackReporter;
   sentAt: string;
   captureArea?: CaptureArea;
   screenshotDataUrl?: string;
@@ -64,6 +67,7 @@ const screenshotQuality = 0.8;
 const thumbnailQuality = 0.74;
 const lucideIcons = {
   camera: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>',
+  mail: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>',
   "map-pin": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
   "message-square": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   pencil: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
@@ -112,7 +116,8 @@ const widgetCopy = {
     missingText: "Texte manquant",
     editFeedback: "Modifier",
     deleteFeedback: "Supprimer",
-    cancelFeedback: "Retirer l'envoi",
+    removeFeedback: "Retirer le feedback",
+    updateReporterCount: "Mettre à jour le contact ({count})",
     noSentFeedback: "Aucun feedback envoyé sur cette page.",
     noDraftFeedback: "Aucun feedback en brouillon sur cette page.",
     canceled: "Feedback annulé.",
@@ -121,6 +126,7 @@ const widgetCopy = {
     reporterTitle: "Vos coordonnées",
     reporterOptional: "Optionnel, mais utile pour vous recontacter.",
     reporterRequired: "Requis pour envoyer ce feedback.",
+    reporterToggle: "Contact",
     reporterName: "Nom",
     reporterEmail: "E-mail",
     reporterEmailInvalid: "E-mail invalide."
@@ -162,7 +168,8 @@ const widgetCopy = {
     missingText: "Missing text",
     editFeedback: "Edit",
     deleteFeedback: "Delete",
-    cancelFeedback: "Withdraw",
+    removeFeedback: "Remove feedback",
+    updateReporterCount: "Update contact ({count})",
     noSentFeedback: "No feedback sent on this page.",
     noDraftFeedback: "No draft feedback on this page.",
     canceled: "Feedback canceled.",
@@ -171,6 +178,7 @@ const widgetCopy = {
     reporterTitle: "Your details",
     reporterOptional: "Optional, but useful if we need to follow up.",
     reporterRequired: "Required to send this feedback.",
+    reporterToggle: "Contact",
     reporterName: "Name",
     reporterEmail: "Email",
     reporterEmailInvalid: "Invalid email."
@@ -219,6 +227,7 @@ export function initChangeThis(options: WidgetOptions): void {
     captureMessage: "",
     reporterName: storedReporter.name ?? "",
     reporterEmail: storedReporter.email ?? "",
+    reporterOpen: reporterFields === "required" && (!storedReporter.name || !storedReporter.email),
     managerOpen: false,
     notice: "",
     focusPinIndex: undefined as number | undefined
@@ -380,6 +389,17 @@ export function initChangeThis(options: WidgetOptions): void {
     const reporter = currentReporter(state.reporterName, state.reporterEmail);
     const reporterEmailInvalid = Boolean(state.reporterEmail.trim()) && !isValidEmail(state.reporterEmail.trim());
     const reporterReady = reporterFields !== "required" || Boolean(reporter?.name && reporter.email && !reporterEmailInvalid);
+    const reporterUpdateCandidates = reporter && !reporterEmailInvalid
+      ? [
+          ...state.sentFeedbacks
+            .filter((feedback) => !sameReporter(feedback.reporter, reporter))
+            .map((feedback) => feedback.feedbackId),
+          ...sentPins
+            .filter((pin) => pin.feedbackId && !sameReporter(pin.reporter, reporter))
+            .map((pin) => pin.feedbackId as string)
+        ]
+      : [];
+    const reporterUpdateIds = [...new Set(reporterUpdateCandidates)];
     const canSend = !state.sending && readyDraftFeedbackCount > 0 && reporterReady && !reporterEmailInvalid;
     const sendLabel = state.sending
       ? copy.sending
@@ -573,16 +593,41 @@ export function initChangeThis(options: WidgetOptions): void {
           display: grid;
           gap: 8px;
           margin-bottom: 12px;
-          padding: 10px;
+          padding: 8px;
         }
         .reporter-fields-header {
-          display: grid;
-          gap: 2px;
+          align-items: center;
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
         }
-        .reporter-fields-header strong {
+        .reporter-trigger {
+          align-items: center;
+          border: 0;
+          border-radius: 5px;
+          background: #f3f4f6;
+          color: #111827;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 6px;
+          min-height: 30px;
+          padding: 6px 8px;
+        }
+        .reporter-trigger strong {
           color: #111827;
           font-size: 12px;
           font-weight: 900;
+        }
+        .reporter-summary {
+          color: #6b7280;
+          font-size: 11px;
+          font-weight: 750;
+          line-height: 1.3;
+          min-width: 0;
+          overflow: hidden;
+          text-align: right;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         .reporter-fields-header span,
         .field-error {
@@ -590,6 +635,10 @@ export function initChangeThis(options: WidgetOptions): void {
           font-size: 11px;
           font-weight: 750;
           line-height: 1.3;
+        }
+        .reporter-body {
+          display: grid;
+          gap: 8px;
         }
         .field-error {
           color: #b91c1c;
@@ -1031,20 +1080,26 @@ export function initChangeThis(options: WidgetOptions): void {
           ${reporterFields !== "hidden" ? `
             <div class="reporter-fields">
               <div class="reporter-fields-header">
-                <strong>${escapeHtml(copy.reporterTitle)}</strong>
-                <span>${escapeHtml(reporterFields === "required" ? copy.reporterRequired : copy.reporterOptional)}</span>
+                <button class="reporter-trigger" data-action="toggle-reporter" aria-expanded="${state.reporterOpen}">
+                  ${lucideIcons.mail}<strong>${escapeHtml(copy.reporterToggle)}</strong>
+                </button>
+                <span class="reporter-summary">${escapeHtml(reporterSummary(reporter, reporterFields === "required" ? copy.reporterRequired : copy.reporterOptional))}</span>
               </div>
-              <div class="reporter-grid">
-                <label class="reporter-field">
-                  <span>${escapeHtml(copy.reporterName)}</span>
-                  <input data-reporter-name autocomplete="name" value="${escapeHtml(state.reporterName)}" ${reporterFields === "required" ? "required" : ""}>
-                </label>
-                <label class="reporter-field">
-                  <span>${escapeHtml(copy.reporterEmail)}</span>
-                  <input data-reporter-email autocomplete="email" inputmode="email" type="email" value="${escapeHtml(state.reporterEmail)}" ${reporterFields === "required" ? "required" : ""}>
-                </label>
-              </div>
-              ${reporterEmailInvalid ? `<span class="field-error">${escapeHtml(copy.reporterEmailInvalid)}</span>` : ""}
+              ${state.reporterOpen ? `
+                <div class="reporter-body">
+                  <div class="reporter-grid">
+                    <label class="reporter-field">
+                      <span>${escapeHtml(copy.reporterName)}</span>
+                      <input data-reporter-name autocomplete="name" value="${escapeHtml(state.reporterName)}" ${reporterFields === "required" ? "required" : ""}>
+                    </label>
+                    <label class="reporter-field">
+                      <span>${escapeHtml(copy.reporterEmail)}</span>
+                      <input data-reporter-email autocomplete="email" inputmode="email" type="email" value="${escapeHtml(state.reporterEmail)}" ${reporterFields === "required" ? "required" : ""}>
+                    </label>
+                  </div>
+                  ${reporterEmailInvalid ? `<span class="field-error">${escapeHtml(copy.reporterEmailInvalid)}</span>` : ""}
+                </div>
+              ` : ""}
             </div>
           ` : ""}
           ${state.type === "comment" ? `
@@ -1104,7 +1159,10 @@ export function initChangeThis(options: WidgetOptions): void {
               <h2 id="changethis-manager-title">${escapeHtml(copy.manageFeedbacks)}</h2>
               <p>${escapeHtml(copy.createdFeedbacks)}: ${totalFeedbacks}</p>
             </div>
-            <button class="manager-button secondary" data-action="close-manager">${lucideIcons.x}${escapeHtml(copy.close)}</button>
+            <div class="manager-actions">
+              ${reporterUpdateIds.length ? `<button class="manager-button secondary" data-action="update-sent-reporters" ${state.sending ? "disabled" : ""}>${lucideIcons.mail}${escapeHtml(copy.updateReporterCount.replace("{count}", String(reporterUpdateIds.length)))}</button>` : ""}
+              <button class="manager-button secondary" data-action="close-manager">${lucideIcons.x}${escapeHtml(copy.close)}</button>
+            </div>
           </div>
           <div class="manager-stats">
             <div class="manager-stat"><strong>${totalFeedbacks}</strong><span>${escapeHtml(copy.createdFeedbacks)}</span></div>
@@ -1139,7 +1197,7 @@ export function initChangeThis(options: WidgetOptions): void {
                       <span>${escapeHtml(feedback.message || copy.note)}</span>
                     </div>
                     <div class="manager-actions">
-                      <button class="manager-button danger" data-action="cancel-sent-feedback" data-feedback-id="${escapeHtml(feedback.feedbackId)}" data-feedback-kind="note" ${state.sending ? "disabled" : ""}>${lucideIcons.undo}${escapeHtml(copy.cancelFeedback)}</button>
+                      <button class="manager-button danger" data-action="cancel-sent-feedback" data-feedback-id="${escapeHtml(feedback.feedbackId)}" data-feedback-kind="note" ${state.sending ? "disabled" : ""}>${lucideIcons.undo}${escapeHtml(copy.removeFeedback)}</button>
                     </div>
                   </li>
                 `).join("")}
@@ -1175,7 +1233,7 @@ export function initChangeThis(options: WidgetOptions): void {
                       <span>${escapeHtml(pin.message || copy.sentPin)}</span>
                     </div>
                     <div class="manager-actions">
-                      <button class="manager-button danger" data-action="cancel-sent-feedback" data-feedback-id="${escapeHtml(pin.feedbackId ?? "")}" ${state.sending ? "disabled" : ""}>${lucideIcons.undo}${escapeHtml(copy.cancelFeedback)}</button>
+                      <button class="manager-button danger" data-action="cancel-sent-feedback" data-feedback-id="${escapeHtml(pin.feedbackId ?? "")}" ${state.sending ? "disabled" : ""}>${lucideIcons.undo}${escapeHtml(copy.removeFeedback)}</button>
                     </div>
                   </li>
                 `).join("")}
@@ -1211,7 +1269,7 @@ export function initChangeThis(options: WidgetOptions): void {
                       ${capturePreviewMarkup(feedback, copy.screenshot)}
                     </div>
                     <div class="manager-actions">
-                      <button class="manager-button danger" data-action="cancel-sent-feedback" data-feedback-id="${escapeHtml(feedback.feedbackId)}" data-feedback-kind="capture" ${state.sending ? "disabled" : ""}>${lucideIcons.undo}${escapeHtml(copy.cancelFeedback)}</button>
+                      <button class="manager-button danger" data-action="cancel-sent-feedback" data-feedback-id="${escapeHtml(feedback.feedbackId)}" data-feedback-kind="capture" ${state.sending ? "disabled" : ""}>${lucideIcons.undo}${escapeHtml(copy.removeFeedback)}</button>
                     </div>
                   </li>
                 `).join("")}
@@ -1268,6 +1326,69 @@ export function initChangeThis(options: WidgetOptions): void {
         state.managerOpen = false;
         render();
       });
+    });
+
+    shadow.querySelector<HTMLButtonElement>("[data-action='update-sent-reporters']")?.addEventListener("click", async () => {
+      const reporter = currentReporter(state.reporterName, state.reporterEmail);
+      if (!reporter || !canSubmitWithReporter("optional", reporter)) {
+        return;
+      }
+
+      const ids = [...new Set([
+        ...state.sentFeedbacks
+          .filter((feedback) => !sameReporter(feedback.reporter, reporter))
+          .map((feedback) => feedback.feedbackId),
+        ...state.pins
+          .filter((pin) => pin.status === "sent" && pin.feedbackId && !sameReporter(pin.reporter, reporter))
+          .map((pin) => pin.feedbackId as string)
+      ])];
+
+      if (ids.length === 0) {
+        return;
+      }
+
+      state.sending = true;
+      render();
+      try {
+        for (const feedbackId of ids) {
+          await updateFeedbackReporter({
+            endpoint,
+            feedbackId,
+            projectKey: options.projectKey,
+            reporter
+          });
+        }
+
+        state.sentFeedbacks = state.sentFeedbacks.map((feedback) => {
+          if (!ids.includes(feedback.feedbackId)) {
+            return feedback;
+          }
+
+          const nextFeedback = { ...feedback, reporter };
+          persistSentFeedback(sentFeedbacksStorageKey, state.viewKey, nextFeedback);
+          return nextFeedback;
+        });
+        state.pins = state.pins.map((pin) => {
+          if (pin.status !== "sent" || !pin.feedbackId || !ids.includes(pin.feedbackId)) {
+            return pin;
+          }
+
+          const nextPin = { ...pin, reporter };
+          persistSentPin(sentPinsStorageKey, state.viewKey, nextPin);
+          return nextPin;
+        });
+        state.notice = copy.sent;
+        window.setTimeout(() => {
+          state.notice = "";
+          render();
+        }, 3600);
+      } catch (error) {
+        console.error("[ChangeThis] Failed to update feedback contact", error);
+        window.alert(copy.alertError);
+      } finally {
+        state.sending = false;
+        render();
+      }
     });
 
     shadow.querySelectorAll<HTMLButtonElement>("[data-action='edit-draft-pin']").forEach((button) => {
@@ -1367,6 +1488,11 @@ export function initChangeThis(options: WidgetOptions): void {
       });
     });
 
+    shadow.querySelector<HTMLButtonElement>("[data-action='toggle-reporter']")?.addEventListener("click", () => {
+      state.reporterOpen = !state.reporterOpen;
+      render();
+    });
+
     const noteTextarea = shadow.querySelector<HTMLTextAreaElement>("[data-note-message]");
     noteTextarea?.addEventListener("input", (event) => {
       state.noteMessage = (event.target as HTMLTextAreaElement).value;
@@ -1422,6 +1548,7 @@ export function initChangeThis(options: WidgetOptions): void {
             ...draft,
             status: "sent",
             feedbackId: submitted.id,
+            reporter,
             sentAt
           };
           persistSentPin(sentPinsStorageKey, state.viewKey, state.pins[index]);
@@ -1506,6 +1633,7 @@ export function initChangeThis(options: WidgetOptions): void {
               feedbackId: submitted.id,
               type: "comment",
               message: pendingNoteMessage,
+              reporter,
               sentAt: new Date().toISOString()
             };
             state.sentFeedbacks = [sentFeedback, ...state.sentFeedbacks].slice(0, 120);
@@ -1530,6 +1658,7 @@ export function initChangeThis(options: WidgetOptions): void {
             ...pin,
             status: "sent",
             feedbackId: submitted.id,
+            reporter,
             sentAt
           };
           persistSentPin(sentPinsStorageKey, state.viewKey, state.pins[index]);
@@ -1552,6 +1681,7 @@ export function initChangeThis(options: WidgetOptions): void {
               feedbackId: submitted.id,
               type: "screenshot",
               message: pendingCapture.message,
+              reporter,
               sentAt: new Date().toISOString(),
               captureArea: pendingCapture.captureArea,
               screenshotDataUrl: submitted.screenshotDataUrl
@@ -1690,6 +1820,28 @@ async function cancelFeedback(params: {
 
   if (!response.ok) {
     throw new Error(`Feedback cancel API returned ${response.status}`);
+  }
+}
+
+async function updateFeedbackReporter(params: {
+  endpoint: string;
+  feedbackId: string;
+  projectKey: string;
+  reporter: FeedbackReporter;
+}): Promise<void> {
+  const response = await fetch(publicFeedbackActionUrl(params.endpoint, `${params.feedbackId}/reporter`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      projectKey: params.projectKey,
+      reporter: params.reporter
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Feedback reporter API returned ${response.status}`);
   }
 }
 
@@ -1998,6 +2150,22 @@ function currentReporter(name: string, email: string): FeedbackReporter | undefi
   };
 }
 
+function reporterSummary(reporter: FeedbackReporter | undefined, fallback: string): string {
+  if (!reporter?.name && !reporter?.email) {
+    return fallback;
+  }
+
+  if (reporter.name && reporter.email) {
+    return `${reporter.name} · ${reporter.email}`;
+  }
+
+  return reporter.name ?? reporter.email ?? fallback;
+}
+
+function sameReporter(left: FeedbackReporter | undefined, right: FeedbackReporter | undefined): boolean {
+  return (left?.name ?? "") === (right?.name ?? "") && (left?.email ?? "") === (right?.email ?? "");
+}
+
 function canSubmitWithReporter(mode: WidgetReporterFields, reporter: FeedbackReporter | undefined): boolean {
   if (reporter?.email && !isValidEmail(reporter.email)) {
     return false;
@@ -2014,17 +2182,23 @@ function readStoredReporter(storageKey: string): FeedbackReporter {
   try {
     const raw = window.localStorage.getItem(storageKey);
     const value = raw ? JSON.parse(raw) : undefined;
-    if (!isRecord(value)) {
-      return {};
-    }
-
-    return {
-      name: safeDataValue(typeof value.name === "string" ? value.name : undefined),
-      email: safeDataValue(typeof value.email === "string" ? value.email : undefined)
-    };
+    return parseStoredReporter(value) ?? {};
   } catch {
     return {};
   }
+}
+
+function parseStoredReporter(value: unknown): FeedbackReporter | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const reporter = {
+    name: safeDataValue(typeof value.name === "string" ? value.name : undefined),
+    email: safeDataValue(typeof value.email === "string" ? value.email : undefined)
+  };
+
+  return reporter.name || reporter.email ? reporter : undefined;
 }
 
 function persistReporter(storageKey: string, reporter: FeedbackReporter | undefined): void {
@@ -2070,6 +2244,7 @@ function loadSentPinsForView(storageKey: string, viewKey: string): DraftPin[] {
       feedbackId: pin.feedbackId,
       target: pin.target,
       message: pin.message,
+      reporter: pin.reporter,
       status: "sent",
       sentAt: pin.sentAt
     }));
@@ -2087,6 +2262,7 @@ function persistSentPin(storageKey: string, viewKey: string, pin: DraftPin): voi
     feedbackId: pin.feedbackId,
     target: pin.target,
     message: pin.message,
+    reporter: pin.reporter,
     sentAt
   };
   const existing = readStoredSentPins(storageKey).filter((item) => {
@@ -2146,6 +2322,7 @@ function parseStoredSentPin(value: unknown): StoredSentPin[] {
     feedbackId,
     target,
     message: value.message,
+    reporter: parseStoredReporter(value.reporter),
     sentAt: value.sentAt
   }];
 }
@@ -2207,6 +2384,7 @@ function parseStoredSentFeedback(value: unknown): StoredSentFeedback[] {
     feedbackId: value.feedbackId,
     type: value.type,
     message: value.message,
+    reporter: parseStoredReporter(value.reporter),
     sentAt: value.sentAt,
     captureArea: isRecord(value.captureArea) ? parseCaptureArea(value.captureArea) : undefined,
     screenshotDataUrl: isSafeImageDataUrl(value.screenshotDataUrl) ? value.screenshotDataUrl : undefined

@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, isPublicSignupEnabled } from "../../lib/auth";
-import { createWorkspaceForUser, isSupabaseServiceConfigured, signUpWithPassword } from "../../lib/supabase-server";
+import { isSupabaseServiceConfigured, requestSignUpEmail } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
@@ -55,7 +54,6 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 
     const authMode = getAuthMode();
     const email = formData.get("email")?.toString().trim() ?? "";
-    const password = formData.get("password")?.toString().trim() ?? "";
 
     if (authMode === "local") {
       redirect("/settings/connected-sites");
@@ -65,49 +63,16 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       redirect("/signup?error=workspace");
     }
 
-    const signUpResult = await signUpWithPassword({
+    const signUpResult = await requestSignUpEmail({
       email,
-      password
+      redirectTo: `${publicAppUrl()}/auth/confirm?next=/signup/set-password`
     });
 
     if (!signUpResult.ok) {
       redirect(`/signup?error=${encodeURIComponent(signUpResult.error)}`);
     }
 
-    const workspace = await createWorkspaceForUser({
-      userId: signUpResult.userId,
-      email: signUpResult.email
-    });
-
-    if (!workspace) {
-      redirect("/signup?error=workspace");
-    }
-
-    if (!signUpResult.accessToken) {
-      redirect("/login?next=/settings/connected-sites");
-    }
-
-    const cookieStore = await cookies();
-    const cookieConfig = {
-      httpOnly: true,
-      path: "/",
-      sameSite: "lax" as const,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: signUpResult.expiresIn && Number.isFinite(signUpResult.expiresIn) && signUpResult.expiresIn > 0
-        ? Math.floor(signUpResult.expiresIn)
-        : 60 * 60
-    };
-
-    cookieStore.set("changethis_access_token", signUpResult.accessToken, cookieConfig);
-    cookieStore.set("supabase-auth-token", signUpResult.accessToken, cookieConfig);
-    if (signUpResult.refreshToken) {
-      cookieStore.set("supabase-refresh-token", signUpResult.refreshToken, {
-        ...cookieConfig,
-        maxAge: 60 * 60 * 24 * 30
-      });
-    }
-
-    redirect("/settings/connected-sites");
+    redirect("/signup?sent=1");
   }
 
   return (
@@ -152,10 +117,6 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
               <T k="login.email" />
               <input autoComplete="email" name="email" required type="email" />
             </label>
-            <label>
-              <T k="signup.password" />
-              <input autoComplete="new-password" minLength={8} name="password" required type="password" />
-            </label>
             <p className="microcopy"><T k="signup.redirectHint" /></p>
             <button className="button" type="submit">
               <T k={isLocalMode ? "signup.localSubmit" : "signup.submit"} />
@@ -170,4 +131,8 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       <AppFooter />
     </main>
   );
+}
+
+function publicAppUrl(): string {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }

@@ -3510,11 +3510,11 @@ dd {
 }
 
 .compact-workbench {
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr) minmax(280px, 320px);
 }
 
 .compact-workbench .compact-inbox {
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 1;
 }
 
@@ -4063,6 +4063,12 @@ dd {
   top: 14px;
 }
 
+.project-route-panel {
+  align-self: start;
+  position: sticky;
+  top: 14px;
+}
+
 .side-panel-section {
   background: white;
   border: 1px solid var(--line);
@@ -4138,11 +4144,13 @@ dd {
 
 .site-route-row {
   align-items: center;
+  color: inherit;
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(0, 1fr) auto;
   min-height: 48px;
   padding: 9px 10px;
+  text-decoration: none;
 }
 
 .site-route-row + .site-route-row {
@@ -4172,6 +4180,41 @@ dd {
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
+}
+
+.project-route-nav .site-route-list {
+  background: white;
+  gap: 0;
+  max-height: min(460px, calc(100vh - 360px));
+}
+
+.project-route-nav .site-route-row {
+  border: 0;
+  border-radius: 0;
+}
+
+.project-route-nav .site-route-row:hover {
+  background: var(--primary-softer);
+}
+
+.project-route-nav .site-route-row.active {
+  background: var(--primary-soft);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.site-route-meta {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.site-route-count {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1;
+  min-width: 1ch;
+  text-align: right;
 }
 
 .provider-split div,
@@ -5809,6 +5852,26 @@ code {
   line-height: 1;
 }
 
+@media (max-width: 1320px) {
+  .compact-workbench {
+    grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  }
+
+  .compact-workbench .compact-inbox {
+    grid-column: 2;
+  }
+
+  .compact-workbench .dashboard-side-panel {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    position: static;
+  }
+
+  .compact-workbench .dashboard-side-panel .side-panel-section {
+    align-content: start;
+  }
+}
+
 @media (max-width: 980px) {
   .hero,
   .workspace-hero,
@@ -5939,7 +6002,23 @@ code {
   }
 
   .dashboard-side-panel {
+    grid-column: 1;
     grid-row: auto;
+    grid-template-columns: 1fr;
+    position: static;
+  }
+
+  .compact-workbench .compact-inbox,
+  .compact-workbench .dashboard-side-panel {
+    grid-column: 1;
+  }
+
+  .compact-workbench .dashboard-side-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .project-route-panel {
+    grid-column: 1;
     position: static;
   }
 

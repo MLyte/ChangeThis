@@ -5,6 +5,7 @@ import { buildIssueDraft, validateFeedbackPayload, validateIssueTarget } from "@
 import type {
   ExternalIssueRef,
   FeedbackPayload,
+  FeedbackReporter,
   FeedbackType,
   FeedbackStatus,
   IssueDraft,
@@ -190,6 +191,7 @@ export type FeedbackRepository = {
   create(input: CreateFeedbackInput): Promise<StoredFeedback>;
   list(filters?: { projectKey?: string; status?: FeedbackStatus; workspaceId?: string }): Promise<StoredFeedback[]>;
   get(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback | undefined>;
+  updateReporter(id: string, reporter: FeedbackReporter | undefined, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   updateIssueDraft(id: string, issueDraft: IssueDraft, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   markIssueCreationPending(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   recordIssueAttempt(id: string, result: IssueAttemptResult, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
@@ -289,6 +291,22 @@ export class FileFeedbackRepository implements FeedbackRepository {
         description: issueDraft.description,
         labels: [...issueDraft.labels]
       };
+      feedback.updatedAt = new Date().toISOString();
+      return feedback;
+    });
+  }
+
+  async updateReporter(id: string, reporter: FeedbackReporter | undefined, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.update((store) => {
+      const feedback = findFeedback(store, id, filters.workspaceId);
+      const payload = {
+        ...feedback.payload,
+        reporter
+      };
+      const issueDraft = buildIssueDraft(payload);
+
+      feedback.payload = payload;
+      feedback.issueDraft = issueDraft;
       feedback.updatedAt = new Date().toISOString();
       return feedback;
     });
@@ -611,6 +629,37 @@ export class SupabaseFeedbackRepository implements FeedbackRepository {
     return {
       ...feedback,
       issueDraft: draft,
+      updatedAt: now
+    };
+  }
+
+  async updateReporter(id: string, reporter: FeedbackReporter | undefined, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    const feedback = await this.requireFeedback(id, filters);
+    const payload = sanitizeFeedbackPayload({
+      ...feedback.payload,
+      reporter
+    });
+    const issueDraft = buildIssueDraft(payload);
+    const now = new Date().toISOString();
+
+    await supabaseServiceRest(`/rest/v1/feedbacks?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: {
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify({
+        payload,
+        issue_draft_title: issueDraft.title,
+        issue_draft_description: issueDraft.description,
+        issue_draft_labels: issueDraft.labels,
+        updated_at: now
+      })
+    });
+
+    return {
+      ...feedback,
+      payload,
+      issueDraft,
       updatedAt: now
     };
   }

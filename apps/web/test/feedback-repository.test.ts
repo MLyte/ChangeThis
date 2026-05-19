@@ -129,6 +129,36 @@ test("file repository records retryable and successful issue attempts", async ()
   });
 });
 
+test("file repository updates reporter details and issue draft", async () => {
+  await withRepository(async (repository) => {
+    const payload = feedbackPayload({
+      reporter: undefined
+    });
+    const stored = await repository.create({
+      projectKey: "demo_project_key",
+      projectName: "Demo Project",
+      issueTarget,
+      payload,
+      issueDraft: buildIssueDraft(payload)
+    });
+
+    assert.equal(stored.payload.reporter, undefined);
+    assert.doesNotMatch(stored.issueDraft.description, /Auteur du feedback/);
+
+    const updated = await repository.updateReporter(stored.id, {
+      name: "Mathieu",
+      email: "mathieu@example.com"
+    });
+
+    assert.deepEqual(updated.payload.reporter, {
+      name: "Mathieu",
+      email: "mathieu@example.com"
+    });
+    assert.match(updated.issueDraft.description, /Auteur du feedback/);
+    assert.match(updated.issueDraft.description, /mathieu@example.com/);
+  });
+});
+
 test("file repository exposes sent issue counts for connected site metrics", async () => {
   await withRepository(async (repository) => {
     const first = await repository.create({

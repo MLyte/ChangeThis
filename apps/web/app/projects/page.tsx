@@ -114,6 +114,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const hasActiveFilters = isFilteringDashboard(filters);
   const hasConfiguredSite = projects.length > 0;
   const onboardingSteps = buildOnboardingChecklist(projects, feedbacks);
+  const feedbackCountsByProject = countFeedbacksByProject(feedbacks);
 
   return (
     <main className="shell">
@@ -127,6 +128,16 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
       <section className="dashboard dashboard-compact">
         <div className="dashboard-workbench compact-workbench">
+          <ProjectRouteNavigation
+            filters={filters}
+            githubProjects={githubProjects}
+            gitlabProjects={gitlabProjects}
+            projects={projects}
+            readyProjects={readyProjects}
+            feedbackCountsByProject={feedbackCountsByProject}
+            totalFeedbacks={feedbacks.length}
+          />
+
           <section className="inbox-panel compact-inbox" id="issues" aria-labelledby="local-inbox-title">
             <div className="inbox-hero compact-inbox-header">
               <div>
@@ -237,34 +248,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
             <section className="side-panel-section">
               <div className="side-panel-heading">
-                <p className="eyebrow">Routage</p>
-                <h2>Sites connectés</h2>
-              </div>
-              <Link className="button secondary-button full-width-button" href="/settings/connected-sites">
-                <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                Sites connectés
-              </Link>
-              <div className="route-summary">
-                <strong>{readyProjects}/{projects.length}</strong>
-                <span>sites prêts à créer des issues</span>
-              </div>
-              <div className="provider-split">
-                <ProviderCount provider="github" count={githubProjects} />
-                <ProviderCount provider="gitlab" count={gitlabProjects} />
-              </div>
-              <div className="site-route-list">
-                {projects.length > 0 ? (
-                  projects.map((project) => <ProjectRouteRow key={project.publicKey} project={project} />)
-                ) : (
-                  <div className="site-route-empty">
-                    Ajoutez un site réel pour activer la route widget vers issue.
-                  </div>
-                )}
-              </div>
-            </section>
-
-            <section className="side-panel-section">
-              <div className="side-panel-heading">
                 <p className="eyebrow">Signal</p>
                 <h2>Activité</h2>
               </div>
@@ -281,6 +264,71 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       </section>
       <AppFooter />
     </main>
+  );
+}
+
+function ProjectRouteNavigation({
+  filters,
+  githubProjects,
+  gitlabProjects,
+  projects,
+  readyProjects,
+  feedbackCountsByProject,
+  totalFeedbacks
+}: {
+  filters: DashboardFilters;
+  githubProjects: number;
+  gitlabProjects: number;
+  projects: ChangeThisProject[];
+  readyProjects: number;
+  feedbackCountsByProject: Map<string, number>;
+  totalFeedbacks: number;
+}) {
+  return (
+    <aside className="project-route-panel" aria-label="Navigation par site connecté">
+      <section className="side-panel-section project-route-nav">
+        <div className="side-panel-heading">
+          <p className="eyebrow">Routage</p>
+          <h2>Sites connectés</h2>
+        </div>
+        <Link className="button secondary-button full-width-button" href="/settings/connected-sites">
+          <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+          Sites connectés
+        </Link>
+        <div className="route-summary">
+          <strong>{readyProjects}/{projects.length}</strong>
+          <span>sites prêts à créer des issues</span>
+        </div>
+        <div className="provider-split">
+          <ProviderCount provider="github" count={githubProjects} />
+          <ProviderCount provider="gitlab" count={gitlabProjects} />
+        </div>
+        <nav className="site-route-list" aria-label="Filtrer les feedbacks par site">
+          <Link className={`site-route-row${filters.site === "all" ? " active" : ""}`} href={dashboardSiteHref(filters, "all")}>
+            <div>
+              <strong>Tous les sites</strong>
+              <span>Feedbacks tous projets</span>
+            </div>
+            <span className="site-route-count">{totalFeedbacks}</span>
+          </Link>
+          {projects.length > 0 ? (
+            projects.map((project) => (
+              <ProjectRouteRow
+                active={filters.site === project.publicKey}
+                count={feedbackCountsByProject.get(project.publicKey) ?? 0}
+                filters={filters}
+                key={project.publicKey}
+                project={project}
+              />
+            ))
+          ) : (
+            <div className="site-route-empty">
+              Ajoutez un site réel pour activer la route widget vers issue.
+            </div>
+          )}
+        </nav>
+      </section>
+    </aside>
   );
 }
 
@@ -540,6 +588,33 @@ function dashboardStatusHref(filters: DashboardFilters, status: DashboardStatusF
   return `/projects?${params.toString()}`;
 }
 
+function dashboardSiteHref(filters: DashboardFilters, site: string): string {
+  const params = new URLSearchParams();
+
+  if (filters.status !== "active") {
+    params.set("status", filters.status);
+  }
+
+  if (filters.query) {
+    params.set("q", filters.query);
+  }
+
+  if (site !== "all") {
+    params.set("site", site);
+  }
+
+  if (filters.type !== "all") {
+    params.set("type", filters.type);
+  }
+
+  if (filters.provider !== "all") {
+    params.set("provider", filters.provider);
+  }
+
+  const query = params.toString();
+  return query ? `/projects?${query}` : "/projects";
+}
+
 function ProviderCount({ count, provider }: { count: number; provider: "github" | "gitlab" }) {
   return (
     <div>
@@ -549,15 +624,28 @@ function ProviderCount({ count, provider }: { count: number; provider: "github" 
   );
 }
 
-function ProjectRouteRow({ project }: { project: ChangeThisProject }) {
+function ProjectRouteRow({
+  active,
+  count,
+  filters,
+  project
+}: {
+  active: boolean;
+  count: number;
+  filters: DashboardFilters;
+  project: ChangeThisProject;
+}) {
   return (
-    <article className="site-route-row">
+    <Link className={`site-route-row${active ? " active" : ""}`} href={dashboardSiteHref(filters, project.publicKey)}>
       <div>
         <strong>{project.name}</strong>
         <span>{project.issueTarget.namespace}/{project.issueTarget.project}</span>
       </div>
-      <ProviderBadge provider={project.issueTarget.provider} />
-    </article>
+      <span className="site-route-meta">
+        <ProviderBadge provider={project.issueTarget.provider} />
+        <span className="site-route-count">{count}</span>
+      </span>
+    </Link>
   );
 }
 
@@ -860,6 +948,13 @@ function countFeedbackStatuses(feedbacks: StoredFeedback[]): Record<FeedbackStat
     resolved: 0,
     ignored: 0
   });
+}
+
+function countFeedbacksByProject(feedbacks: StoredFeedback[]): Map<string, number> {
+  return feedbacks.reduce((counts, feedback) => {
+    counts.set(feedback.projectKey, (counts.get(feedback.projectKey) ?? 0) + 1);
+    return counts;
+  }, new Map<string, number>());
 }
 
 function isActiveFeedback(feedback: StoredFeedback): boolean {

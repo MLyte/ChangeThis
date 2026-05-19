@@ -87,6 +87,14 @@ test("Supabase repository covers feedback lifecycle with workspace scope", async
   assert.equal(withDraft.issueDraft.title, updatedDraft.title);
   assert.equal((await repository.get(created.id, { workspaceId }))?.issueDraft.title, updatedDraft.title);
 
+  const withReporter = await repository.updateReporter(created.id, {
+    name: "Mathieu",
+    email: "mathieu@example.com"
+  }, { workspaceId });
+  assert.equal(withReporter.payload.reporter?.name, "Mathieu");
+  assert.match(withReporter.issueDraft.description, /mathieu@example.com/);
+  assert.equal((await repository.get(created.id, { workspaceId }))?.payload.reporter?.email, "mathieu@example.com");
+
   assert.equal((await repository.markIssueCreationPending(created.id, { workspaceId })).status, "issue_creation_pending");
 
   const retryAt = "2026-05-02T12:00:00.000Z";

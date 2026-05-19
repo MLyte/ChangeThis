@@ -4,6 +4,7 @@ import test from "node:test";
 
 type FeedbackRouteModule = typeof import("../app/api/public/feedback/route.ts");
 type FeedbackCancelRouteModule = typeof import("../app/api/public/feedback/[id]/cancel/route.ts");
+type FeedbackReporterRouteModule = typeof import("../app/api/public/feedback/[id]/reporter/route.ts");
 type WidgetConfigRouteModule = typeof import("../app/api/widget/config/route.ts");
 type FeedbackBulkIssueRouteModule = typeof import("../app/api/projects/feedbacks/bulk-issue/route.ts");
 type FeedbackIssueRouteModule = typeof import("../app/api/projects/feedbacks/[id]/issue/route.ts");
@@ -15,6 +16,7 @@ type RetriesRouteModule = typeof import("../app/api/projects/retries/route.ts");
 
 const feedbackRoute = await import(pathToFileURL(`${process.cwd()}/app/api/public/feedback/route.ts`).href) as FeedbackRouteModule;
 const feedbackCancelRoute = await import(pathToFileURL(`${process.cwd()}/app/api/public/feedback/[id]/cancel/route.ts`).href) as FeedbackCancelRouteModule;
+const feedbackReporterRoute = await import(pathToFileURL(`${process.cwd()}/app/api/public/feedback/[id]/reporter/route.ts`).href) as FeedbackReporterRouteModule;
 const widgetConfigRoute = await import(pathToFileURL(`${process.cwd()}/app/api/widget/config/route.ts`).href) as WidgetConfigRouteModule;
 const feedbackBulkIssueRoute = await import(pathToFileURL(`${process.cwd()}/app/api/projects/feedbacks/bulk-issue/route.ts`).href) as FeedbackBulkIssueRouteModule;
 const feedbackIssueRoute = await import(pathToFileURL(`${process.cwd()}/app/api/projects/feedbacks/[id]/issue/route.ts`).href) as FeedbackIssueRouteModule;
@@ -34,6 +36,10 @@ test("public feedback routes reject unsupported methods with Allow headers", asy
   );
   await assertMethodNotAllowed(
     feedbackCancelRoute.PATCH(new Request("http://localhost:3000/api/public/feedback/feedback_1/cancel")),
+    "POST, OPTIONS"
+  );
+  await assertMethodNotAllowed(
+    feedbackReporterRoute.GET(new Request("http://localhost:3000/api/public/feedback/feedback_1/reporter")),
     "POST, OPTIONS"
   );
 });
