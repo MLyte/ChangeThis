@@ -632,18 +632,25 @@ function UsersSection({
           </div>
           {canManageMembers ? (
             <form className="member-invite-form" onSubmit={onInvite}>
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={(event) => onInviteEmailChange(event.target.value)}
-                placeholder="email@exemple.com"
-                required
-              />
-              <select value={inviteRole} onChange={(event) => onInviteRoleChange(event.target.value as "viewer" | "member" | "admin")}>
-                <option value="member">Membre</option>
-                <option value="admin">Admin</option>
-                <option value="viewer">Lecteur</option>
-              </select>
+              <div className="member-invite-fields">
+                <input
+                  aria-label="E-mail à inviter"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(event) => onInviteEmailChange(event.target.value)}
+                  placeholder="email@exemple.com"
+                  required
+                />
+                <select
+                  aria-label="Rôle du membre"
+                  value={inviteRole}
+                  onChange={(event) => onInviteRoleChange(event.target.value as "viewer" | "member" | "admin")}
+                >
+                  <option value="member">Membre</option>
+                  <option value="admin">Admin</option>
+                  <option value="viewer">Lecteur</option>
+                </select>
+              </div>
               <button className="button secondary-button" type="submit">
                 <Mail aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                 Inviter

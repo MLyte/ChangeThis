@@ -4648,10 +4648,62 @@ dd {
 }
 
 .user-management-heading {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
   gap: 14px;
   justify-content: space-between;
+}
+
+.member-invite-form {
+  align-items: stretch;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: min(100%, 420px);
+}
+
+.member-invite-fields {
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(118px, auto);
+  min-height: 38px;
+  overflow: hidden;
+}
+
+.member-invite-fields input,
+.member-invite-fields select {
+  appearance: none;
+  background: white;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  min-width: 0;
+  padding: 0 11px;
+}
+
+.member-invite-fields input {
+  border-right: 1px solid var(--line);
+}
+
+.member-invite-fields select {
+  background:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%) calc(100% - 15px) 50% / 5px 5px no-repeat,
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%) calc(100% - 10px) 50% / 5px 5px no-repeat,
+    white;
+  padding-right: 28px;
+}
+
+.member-invite-fields:focus-within {
+  border-color: var(--primary-border);
+  box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.14);
+}
+
+.member-invite-form .button {
+  min-height: 38px;
+  white-space: nowrap;
 }
 
 .user-management-heading strong,
@@ -4676,7 +4728,7 @@ dd {
   border-top: 1px solid var(--line);
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(220px, 1.2fr) minmax(130px, 0.55fr) minmax(110px, 0.45fr) minmax(120px, 0.45fr);
+  grid-template-columns: minmax(220px, 1.35fr) minmax(130px, 0.65fr) minmax(110px, 0.5fr) minmax(120px, 0.5fr) minmax(120px, 0.55fr);
   min-height: 54px;
   padding: 10px 12px;
 }
