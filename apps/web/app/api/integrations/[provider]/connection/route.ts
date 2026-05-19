@@ -77,7 +77,7 @@ export async function POST(
       integrationId: integration.id,
       kind: "access_token",
       value: tokenInput,
-      scopes: integration.provider === "gitlab" ? ["api", "read_user"] : ["repo"]
+      scopes: integration.provider === "gitlab" ? ["api"] : ["repo"]
     });
   }
 

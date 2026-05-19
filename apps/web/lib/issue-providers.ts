@@ -429,7 +429,6 @@ async function listGitLabRepositories(options: IssueProviderClientOptions): Prom
   projectsUrl.searchParams.set("per_page", "100");
 
   const pages = await fetchProviderJsonPages("gitlab", projectsUrl.toString(), {
-    Authorization: `Bearer ${token}`,
     "PRIVATE-TOKEN": token
   });
 

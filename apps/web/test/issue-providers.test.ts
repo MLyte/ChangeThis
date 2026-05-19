@@ -73,7 +73,7 @@ test("lists GitLab projects and preserves the numeric external project id", asyn
   const repositories = await listIssueProviderRepositories("gitlab", { token: "gitlab-token" });
 
   assert.equal(requests[0]?.url, "https://gitlab.com/api/v4/projects?membership=true&simple=true&per_page=100");
-  assert.equal(requests[0]?.headers.get("authorization"), "Bearer gitlab-token");
+  assert.equal(requests[0]?.headers.has("authorization"), false);
   assert.equal(requests[0]?.headers.get("private-token"), "gitlab-token");
   assert.deepEqual(repositories, [
     {
