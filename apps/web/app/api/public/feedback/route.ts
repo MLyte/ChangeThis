@@ -1,9 +1,11 @@
 import { buildIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { methodNotAllowed } from "../../../../lib/api-security";
+import { getCurrentSession } from "../../../../lib/auth";
+import { demoProject } from "../../../../lib/demo-project";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
-import { ensureIssueTargetConfigured, findConfiguredProjectByKey, isKnownOrigin } from "../../../../lib/project-registry";
+import { ensureIssueTargetConfigured, ensureWorkspaceDemoProject, findConfiguredProjectByKey, isKnownOrigin } from "../../../../lib/project-registry";
 
 const maxBodyBytes = 2_500_000;
 const maxScreenshotBytes = 2_000_000;
@@ -69,7 +71,10 @@ export async function POST(request: Request) {
   }
 
   const payload = validation.value;
-  const project = await findConfiguredProjectByKey(payload.projectKey);
+  const session = isDemoSubmission(payload) ? await getCurrentSession(request) : null;
+  const project = session?.workspace
+    ? await ensureWorkspaceDemoProject(session.workspace.id, origin)
+    : await findConfiguredProjectByKey(payload.projectKey);
 
   if (!project) {
     logWarn("feedback_rejected_unknown_project", { request_id: requestId, origin, project_key: payload.projectKey });
@@ -140,6 +145,10 @@ export async function POST(request: Request) {
     },
     issueDraft
   }, { headers: { ...headers, "X-Request-Id": requestId } });
+}
+
+function isDemoSubmission(payload: { projectKey: string; metadata: { app?: { testRunId?: string } } }): boolean {
+  return payload.projectKey === demoProject.publicKey && payload.metadata.app?.testRunId?.startsWith("manual-demo-") === true;
 }
 
 function checkRateLimit(key: string): { allowed: true } | { allowed: false; resetAt: number } {

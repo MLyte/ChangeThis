@@ -3,7 +3,8 @@ import { forbidden, unauthorized } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Clock3, Code2, GitBranch, Globe2, Inbox, MessageSquareText, RotateCcw, type LucideIcon } from "lucide-react";
 import type { FeedbackStatus } from "@changethis/shared";
 import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
-import type { ChangeThisProject } from "../../lib/demo-project";
+import { workspaceDemoProjectKeyPrefix, workspaceDemoProjectName, type ChangeThisProject } from "../../lib/demo-project";
+import { isDemoFeedback } from "../../lib/demo-feedback-actions";
 import { getFeedbackRepository, type StoredFeedback } from "../../lib/feedback-repository";
 import { listConfiguredProjects } from "../../lib/project-registry";
 import { AppFooter } from "../app-footer";
@@ -107,9 +108,10 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const retryFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "retrying");
   const failedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "failed");
   const resolvedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "resolved");
-  const githubProjects = projects.filter((project) => project.issueTarget.provider === "github").length;
-  const gitlabProjects = projects.filter((project) => project.issueTarget.provider === "gitlab").length;
-  const readyProjects = projects.filter((project) => project.issueTarget.namespace && project.issueTarget.project).length;
+  const connectedProjects = projects.filter((project) => !isDemoProject(project));
+  const githubProjects = connectedProjects.filter((project) => project.issueTarget.provider === "github").length;
+  const gitlabProjects = connectedProjects.filter((project) => project.issueTarget.provider === "gitlab").length;
+  const readyProjects = connectedProjects.filter((project) => project.issueTarget.namespace && project.issueTarget.project).length;
   const hasActiveFilters = isFilteringDashboard(filters);
   const hasConfiguredSite = projects.length > 0;
   const onboardingSteps = buildOnboardingChecklist(projects, feedbacks);
@@ -133,6 +135,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             gitlabProjects={gitlabProjects}
             projects={projects}
             readyProjects={readyProjects}
+            connectedProjectCount={connectedProjects.length}
             feedbackCountsByProject={feedbackCountsByProject}
             totalFeedbacks={feedbacks.length}
             priorityCount={priorityFeedbacks.length}
@@ -211,6 +214,7 @@ function ProjectRouteNavigation({
   gitlabProjects,
   projects,
   readyProjects,
+  connectedProjectCount,
   feedbackCountsByProject,
   totalFeedbacks,
   priorityCount,
@@ -224,6 +228,7 @@ function ProjectRouteNavigation({
   gitlabProjects: number;
   projects: ChangeThisProject[];
   readyProjects: number;
+  connectedProjectCount: number;
   feedbackCountsByProject: Map<string, number>;
   totalFeedbacks: number;
   priorityCount: number;
@@ -244,7 +249,7 @@ function ProjectRouteNavigation({
           Sites connectés
         </Link>
         <div className="route-summary">
-          <strong>{readyProjects}/{projects.length}</strong>
+          <strong>{readyProjects}/{connectedProjectCount}</strong>
           <span>sites prêts à créer des issues</span>
         </div>
         <div className="provider-split">
@@ -506,7 +511,7 @@ function DashboardFilterBar({
         <select defaultValue={filters.site} id="dashboard-filter-site" name="site">
           <option value="all">Tous les sites</option>
           {projects.map((project) => (
-            <option key={project.publicKey} value={project.publicKey}>{project.name}</option>
+            <option key={project.publicKey} value={project.publicKey}>{isDemoProject(project) ? workspaceDemoProjectName : project.name}</option>
           ))}
         </select>
       </div>
@@ -638,14 +643,16 @@ function ProjectRouteRow({
   filters: DashboardFilters;
   project: ChangeThisProject;
 }) {
+  const demoProject = isDemoProject(project);
+
   return (
     <Link className={`site-route-row${active ? " active" : ""}`} href={dashboardSiteHref(filters, project.publicKey)}>
       <div>
-        <strong>{project.name}</strong>
-        <span>{project.issueTarget.namespace}/{project.issueTarget.project}</span>
+        <strong>{demoProject ? workspaceDemoProjectName : project.name}</strong>
+        <span>{demoProject ? "Feedbacks de démonstration" : `${project.issueTarget.namespace}/${project.issueTarget.project}`}</span>
       </div>
       <span className="site-route-meta">
-        <ProviderBadge provider={project.issueTarget.provider} />
+        {demoProject ? <DemoBadge /> : <ProviderBadge provider={project.issueTarget.provider} />}
         <span className="site-route-count">{count}</span>
       </span>
     </Link>
@@ -653,6 +660,7 @@ function ProjectRouteRow({
 }
 
 function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
+  const demoFeedback = isDemoFeedback(feedback);
   const draftLabels = feedback.issueDraft.labels.join(" / ");
   const viewport = `${feedback.payload.metadata.viewport.width} x ${feedback.payload.metadata.viewport.height}`;
   const appEnvironment = feedback.payload.metadata.app;
@@ -681,7 +689,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           <span className={`status-badge ${statusClasses[feedback.status]}`}>
             <T k={statusLabelKeys[feedback.status]} />
           </span>
-          <ProviderBadge provider={feedback.issueTarget.provider} />
+          {demoFeedback ? <DemoBadge /> : <ProviderBadge provider={feedback.issueTarget.provider} />}
         </div>
         <h2>{cardTitle}</h2>
         <p>{displayMessage.message || <T k="projects.feedback.noMessage" />}</p>
@@ -698,7 +706,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
         ) : null}
         <div className="feedback-meta">
           {displayMessage.reporter ? <span>Envoyé par {displayMessage.reporter}</span> : null}
-          <span>{feedback.projectName}</span>
+          <span>{demoFeedback ? workspaceDemoProjectName : feedback.projectName}</span>
           <span>{feedback.payload.metadata.path}</span>
           <span>{formatDate(feedback.createdAt)}</span>
         </div>
@@ -708,17 +716,19 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
             <div className="issue-draft compact-issue-draft">
               <div>
                 <p className="eyebrow"><T k="projects.feedback.draft" /></p>
-                <strong>{feedback.issueTarget.namespace}/{feedback.issueTarget.project}</strong>
+                <strong>{demoFeedback ? workspaceDemoProjectName : `${feedback.issueTarget.namespace}/${feedback.issueTarget.project}`}</strong>
               </div>
-              <span>{draftLabels}</span>
+              <span>{demoFeedback ? "Feedback de démonstration" : draftLabels}</span>
               {feedback.payload.pins?.length ? (
                 <span>{feedback.payload.pins.length} pin{feedback.payload.pins.length > 1 ? "s" : ""}</span>
               ) : feedback.payload.pin ? (
                 <span>Pin: {Math.round(feedback.payload.pin.x)}, {Math.round(feedback.payload.pin.y)}</span>
               ) : null}
-              <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}>
-                <T k="projects.feedback.destination" />
-              </a>
+              {demoFeedback ? null : (
+                <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}>
+                  <T k="projects.feedback.destination" />
+                </a>
+              )}
             </div>
             <div className="feedback-technical-summary">
               <span>Viewport: {viewport}</span>
@@ -729,7 +739,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
         </details>
       </div>
       <div className="feedback-site-cell">
-        <strong>{feedback.projectName}</strong>
+        <strong>{demoFeedback ? workspaceDemoProjectName : feedback.projectName}</strong>
         <span>{feedback.payload.metadata.path}</span>
       </div>
       <div className="feedback-status-cell">
@@ -747,7 +757,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
                 createdAt: feedback.createdAt,
                 issueTarget: feedback.issueTarget,
                 message: feedback.payload.message,
-                projectName: feedback.projectName,
+                projectName: demoFeedback ? workspaceDemoProjectName : feedback.projectName,
                 status: feedback.status,
                 title: feedback.issueDraft.title
               }}
@@ -762,8 +772,8 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
       </div>
       <div className="feedback-issue-cell">
         <div className="feedback-issue-destination">
-          <ProviderBadge provider={feedback.issueTarget.provider} />
-          <span>{issueLabel}</span>
+          {demoFeedback ? <DemoBadge /> : <ProviderBadge provider={feedback.issueTarget.provider} />}
+          <span>{demoFeedback ? "Demo" : issueLabel}</span>
         </div>
       </div>
       <div className="feedback-received-cell">
@@ -777,6 +787,10 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
       />
     </article>
   );
+}
+
+function DemoBadge() {
+  return <span className="status-badge demo-badge">Demo</span>;
 }
 
 function buildOnboardingChecklist(projects: ChangeThisProject[], feedbacks: StoredFeedback[]): OnboardingChecklistStep[] {
@@ -869,7 +883,7 @@ function parseStatusFilter(value?: string): DashboardStatusFilter {
 }
 
 function matchesDashboardFilters(feedback: StoredFeedback, filters: DashboardFilters): boolean {
-  if (filters.provider !== "all" && feedback.issueTarget.provider !== filters.provider) {
+  if (filters.provider !== "all" && (isDemoFeedback(feedback) || feedback.issueTarget.provider !== filters.provider)) {
     return false;
   }
 
@@ -922,6 +936,10 @@ function matchesDashboardFilters(feedback: StoredFeedback, filters: DashboardFil
   ].join(" ").toLowerCase();
 
   return haystack.includes(filters.query.toLowerCase());
+}
+
+function isDemoProject(project: ChangeThisProject): boolean {
+  return project.publicKey.startsWith(workspaceDemoProjectKeyPrefix) || project.id === "site_demo" || project.name === workspaceDemoProjectName;
 }
 
 function isPriorityFeedback(feedback: StoredFeedback): boolean {

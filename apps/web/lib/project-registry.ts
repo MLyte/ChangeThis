@@ -10,7 +10,13 @@ import {
   type WidgetLocale,
   type WidgetReporterFields
 } from "@changethis/shared";
-import { demoProject, localWorkspace, type ChangeThisProject } from "./demo-project";
+import {
+  demoProject,
+  localWorkspace,
+  workspaceDemoProjectKey,
+  workspaceDemoProjectName,
+  type ChangeThisProject
+} from "./demo-project";
 import { getDataStoreMode } from "./runtime";
 import { isSupabaseServiceConfigured, supabaseServiceRest } from "./supabase-server";
 
@@ -116,6 +122,23 @@ export async function findConfiguredProjectByKey(
   }
 
   return !workspaceId && projectKey === demoProject.publicKey ? demoProject : undefined;
+}
+
+export async function ensureWorkspaceDemoProject(workspaceId: string, origin?: string | null): Promise<ChangeThisProject> {
+  const normalizedOrigin = normalizeAllowedOrigin(origin ?? "") ?? demoProject.allowedOrigins[0];
+  const allowedOrigins = [...new Set([normalizedOrigin, ...demoProject.allowedOrigins].filter((value): value is string => Boolean(value)))];
+
+  if (usesSupabaseProjectRegistry()) {
+    return ensureSupabaseWorkspaceDemoProject(workspaceId, allowedOrigins);
+  }
+
+  return {
+    ...demoProject,
+    workspaceId,
+    publicKey: workspaceDemoProjectKey(workspaceId),
+    name: workspaceDemoProjectName,
+    allowedOrigins
+  };
 }
 
 export async function createConnectedSite(input: CreateConnectedSiteInput): Promise<ChangeThisProject> {
@@ -463,6 +486,104 @@ async function createSupabaseConnectedSite(
 
   if (!project) {
     throw new Error("Supabase returned an invalid project registry row");
+  }
+
+  return project;
+}
+
+async function ensureSupabaseWorkspaceDemoProject(
+  workspaceId: string,
+  allowedOrigins: string[]
+): Promise<ChangeThisProject> {
+  ensureSupabaseProjectRegistryConfigured();
+
+  if (!isUuid(workspaceId)) {
+    throw new ProjectTargetValidationError("Workspace is required for Supabase project registry", 422);
+  }
+
+  const publicKey = workspaceDemoProjectKey(workspaceId);
+  const existing = await findSupabaseConfiguredProjectByKey(publicKey, workspaceId);
+
+  if (existing) {
+    const nextAllowedOrigins = [...new Set([...existing.allowedOrigins, ...allowedOrigins])];
+    if (nextAllowedOrigins.length === existing.allowedOrigins.length) {
+      return existing;
+    }
+
+    const params = new URLSearchParams({
+      id: `eq.${existing.id}`,
+      organization_id: `eq.${workspaceId}`,
+      select: supabaseProjectSelect(),
+      limit: "1"
+    });
+    const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`, {
+      method: "PATCH",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({
+        allowed_origins: nextAllowedOrigins
+      })
+    });
+    const updatedProject = mapSupabaseProject(projectRows[0], publicKey, toSupabaseIssueTargetRow(existing.id, existing.issueTarget));
+
+    if (!updatedProject) {
+      throw new Error("Supabase returned an invalid demo project row");
+    }
+
+    return updatedProject;
+  }
+
+  const now = new Date().toISOString();
+  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>("/rest/v1/projects", {
+    method: "POST",
+    headers: {
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify({
+      organization_id: workspaceId,
+      name: workspaceDemoProjectName,
+      public_key: publicKey,
+      allowed_origins: allowedOrigins,
+      widget_locale: demoProject.widgetLocale,
+      widget_button_position: demoProject.widgetButtonPosition,
+      widget_button_variant: demoProject.widgetButtonVariant,
+      widget_reporter_fields: demoProject.widgetReporterFields
+    })
+  });
+  const projectRow = projectRows[0];
+
+  if (!projectRow) {
+    throw new Error("Supabase did not return the created demo project");
+  }
+
+  await supabaseServiceRest("/rest/v1/project_public_keys", {
+    method: "POST",
+    headers: {
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify({
+      project_id: projectRow.id,
+      public_key: publicKey,
+      status: "active",
+      activated_at: projectRow.created_at ?? now
+    })
+  });
+
+  const issueTargetRows = await supabaseServiceRest<SupabaseIssueTargetRow[]>("/rest/v1/issue_targets", {
+    method: "POST",
+    headers: {
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify({
+      project_id: projectRow.id,
+      ...toSupabaseIssueTargetPayload(demoProject.issueTarget)
+    })
+  });
+  const project = mapSupabaseProject(projectRow, publicKey, issueTargetRows[0]);
+
+  if (!project) {
+    throw new Error("Supabase returned an invalid demo project registry row");
   }
 
   return project;

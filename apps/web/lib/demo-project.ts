@@ -11,6 +11,8 @@ export type ChangeThisProject = Site & {
 };
 
 const localTimestamp = "2026-04-27T00:00:00.000Z";
+export const workspaceDemoProjectName = "Demo";
+export const workspaceDemoProjectKeyPrefix = "ct_demo_";
 
 export const localWorkspace: Workspace = {
   id: "workspace_changethis_local",
@@ -53,6 +55,10 @@ export const demoProject: ChangeThisProject = {
   createdAt: localTimestamp,
   updatedAt: localTimestamp
 };
+
+export function workspaceDemoProjectKey(workspaceId: string): string {
+  return `${workspaceDemoProjectKeyPrefix}${workspaceId.replace(/[^a-zA-Z0-9]/g, "")}`;
+}
 
 export const demoAppEnvironment: Required<FeedbackAppEnvironment> = {
   environment: "staging",

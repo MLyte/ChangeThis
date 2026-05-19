@@ -5183,6 +5183,12 @@ dd {
   color: #6f6f6f;
 }
 
+.status-badge.demo-badge {
+  background: var(--primary-softer);
+  border: 1px solid var(--primary-soft);
+  color: var(--primary);
+}
+
 .repo-linker {
   align-items: end;
   display: grid;
@@ -6283,9 +6289,78 @@ code {
 
 @media (max-width: 680px) {
   .topbar {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 14px;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .topbar.app-header {
+    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .app-header .brand {
+    min-width: 0;
+  }
+
+  .app-header .brand-logo {
+    height: 24px;
+    width: 24px;
+  }
+
+  .app-header .brand-wordmark {
+    font-size: 19px;
+  }
+
+  .app-header .topbar-actions {
+    display: contents;
+  }
+
+  .app-header .primary-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    width: 100%;
+  }
+
+  .app-header .primary-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-header .language-switch {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: repeat(2, 34px);
+    justify-self: end;
+    min-height: 32px;
+  }
+
+  .app-header .language-switch button {
+    min-height: 30px;
+  }
+
+  .app-header .session-menu {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    min-width: 0;
+    padding: 6px 8px;
+    width: 100%;
+  }
+
+  .app-header .session-menu span {
+    max-width: min(52vw, 210px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-header .session-link {
+    flex: 0 0 auto;
   }
 
   .nav {
@@ -6297,7 +6372,7 @@ code {
     align-items: center;
     flex-direction: row;
     gap: 8px;
-    padding: 7px 12px;
+    padding: 7px 12px calc(7px + env(safe-area-inset-bottom));
   }
 
   .footer-brand,
@@ -6352,6 +6427,14 @@ code {
 
   .app-footer nav {
     gap: 7px;
+    justify-content: flex-end;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .app-footer nav::-webkit-scrollbar {
+    display: none;
   }
 
   .app-footer a,
@@ -6564,6 +6647,26 @@ code {
 
   .issue-panel {
     margin-top: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-footer {
+    gap: 6px;
+    padding-inline: 10px;
+  }
+
+  .app-footer strong {
+    display: none;
+  }
+
+  .app-footer nav {
+    gap: 5px;
+  }
+
+  .footer-support-link,
+  .footer-license-link {
+    padding-inline: 6px;
   }
 }
 

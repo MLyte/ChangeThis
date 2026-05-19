@@ -6,7 +6,6 @@ import type { StoredFeedback } from "./feedback-repository";
 import { getFeedbackRepository } from "./feedback-repository";
 import { getIssueProviderClient, IssueProviderError } from "./issue-providers";
 import { logError, logInfo, logWarn } from "./logger";
-import { isProductionRuntime } from "./runtime";
 
 const retryBaseDelayMs = 30_000;
 const retryMaxDelayMs = 15 * 60_000;
@@ -44,7 +43,7 @@ export async function createIssueForFeedback(
     return updated;
   }
 
-  if (isDemoFeedback(feedback) && !isProductionRuntime) {
+  if (isDemoFeedback(feedback)) {
     const updatedDraft = options.issueDraft ?? feedback.issueDraft;
 
     if (options.issueDraft) {
@@ -139,7 +138,7 @@ export async function syncFeedbackIssueState(
     return feedback;
   }
 
-  if (isDemoFeedback(feedback) && !isProductionRuntime) {
+  if (isDemoFeedback(feedback)) {
     const updated = await getFeedbackRepository().recordExternalIssueState(feedback.id, {
       ...feedback.externalIssue,
       state: feedback.externalIssue.state ?? "open"

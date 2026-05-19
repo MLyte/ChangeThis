@@ -9,6 +9,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
 type ProjectRegistryModule = typeof import("../lib/project-registry.ts");
 
 const {
+  ensureWorkspaceDemoProject,
   findConfiguredProjectByKey,
   listConfiguredProjects
 } = await import(`${pathToFileURL(`${process.cwd()}/lib/project-registry.ts`).href}?supabase-test`) as ProjectRegistryModule;
@@ -111,6 +112,92 @@ test("does not fall back to the hard-coded demo project in Supabase mode", async
   };
 
   assert.equal(await findConfiguredProjectByKey("changethis_demo_public_key"), undefined);
+});
+
+test("creates a workspace-scoped demo project in Supabase mode", async () => {
+  const workspaceId = "11111111-1111-4111-8111-111111111111";
+  const projectId = "22222222-2222-4222-8222-222222222222";
+  const publicKey = "ct_demo_11111111111141118111111111111111";
+  const calls: Array<{ method: string; path: string; body?: unknown }> = [];
+
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(input.toString());
+    const method = init.method ?? "GET";
+    const body = typeof init.body === "string" ? JSON.parse(init.body) : undefined;
+    calls.push({ method, path: url.pathname, body });
+
+    if (url.pathname === "/rest/v1/project_public_keys" && method === "GET") {
+      return jsonResponse([]);
+    }
+
+    if (url.pathname === "/rest/v1/projects" && method === "POST") {
+      assert.deepEqual(body, {
+        organization_id: workspaceId,
+        name: "Demo",
+        public_key: publicKey,
+        allowed_origins: [
+          "https://app.example.test",
+          "http://localhost:3000",
+          "http://127.0.0.1:3000"
+        ],
+        widget_locale: "fr",
+        widget_button_position: "bottom-right",
+        widget_button_variant: "default",
+        widget_reporter_fields: "optional"
+      });
+
+      return jsonResponse([{
+        id: projectId,
+        organization_id: workspaceId,
+        name: "Demo",
+        public_key: publicKey,
+        allowed_origins: body.allowed_origins,
+        widget_locale: "fr",
+        widget_button_position: "bottom-right",
+        widget_button_variant: "default",
+        widget_reporter_fields: "optional",
+        created_at: "2026-05-19T10:00:00.000Z",
+        updated_at: "2026-05-19T10:00:00.000Z"
+      }]);
+    }
+
+    if (url.pathname === "/rest/v1/project_public_keys" && method === "POST") {
+      assert.deepEqual(body, {
+        project_id: projectId,
+        public_key: publicKey,
+        status: "active",
+        activated_at: "2026-05-19T10:00:00.000Z"
+      });
+      return new Response(null, { status: 204 });
+    }
+
+    if (url.pathname === "/rest/v1/issue_targets" && method === "POST") {
+      assert.equal(body.project_id, projectId);
+      assert.equal(body.provider, "github");
+      assert.equal(body.namespace, "MLyte");
+      assert.equal(body.project_name, "ChangeThis");
+
+      return jsonResponse([{
+        project_id: projectId,
+        provider: "github",
+        namespace: "MLyte",
+        project_name: "ChangeThis",
+        integration_id: null,
+        external_project_id: null,
+        web_url: "https://github.com/MLyte/ChangeThis"
+      }]);
+    }
+
+    throw new Error(`Unexpected Supabase request: ${method} ${url.toString()}`);
+  };
+
+  const project = await ensureWorkspaceDemoProject(workspaceId, "https://app.example.test/demo");
+
+  assert.equal(project.workspaceId, workspaceId);
+  assert.equal(project.publicKey, publicKey);
+  assert.equal(project.name, "Demo");
+  assert.equal(project.allowedOrigins.includes("https://app.example.test"), true);
+  assert.equal(calls.filter((call) => call.method === "POST").length, 3);
 });
 
 function jsonResponse(body: unknown): Response {

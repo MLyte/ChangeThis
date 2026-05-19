@@ -100,6 +100,7 @@ const widgetCopy = {
     selectArea: "Trace la zone à capturer",
     defineCapture: "Définir la zone",
     addPin: "Ajouter une pin",
+    selectPin: "Touchez la zone à commenter",
     pins: "Pins",
     pinPlaceholder: "Décris cette correction",
     removePin: "Supprimer la pin",
@@ -152,6 +153,7 @@ const widgetCopy = {
     selectArea: "Drag the area to capture",
     defineCapture: "Define area",
     addPin: "Add pin",
+    selectPin: "Tap the area to comment on",
     pins: "Pins",
     pinPlaceholder: "Describe this correction",
     removePin: "Remove pin",
@@ -308,7 +310,7 @@ export function initChangeThis(options: WidgetOptions): void {
     state.notice = "";
     state.open = false;
     render();
-    startPinMode((pin) => {
+    startPinMode(copy.selectPin, copy.close, (pin) => {
       if (currentViewKey() !== viewKey) {
         clearViewBoundDraft();
         render();
@@ -321,6 +323,10 @@ export function initChangeThis(options: WidgetOptions): void {
       state.open = true;
       state.focusPinIndex = nextPinIndex;
       render();
+    }, () => {
+      state.type = "pin";
+      state.open = true;
+      render();
     });
   };
 
@@ -331,7 +337,7 @@ export function initChangeThis(options: WidgetOptions): void {
     state.draftViewKey = viewKey;
     state.open = false;
     render();
-    startCaptureSelection(copy.selectArea, (area) => {
+    startCaptureSelection(copy.selectArea, copy.close, (area) => {
       if (currentViewKey() !== viewKey) {
         clearViewBoundDraft();
         render();
@@ -463,6 +469,7 @@ export function initChangeThis(options: WidgetOptions): void {
           position: fixed;
           z-index: 2147483647;
           width: min(340px, calc(100vw - 32px));
+          max-height: min(680px, calc(100dvh - 112px - env(safe-area-inset-bottom)));
           border: 1px solid #c5cae9;
           border-top: 3px solid #3f51b5;
           border-radius: 8px;
@@ -471,6 +478,8 @@ export function initChangeThis(options: WidgetOptions): void {
           box-shadow: 0 20px 50px rgba(17, 24, 39, 0.18);
           display: grid;
           gap: 12px;
+          overflow: auto;
+          overscroll-behavior: contain;
           padding: 14px;
         }
         .panel[data-position="bottom-right"] { right: 20px; bottom: calc(76px + var(--ct-footer-offset, 0px)); }
@@ -992,7 +1001,15 @@ export function initChangeThis(options: WidgetOptions): void {
           gap: 6px;
           justify-content: flex-end;
         }
-        .actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .actions {
+          display: flex;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+        .actions .send {
+          min-width: 0;
+          white-space: normal;
+        }
         .send { background: #3f51b5; border-color: #3f51b5; color: #fff; }
         .send:disabled { cursor: wait; opacity: .65; }
         .pin {
@@ -1030,6 +1047,43 @@ export function initChangeThis(options: WidgetOptions): void {
           box-shadow: 0 14px 34px rgba(22, 101, 52, 0.16);
         }
         @media (max-width: 640px) {
+          .panel {
+            left: 12px !important;
+            right: 12px !important;
+            width: auto;
+            max-height: min(620px, calc(100dvh - 96px - env(safe-area-inset-bottom) - var(--ct-footer-offset, 0px)));
+            padding: 12px;
+          }
+          .panel[data-position^="bottom"] {
+            bottom: calc(68px + env(safe-area-inset-bottom) + var(--ct-footer-offset, 0px));
+          }
+          .panel[data-position^="top"] {
+            top: calc(12px + env(safe-area-inset-top));
+          }
+          .panel-header {
+            align-items: flex-start;
+          }
+          .panel-header-actions {
+            flex-wrap: wrap;
+            justify-content: flex-end;
+          }
+          .mode {
+            gap: 4px;
+            padding-inline: 4px;
+          }
+          .actions {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+          .send,
+          .cancel {
+            width: 100%;
+          }
+          .manager-modal {
+            width: calc(100vw - 24px);
+            max-height: calc(100dvh - 24px);
+            padding: 14px;
+          }
           .manager-header {
             flex-direction: column;
           }
@@ -1840,7 +1894,7 @@ function publicFeedbackActionUrl(endpoint: string, actionPath: string): string {
   return url.toString();
 }
 
-function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => void, onCancel?: () => void): void {
+function startCaptureSelection(label: string, cancelLabel: string, onSelect: (area: CaptureArea) => void, onCancel?: () => void): void {
   const layer = document.createElement("div");
   layer.innerHTML = `
     <style>
@@ -1850,8 +1904,14 @@ function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => v
         z-index: 2147483647;
         cursor: crosshair;
         background: rgba(17, 24, 39, 0.18);
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
       }
       .changethis-selection-help {
+        align-items: center;
+        display: flex;
+        gap: 10px;
         position: fixed;
         left: 50%;
         top: 18px;
@@ -1864,6 +1924,15 @@ function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => v
         font-weight: 800;
         padding: 10px 14px;
       }
+      .changethis-selection-help button {
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        cursor: pointer;
+        font: inherit;
+        padding: 4px 8px;
+      }
       .changethis-selection-box {
         position: fixed;
         border: 2px solid #fff;
@@ -1872,7 +1941,7 @@ function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => v
       }
     </style>
     <div class="changethis-selection-layer">
-      <div class="changethis-selection-help">${escapeHtml(label)}</div>
+      <div class="changethis-selection-help">${escapeHtml(label)} <button type="button" data-changethis-selection-cancel>${escapeHtml(cancelLabel)}</button></div>
       <div class="changethis-selection-box" hidden></div>
     </div>
   `;
@@ -1911,7 +1980,18 @@ function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => v
     box.style.height = `${height}px`;
   };
 
+  layer.querySelector<HTMLElement>("[data-changethis-selection-cancel]")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    finish(onCancel);
+  });
+
   surface?.addEventListener("pointerdown", (event) => {
+    if ((event.target as Element | null)?.closest("[data-changethis-selection-cancel]")) {
+      return;
+    }
+
+    event.preventDefault();
     dragging = true;
     startX = event.clientX;
     startY = event.clientY;
@@ -1923,6 +2003,7 @@ function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => v
 
   surface?.addEventListener("pointermove", (event) => {
     if (!dragging) return;
+    event.preventDefault();
     latestX = event.clientX;
     latestY = event.clientY;
     updateBox();
@@ -1930,6 +2011,7 @@ function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => v
 
   surface?.addEventListener("pointerup", (event) => {
     if (!dragging) return;
+    event.preventDefault();
     dragging = false;
     latestX = event.clientX;
     latestY = event.clientY;
@@ -1964,29 +2046,100 @@ function startCaptureSelection(label: string, onSelect: (area: CaptureArea) => v
   document.addEventListener("keydown", handleKeydown, true);
 }
 
-function startPinMode(onSelect: (pin: PinTarget) => void): void {
-  const previousCursor = document.documentElement.style.cursor;
-  document.documentElement.style.cursor = "crosshair";
+function startPinMode(label: string, cancelLabel: string, onSelect: (pin: PinTarget) => void, onCancel?: () => void): void {
+  const layer = document.createElement("div");
+  layer.innerHTML = `
+    <style>
+      .changethis-pin-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        cursor: crosshair;
+        background: rgba(17, 24, 39, 0.12);
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .changethis-pin-help {
+        align-items: center;
+        display: flex;
+        gap: 10px;
+        position: fixed;
+        left: 50%;
+        top: 18px;
+        transform: translateX(-50%);
+        border-radius: 999px;
+        background: #111827;
+        color: #fff;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: 13px;
+        font-weight: 800;
+        padding: 10px 14px;
+      }
+      .changethis-pin-help button {
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        cursor: pointer;
+        font: inherit;
+        padding: 4px 8px;
+      }
+    </style>
+    <div class="changethis-pin-layer">
+      <div class="changethis-pin-help">${escapeHtml(label)} <button type="button" data-changethis-pin-cancel>${escapeHtml(cancelLabel)}</button></div>
+    </div>
+  `;
+  document.documentElement.appendChild(layer);
 
-  const cleanup = () => {
-    document.documentElement.style.cursor = previousCursor;
-    document.removeEventListener("click", handleClick, true);
+  const surface = layer.querySelector<HTMLElement>(".changethis-pin-layer");
+  let isFinished = false;
+
+  const finish = (callback?: () => void) => {
+    if (isFinished) {
+      return;
+    }
+
+    isFinished = true;
     document.removeEventListener("keydown", handleKeydown, true);
+    layer.remove();
+    callback?.();
   };
 
-  const handleClick = (event: MouseEvent) => {
+  layer.querySelector<HTMLElement>("[data-changethis-pin-cancel]")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    cleanup();
+    finish(onCancel);
+  });
 
-    const target = event.target instanceof Element ? event.target : undefined;
-    onSelect({
-      x: event.clientX + window.scrollX,
-      y: event.clientY + window.scrollY,
+  surface?.addEventListener("pointerdown", (event) => {
+    if ((event.target as Element | null)?.closest("[data-changethis-pin-cancel]")) {
+      return;
+    }
+
+    event.preventDefault();
+  });
+
+  surface?.addEventListener("pointerup", (event) => {
+    if ((event.target as Element | null)?.closest("[data-changethis-pin-cancel]")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const clientX = event.clientX;
+    const clientY = event.clientY;
+    layer.style.pointerEvents = "none";
+    const target = document.elementFromPoint(clientX, clientY);
+    layer.style.pointerEvents = "";
+
+    finish(() => onSelect({
+      x: clientX + window.scrollX,
+      y: clientY + window.scrollY,
       selector: target ? buildSelector(target) : undefined,
       text: target?.textContent?.trim().slice(0, 120)
-    });
-  };
+    }));
+  });
 
   const handleKeydown = (event: KeyboardEvent) => {
     if (event.key !== "Escape") {
@@ -1995,10 +2148,9 @@ function startPinMode(onSelect: (pin: PinTarget) => void): void {
 
     event.preventDefault();
     event.stopPropagation();
-    cleanup();
+    finish(onCancel);
   };
 
-  document.addEventListener("click", handleClick, true);
   document.addEventListener("keydown", handleKeydown, true);
 }
 
