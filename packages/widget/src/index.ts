@@ -70,8 +70,10 @@ const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
 const reporterStorageKeyPrefix = "changethis:reporter:";
 const productWebsiteUrl = "https://app.changethis.dev";
 const maxScreenshotDimension = 1600;
+const pageFeedbackScreenshotMaxDimension = 960;
 const maxThumbnailDimension = 400;
 const screenshotQuality = 0.8;
+const pageFeedbackScreenshotQuality = 0.62;
 const thumbnailQuality = 0.74;
 const lucideIcons = {
   bug: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/><path d="M6 17H3"/><path d="M21 17h-3"/></svg>',
@@ -1334,6 +1336,7 @@ export function initChangeThis(options: WidgetOptions): void {
                     <div class="manager-copy">
                       <strong>${escapeHtml(copy.sentPin)}</strong>
                       <span>${escapeHtml(feedback.message || copy.note)}</span>
+                      ${capturePreviewMarkup(feedback, copy.note)}
                     </div>
                     <div class="manager-actions">
                       <button class="manager-button danger" data-action="cancel-sent-feedback" data-feedback-id="${escapeHtml(feedback.feedbackId)}" data-feedback-kind="note" ${state.sending ? "disabled" : ""}>${lucideIcons.undo}${escapeHtml(copy.removeFeedback)}</button>
@@ -1774,7 +1777,8 @@ export function initChangeThis(options: WidgetOptions): void {
               type: "comment",
               message: pendingNoteMessage,
               reporter,
-              sentAt: new Date().toISOString()
+              sentAt: new Date().toISOString(),
+              screenshotDataUrl: submitted.screenshotDataUrl
             };
             state.sentFeedbacks = [sentFeedback, ...state.sentFeedbacks].slice(0, 120);
             persistSentFeedback(sentFeedbacksStorageKey, state.viewKey, sentFeedback);
@@ -1883,7 +1887,9 @@ async function submitFeedback(params: {
     ? await captureViewport(params.captureArea)
     : params.type === "pin"
       ? await captureViewport()
-      : undefined;
+      : params.type === "comment"
+        ? await capturePageFeedbackPreview()
+        : undefined;
   const screenshotThumbnailDataUrl = screenshotDataUrl
     ? await createImageThumbnail(screenshotDataUrl)
     : undefined;
@@ -2252,7 +2258,22 @@ function startPinMode(label: string, cancelLabel: string, onSelect: (pin: PinTar
   document.addEventListener("keydown", handleKeydown, true);
 }
 
-async function captureViewport(area?: CaptureArea): Promise<string | undefined> {
+async function capturePageFeedbackPreview(): Promise<string | undefined> {
+  try {
+    return await captureViewport(undefined, {
+      maxDimension: pageFeedbackScreenshotMaxDimension,
+      quality: pageFeedbackScreenshotQuality
+    });
+  } catch (error) {
+    console.warn("[ChangeThis] Failed to capture page preview", error);
+    return undefined;
+  }
+}
+
+async function captureViewport(
+  area?: CaptureArea,
+  options: { maxDimension?: number; quality?: number } = {}
+): Promise<string | undefined> {
   try {
     maskSensitiveFields(true);
     const canvas = await capturePage(document.body, {
@@ -2265,8 +2286,8 @@ async function captureViewport(area?: CaptureArea): Promise<string | undefined> 
       useCORS: true
     });
     const output = area ? cropCanvas(canvas, area) : canvas;
-    const resized = resizeCanvasToMax(output, maxScreenshotDimension);
-    return encodeCanvas(resized, screenshotQuality);
+    const resized = resizeCanvasToMax(output, options.maxDimension ?? maxScreenshotDimension);
+    return encodeCanvas(resized, options.quality ?? screenshotQuality);
   } finally {
     maskSensitiveFields(false);
   }
