@@ -105,23 +105,25 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             </div>
           ) : null}
 
-          {isLocalMode ? (
+          {!isSent && isLocalMode ? (
             <div className="local-mode-callout">
               <strong><T k="login.localMode.title" /></strong>
               <span><T k="signup.localMode.copy" /></span>
             </div>
           ) : null}
 
-          <form action={signUpAction} className="auth-form">
-            <label>
-              <T k="login.email" />
-              <input autoComplete="email" name="email" required type="email" />
-            </label>
-            <p className="microcopy"><T k="signup.redirectHint" /></p>
-            <button className="button" type="submit">
-              <T k={isLocalMode ? "signup.localSubmit" : "signup.submit"} />
-            </button>
-          </form>
+          {!isSent ? (
+            <form action={signUpAction} className="auth-form">
+              <label>
+                <T k="login.email" />
+                <input autoComplete="email" name="email" required type="email" />
+              </label>
+              <p className="microcopy"><T k="signup.redirectHint" /></p>
+              <button className="button" type="submit">
+                <T k={isLocalMode ? "signup.localSubmit" : "signup.submit"} />
+              </button>
+            </form>
+          ) : null}
 
           <p className="microcopy">
             <T k="signup.loginHint" /> <a className="inline-link" href="/login"><T k="nav.login" /></a>

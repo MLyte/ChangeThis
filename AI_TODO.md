@@ -341,6 +341,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Valider les clients pilotes et le périmètre du dry-run staging.
 
 ## Journal
+- [2026-05-19] UX signup lien envoye: quand `/signup?sent=1` est affiche, le formulaire e-mail et le bouton `Recevoir le lien securise` sont masques pour ne garder que la confirmation et le lien de connexion. Validation ciblee: typecheck web OK, tests web OK.
 - [2026-05-19] Correctif verification token_hash Supabase: l'echange serveur `/auth/v1/verify` envoie maintenant aussi `Authorization: Bearer <anon key>`, comme le client officiel GoTrue, avec test des headers de callback. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] Auth signup robuste aux scanners mail: ajout du support `token_hash` Supabase sur `/auth/confirm` + `/api/auth/callback`, avec echange serveur via `/auth/v1/verify`, cookies de session poses cote app, et documentation du template `Confirm signup` utilisant `{{ .TokenHash }}` au lieu du lien Supabase direct. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] Correctif callback auth Railway: `/api/auth/callback` construit maintenant ses redirects absolus depuis `NEXT_PUBLIC_APP_URL` au lieu de `request.url`, qui peut valoir `https://localhost:8080` dans le runtime Railway. Ajout d'un test reproduisant l'erreur `localhost:8080/login`. Validation ciblee: tests web OK, typecheck web OK.
