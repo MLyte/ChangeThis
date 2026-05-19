@@ -674,7 +674,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const appEnvironment = feedback.payload.metadata.app;
   const appEnvironmentSummary = formatAppEnvironmentSummary(appEnvironment);
   const displayMessage = formatFeedbackMessage(feedback);
-  const cardTitle = formatFeedbackCardTitle(feedback);
+  const cardTitle = formatFeedbackCardTitle(feedback, demoFeedback ? workspaceDemoProjectName : feedback.projectName);
   const canBulkCreateIssue = feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
   const issueLabel = feedback.externalIssue?.url ? "Créée" : feedback.status === "issue_creation_pending" ? "En cours" : "Non créée";
@@ -700,7 +700,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           {demoFeedback ? <DemoBadge /> : <ProviderBadge provider={feedback.issueTarget.provider} />}
         </div>
         <h2>{cardTitle}</h2>
-        <p>{displayMessage.message || <T k="projects.feedback.noMessage" />}</p>
+        <p>{displayMessage.message ? `"${displayMessage.message}"` : <T k="projects.feedback.noMessage" />}</p>
         {feedback.lastError ? (
           <div className={`error-callout compact-callout error-callout--${errorSeverity}`}>
             <strong><T k="projects.feedback.issueError" /></strong>
@@ -714,9 +714,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
         ) : null}
         <div className="feedback-meta">
           {displayMessage.reporter ? <span>Envoyé par {displayMessage.reporter}</span> : null}
-          <span>{demoFeedback ? workspaceDemoProjectName : feedback.projectName}</span>
-          <span>{feedback.payload.metadata.path}</span>
-          <span>{formatDate(feedback.createdAt)}</span>
+          <span>Le {formatDate(feedback.createdAt)}</span>
         </div>
         <details className="feedback-disclosure" open={feedback.status === "failed" || feedback.status === "retrying"}>
           <summary>Brouillon, destination et contexte</summary>
@@ -767,7 +765,8 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
                 message: feedback.payload.message,
                 projectName: demoFeedback ? workspaceDemoProjectName : feedback.projectName,
                 status: feedback.status,
-                title: feedback.issueDraft.title
+                title: feedback.issueDraft.title,
+                type: feedback.payload.type
               }}
               metadata={feedback.payload.metadata}
               pin={feedback.payload.pin}
@@ -1041,7 +1040,7 @@ function formatFeedbackReporter(reporter: StoredFeedback["payload"]["reporter"])
   return reporter.name ?? reporter.email;
 }
 
-function formatFeedbackCardTitle(feedback: StoredFeedback): string {
+function formatFeedbackCardTitle(feedback: StoredFeedback, projectName: string): string {
   const typeLabel: Record<StoredFeedback["payload"]["type"], string> = {
     comment: "Note",
     pin: "Pin",
@@ -1049,7 +1048,7 @@ function formatFeedbackCardTitle(feedback: StoredFeedback): string {
   };
   const path = feedback.payload.metadata.path || "/";
 
-  return `${typeLabel[feedback.payload.type]} sur ${path}`;
+  return `${typeLabel[feedback.payload.type]} sur ${projectName}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 function formatAppEnvironmentSummary(app?: StoredFeedback["payload"]["metadata"]["app"]): string | undefined {

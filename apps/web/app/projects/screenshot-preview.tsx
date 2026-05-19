@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Eye, X } from "lucide-react";
 import { useId, useState } from "react";
-import type { FeedbackMetadata, FeedbackStatus, IssueProvider, PinTarget } from "@changethis/shared";
+import type { FeedbackMetadata, FeedbackStatus, FeedbackType, IssueProvider, PinTarget } from "@changethis/shared";
 import type { StoredAsset } from "../../lib/feedback-repository";
 import { T } from "../i18n";
 import { ProviderBadge } from "../provider-badge";
@@ -22,6 +22,7 @@ type Props = {
     projectName: string;
     status: FeedbackStatus;
     title: string;
+    type: FeedbackType;
   };
   metadata: FeedbackMetadata;
   pin?: PinTarget;
@@ -38,6 +39,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
   const viewport = `${metadata.viewport.width} x ${metadata.viewport.height}`;
   const isMobileCapture = metadata.viewport.width < 700 && metadata.viewport.height > metadata.viewport.width;
   const pinPositions = (pins?.length ? pins : pin ? [pin] : []).map((item) => pinImagePosition(item, metadata));
+  const modalImageSize = displayImageSize(metadata.viewport, feedback.type);
 
   if (!previewUrl || !fullImageUrl) {
     return null;
@@ -98,10 +100,10 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
                 <Image
                   alt=""
                   className="screenshot-modal-image"
-                  height={1080}
+                  height={modalImageSize.height}
                   src={fullImageUrl}
                   unoptimized
-                  width={1920}
+                  width={modalImageSize.width}
                 />
                 {pinPositions.map((position, index) => (
                   <span className="screenshot-pin large" key={index} style={position}>{index + 1}</span>
@@ -171,6 +173,15 @@ function pinImagePosition(pin: PinTarget, metadata: FeedbackMetadata): { left: s
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function displayImageSize(viewport: FeedbackMetadata["viewport"], type: FeedbackType): { width: number; height: number } {
+  const maxWidth = type === "comment" ? 960 : 1600;
+  const width = Math.max(1, Math.round(Math.min(viewport.width, maxWidth)));
+  const scale = width / Math.max(1, viewport.width);
+  const height = Math.max(1, Math.round(viewport.height * scale));
+
+  return { width, height };
 }
 
 function formatDate(value: string): string {

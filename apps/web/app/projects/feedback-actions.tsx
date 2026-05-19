@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ExternalLink, RotateCcw, Send } from "lucide-react";
+import { Archive, ExternalLink, RotateCcw, Send } from "lucide-react";
 import type { FeedbackStatus, IssueDraft } from "@changethis/shared";
 import { T, useLanguage } from "../i18n";
 
@@ -20,6 +20,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isIgnoreConfirmOpen, setIsIgnoreConfirmOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState(issueDraft.title);
   const [draftDescription, setDraftDescription] = useState(issueDraft.description);
   const [draftLabels, setDraftLabels] = useState(issueDraft.labels.join(", "));
@@ -124,12 +125,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
   }
 
   function ignoreFeedback() {
-    const confirmed = window.confirm("Ignorer ce feedback ? Il sortira de la file active, mais restera disponible dans l'historique.");
-
-    if (!confirmed) {
-      return;
-    }
-
+    setIsIgnoreConfirmOpen(false);
     run(`/api/projects/feedbacks/${feedbackId}/ignore`, "ignore");
   }
 
@@ -152,7 +148,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
     }
 
     if (action === "ignore") {
-      ignoreFeedback();
+      setIsIgnoreConfirmOpen(true);
     }
   }
 
@@ -228,6 +224,13 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
         </option>
       </select>
       {error ? <span className="action-error" role="alert">{error}</span> : null}
+      {isIgnoreConfirmOpen ? (
+        <FeedbackIgnoreConfirmationModal
+          isPending={isPending}
+          onCancel={() => setIsIgnoreConfirmOpen(false)}
+          onConfirm={ignoreFeedback}
+        />
+      ) : null}
       {isComposerOpen ? (
         <div className="issue-composer" role="dialog" aria-modal="true" aria-labelledby={`issue-composer-${feedbackId}`}>
           <button
@@ -285,6 +288,42 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
           </section>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function FeedbackIgnoreConfirmationModal({
+  isPending,
+  onCancel,
+  onConfirm
+}: {
+  isPending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="ignore-feedback-title">
+      <button className="settings-modal-backdrop" aria-label="Annuler" onClick={onCancel} type="button" />
+      <div className="settings-modal-panel confirmation-modal-panel">
+        <div className="confirmation-modal-icon" aria-hidden="true">
+          <Archive className="ui-icon" size={22} strokeWidth={2.2} />
+        </div>
+        <div className="confirmation-modal-content">
+          <p className="eyebrow">Archivage</p>
+          <h2 id="ignore-feedback-title">Ignorer ce feedback ?</h2>
+          <p>
+            Il sortira de la file active, mais restera disponible dans l&apos;historique.
+          </p>
+        </div>
+        <div className="confirmation-modal-actions">
+          <button className="button secondary-button" disabled={isPending} onClick={onCancel} type="button">
+            Annuler
+          </button>
+          <button className="button" disabled={isPending} onClick={onConfirm} type="button">
+            {isPending ? "Archivage..." : "Ignorer"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
