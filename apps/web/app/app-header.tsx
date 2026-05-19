@@ -83,12 +83,10 @@ export async function AppHeader({
           <div className="session-menu" aria-label="Session">
             <UserRound aria-hidden="true" className="ui-icon muted-icon" size={16} strokeWidth={2.2} />
             <span>{resolvedSession.email}</span>
-            <form action="/logout" method="post">
-              <button className="link session-link" type="submit">
-                <LogOut aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
-                <T k="nav.logout" />
-              </button>
-            </form>
+            <a className="link session-link" href="/logout">
+              <LogOut aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+              <T k="nav.logout" />
+            </a>
           </div>
         ) : null}
       </div>
