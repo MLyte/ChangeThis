@@ -72,12 +72,12 @@ const lucideIcons = {
   "message-square": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   pencil: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   plus: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+  question: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>',
   send: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
   trash: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
   undo: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 1 1 0 11H11"/></svg>',
   x: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
 };
-const brandMark = '<svg class="brand-mark" aria-hidden="true" viewBox="0 0 28 28"><path d="M14.6 3.9c1.1.1 2 .9 2.2 2l.1.9.6-.2c1.1-.3 2.2.3 2.6 1.3.2.5.2 1 .1 1.5l-.2.7.4-.1c1.1-.1 2.1.6 2.4 1.7.2.7 0 1.4-.4 2l-5.4 7.5c-.7 1-1.8 1.6-3 1.8l-1.5.2c-1.7.2-3.4-.4-4.5-1.7l-3.7-4.2c-.7-.8-.6-2 .1-2.7.7-.7 1.8-.7 2.6-.1l1.3 1V7c0-1.2.9-2.2 2.1-2.3 1-.1 1.8.4 2.3 1.2.4-1.2 1.4-2.1 2.8-2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 6.8v7.1M16.9 6.8v6.7M20 10.1v4.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
 const widgetCopy = {
   fr: {
     button: "Feedback",
@@ -463,11 +463,14 @@ export function initChangeThis(options: WidgetOptions): void {
           position: fixed;
           z-index: 2147483647;
           width: min(340px, calc(100vw - 32px));
-          border: 1px solid #d1d5db;
+          border: 1px solid #c5cae9;
+          border-top: 3px solid #3f51b5;
           border-radius: 8px;
           background: #fff;
           color: #111827;
           box-shadow: 0 20px 50px rgba(17, 24, 39, 0.18);
+          display: grid;
+          gap: 12px;
           padding: 14px;
         }
         .panel[data-position="bottom-right"] { right: 20px; bottom: calc(76px + var(--ct-footer-offset, 0px)); }
@@ -479,7 +482,6 @@ export function initChangeThis(options: WidgetOptions): void {
           display: flex;
           gap: 8px;
           justify-content: space-between;
-          margin-bottom: 10px;
         }
         .panel-brand {
           align-items: center;
@@ -495,12 +497,6 @@ export function initChangeThis(options: WidgetOptions): void {
           letter-spacing: 0;
           line-height: 1;
         }
-        .panel-brand .brand-mark {
-          color: #111827;
-          flex: 0 0 auto;
-          height: 17px;
-          width: 17px;
-        }
         .panel-brand:hover strong {
           text-decoration: underline;
           text-underline-offset: 3px;
@@ -511,18 +507,36 @@ export function initChangeThis(options: WidgetOptions): void {
           flex: 0 0 auto;
           gap: 8px;
         }
+        .header-icon-button,
         .brand-discovery-link {
-          color: #6b7280;
+          align-items: center;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          background: #fff;
+          color: #4b5563;
+          cursor: pointer;
+          display: inline-flex;
           flex: 0 0 auto;
-          font-size: 11px;
-          font-weight: 750;
-          line-height: 1;
+          gap: 6px;
+          height: 32px;
+          justify-content: center;
+          min-width: 32px;
+          padding: 0 8px;
           text-decoration: none;
         }
+        .header-icon-button {
+          font-size: 12px;
+          font-weight: 900;
+        }
+        .header-icon-button[data-active="true"] {
+          background: #e8eaf6;
+          border-color: #c5cae9;
+          color: #3f51b5;
+        }
         .brand-discovery-link:hover {
-          color: #111827;
-          text-decoration: underline;
-          text-underline-offset: 3px;
+          background: #f9fafb;
+          border-color: #c5cae9;
+          color: #3f51b5;
         }
         .title { font-size: 14px; font-weight: 800; margin: 0; }
         .modes {
@@ -530,7 +544,6 @@ export function initChangeThis(options: WidgetOptions): void {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 0;
-          margin-bottom: 12px;
         }
         .mode, .send, .cancel {
           align-items: center;
@@ -562,7 +575,7 @@ export function initChangeThis(options: WidgetOptions): void {
           color: #111827;
         }
         .mode[data-active="true"] {
-          border-bottom-color: #111827;
+          border-bottom-color: #3f51b5;
           background: transparent;
           color: #111827;
         }
@@ -588,48 +601,25 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 10px;
         }
         .reporter-fields {
-          border: 1px solid #e5e7eb;
+          border: 1px solid #c5cae9;
           border-radius: 7px;
+          background: #f8f9ff;
           display: grid;
           gap: 8px;
-          margin-bottom: 12px;
           padding: 8px;
-        }
-        .reporter-fields-header {
-          align-items: center;
-          display: flex;
-          gap: 8px;
-          justify-content: space-between;
         }
         .reporter-trigger {
           align-items: center;
-          border: 0;
-          border-radius: 5px;
-          background: #f3f4f6;
-          color: #111827;
-          cursor: pointer;
-          display: inline-flex;
-          gap: 6px;
-          min-height: 30px;
-          padding: 6px 8px;
+          border: 1px solid #c5cae9;
+          border-radius: 6px;
+          background: #e8eaf6;
+          color: #3f51b5;
         }
         .reporter-trigger strong {
           color: #111827;
           font-size: 12px;
           font-weight: 900;
         }
-        .reporter-summary {
-          color: #6b7280;
-          font-size: 11px;
-          font-weight: 750;
-          line-height: 1.3;
-          min-width: 0;
-          overflow: hidden;
-          text-align: right;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .reporter-fields-header span,
         .field-error {
           color: #6b7280;
           font-size: 11px;
@@ -1002,8 +992,8 @@ export function initChangeThis(options: WidgetOptions): void {
           gap: 6px;
           justify-content: flex-end;
         }
-        .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
-        .send { background: #0f766e; border-color: #0f766e; color: #fff; }
+        .actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .send { background: #3f51b5; border-color: #3f51b5; color: #fff; }
         .send:disabled { cursor: wait; opacity: .65; }
         .pin {
           position: fixed;
@@ -1064,10 +1054,14 @@ export function initChangeThis(options: WidgetOptions): void {
           <div class="panel-header">
             <a class="panel-brand" href="${productWebsiteUrl}" target="_blank" rel="noopener noreferrer" aria-label="ChangeThis">
               <strong>ChangeThis</strong>
-              ${brandMark}
             </a>
             <div class="panel-header-actions">
-              <a class="brand-discovery-link" href="${productWebsiteUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.brandLabel)}</a>
+              ${reporterFields !== "hidden" ? `
+                <button class="header-icon-button reporter-trigger" data-action="toggle-reporter" data-active="${state.reporterOpen}" aria-expanded="${state.reporterOpen}">
+                  <strong>${escapeHtml(copy.reporterToggle)}</strong>
+                </button>
+              ` : ""}
+              <a class="brand-discovery-link" href="${productWebsiteUrl}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(copy.brandLabel)}" title="${escapeHtml(copy.brandLabel)}">${lucideIcons.question}</a>
               ${totalFeedbacks ? `<button class="panel-link" data-action="open-manager">${escapeHtml(copy.manageFeedbacks)}</button>` : ""}
             </div>
           </div>
@@ -1078,14 +1072,8 @@ export function initChangeThis(options: WidgetOptions): void {
             <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>
           </div>
           ${reporterFields !== "hidden" ? `
-            <div class="reporter-fields">
-              <div class="reporter-fields-header">
-                <button class="reporter-trigger" data-action="toggle-reporter" aria-expanded="${state.reporterOpen}">
-                  ${lucideIcons.mail}<strong>${escapeHtml(copy.reporterToggle)}</strong>
-                </button>
-                <span class="reporter-summary">${escapeHtml(reporterSummary(reporter, reporterFields === "required" ? copy.reporterRequired : copy.reporterOptional))}</span>
-              </div>
-              ${state.reporterOpen ? `
+            ${state.reporterOpen ? `
+              <div class="reporter-fields">
                 <div class="reporter-body">
                   <div class="reporter-grid">
                     <label class="reporter-field">
@@ -1099,8 +1087,8 @@ export function initChangeThis(options: WidgetOptions): void {
                   </div>
                   ${reporterEmailInvalid ? `<span class="field-error">${escapeHtml(copy.reporterEmailInvalid)}</span>` : ""}
                 </div>
-              ` : ""}
-            </div>
+              </div>
+            ` : ""}
           ` : ""}
           ${state.type === "comment" ? `
             <textarea data-note-message placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.noteMessage)}</textarea>
@@ -2148,18 +2136,6 @@ function currentReporter(name: string, email: string): FeedbackReporter | undefi
     name: trimmedName || undefined,
     email: trimmedEmail || undefined
   };
-}
-
-function reporterSummary(reporter: FeedbackReporter | undefined, fallback: string): string {
-  if (!reporter?.name && !reporter?.email) {
-    return fallback;
-  }
-
-  if (reporter.name && reporter.email) {
-    return `${reporter.name} · ${reporter.email}`;
-  }
-
-  return reporter.name ?? reporter.email ?? fallback;
 }
 
 function sameReporter(left: FeedbackReporter | undefined, right: FeedbackReporter | undefined): boolean {
