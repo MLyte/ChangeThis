@@ -180,6 +180,19 @@ test("buildIssueDraft numbers multiple pins in the issue description", () => {
   assert.match(draft.description, /Pin #2: x=210, y=360/);
 });
 
+test("buildIssueDraft does not imply screenshots are attached to Git issues", () => {
+  const validation = validateFeedbackPayload(validPayload({
+    screenshotDataUrl: "data:image/png;base64,AAAA"
+  }));
+  assert.equal(validation.ok, true);
+
+  const draft = buildIssueDraft(validation.value);
+
+  assert.match(draft.description, /Capture disponible dans ChangeThis/);
+  assert.match(draft.description, /n'est pas jointe a l'issue Git/);
+  assert.doesNotMatch(draft.description, /Supabase Storage/);
+});
+
 test("buildGitHubIssueDraft remains as a compatibility alias", () => {
   const validation = validateFeedbackPayload(validPayload());
   assert.equal(validation.ok, true);

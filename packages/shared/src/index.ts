@@ -419,7 +419,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     "## Capture",
     "",
     feedback.screenshotDataUrl
-      ? "Capture recue par l'API ChangeThis. Le stockage permanent sera gere par Supabase Storage."
+      ? "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant."
       : "Aucune capture jointe.",
     "",
     "## Analyse IA",

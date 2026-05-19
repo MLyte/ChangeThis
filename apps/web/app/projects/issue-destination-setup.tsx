@@ -115,6 +115,10 @@ type AutomaticIssueConfirmation = {
   projectKey: string;
 };
 
+type DeleteSiteConfirmation = {
+  projectKey: string;
+};
+
 export function IssueDestinationSetup({
   projects,
   integrations,
@@ -148,6 +152,7 @@ export function IssueDestinationSetup({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"viewer" | "member" | "admin">("member");
   const [automaticIssueConfirmation, setAutomaticIssueConfirmation] = useState<AutomaticIssueConfirmation | undefined>();
+  const [deleteSiteConfirmation, setDeleteSiteConfirmation] = useState<DeleteSiteConfirmation | undefined>();
 
   const connectedProviders = useMemo(
     () => new Set(integrations.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
@@ -559,8 +564,15 @@ export function IssueDestinationSetup({
     });
   }
 
+  function requestDeleteSite(projectKey: string) {
+    setDeleteSiteConfirmation({ projectKey });
+  }
+
   const pendingAutomaticIssueProject = automaticIssueConfirmation
     ? projectViews.find((project) => project.publicKey === automaticIssueConfirmation.projectKey)
+    : undefined;
+  const pendingDeleteSiteProject = deleteSiteConfirmation
+    ? projectViews.find((project) => project.publicKey === deleteSiteConfirmation.projectKey)
     : undefined;
 
   function confirmAutomaticIssueCreation() {
@@ -571,6 +583,16 @@ export function IssueDestinationSetup({
 
     setAutomaticIssueConfirmation(undefined);
     applyWidgetSettings(pendingAutomaticIssueProject, { issueCreationMode: "automatic" });
+  }
+
+  function confirmDeleteSite() {
+    if (!pendingDeleteSiteProject) {
+      setDeleteSiteConfirmation(undefined);
+      return;
+    }
+
+    setDeleteSiteConfirmation(undefined);
+    deleteSite(pendingDeleteSiteProject.publicKey);
   }
 
   return (
@@ -613,7 +635,7 @@ export function IssueDestinationSetup({
               installChecks={installChecks}
               onCloseModal={() => setIsSiteModalOpen(false)}
               onCreateSite={createSite}
-              onDeleteSite={deleteSite}
+              onDeleteSite={requestDeleteSite}
               onTestScript={testScript}
               onCopyInstallSnippet={copyInstallSnippet}
               onOpenSiteModal={openSiteModal}
@@ -668,6 +690,15 @@ export function IssueDestinationSetup({
           onCancel={() => setAutomaticIssueConfirmation(undefined)}
           onConfirm={confirmAutomaticIssueCreation}
           project={pendingAutomaticIssueProject}
+        />
+      ) : null}
+
+      {pendingDeleteSiteProject ? (
+        <DeleteSiteConfirmationModal
+          isPending={isPending}
+          onCancel={() => setDeleteSiteConfirmation(undefined)}
+          onConfirm={confirmDeleteSite}
+          project={pendingDeleteSiteProject}
         />
       ) : null}
     </section>
@@ -1606,6 +1637,50 @@ function AutomaticIssueConfirmationModal({
           </button>
           <button className="button" disabled={isPending} onClick={onConfirm} type="button">
             {isPending ? "Activation..." : "Activer"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteSiteConfirmationModal({
+  isPending,
+  onCancel,
+  onConfirm,
+  project
+}: {
+  isPending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  project: ProjectView;
+}) {
+  const feedbackCount = project.metrics?.feedbacksReceived ?? 0;
+  const issueCount = project.metrics?.issuesCreated ?? 0;
+
+  return (
+    <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="delete-site-title">
+      <button className="settings-modal-backdrop" aria-label="Annuler" onClick={onCancel} type="button" />
+      <div className="settings-modal-panel confirmation-modal-panel">
+        <div className="confirmation-modal-icon danger" aria-hidden="true">
+          <Trash2 className="ui-icon" size={22} strokeWidth={2.2} />
+        </div>
+        <div className="confirmation-modal-content">
+          <p className="eyebrow">Suppression</p>
+          <h2 id="delete-site-title">Supprimer ce site ?</h2>
+          <p>
+            <strong>{project.name}</strong> ne recevra plus de feedbacks avec cette clé publique.
+          </p>
+          <div className="confirmation-warning">
+            {feedbackCount} feedback{feedbackCount > 1 ? "s" : ""} collecté{feedbackCount > 1 ? "s" : ""} et {issueCount} issue{issueCount > 1 ? "s" : ""} Git créée{issueCount > 1 ? "s" : ""} restent dans l&apos;historique. Les issues déjà créées dans GitHub ou GitLab ne sont pas modifiées.
+          </div>
+        </div>
+        <div className="confirmation-modal-actions">
+          <button className="button secondary-button" disabled={isPending} onClick={onCancel} type="button">
+            Annuler
+          </button>
+          <button className="button danger-button" disabled={isPending} onClick={onConfirm} type="button">
+            {isPending ? "Suppression..." : "Supprimer"}
           </button>
         </div>
       </div>

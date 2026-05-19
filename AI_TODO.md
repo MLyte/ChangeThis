@@ -119,7 +119,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [x] Ajouter la modification des domaines autorisés par site.
 - [ ] Ajouter la rotation de clé publique widget par site.
 - [ ] Ajouter la désactivation temporaire d'un site sans supprimer son historique.
-- [ ] Ajouter la suppression d'un site avec confirmation et impact affiché.
+- [x] Ajouter la suppression d'un site avec confirmation et impact affiché.
 - [x] Ajouter la gestion des connexions Git par workspace et non seulement par environnement serveur.
 - [x] Ajouter l'état d'expiration ou d'erreur des tokens GitHub/GitLab.
 - [x] Ajouter un test de connexion provider depuis la carte GitHub/GitLab.
@@ -715,3 +715,4 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [2026-05-19] Ajustement grille site connecté: réduction de la colonne script widget, largeur rendue aux dropdowns de configuration, et clarification des métriques en `Feedbacks reçus`, `Issues Git créées`, `Échecs Git`. Validation ciblée: `npm.cmd run typecheck --workspace @changethis/web` OK, `npm.cmd run lint --workspace @changethis/web` OK, `git diff --check` OK.
 - [2026-05-19] Correction sauvegarde réglages widget: le client tolère désormais les réponses vides/non JSON, la route PATCH renvoie un JSON 500 traçable, et la mise à jour Supabase retente sans `widget_reporter_fields` si le schéma prod n'a pas encore cette colonne. Validation ciblée: `npx tsx --test test/project-registry-supabase.test.ts` OK, `npm.cmd run typecheck --workspace @changethis/web` OK, `npm.cmd run lint --workspace @changethis/web` OK, `git diff --check` OK.
 - [2026-05-19] Correction test installation script: le bouton `Tester le script` tolère désormais les réponses vides/non JSON et la route `/script-test` renvoie un JSON 500 traçable en cas d'erreur inattendue, au lieu d'afficher `Unexpected end of JSON input`. Validation ciblée: `npx tsx --test test/script-test-route.test.ts test/project-registry-supabase.test.ts` OK, `npm.cmd run typecheck --workspace @changethis/web` OK, `npm.cmd run lint --workspace @changethis/web` OK, `git diff --check` OK.
+- [2026-05-19] Confirmation suppression site connecté: le bouton `Supprimer` ouvre maintenant une modale stylisée avec impact affiché avant l'appel `DELETE`, et la tâche checklist correspondante est cochée. Validation ciblée: `npm.cmd run typecheck --workspace @changethis/web` OK, `npm.cmd run lint --workspace @changethis/web` OK, `git diff --check` OK.
