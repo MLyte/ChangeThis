@@ -296,7 +296,10 @@ export async function requestSignUpEmail(input: {
     };
   }
 
-  const response = await fetch(`${getSupabaseUrl()}/auth/v1/otp`, {
+  const otpUrl = new URL("/auth/v1/otp", getSupabaseUrl());
+  otpUrl.searchParams.set("redirect_to", input.redirectTo);
+
+  const response = await fetch(otpUrl, {
     method: "POST",
     headers: {
       apikey: getSupabaseAnonKey()!,
@@ -304,10 +307,7 @@ export async function requestSignUpEmail(input: {
     },
     body: JSON.stringify({
       email: input.email,
-      should_create_user: true,
-      options: {
-        redirectTo: input.redirectTo
-      }
+      create_user: true
     }),
     cache: "no-store"
   });

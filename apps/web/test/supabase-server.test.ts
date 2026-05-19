@@ -45,9 +45,11 @@ test("Supabase REST requests use the configured timeout", async () => {
 });
 
 test("signup emails pass the requested auth redirect URL to Supabase", async () => {
+  let requestUrl = "";
   let requestBody: unknown;
 
-  globalThis.fetch = async (_input, init) => {
+  globalThis.fetch = async (input, init) => {
+    requestUrl = String(input);
     requestBody = JSON.parse(String(init?.body));
 
     return new Response(null, { status: 200 });
@@ -60,11 +62,11 @@ test("signup emails pass the requested auth redirect URL to Supabase", async () 
   });
 
   assert.deepEqual(result, { ok: true });
+  const sentUrl = new URL(requestUrl);
+  assert.equal(sentUrl.pathname, "/auth/v1/otp");
+  assert.equal(sentUrl.searchParams.get("redirect_to"), redirectTo);
   assert.deepEqual(requestBody, {
     email: "mathieu@example.test",
-    should_create_user: true,
-    options: {
-      redirectTo
-    }
+    create_user: true
   });
 });
