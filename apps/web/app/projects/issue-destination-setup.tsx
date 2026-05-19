@@ -124,6 +124,7 @@ export function IssueDestinationSetup({
   const [isSiteModalOpen, setIsSiteModalOpen] = useState(false);
   const [repositoryOptions, setRepositoryOptions] = useState<RepositoryOption[]>([]);
   const [selectedRepositoryId, setSelectedRepositoryId] = useState("");
+  const [repositoryUrl, setRepositoryUrl] = useState("");
   const [siteName, setSiteName] = useState("");
   const [siteOrigin, setSiteOrigin] = useState("");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
@@ -139,6 +140,7 @@ export function IssueDestinationSetup({
 
   const selectedIntegration = integrations.find((integration) => integration.provider === selectedProvider);
   const selectedRepository = repositoryOptions.find((repository) => repository.id === selectedRepositoryId);
+  const normalizedRepositoryUrl = repositoryUrl.trim();
 
   useEffect(() => {
     if (!isSiteModalOpen || !connectedProviders.has(selectedProvider)) {
@@ -200,6 +202,7 @@ export function IssueDestinationSetup({
   function selectProvider(provider: IssueProvider) {
     setSelectedProvider(provider);
     setSelectedRepositoryId("");
+    setRepositoryUrl("");
     setRepositoryOptions([]);
     setRepositoryLoadState("idle");
     setRepositoryLoadMessage("");
@@ -225,8 +228,8 @@ export function IssueDestinationSetup({
 
   function createSite() {
     startTransition(async () => {
-      if (!selectedIntegration?.credentialConfigured || !selectedRepository) {
-        const errorMessage = "Choisissez une connexion Git active et un dépôt accessible.";
+      if (!selectedIntegration?.credentialConfigured || (!selectedRepository && !normalizedRepositoryUrl)) {
+        const errorMessage = "Choisissez une connexion Git active et un dépôt accessible, ou collez l'URL du dépôt cible.";
         setMessage(errorMessage);
         toast.error("Site non créé", {
           description: errorMessage
@@ -245,7 +248,8 @@ export function IssueDestinationSetup({
             allowedOrigin: siteOrigin,
             provider: selectedProvider,
             integrationId: selectedIntegration.id,
-            repositoryId: selectedRepository.id
+            repositoryId: selectedRepository?.id,
+            repositoryUrl: normalizedRepositoryUrl || undefined
           })
         });
 
@@ -541,8 +545,10 @@ export function IssueDestinationSetup({
               repositoryLoadMessage={repositoryLoadMessage}
               repositoryLoadState={repositoryLoadState}
               repositoryOptions={repositoryOptions}
+              repositoryUrl={repositoryUrl}
               selectedProvider={selectedProvider}
               selectedRepositoryId={selectedRepositoryId}
+              setRepositoryUrl={setRepositoryUrl}
               setSelectedRepositoryId={setSelectedRepositoryId}
               setSiteName={setSiteName}
               setSiteOrigin={setSiteOrigin}
@@ -757,7 +763,9 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
           ...current,
           [integration.provider]: {
             state: "error",
-            message: repositoryErrorMessage(body) ?? "Connexion impossible. Vérifiez le token ou les permissions.",
+            message: integration.provider === "gitlab"
+              ? repositoryErrorMessage(body) ?? "Token enregistré. Avec un Project Access Token, collez l'URL du projet dans Sites connectés pour valider le dépôt cible."
+              : repositoryErrorMessage(body) ?? "Connexion impossible. Vérifiez le token ou les permissions.",
             checkedAt: new Date()
           }
         }));
@@ -1330,8 +1338,10 @@ function ConnectedSitesSection({
   repositoryLoadMessage,
   repositoryLoadState,
   repositoryOptions,
+  repositoryUrl,
   selectedProvider,
   selectedRepositoryId,
+  setRepositoryUrl,
   setSelectedRepositoryId,
   setSiteName,
   setSiteOrigin,
@@ -1355,8 +1365,10 @@ function ConnectedSitesSection({
   repositoryLoadMessage: string;
   repositoryLoadState: RepositoryLoadState;
   repositoryOptions: RepositoryOption[];
+  repositoryUrl: string;
   selectedProvider: IssueProvider;
   selectedRepositoryId: string;
+  setRepositoryUrl: (repositoryUrl: string) => void;
   setSelectedRepositoryId: (repositoryId: string) => void;
   setSiteName: (name: string) => void;
   setSiteOrigin: (origin: string) => void;
@@ -1367,6 +1379,7 @@ function ConnectedSitesSection({
   const [openScriptForProject, setOpenScriptForProject] = useState<string | null>(null);
   const shouldShowRepositoryStatus = isSelectedProviderConnected && repositoryLoadState !== "idle";
   const isRepositorySelectDisabled = !isSelectedProviderConnected || repositoryLoadState === "loading" || repositoryOptions.length === 0;
+  const hasRepositoryDestination = Boolean(selectedRepositoryId || repositoryUrl.trim());
   const connectedIntegrations = Array.from(connectedProviders);
   const hasConnectedProvider = connectedIntegrations.length > 0;
   const siteOriginValidation = validateAllowedOrigin(siteOrigin);
@@ -1606,13 +1619,13 @@ function ConnectedSitesSection({
 
             <div className="modal-copy">
               <strong>Un site, une clé publique, un dépôt Git.</strong>
-              <span>Choisissez un provider actif, sélectionnez un dépôt accessible, puis placez le script généré sur le domaine autorisé.</span>
+            <span>Choisissez un provider actif, sélectionnez un dépôt ou collez son URL, puis placez le script généré sur le domaine autorisé.</span>
             </div>
 
             <div className="repo-linker in-modal" id="site-repos">
               <div>
                 <h3>Choisir la destination des issues</h3>
-                <p>Seuls les providers connectés et les dépôts accessibles par le token sont proposés.</p>
+                <p>Utilisez la liste si elle est disponible. Pour un Project Access Token GitLab, collez directement l&apos;URL du projet cible.</p>
               </div>
               {connectedIntegrations.length === 0 ? (
                 <div className="repository-loader unavailable" role="status">
@@ -1668,7 +1681,10 @@ function ConnectedSitesSection({
                     disabled={isRepositorySelectDisabled}
                     name="repositorySelect"
                     value={selectedRepositoryId}
-                    onChange={(event) => setSelectedRepositoryId(event.target.value)}
+                    onChange={(event) => {
+                      setSelectedRepositoryId(event.target.value);
+                      setRepositoryUrl("");
+                    }}
                   >
                     <option value="">{repositorySelectPlaceholder(repositoryLoadState, isSelectedProviderConnected)}</option>
                     {repositoryOptions.map((repository) => (
@@ -1678,11 +1694,23 @@ function ConnectedSitesSection({
                     ))}
                   </select>
                 </label>
+                <label>
+                  URL du dépôt cible
+                  <input
+                    name="repositoryUrl"
+                    onChange={(event) => {
+                      setRepositoryUrl(event.target.value);
+                      setSelectedRepositoryId("");
+                    }}
+                    placeholder={selectedProvider === "gitlab" ? "https://gitlab.com/groupe/projet" : "https://github.com/organisation/projet"}
+                    value={repositoryUrl}
+                  />
+                </label>
                 <p className="form-status site-create-status" role="status">
                   {message}
                 </p>
                 <div className="site-create-actions">
-                  <button className="button" disabled={isPending || !siteOriginValidation.ok || !selectedRepositoryId || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
+                  <button className="button" disabled={isPending || !siteOriginValidation.ok || !hasRepositoryDestination || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
                     <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                     {isPending ? "Création..." : "Créer le site"}
                   </button>

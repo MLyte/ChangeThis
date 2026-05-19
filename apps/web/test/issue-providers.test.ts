@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getIssueProviderClient, IssueProviderError, listIssueProviderRepositories } from "../lib/issue-providers.ts";
+import { getIssueProviderClient, getIssueProviderRepositoryFromUrl, IssueProviderError, listIssueProviderRepositories } from "../lib/issue-providers.ts";
 import type { IssueDraft, IssueTarget } from "@changethis/shared";
 
 const originalFetch = globalThis.fetch;
@@ -89,6 +89,40 @@ test("lists GitLab projects and preserves the numeric external project id", asyn
       externalProjectId: "456"
     }
   ]);
+});
+
+test("resolves a single GitLab project URL with a project access token", async () => {
+  const requests: Request[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init);
+    requests.push(request);
+
+    return Response.json({
+      id: 789,
+      name: "pulvemap",
+      path_with_namespace: "cra/pulvemap",
+      web_url: "https://gitlab.com/cra/pulvemap",
+      visibility: "private",
+      default_branch: "main"
+    });
+  };
+
+  const repository = await getIssueProviderRepositoryFromUrl("gitlab", "https://gitlab.com/cra/pulvemap", { token: "gitlab-token" });
+
+  assert.equal(requests[0]?.url, "https://gitlab.com/api/v4/projects/cra%2Fpulvemap");
+  assert.equal(requests[0]?.headers.get("private-token"), "gitlab-token");
+  assert.deepEqual(repository, {
+    provider: "gitlab",
+    id: "789",
+    name: "pulvemap",
+    fullName: "cra/pulvemap",
+    namespace: "cra",
+    project: "pulvemap",
+    webUrl: "https://gitlab.com/cra/pulvemap",
+    private: true,
+    defaultBranch: "main",
+    externalProjectId: "789"
+  });
 });
 
 test("uses a 30 second default provider timeout", async () => {

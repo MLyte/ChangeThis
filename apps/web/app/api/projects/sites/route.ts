@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
-import { IssueProviderError, listIssueProviderRepositories } from "../../../../lib/issue-providers";
+import { getIssueProviderRepositoryFromUrl, IssueProviderError, listIssueProviderRepositories } from "../../../../lib/issue-providers";
 import { getProviderIntegrationAsync } from "../../../../lib/provider-integrations";
 import {
   createConnectedSite,
@@ -76,8 +76,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Request body must be valid JSON" }, { status: 400 });
   }
 
-  if (!isRecord(body) || !isIssueProvider(body.provider) || typeof body.repositoryId !== "string" || typeof body.allowedOrigin !== "string") {
-    return NextResponse.json({ error: "provider, repositoryId, and allowedOrigin are required" }, { status: 422 });
+  if (!isRecord(body) || !isIssueProvider(body.provider) || typeof body.allowedOrigin !== "string") {
+    return NextResponse.json({ error: "provider and allowedOrigin are required" }, { status: 422 });
+  }
+
+  const repositoryId = typeof body.repositoryId === "string" ? body.repositoryId.trim() : "";
+  const repositoryUrl = typeof body.repositoryUrl === "string" ? body.repositoryUrl.trim() : "";
+
+  if (!repositoryId && !repositoryUrl) {
+    return NextResponse.json({ error: "repositoryId or repositoryUrl is required" }, { status: 422 });
   }
 
   const integrationId = typeof body.integrationId === "string" ? body.integrationId : undefined;
@@ -88,8 +95,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const repositories = await listIssueProviderRepositories(body.provider, { integrationId: integration.id, workspaceId: session.workspace.id });
-    const repository = repositories.find((item) => item.id === body.repositoryId || item.webUrl === body.repositoryId);
+    const repository = repositoryUrl
+      ? await getIssueProviderRepositoryFromUrl(body.provider, repositoryUrl, { integrationId: integration.id, workspaceId: session.workspace.id })
+      : await findRepositoryById(body.provider, repositoryId, integration.id, session.workspace.id);
 
     if (!repository) {
       return NextResponse.json({ error: "Repository is not accessible from this provider connection" }, { status: 422 });
@@ -133,4 +141,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isIssueProvider(value: unknown): value is IssueProvider {
   return value === "github" || value === "gitlab";
+}
+
+async function findRepositoryById(provider: IssueProvider, repositoryId: string, integrationId: string, workspaceId: string) {
+  const repositories = await listIssueProviderRepositories(provider, { integrationId, workspaceId });
+  return repositories.find((item) => item.id === repositoryId || item.webUrl === repositoryId);
 }

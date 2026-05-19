@@ -81,6 +81,22 @@ export async function listIssueProviderRepositories(
   throw new IssueProviderError(provider, "auth_failed", `${provider} credentials are not configured.`);
 }
 
+export async function getIssueProviderRepositoryFromUrl(
+  provider: IssueProvider,
+  repositoryUrl: string,
+  options: IssueProviderClientOptions = {}
+): Promise<ProviderRepository> {
+  if (provider === "github") {
+    return getGitHubRepositoryFromUrl(repositoryUrl, options);
+  }
+
+  if (provider === "gitlab") {
+    return getGitLabRepositoryFromUrl(repositoryUrl, options);
+  }
+
+  throw new IssueProviderError(provider, "auth_failed", `${provider} credentials are not configured.`);
+}
+
 function createUnsupportedProviderClient(provider: IssueProvider): IssueProviderClient {
   return {
     provider,
@@ -439,6 +455,89 @@ async function listGitLabRepositories(options: IssueProviderClientOptions): Prom
   return pages.flatMap((page) => page as unknown[]).flatMap(normalizeGitLabProject);
 }
 
+async function getGitHubRepositoryFromUrl(repositoryUrl: string, options: IssueProviderClientOptions): Promise<ProviderRepository> {
+  const repositoryPath = parseRepositoryUrlPath(repositoryUrl, "github");
+
+  if (!repositoryPath) {
+    throw new IssueProviderError("github", "validation_failed", "Repository URL must be a GitHub repository URL.");
+  }
+
+  const access = await getGitHubRepositoryAccess(options);
+
+  if (!access) {
+    throw new IssueProviderError("github", "auth_failed", "github credentials are not configured.");
+  }
+
+  if (isDemoProviderToken("github", access.token)) {
+    const repository = demoRepositoriesForProvider("github").find((item) => item.fullName === repositoryPath.fullName);
+
+    if (repository) {
+      return repository;
+    }
+  }
+
+  const response = await fetchProvider("github", `https://api.github.com/repos/${repositoryPath.fullName}`, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${access.token}`,
+      "User-Agent": "ChangeThis",
+      "X-GitHub-Api-Version": "2022-11-28"
+    }
+  });
+  const body = await parseResponseBody(response);
+
+  if (!response.ok) {
+    throw providerError("github", response.status, body, "repository lookup");
+  }
+
+  const repositories = normalizeGitHubRepository(body);
+
+  if (!repositories[0]) {
+    throw new IssueProviderError("github", "validation_failed", "GitHub returned an unexpected repository payload.");
+  }
+
+  return repositories[0];
+}
+
+async function getGitLabRepositoryFromUrl(repositoryUrl: string, options: IssueProviderClientOptions): Promise<ProviderRepository> {
+  const repositoryPath = parseRepositoryUrlPath(repositoryUrl, "gitlab");
+
+  if (!repositoryPath) {
+    throw new IssueProviderError("gitlab", "validation_failed", "Repository URL must be a GitLab project URL.");
+  }
+
+  const token = await requireProviderToken("gitlab", () => getIssueProviderToken("gitlab", options));
+
+  if (isDemoProviderToken("gitlab", token)) {
+    const repository = demoRepositoriesForProvider("gitlab").find((item) => item.fullName === repositoryPath.fullName);
+
+    if (repository) {
+      return repository;
+    }
+  }
+
+  const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
+  const encodedProjectPath = encodeURIComponent(repositoryPath.fullName);
+  const response = await fetchProvider("gitlab", `${baseUrl}/api/v4/projects/${encodedProjectPath}`, {
+    headers: {
+      "PRIVATE-TOKEN": token
+    }
+  });
+  const body = await parseResponseBody(response);
+
+  if (!response.ok) {
+    throw providerError("gitlab", response.status, body, "repository lookup");
+  }
+
+  const repositories = normalizeGitLabProject(body);
+
+  if (!repositories[0]) {
+    throw new IssueProviderError("gitlab", "validation_failed", "GitLab returned an unexpected project payload.");
+  }
+
+  return repositories[0];
+}
+
 async function fetchProviderJsonPages(provider: IssueProvider, firstUrl: string, headers: Record<string, string>): Promise<unknown[]> {
   const pages: unknown[] = [];
   let nextUrl: string | undefined = firstUrl;
@@ -525,6 +624,54 @@ function normalizeGitLabProject(value: unknown): ProviderRepository[] {
     defaultBranch: typeof value.default_branch === "string" ? value.default_branch : undefined,
     externalProjectId: typeof value.id === "number" ? String(value.id) : undefined
   }];
+}
+
+function parseRepositoryUrlPath(repositoryUrl: string, provider: IssueProvider): { fullName: string; namespace: string; project: string } | undefined {
+  try {
+    const url = new URL(repositoryUrl.trim());
+    const parts = url.pathname.split("/").filter(Boolean);
+
+    if (parts.length < 2) {
+      return undefined;
+    }
+
+    if (provider === "github" && url.hostname !== "github.com") {
+      return undefined;
+    }
+
+    if (provider === "gitlab" && !isAllowedGitLabRepositoryOrigin(url)) {
+      return undefined;
+    }
+
+    const namespace = provider === "github" ? parts[0] : parts.slice(0, -1).join("/");
+    const project = provider === "github" ? parts[1] : parts.at(-1);
+
+    if (!namespace || !project) {
+      return undefined;
+    }
+
+    return {
+      fullName: `${namespace}/${project}`,
+      namespace,
+      project
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function isAllowedGitLabRepositoryOrigin(url: URL): boolean {
+  const gitlabBaseUrl = process.env.GITLAB_BASE_URL;
+
+  if (gitlabBaseUrl) {
+    try {
+      return url.origin === new URL(gitlabBaseUrl).origin;
+    } catch {
+      return false;
+    }
+  }
+
+  return url.hostname === "gitlab.com";
 }
 
 async function requireProviderToken(provider: IssueProvider, resolveToken: TokenResolver): Promise<string> {
