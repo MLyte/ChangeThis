@@ -3770,7 +3770,7 @@ dd {
   padding: 10px 16px;
 }
 
-.bulk-issue-toolbar div {
+.bulk-issue-toolbar-summary {
   display: grid;
   gap: 2px;
 }
@@ -4247,10 +4247,6 @@ dd {
 }
 
 .compact-onboarding-step strong {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
   margin-bottom: 2px;
 }
 
@@ -5308,6 +5304,14 @@ dd {
   margin-bottom: 3px;
 }
 
+.onboarding-step.compact-onboarding-step strong {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
 .onboarding-step.current {
   border-color: var(--primary-border);
 }
@@ -6033,12 +6037,16 @@ code {
   }
 
   .bulk-issue-toolbar-actions {
+    align-items: stretch;
+    flex-direction: column;
     flex-wrap: wrap;
+    gap: 8px;
     width: 100%;
   }
 
   .bulk-issue-toolbar-actions .button {
-    flex: 1 1 auto;
+    flex: none;
+    width: 100%;
   }
 }
 

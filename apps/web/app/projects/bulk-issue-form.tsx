@@ -111,7 +111,7 @@ export function BulkIssueForm({ children, showTableHead = false }: BulkIssueForm
       ref={formRef}
     >
       <div className="bulk-issue-toolbar">
-        <div>
+        <div className="bulk-issue-toolbar-summary">
           <strong>Création par lot</strong>
           <span>
             {selectableCount > 0
