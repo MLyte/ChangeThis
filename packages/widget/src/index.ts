@@ -498,8 +498,8 @@ export function initChangeThis(options: WidgetOptions): void {
         .panel {
           position: fixed;
           z-index: 2147483647;
-          width: min(340px, calc(100vw - 32px));
-          max-height: min(680px, calc(100dvh - 112px - env(safe-area-inset-bottom)));
+          width: min(400px, calc(100vw - 24px));
+          max-height: min(760px, calc(100dvh - 88px - env(safe-area-inset-bottom)));
           border: 1px solid #c5cae9;
           border-top: 3px solid #3f51b5;
           border-radius: 8px;
@@ -1081,10 +1081,10 @@ export function initChangeThis(options: WidgetOptions): void {
         }
         @media (max-width: 640px) {
           .panel {
-            left: 12px !important;
-            right: 12px !important;
+            left: 8px !important;
+            right: 8px !important;
             width: auto;
-            max-height: min(620px, calc(100dvh - 88px - env(safe-area-inset-bottom) - var(--ct-footer-offset, 0px)));
+            max-height: min(720px, calc(100dvh - 68px - env(safe-area-inset-bottom) - var(--ct-footer-offset, 0px)));
             gap: 8px;
             overflow-x: hidden;
             padding: 10px;
@@ -1148,7 +1148,7 @@ export function initChangeThis(options: WidgetOptions): void {
           .actions {
             display: grid;
             gap: 7px;
-            grid-template-columns: minmax(78px, 0.54fr) minmax(0, 1fr);
+            grid-template-columns: minmax(74px, max-content) minmax(0, 1fr);
           }
           .send,
           .cancel {
