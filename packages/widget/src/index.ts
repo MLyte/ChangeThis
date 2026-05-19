@@ -74,6 +74,7 @@ const maxThumbnailDimension = 400;
 const screenshotQuality = 0.8;
 const thumbnailQuality = 0.74;
 const lucideIcons = {
+  bug: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/><path d="M6 17H3"/><path d="M21 17h-3"/></svg>',
   camera: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>',
   mail: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>',
   "map-pin": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -206,6 +207,8 @@ export function initChangeThis(options: WidgetOptions): void {
   const buttonStateLabel = options.buttonStateLabel;
   const buttonVariant = options.buttonVariant ?? "default";
   const buttonPosition = options.buttonPosition ?? "bottom-right";
+  const isSubtleButton = buttonVariant === "subtle";
+  const advancedModesEnabled = supportsAdvancedFeedbackModes();
   const reporterFields = options.reporterFields ?? "optional";
   const appEnvironment = buildAppEnvironment(options);
   const sentPinsStorageKey = `${sentPinsStorageKeyPrefix}${options.projectKey}`;
@@ -310,6 +313,12 @@ export function initChangeThis(options: WidgetOptions): void {
   };
 
   const requestPin = () => {
+    if (!advancedModesEnabled) {
+      state.type = "comment";
+      render();
+      return;
+    }
+
     syncDraftView();
     const viewKey = currentViewKey();
     state.type = "pin";
@@ -339,6 +348,12 @@ export function initChangeThis(options: WidgetOptions): void {
   };
 
   const requestCaptureArea = () => {
+    if (!advancedModesEnabled) {
+      state.type = "comment";
+      render();
+      return;
+    }
+
     syncDraftView();
     const viewKey = currentViewKey();
     state.type = "screenshot";
@@ -452,10 +467,17 @@ export function initChangeThis(options: WidgetOptions): void {
           background: rgba(17, 24, 39, 0.72);
           border: 1px solid rgba(255, 255, 255, 0.44);
           color: #fff;
+          height: 42px;
+          justify-content: center;
           opacity: 0.46;
-          padding: 10px 12px;
+          padding: 0;
           transform: scale(0.92);
           transform-origin: bottom right;
+          width: 42px;
+        }
+        .button[data-variant="subtle"] .lucide-icon {
+          height: 18px;
+          width: 18px;
         }
         .button[data-variant="subtle"]:hover,
         .button[data-variant="subtle"]:focus-visible,
@@ -561,6 +583,9 @@ export function initChangeThis(options: WidgetOptions): void {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 0;
+        }
+        .modes[data-advanced="false"] {
+          grid-template-columns: 1fr;
         }
         .mode, .send, .cancel {
           align-items: center;
@@ -1059,32 +1084,77 @@ export function initChangeThis(options: WidgetOptions): void {
             left: 12px !important;
             right: 12px !important;
             width: auto;
-            max-height: min(620px, calc(100dvh - 96px - env(safe-area-inset-bottom) - var(--ct-footer-offset, 0px)));
-            padding: 12px;
+            max-height: min(620px, calc(100dvh - 88px - env(safe-area-inset-bottom) - var(--ct-footer-offset, 0px)));
+            gap: 8px;
+            overflow-x: hidden;
+            padding: 10px;
           }
           .panel[data-position^="bottom"] {
-            bottom: calc(68px + env(safe-area-inset-bottom) + var(--ct-footer-offset, 0px));
+            bottom: calc(58px + env(safe-area-inset-bottom) + var(--ct-footer-offset, 0px));
           }
           .panel[data-position^="top"] {
             top: calc(12px + env(safe-area-inset-top));
           }
           .panel-header {
-            align-items: flex-start;
+            align-items: center;
+            gap: 6px;
+          }
+          .panel-brand strong,
+          .title {
+            font-size: 12px;
           }
           .panel-header-actions {
             flex-wrap: wrap;
             justify-content: flex-end;
           }
+          .header-icon-button,
+          .brand-discovery-link {
+            height: 30px;
+            min-width: 30px;
+            padding-inline: 7px;
+          }
+          .modes {
+            margin-top: -2px;
+          }
           .mode {
+            font-size: 11px;
             gap: 4px;
-            padding-inline: 4px;
+            min-height: 32px;
+            padding: 5px 4px 7px;
+          }
+          textarea {
+            font-size: 13px;
+            line-height: 1.3;
+            min-height: 62px;
+            padding: 8px;
+          }
+          .shortcut-hint {
+            font-size: 10px;
+            margin-top: 2px;
+          }
+          .meta,
+          .selection-summary {
+            font-size: 11px;
+            margin-top: 6px;
+            padding: 7px 8px;
+          }
+          .selection-header {
+            gap: 6px;
+            margin-bottom: 4px;
+          }
+          .selection-header span {
+            white-space: normal;
           }
           .actions {
             display: grid;
-            grid-template-columns: 1fr;
+            gap: 7px;
+            grid-template-columns: minmax(78px, 0.54fr) minmax(0, 1fr);
           }
           .send,
           .cancel {
+            font-size: 11px;
+            min-height: 34px;
+            padding: 7px 9px;
             width: 100%;
           }
           .manager-modal {
@@ -1107,9 +1177,9 @@ export function initChangeThis(options: WidgetOptions): void {
       </style>
       ${pinMarkers}
       ${state.notice ? `<div class="notice" role="status">${escapeHtml(state.notice)}</div>` : ""}
-      <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}">
-        <span>${escapeHtml(buttonLabel)}</span>
-        ${buttonStateLabel ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
+      <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}" aria-label="${escapeHtml(buttonLabel)}" title="${escapeHtml(buttonLabel)}">
+        ${isSubtleButton ? lucideIcons.bug : `<span>${escapeHtml(buttonLabel)}</span>`}
+        ${buttonStateLabel && !isSubtleButton ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
       </button>
       ${state.open ? `
         <section class="panel" data-position="${buttonPosition}" aria-label="Envoyer un feedback">
@@ -1128,10 +1198,12 @@ export function initChangeThis(options: WidgetOptions): void {
             </div>
           </div>
           <p class="title">${escapeHtml(copy.title)}</p>
-          <div class="modes">
+          <div class="modes" data-advanced="${advancedModesEnabled}">
             <button class="mode" data-mode="comment" data-active="${state.type === "comment"}">${lucideIcons["message-square"]}${escapeHtml(copy.note)}</button>
-            <button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>
-            <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>
+            ${advancedModesEnabled ? `
+              <button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>
+              <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>
+            ` : ""}
           </div>
           ${reporterFields !== "hidden" ? `
             ${state.reporterOpen ? `
@@ -1532,7 +1604,8 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => {
       button.addEventListener("click", () => {
-        state.type = button.dataset.mode as FeedbackType;
+        const nextType = button.dataset.mode as FeedbackType;
+        state.type = advancedModesEnabled || nextType === "comment" ? nextType : "comment";
         state.notice = "";
         render();
       });
@@ -2695,6 +2768,12 @@ function escapeHtml(value: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function supportsAdvancedFeedbackModes(): boolean {
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches === true;
+  const smallViewport = window.matchMedia?.("(max-width: 640px)").matches === true || window.innerWidth <= 640;
+  return !coarsePointer && !smallViewport;
 }
 
 const currentScript = document.currentScript as HTMLScriptElement | null;
