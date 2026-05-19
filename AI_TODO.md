@@ -13,17 +13,16 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 État courant synchronisé: voir `docs/current-state.fr.md`. Le chemin beta réelle est Railway app + Supabase Auth/DB + OVH DNS, avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`. `DATA_STORE=file` reste local/dev uniquement.
 
 ### P0 - Chemin critique beta vendable
-1. **Onboarding premier site**: le signup peut créer organisation/workspace/owner en bêta ouverte contrôlée et l'action manuelle "Créer un site" existe; terminer surtout la checklist guidée Git -> site -> script -> feedback test.
-2. **Checklist onboarding courte**: afficher les étapes compte Git, site, script, feedback test et issue créée.
-3. **Widget public installable**: le bundle public est servi; ajouter smoke page HTML externe, vérification compatibilité navigateur et signal d'installation réel.
-4. **GitHub workspace-backed pour beta**: flux App/tokens partiel; finaliser validation dépôt contre intégration, pagination et reconnect.
-5. **Sécurité publique minimale restante**: limiter les champs texte des routes privées, décider screenshot beta (désactivable par site ou stockage objet) et ajouter stratégie scan/quarantaine.
-6. **Fiabilité issue minimale restante**: idempotence/verrou anti double issue, relance manuelle propre, statut terminal simple, circuit breaker et backoff jitter.
-7. **Documentation client minimale restante**: configurer GitLab, domaines autorisés, FAQ beta privée et checklist smoke staging.
+1. **Validation installation réelle**: le widget public est servi et configurable par site; ajouter un smoke test externe documenté qui prouve `/widget.js` sur un vrai domaine autorisé.
+2. **Onboarding premier site**: signup, workspace, connexions Git, création de site et script existent; resserrer la checklist Git -> site -> script -> feedback test -> issue créée.
+3. **Git providers beta**: les tokens GitHub/GitLab manuels fonctionnent; finaliser validation stricte du dépôt contre l'intégration, pagination/recherche et reconnexion propre.
+4. **Sécurité publique minimale restante**: limiter les champs texte privés restants, désactivation capture par site, stockage objet/screenshots et stratégie scan/quarantaine.
+5. **Fiabilité issue minimale restante**: idempotence/verrou anti double issue, relance manuelle propre, statut terminal simple, circuit breaker et backoff jitter.
+6. **Documentation client minimale restante**: configurer GitLab, domaines autorisés, installation widget, statuts de feedback et smoke checklist staging/production.
 
 ### P1 - Beta confortable et sûre
-1. Tests ciblés widget restants (Shadow DOM, messages/métadonnées HTML, champs sensibles, sélection, scroll/resize).
-2. Stockage objet screenshots avec chemin/URL signée et hash de contenu.
+1. Tests ciblés widget restants: Shadow DOM, messages/métadonnées HTML, masquage/restauration champs sensibles, sélection, scroll/resize, capture page légère.
+2. Stockage objet screenshots avec chemin/URL signée, TTL, hash et politique d'archivage vérifiée.
 3. Observabilité minimale: `request_id`, métriques API/provider/widget, audit log destinations/providers/membres, messages d'erreur actionnables.
 4. Retry durable ou semi-durable: backoff jitter, maximum configurable, worker/cron protégé, circuit breaker simple.
 5. Support léger: page aide intégrée, formulaire support et collecte contexte support.
@@ -38,19 +37,20 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 6. Procédures complètes backup/restore/export/suppression définitive et conformité élargie.
 
 ### Décisions gelées pour avancer vite
-- Bêta ouverte contrôlée: signup activable par environnement, accès surveillé et réversible.
+- Bêta ouverte contrôlée: signup ouvert par défaut, pause possible avec `ENABLE_PUBLIC_SIGNUP=false`, accès surveillé et réversible.
 - Connexions GitHub et GitLab prévues dans le parcours bêta selon la configuration de chaque équipe; ne pas présenter GitHub comme prioritaire par défaut.
-- Création d'issue manuelle depuis l'inbox avant automatisation par job.
+- Création d'issue manuelle depuis l'inbox reste le chemin par défaut; le mode automatique par site existe mais doit être fiabilisé avant d'être promu.
 - Railway app + Supabase Auth/DB + OVH DNS est le chemin beta par défaut; Railway PostgreSQL natif n'est pas consommé par le code actuel.
 
 ## 1. Auth, workspaces et rôles
-- [ ] Ajouter un flux d'onboarding qui crée l'organisation, le workspace, l'owner et le premier site.
+- [x] Ajouter un flux d'onboarding qui crée l'organisation, le workspace et l'owner.
+- [ ] Transformer l'onboarding premier site en parcours guidé complet jusqu'au feedback test et à l'issue créée.
 - [ ] Ajouter un sélecteur de workspace si un utilisateur appartient à plusieurs organisations.
 
 ## 2. Onboarding produit
-- [ ] Définir le parcours premier utilisateur de `signup/login` jusqu'au premier feedback reçu.
+- [x] Définir le parcours premier utilisateur de `signup/login` jusqu'au premier feedback reçu.
 - [x] Créer une checklist onboarding affichée dans l'app avec étapes compte Git, site, script, feedback test et issue créée.
-- [ ] Ajouter une action "Créer un site" avec nom, domaine autorisé et clé publique générée.
+- [x] Ajouter une action "Créer un site" avec nom, domaine autorisé et clé publique générée.
 - [ ] Ajouter un test de feedback depuis un site configuré, distinct de la page `/demo`.
 - [ ] Ajouter une confirmation de fin d'onboarding quand un feedback réel crée une issue externe.
 - [ ] Ajouter une vue "inviter un développeur ou collègue" pour les usages agence et équipe.
@@ -60,6 +60,8 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Migrer les screenshots depuis les data URLs vers Supabase Storage ou stockage objet.
 - [ ] Stocker uniquement un chemin d'objet ou une URL signée pour chaque screenshot.
 - [x] Ajouter une table ou colonne pour le hash de contenu des screenshots.
+- [x] Ajouter une colonne de configuration par site pour l'identité visiteur du widget.
+- [x] Ajouter une colonne de configuration par site pour le mode de création d'issue manuel/automatique.
 - [ ] Ajouter une migration pour les index nécessaires aux listes feedbacks par projet, statut et date.
 - [ ] Ajouter une migration pour les timestamps `updated_at` automatiques.
 - [ ] Ajouter une migration pour conserver le raw payload provider des créations d'issues.
@@ -72,7 +74,9 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter une procédure de suppression définitive workspace/projet/feedback.
 
 ## 4. Widget commercial
-- [ ] Ajouter une version publique du widget dans le bundle servi.
+- [x] Ajouter une version publique du widget dans le bundle servi.
+- [x] Charger la configuration widget dynamique depuis le site connecté sans recoller le script.
+- [x] Ajouter une capture viewport légère aux feedbacks de page.
 - [ ] Ajouter une option widget pour désactiver la capture screenshot par site.
 - [ ] Ajouter une vérification de compatibilité navigateur du widget.
 - [ ] Ajouter des tests widget pour le rendu Shadow DOM sans collision avec CSS hôte.
@@ -82,6 +86,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter des tests widget pour sélection de zone minimale ignorée.
 - [ ] Ajouter des tests widget pour repositionnement du pin après scroll et resize.
 - [ ] Ajouter un smoke test du bundle `/widget.js` et `/widget.global.js` dans une page HTML externe.
+- [ ] Ajouter un test ciblé pour la capture légère des feedbacks de page.
 - [ ] Mesurer le coût d'initialisation du widget sur page externe.
 - [ ] Mesurer le temps de capture screenshot p50/p95 sur desktop et mobile.
 
@@ -106,17 +111,20 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter le support d'attachement ou lien sécurisé de screenshot dans le corps d'issue.
 - [ ] Ajouter une synchronisation minimale du statut externe issue open/closed.
 - [ ] Ajouter des webhooks provider pour détecter installation supprimée ou token révoqué.
+- [x] Supporter les Personal Access Tokens GitHub/GitLab configurés par workspace.
+- [x] Supporter GitLab self-hosted par URL de dépôt/projet.
 
 ## 6. Inbox, settings et analytics
-- [ ] Ajouter la création, modification et suppression d'un site connecté depuis l'interface.
-- [ ] Ajouter la modification des domaines autorisés par site.
+- [x] Ajouter la création, modification et suppression d'un site connecté depuis l'interface.
+- [x] Ajouter la modification des domaines autorisés par site.
 - [ ] Ajouter la rotation de clé publique widget par site.
 - [ ] Ajouter la désactivation temporaire d'un site sans supprimer son historique.
 - [ ] Ajouter la suppression d'un site avec confirmation et impact affiché.
-- [ ] Ajouter la gestion des connexions Git par workspace et non seulement par environnement serveur.
+- [x] Ajouter la gestion des connexions Git par workspace et non seulement par environnement serveur.
 - [ ] Ajouter l'état d'expiration ou d'erreur des tokens GitHub/GitLab.
 - [ ] Ajouter un test de connexion provider depuis la carte GitHub/GitLab.
-- [ ] Ajouter le choix du dépôt cible depuis la liste provider avec recherche.
+- [x] Ajouter le choix du dépôt cible depuis la liste provider.
+- [ ] Ajouter la recherche serveur des dépôts providers dans la modale site connecté.
 - [ ] Ajouter la configuration des labels d'issue par site.
 - [ ] Ajouter la configuration du template d'issue par site.
 - [ ] Ajouter la configuration de la langue par workspace.
@@ -136,6 +144,8 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter une répartition des erreurs provider par cause.
 - [ ] Ajouter un suivi d'activation onboarding par workspace.
 - [ ] Ajouter un suivi des limites de plan consommées.
+- [x] Ajouter la configuration widget par site: langue, visibilité, position bouton et identité visiteur.
+- [x] Ajouter le mode de création d'issue manuel/automatique par site.
 
 ## 7. Fiabilité et jobs
 - [ ] Transformer la création d'issue en job asynchrone après réception feedback.
@@ -151,6 +161,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter une action de relance manuelle d'un feedback échoué.
 - [ ] Ajouter une action d'annulation ou archivage définitif d'un feedback.
 - [ ] Ajouter une protection contre les doublons de feedback soumis plusieurs fois par le widget.
+- [ ] Ajouter une idempotence applicative pour la création automatique d'issues par site.
 - [ ] Ajouter une taille maximale de store ou pagination côté dashboard.
 - [ ] Remplacer le rate limit mémoire par un store partagé compatible serverless.
 - [ ] Ajouter un test de charge léger sur `POST /api/public/feedback` avec origines autorisées.
@@ -162,6 +173,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter un scan ou une stratégie de quarantaine pour les uploads image.
 - [ ] Ajouter une rotation documentée de `CHANGETHIS_SECRET_KEY`.
 - [ ] Remplacer le stockage local chiffré des credentials provider par un coffre compatible production.
+- [x] Révoquer l'exécution publique des fonctions RLS `SECURITY DEFINER` exposées par Supabase.
 - [ ] Ajouter la vérification des webhooks GitHub avec `GITHUB_WEBHOOK_SECRET`.
 - [ ] Ajouter la vérification des webhooks GitLab avec `GITLAB_WEBHOOK_SECRET`.
 - [ ] Ajouter une politique RLS d'insertion publique contrôlée pour les feedbacks si l'API écrit directement via Supabase.

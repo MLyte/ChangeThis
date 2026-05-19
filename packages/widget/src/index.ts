@@ -531,18 +531,13 @@ export function initChangeThis(options: WidgetOptions): void {
           display: inline-flex;
           gap: 6px;
           min-width: 0;
-          text-decoration: none;
         }
         .panel-brand strong {
-          color: #111827;
+          color: #3f51b5;
           font-size: 12px;
           font-weight: 900;
           letter-spacing: 0;
           line-height: 1;
-        }
-        .panel-brand:hover strong {
-          text-decoration: underline;
-          text-underline-offset: 3px;
         }
         .panel-header-actions {
           align-items: center;
@@ -1203,9 +1198,9 @@ export function initChangeThis(options: WidgetOptions): void {
       ${state.open ? `
         <section class="panel" data-position="${buttonPosition}" aria-label="Envoyer un feedback">
           <div class="panel-header">
-            <a class="panel-brand" href="${productWebsiteUrl}" target="_blank" rel="noopener noreferrer" aria-label="ChangeThis">
+            <div class="panel-brand" aria-label="ChangeThis">
               <strong>ChangeThis</strong>
-            </a>
+            </div>
             <div class="panel-header-actions">
               ${reporterFields !== "hidden" ? `
                 <button class="header-icon-button reporter-trigger" data-action="toggle-reporter" data-active="${state.reporterOpen}" aria-expanded="${state.reporterOpen}">
