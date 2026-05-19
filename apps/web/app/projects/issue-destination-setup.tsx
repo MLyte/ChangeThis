@@ -147,6 +147,8 @@ export function IssueDestinationSetup({
   const selectedIntegration = integrations.find((integration) => integration.provider === selectedProvider);
   const selectedRepository = repositoryOptions.find((repository) => repository.id === selectedRepositoryId);
   const normalizedRepositoryUrl = repositoryUrl.trim();
+  const canUseRepositoryUrlFallback = Boolean(selectedIntegration?.credentialConfigured)
+    && (repositoryLoadState === "empty" || repositoryLoadState === "error" || repositoryLoadState === "unavailable");
 
   useEffect(() => {
     if (!isSiteModalOpen || !connectedProviders.has(selectedProvider)) {
@@ -171,7 +173,7 @@ export function IssueDestinationSetup({
         if (response.status === 404) {
           setRepositoryOptions([]);
           setRepositoryLoadState("unavailable");
-          setRepositoryLoadMessage("Liste des dépôts indisponible. Vous pouvez renseigner l'URL du dépôt cible.");
+          setRepositoryLoadMessage("Liste des dépôts indisponible. La saisie URL reste disponible en secours.");
           return;
         }
 
@@ -180,7 +182,7 @@ export function IssueDestinationSetup({
         if (!response.ok) {
           setRepositoryOptions([]);
           setRepositoryLoadState("error");
-          setRepositoryLoadMessage(repositoryErrorMessage(body) ?? "Impossible de charger les dépôts. La saisie par URL reste disponible.");
+          setRepositoryLoadMessage(repositoryErrorMessage(body) ?? "Impossible de charger les dépôts. La saisie URL reste disponible en secours.");
           return;
         }
 
@@ -188,7 +190,7 @@ export function IssueDestinationSetup({
 
         setRepositoryOptions(repositories);
         setRepositoryLoadState(repositories.length > 0 ? "ready" : "empty");
-        setRepositoryLoadMessage(repositories.length > 0 ? "" : "Aucun dépôt accessible pour cette connexion. Utilisez l'URL du dépôt cible.");
+        setRepositoryLoadMessage(repositories.length > 0 ? "" : "Aucun dépôt accessible pour cette connexion. La saisie URL reste disponible en secours.");
       } catch (error) {
         if (abortController.signal.aborted) {
           return;
@@ -196,7 +198,7 @@ export function IssueDestinationSetup({
 
         setRepositoryOptions([]);
         setRepositoryLoadState("error");
-        setRepositoryLoadMessage(error instanceof Error ? error.message : "Impossible de charger les dépôts. La saisie par URL reste disponible.");
+        setRepositoryLoadMessage(error instanceof Error ? error.message : "Impossible de charger les dépôts. La saisie URL reste disponible en secours.");
       }
     }
 
@@ -253,8 +255,10 @@ export function IssueDestinationSetup({
 
   function createSite() {
     startTransition(async () => {
-      if (!selectedIntegration?.credentialConfigured || (!selectedRepository && !normalizedRepositoryUrl)) {
-        const errorMessage = "Choisissez une connexion Git active et un dépôt accessible, ou collez l'URL du dépôt cible.";
+      if (!selectedIntegration?.credentialConfigured || (!selectedRepository && !(canUseRepositoryUrlFallback && normalizedRepositoryUrl))) {
+        const errorMessage = canUseRepositoryUrlFallback
+          ? "Choisissez une connexion Git active et un dépôt accessible, ou saisissez l'URL du dépôt en secours."
+          : "Choisissez une connexion Git active et un dépôt accessible.";
         setMessage(errorMessage);
         toast.error("Site non créé", {
           description: errorMessage
@@ -274,7 +278,7 @@ export function IssueDestinationSetup({
             provider: selectedProvider,
             integrationId: selectedIntegration.id,
             repositoryId: selectedRepository?.id,
-            repositoryUrl: normalizedRepositoryUrl || undefined,
+            repositoryUrl: canUseRepositoryUrlFallback ? normalizedRepositoryUrl || undefined : undefined,
             widgetLocale: siteWidgetLocale,
             widgetButtonPosition: siteWidgetButtonPosition,
             widgetButtonVariant: siteWidgetButtonVariant,
@@ -282,10 +286,10 @@ export function IssueDestinationSetup({
           })
         });
 
-        const body = (await response.json()) as { site?: ProjectView; installSnippet?: string; metrics?: ProjectView["metrics"]; error?: string };
+        const body = await parseJsonResponse<{ site?: ProjectView; installSnippet?: string; metrics?: ProjectView["metrics"]; error?: string }>(response);
 
-        if (!response.ok || !body.site) {
-          const errorMessage = body.error ?? t("destinations.message.error");
+        if (!response.ok || !body?.site) {
+          const errorMessage = body?.error ?? t("destinations.message.error");
           setMessage(errorMessage);
           toast.error("Site non créé", {
             description: errorMessage
@@ -1515,7 +1519,9 @@ function ConnectedSitesSection({
   const [openScriptForProject, setOpenScriptForProject] = useState<string | null>(null);
   const shouldShowRepositoryStatus = isSelectedProviderConnected && repositoryLoadState !== "idle";
   const isRepositorySelectDisabled = !isSelectedProviderConnected || repositoryLoadState === "loading" || repositoryOptions.length === 0;
-  const hasRepositoryDestination = Boolean(selectedRepositoryId || repositoryUrl.trim());
+  const canUseRepositoryUrlFallback = isSelectedProviderConnected
+    && (repositoryLoadState === "empty" || repositoryLoadState === "error" || repositoryLoadState === "unavailable");
+  const hasRepositoryDestination = Boolean(selectedRepositoryId || (canUseRepositoryUrlFallback && repositoryUrl.trim()));
   const connectedIntegrations = Array.from(connectedProviders);
   const hasConnectedProvider = connectedIntegrations.length > 0;
   const gitConnectionSummaries = providerOrder.map((provider) => {
@@ -1777,13 +1783,13 @@ function ConnectedSitesSection({
 
             <div className="modal-copy">
               <strong>Un site, une clé publique, un dépôt Git.</strong>
-            <span>Choisissez un provider actif, sélectionnez un dépôt ou collez son URL, puis placez le script généré sur le domaine autorisé.</span>
+            <span>Choisissez un provider actif, sélectionnez un dépôt accessible, puis placez le script généré sur le domaine autorisé.</span>
             </div>
 
             <div className="repo-linker in-modal" id="site-repos">
               <div>
                 <h3>Choisir la destination des issues</h3>
-                <p>Utilisez la liste avec une connexion Git active. Si un token GitLab est limité à un seul projet, l&apos;URL du dépôt cible reste disponible.</p>
+                <p>La liste affiche les repositories accessibles avec la connexion Git active. La saisie URL n&apos;apparaît qu&apos;en secours si cette liste est indisponible.</p>
               </div>
               {connectedIntegrations.length === 0 ? (
                 <div className="repository-loader unavailable" role="status">
@@ -1829,17 +1835,19 @@ function ConnectedSitesSection({
                     ))}
                   </select>
                 </label>
-                <label>
-                  URL du dépôt cible
-                  <input
-                    name="repositoryUrl"
-                    onChange={(event) => {
-                      onRepositoryUrlChange(event.target.value);
-                    }}
-                    placeholder={selectedProvider === "gitlab" ? "https://gitlab.com/groupe/projet" : "https://github.com/organisation/projet"}
-                    value={repositoryUrl}
-                  />
-                </label>
+                {canUseRepositoryUrlFallback ? (
+                  <label>
+                    URL du dépôt en secours
+                    <input
+                      name="repositoryUrl"
+                      onChange={(event) => {
+                        onRepositoryUrlChange(event.target.value);
+                      }}
+                      placeholder={selectedProvider === "gitlab" ? "https://gitlab.com/groupe/projet" : "https://github.com/organisation/projet"}
+                      value={repositoryUrl}
+                    />
+                  </label>
+                ) : null}
                 <label>
                   Nom du projet
                   <input name="siteName" onChange={(event) => setSiteName(event.target.value)} placeholder="Nom repris depuis le dépôt choisi" value={siteName} />
@@ -1949,10 +1957,10 @@ function repositoryStatusText(state: RepositoryLoadState, message: string): stri
   }
 
   if (state === "ready") {
-    return "Choisissez un dépôt dans la liste ou ajustez l'URL manuellement.";
+    return "Choisissez un dépôt accessible dans la liste.";
   }
 
-  return "Le champ URL reste disponible.";
+  return "La saisie URL apparaît seulement si la liste n'est pas exploitable.";
 }
 
 function repositorySelectPlaceholder(state: RepositoryLoadState, isProviderConnected: boolean): string {
@@ -1973,6 +1981,19 @@ function repositorySelectPlaceholder(state: RepositoryLoadState, isProviderConne
   }
 
   return "Choisir un dépôt";
+}
+
+async function parseJsonResponse<T>(response: Response): Promise<T | undefined> {
+  const text = await response.text();
+  if (!text.trim()) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return undefined;
+  }
 }
 
 function validateAllowedOrigins(origins: string[]): OriginValidation {

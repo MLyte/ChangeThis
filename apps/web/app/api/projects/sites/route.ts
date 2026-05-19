@@ -5,6 +5,7 @@ import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../li
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { getIssueProviderRepositoryFromUrl, IssueProviderError, listIssueProviderRepositories } from "../../../../lib/issue-providers";
 import { getProviderIntegrationAsync } from "../../../../lib/provider-integrations";
+import { logError, requestIdFrom } from "../../../../lib/logger";
 import {
   createConnectedSite,
   installSnippet,
@@ -46,6 +47,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const requestId = requestIdFrom(request);
   const session = requireWorkspaceRole(await requireWorkspaceSession(request), ["admin", "owner"]);
 
   if (isAuthFailure(session)) {
@@ -135,7 +137,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: error.status ?? 502 });
     }
 
-    throw error;
+    const message = error instanceof Error ? error.message : "Unknown site creation error";
+    logError("connected_site_create_failed", {
+      request_id: requestId,
+      provider: body.provider,
+      workspace_id: session.workspace.id,
+      error: message
+    });
+
+    return NextResponse.json(
+      { error: "Impossible de créer le site connecté pour le moment.", requestId },
+      { status: 500 }
+    );
   }
 }
 

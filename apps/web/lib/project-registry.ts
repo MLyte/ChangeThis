@@ -37,7 +37,7 @@ type SupabaseProjectRow = {
   widget_locale: unknown;
   widget_button_position: unknown;
   widget_button_variant: unknown;
-  widget_reporter_fields: unknown;
+  widget_reporter_fields?: unknown;
   created_at: string;
   updated_at: string;
 };
@@ -437,22 +437,17 @@ async function createSupabaseConnectedSite(
   }
 
   const publicKey = `ct_${crypto.randomUUID().replaceAll("-", "")}`;
-  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>("/rest/v1/projects", {
-    method: "POST",
-    headers: {
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify({
-      organization_id: input.workspaceId,
-      name: normalizeSiteName(input.name) ?? issueTarget.project,
-      public_key: publicKey,
-      allowed_origins: [allowedOrigin],
-      widget_locale: input.widgetLocale ?? "fr",
-      widget_button_position: input.widgetButtonPosition ?? "bottom-right",
-      widget_button_variant: input.widgetButtonVariant ?? "default",
-      widget_reporter_fields: input.widgetReporterFields ?? "optional"
-    })
-  });
+  const projectPayload = {
+    organization_id: input.workspaceId,
+    name: normalizeSiteName(input.name) ?? issueTarget.project,
+    public_key: publicKey,
+    allowed_origins: [allowedOrigin],
+    widget_locale: input.widgetLocale ?? "fr",
+    widget_button_position: input.widgetButtonPosition ?? "bottom-right",
+    widget_button_variant: input.widgetButtonVariant ?? "default",
+    widget_reporter_fields: input.widgetReporterFields ?? "optional"
+  };
+  const projectRows = await insertSupabaseProject(projectPayload);
   const projectRow = projectRows[0];
 
   if (!projectRow) {
@@ -535,21 +530,15 @@ async function ensureSupabaseWorkspaceDemoProject(
   }
 
   const now = new Date().toISOString();
-  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>("/rest/v1/projects", {
-    method: "POST",
-    headers: {
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify({
-      organization_id: workspaceId,
-      name: workspaceDemoProjectName,
-      public_key: publicKey,
-      allowed_origins: allowedOrigins,
-      widget_locale: demoProject.widgetLocale,
-      widget_button_position: demoProject.widgetButtonPosition,
-      widget_button_variant: demoProject.widgetButtonVariant,
-      widget_reporter_fields: demoProject.widgetReporterFields
-    })
+  const projectRows = await insertSupabaseProject({
+    organization_id: workspaceId,
+    name: workspaceDemoProjectName,
+    public_key: publicKey,
+    allowed_origins: allowedOrigins,
+    widget_locale: demoProject.widgetLocale,
+    widget_button_position: demoProject.widgetButtonPosition,
+    widget_button_variant: demoProject.widgetButtonVariant,
+    widget_reporter_fields: demoProject.widgetReporterFields
   });
   const projectRow = projectRows[0];
 
@@ -714,6 +703,33 @@ async function saveSupabaseProjectIssueTarget(update: ProjectIssueTargetUpdate, 
     ...project,
     issueTarget: updatedIssueTarget
   };
+}
+
+async function insertSupabaseProject(payload: Record<string, unknown>): Promise<SupabaseProjectRow[]> {
+  try {
+    return await supabaseServiceRest<SupabaseProjectRow[]>("/rest/v1/projects", {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    if (!("widget_reporter_fields" in payload)) {
+      throw error;
+    }
+
+    const fallbackPayload = { ...payload };
+    delete fallbackPayload.widget_reporter_fields;
+
+    return supabaseServiceRest<SupabaseProjectRow[]>("/rest/v1/projects", {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(fallbackPayload)
+    });
+  }
 }
 
 async function isKnownSupabaseOrigin(origin: string): Promise<boolean> {
