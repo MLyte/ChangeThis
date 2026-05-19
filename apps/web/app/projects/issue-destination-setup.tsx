@@ -12,7 +12,6 @@ import {
   Link2,
   Mail,
   Plus,
-  RefreshCw,
   ShieldCheck,
   Trash2,
   UserRound,
@@ -100,11 +99,6 @@ const issueCreationModeOptions: Array<{ label: string; value: IssueCreationMode 
   { label: "Automatique", value: "automatic" }
 ];
 
-type InstallCheckResult = {
-  ok: boolean;
-  message: string;
-};
-
 type OriginValidation = {
   ok: boolean;
   message: string;
@@ -148,7 +142,6 @@ export function IssueDestinationSetup({
   const [siteIssueCreationMode, setSiteIssueCreationMode] = useState<IssueCreationMode>("manual");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
-  const [installChecks, setInstallChecks] = useState<Record<string, InstallCheckResult>>({});
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"viewer" | "member" | "admin">("member");
   const [automaticIssueConfirmation, setAutomaticIssueConfirmation] = useState<AutomaticIssueConfirmation | undefined>();
@@ -522,48 +515,6 @@ export function IssueDestinationSetup({
     });
   }
 
-  function testScript(projectKey: string) {
-    startTransition(async () => {
-      try {
-        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/script-test`, {
-          method: "POST"
-        });
-        const body = await parseJsonResponse<{ message?: string; error?: string; requestId?: string }>(response);
-        const message = body?.message ?? body?.error ?? (response.ok ? "Test terminé." : "Test impossible.");
-        const requestId = body?.requestId ? ` (${body.requestId})` : "";
-
-        setInstallChecks((current) => ({
-          ...current,
-          [projectKey]: {
-            ok: response.ok,
-            message: `${message}${requestId}`
-          }
-        }));
-        if (response.ok) {
-          toast.success("Script détecté", {
-            description: body?.message ?? "Le widget est installé sur l'URL du site."
-          });
-        } else {
-          toast.error("Script non détecté", {
-            description: `${body?.message ?? body?.error ?? "Vérifiez que le snippet est installé sur l'URL du site."}${requestId}`
-          });
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
-        setInstallChecks((current) => ({
-          ...current,
-          [projectKey]: {
-            ok: false,
-            message: errorMessage
-          }
-        }));
-        toast.error("Test impossible", {
-          description: errorMessage
-        });
-      }
-    });
-  }
-
   function requestDeleteSite(projectKey: string) {
     setDeleteSiteConfirmation({ projectKey });
   }
@@ -632,11 +583,9 @@ export function IssueDestinationSetup({
               integrations={integrations}
               isPending={isPending}
               isSiteModalOpen={isSiteModalOpen}
-              installChecks={installChecks}
               onCloseModal={() => setIsSiteModalOpen(false)}
               onCreateSite={createSite}
               onDeleteSite={requestDeleteSite}
-              onTestScript={testScript}
               onCopyInstallSnippet={copyInstallSnippet}
               onOpenSiteModal={openSiteModal}
               onSelectProvider={selectProvider}
@@ -1693,11 +1642,9 @@ function ConnectedSitesSection({
   integrations,
   isPending,
   isSiteModalOpen,
-  installChecks,
   onCloseModal,
   onCreateSite,
   onDeleteSite,
-  onTestScript,
   onCopyInstallSnippet,
   onOpenSiteModal,
   onRepositoryUrlChange,
@@ -1730,11 +1677,9 @@ function ConnectedSitesSection({
   integrations: ProviderIntegrationSummary[];
   isPending: boolean;
   isSiteModalOpen: boolean;
-  installChecks: Record<string, InstallCheckResult>;
   onCloseModal: () => void;
   onCreateSite: () => void;
   onDeleteSite: (projectKey: string) => void;
-  onTestScript: (projectKey: string) => void;
   onCopyInstallSnippet: (project: ProjectView) => void;
   onOpenSiteModal: () => void;
   onRepositoryUrlChange: (repositoryUrl: string) => void;
@@ -1863,6 +1808,7 @@ function ConnectedSitesSection({
             const isReady = providerConnected && issueTarget.namespace && issueTarget.project;
             const originValidation = validateAllowedOrigins(project.allowedOrigins);
             const snippet = project.installSnippet ?? installSnippet(project);
+            const failedIssueCount = project.metrics?.failedIssues ?? 0;
 
             return (
               <article className="site-repo-row connected-site-row" key={project.publicKey}>
@@ -1893,10 +1839,6 @@ function ConnectedSitesSection({
                         <T k="destinations.open" />
                       </a>
                     ) : null}
-                    <button className="button secondary-button" onClick={() => onTestScript(project.publicKey)} type="button">
-                      <RefreshCw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                      Tester le script
-                    </button>
                     <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
                       <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                       Supprimer
@@ -1907,7 +1849,9 @@ function ConnectedSitesSection({
                   <div className="site-metrics">
                     <span title="Feedbacks reçus depuis ce site"><strong>{project.metrics?.feedbacksReceived ?? 0}</strong><small>Feedbacks reçus</small></span>
                     <span title="Issues Git créées depuis ces feedbacks"><strong>{project.metrics?.issuesCreated ?? 0}</strong><small>Issues Git créées</small></span>
-                    <span title="Créations d'issues Git en échec"><strong>{project.metrics?.failedIssues ?? 0}</strong><small>Échecs Git</small></span>
+                    {failedIssueCount > 0 ? (
+                      <span title="Créations d'issues Git en échec"><strong>{failedIssueCount}</strong><small>Échecs Git</small></span>
+                    ) : null}
                   </div>
                   <div className="widget-settings">
                     <ThemeDropdown

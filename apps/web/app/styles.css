@@ -788,7 +788,11 @@ h3 {
 }
 
 .home-hero-proof-row .tech-word {
-  margin-inline: 0.18em;
+  background: #ffffff;
+  border: 1px solid var(--secondary-border);
+  border-radius: 999px;
+  margin-inline: 0.28em;
+  padding: 2px 8px;
 }
 
 .app-home .lede strong,
@@ -4623,6 +4627,10 @@ dd {
   margin-bottom: 0;
 }
 
+.settings-section.linked-sites {
+  margin-top: 0;
+}
+
 .settings-section .setup-heading h3 {
   font-size: clamp(24px, 3vw, 34px);
   line-height: 1.05;
@@ -5270,8 +5278,11 @@ dd {
 
 .site-title-row .provider-badge,
 .site-title-row .status-badge {
-  min-height: 24px;
-  padding: 4px 7px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  line-height: 1;
+  min-height: 26px;
+  padding: 5px 8px;
 }
 
 .site-title-row .provider-badge {
@@ -5874,7 +5885,7 @@ dd {
   align-items: stretch;
   display: grid;
   gap: 7px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
 }
 
 .site-metrics span {
@@ -5993,11 +6004,11 @@ dd {
   color: var(--ink);
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size: 12px;
-  line-height: 1.45;
-  max-height: 70px;
-  overflow: auto;
-  padding: 10px;
+  font-size: 10px;
+  line-height: 1.25;
+  max-height: 54px;
+  overflow: hidden;
+  padding: 8px;
   text-overflow: clip;
   white-space: pre-wrap;
   word-break: break-word;
@@ -7277,8 +7288,9 @@ code {
 }
 
 .feedback-context-section {
+  align-content: start;
   display: grid;
-  gap: clamp(28px, 4vw, 52px);
+  gap: clamp(18px, 2.4vw, 32px);
   min-height: var(--home-section-min);
 }
 
