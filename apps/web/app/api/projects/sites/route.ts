@@ -1,4 +1,4 @@
-import type { IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetReporterFields } from "@changethis/shared";
+import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetReporterFields } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
@@ -116,7 +116,8 @@ export async function POST(request: Request) {
       widgetLocale: parseWidgetLocale(body.widgetLocale),
       widgetButtonPosition: parseWidgetButtonPosition(body.widgetButtonPosition),
       widgetButtonVariant: parseWidgetButtonVariant(body.widgetButtonVariant),
-      widgetReporterFields: parseWidgetReporterFields(body.widgetReporterFields)
+      widgetReporterFields: parseWidgetReporterFields(body.widgetReporterFields),
+      issueCreationMode: parseIssueCreationMode(body.issueCreationMode)
     });
 
     return NextResponse.json({
@@ -174,6 +175,10 @@ function parseWidgetButtonVariant(value: unknown): WidgetButtonVariant | undefin
 
 function parseWidgetReporterFields(value: unknown): WidgetReporterFields | undefined {
   return value === "hidden" || value === "optional" || value === "required" ? value : undefined;
+}
+
+function parseIssueCreationMode(value: unknown): IssueCreationMode | undefined {
+  return value === "manual" || value === "automatic" ? value : undefined;
 }
 
 async function findRepositoryById(provider: IssueProvider, repositoryId: string, integrationId: string, workspaceId: string) {

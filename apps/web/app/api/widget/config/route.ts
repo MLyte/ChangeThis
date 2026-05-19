@@ -23,6 +23,17 @@ export const PUT = unsupportedMethod;
 export const PATCH = unsupportedMethod;
 export const DELETE = unsupportedMethod;
 
+function corsHeaders(origin: string | null): HeadersInit {
+  if (!origin) {
+    return {};
+  }
+
+  return {
+    "Access-Control-Allow-Origin": origin,
+    Vary: "Origin"
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectKey = searchParams.get("project");
@@ -41,7 +52,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Origin is not allowed for this project" }, { status: 403 });
   }
 
-  return NextResponse.json(widgetConfigResponse(project));
+  return NextResponse.json(widgetConfigResponse(project), {
+    headers: corsHeaders(origin ?? null)
+  });
 }
 
 function widgetConfigResponse(project: ChangeThisProject): WidgetConfigResponse {

@@ -18,7 +18,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import type { IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetReporterFields } from "@changethis/shared";
+import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetReporterFields } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
@@ -95,6 +95,11 @@ const widgetReporterFieldOptions: Array<{ label: string; value: WidgetReporterFi
   { label: "Masquer", value: "hidden" }
 ];
 
+const issueCreationModeOptions: Array<{ label: string; value: IssueCreationMode }> = [
+  { label: "Manuelle", value: "manual" },
+  { label: "Automatique", value: "automatic" }
+];
+
 type InstallCheckResult = {
   ok: boolean;
   message: string;
@@ -132,6 +137,7 @@ export function IssueDestinationSetup({
   const [siteWidgetButtonVariant, setSiteWidgetButtonVariant] = useState<WidgetButtonVariant>("default");
   const [siteWidgetButtonPosition, setSiteWidgetButtonPosition] = useState<WidgetButtonPosition>("bottom-right");
   const [siteWidgetReporterFields, setSiteWidgetReporterFields] = useState<WidgetReporterFields>("optional");
+  const [siteIssueCreationMode, setSiteIssueCreationMode] = useState<IssueCreationMode>("manual");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
   const [installChecks, setInstallChecks] = useState<Record<string, InstallCheckResult>>({});
@@ -281,7 +287,8 @@ export function IssueDestinationSetup({
             widgetLocale: siteWidgetLocale,
             widgetButtonPosition: siteWidgetButtonPosition,
             widgetButtonVariant: siteWidgetButtonVariant,
-            widgetReporterFields: siteWidgetReporterFields
+            widgetReporterFields: siteWidgetReporterFields,
+            issueCreationMode: siteIssueCreationMode
           })
         });
 
@@ -312,6 +319,7 @@ export function IssueDestinationSetup({
         setSiteWidgetButtonVariant("default");
         setSiteWidgetButtonPosition("bottom-right");
         setSiteWidgetReporterFields("optional");
+        setSiteIssueCreationMode("manual");
         setIsSiteModalOpen(false);
         toast.success("Site connecté", {
           description: `${body.site.name} est prêt. Copiez le script depuis la liste des sites.`
@@ -326,17 +334,28 @@ export function IssueDestinationSetup({
     });
   }
 
-  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">>) {
+  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) {
     const project = projectViews.find((item) => item.publicKey === projectKey);
     if (!project) {
       return;
+    }
+
+    if (update.issueCreationMode === "automatic" && project.issueCreationMode !== "automatic") {
+      const confirmed = window.confirm(
+        `Activer la création automatique d'issues pour ${project.name} ?\n\nLes prochains feedbacks reçus créeront directement une issue Git dans ${project.issueTarget.namespace}/${project.issueTarget.project}. ChangeThis garde les protections existantes, mais les retours incomplets, doublons ou déjà traités peuvent quand même arriver dans le dépôt.`
+      );
+
+      if (!confirmed) {
+        return;
+      }
     }
 
     const nextSettings = {
       widgetLocale: update.widgetLocale ?? project.widgetLocale,
       widgetButtonPosition: update.widgetButtonPosition ?? project.widgetButtonPosition,
       widgetButtonVariant: update.widgetButtonVariant ?? project.widgetButtonVariant,
-      widgetReporterFields: update.widgetReporterFields ?? project.widgetReporterFields
+      widgetReporterFields: update.widgetReporterFields ?? project.widgetReporterFields,
+      issueCreationMode: update.issueCreationMode ?? project.issueCreationMode
     };
 
     setProjectViews((current) => current.map((item) => item.publicKey === projectKey
@@ -601,8 +620,10 @@ export function IssueDestinationSetup({
               siteOrigin={siteOrigin}
               siteWidgetButtonPosition={siteWidgetButtonPosition}
               siteWidgetButtonVariant={siteWidgetButtonVariant}
+              siteIssueCreationMode={siteIssueCreationMode}
               siteWidgetLocale={siteWidgetLocale}
               siteWidgetReporterFields={siteWidgetReporterFields}
+              setSiteIssueCreationMode={setSiteIssueCreationMode}
             />
           ) : null}
 
@@ -1556,8 +1577,10 @@ function ConnectedSitesSection({
   siteOrigin,
   siteWidgetButtonPosition,
   siteWidgetButtonVariant,
+  siteIssueCreationMode,
   siteWidgetLocale,
-  siteWidgetReporterFields
+  siteWidgetReporterFields,
+  setSiteIssueCreationMode
 }: {
   connectedProviders: Set<IssueProvider>;
   integrations: ProviderIntegrationSummary[];
@@ -1573,7 +1596,7 @@ function ConnectedSitesSection({
   onRepositoryUrlChange: (repositoryUrl: string) => void;
   onSelectProvider: (provider: IssueProvider) => void;
   onSelectRepository: (repositoryId: string) => void;
-  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">>) => void;
+  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) => void;
   projects: ProjectView[];
   repositoryLoadMessage: string;
   repositoryLoadState: RepositoryLoadState;
@@ -1591,8 +1614,10 @@ function ConnectedSitesSection({
   siteOrigin: string;
   siteWidgetButtonPosition: WidgetButtonPosition;
   siteWidgetButtonVariant: WidgetButtonVariant;
+  siteIssueCreationMode: IssueCreationMode;
   siteWidgetLocale: WidgetLocale;
   siteWidgetReporterFields: WidgetReporterFields;
+  setSiteIssueCreationMode: (mode: IssueCreationMode) => void;
 }) {
   const isSelectedProviderConnected = connectedProviders.has(selectedProvider);
   const shouldShowRepositoryStatus = isSelectedProviderConnected && repositoryLoadState !== "idle";
@@ -1770,6 +1795,20 @@ function ConnectedSitesSection({
                       value={project.widgetReporterFields}
                     />
                   </div>
+                  <div className="issue-automation-settings">
+                    <ThemeDropdown
+                      disabled={isPending}
+                      label="Création d'issues"
+                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { issueCreationMode: value })}
+                      options={issueCreationModeOptions}
+                      value={project.issueCreationMode}
+                    />
+                    <p>
+                      {project.issueCreationMode === "automatic"
+                        ? "Les nouveaux feedbacks créent directement une issue Git."
+                        : "Les feedbacks restent à valider avant Git."}
+                    </p>
+                  </div>
                   <div className="site-script">
                     {originValidation.ok ? (
                       <button aria-label="Copier le script widget" className="site-script-copy-card" onClick={() => onCopyInstallSnippet(project)} type="button">
@@ -1895,6 +1934,7 @@ function ConnectedSitesSection({
                   <ThemeDropdown label="Visibilité" onChange={setSiteWidgetButtonVariant} options={widgetVariantOptions} value={siteWidgetButtonVariant} />
                   <ThemeDropdown label="Position bouton" onChange={setSiteWidgetButtonPosition} options={widgetPositionOptions} value={siteWidgetButtonPosition} />
                   <ThemeDropdown label="Identité visiteur" onChange={setSiteWidgetReporterFields} options={widgetReporterFieldOptions} value={siteWidgetReporterFields} />
+                  <ThemeDropdown label="Création issues" onChange={setSiteIssueCreationMode} options={issueCreationModeOptions} value={siteIssueCreationMode} />
                 </fieldset>
                 <div className="site-create-actions">
                   <button className="button" disabled={isPending || !siteOriginValidation.ok || !hasRepositoryDestination || !isSelectedProviderConnected} onClick={onCreateSite} type="button">

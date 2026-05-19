@@ -25,6 +25,14 @@ type WidgetOptions = {
   customer?: string;
 };
 
+type WidgetConfigResponse = {
+  locale?: "fr" | "en";
+  buttonPosition?: WidgetOptions["buttonPosition"];
+  buttonVariant?: WidgetOptions["buttonVariant"];
+  reporterFields?: WidgetReporterFields;
+  endpoint?: string;
+};
+
 type DraftPin = {
   number: number;
   target: PinTarget;
@@ -2693,28 +2701,91 @@ const currentScript = document.currentScript as HTMLScriptElement | null;
 const projectKey = currentScript?.dataset.project;
 
 if (projectKey) {
-  const variant = currentScript?.dataset.buttonVariant;
-  const position = currentScript?.dataset.position;
-  const reporterFields = currentScript?.dataset.reporterFields;
+  const scriptOptions = widgetOptionsFromScript(currentScript, projectKey);
 
-  initChangeThis({
+  void resolveWidgetOptions(currentScript, scriptOptions)
+    .then(initChangeThis)
+    .catch(() => {
+      initChangeThis(scriptOptions);
+    });
+}
+
+function widgetOptionsFromScript(script: HTMLScriptElement | null, projectKey: string): WidgetOptions {
+  const variant = script?.dataset.buttonVariant;
+  const position = script?.dataset.position;
+  const reporterFields = script?.dataset.reporterFields;
+
+  return {
     projectKey,
-    endpoint: currentScript?.dataset.endpoint,
-    buttonLabel: currentScript?.dataset.buttonLabel,
-    buttonStateLabel: currentScript?.dataset.buttonState,
+    endpoint: script?.dataset.endpoint ?? scriptEndpoint(script),
+    buttonLabel: script?.dataset.buttonLabel,
+    buttonStateLabel: script?.dataset.buttonState,
     buttonVariant: variant === "dev" || variant === "prod" || variant === "review" || variant === "subtle" ? variant : undefined,
     buttonPosition: position === "bottom-right" || position === "bottom-left" || position === "top-right" || position === "top-left" ? position : undefined,
     reporterFields: reporterFields === "hidden" || reporterFields === "optional" || reporterFields === "required" ? reporterFields : undefined,
-    locale: currentScript?.dataset.locale === "fr" || currentScript?.dataset.locale === "en" ? currentScript.dataset.locale : undefined,
-    visible: currentScript?.dataset.visible !== "false",
-    environment: currentScript?.dataset.environment,
-    release: currentScript?.dataset.release,
-    appVersion: currentScript?.dataset.appVersion,
-    buildId: currentScript?.dataset.buildId,
-    commitSha: currentScript?.dataset.commitSha,
-    branch: currentScript?.dataset.branch,
-    testRunId: currentScript?.dataset.testRunId,
-    scenario: currentScript?.dataset.scenario,
-    customer: currentScript?.dataset.customer
+    locale: script?.dataset.locale === "fr" || script?.dataset.locale === "en" ? script.dataset.locale : undefined,
+    visible: script?.dataset.visible !== "false",
+    environment: script?.dataset.environment,
+    release: script?.dataset.release,
+    appVersion: script?.dataset.appVersion,
+    buildId: script?.dataset.buildId,
+    commitSha: script?.dataset.commitSha,
+    branch: script?.dataset.branch,
+    testRunId: script?.dataset.testRunId,
+    scenario: script?.dataset.scenario,
+    customer: script?.dataset.customer
+  };
+}
+
+async function resolveWidgetOptions(script: HTMLScriptElement | null, fallback: WidgetOptions): Promise<WidgetOptions> {
+  const configUrl = widgetConfigUrl(script, fallback.projectKey);
+  if (!configUrl) {
+    return fallback;
+  }
+
+  const response = await fetch(configUrl, {
+    headers: {
+      Accept: "application/json"
+    }
   });
+
+  if (!response.ok) {
+    return fallback;
+  }
+
+  const config = await response.json() as unknown;
+  if (!isWidgetConfigResponse(config)) {
+    return fallback;
+  }
+
+  return {
+    ...fallback,
+    endpoint: config.endpoint ? new URL(config.endpoint, configUrl).toString() : fallback.endpoint,
+    locale: config.locale ?? fallback.locale,
+    buttonPosition: config.buttonPosition ?? fallback.buttonPosition,
+    buttonVariant: config.buttonVariant ?? fallback.buttonVariant,
+    reporterFields: config.reporterFields ?? fallback.reporterFields
+  };
+}
+
+function scriptEndpoint(script: HTMLScriptElement | null): string | undefined {
+  return script?.src ? new URL("/api/public/feedback", script.src).toString() : undefined;
+}
+
+function widgetConfigUrl(script: HTMLScriptElement | null, projectKey: string): string | undefined {
+  if (!script?.src) {
+    return undefined;
+  }
+
+  const url = new URL("/api/widget/config", script.src);
+  url.searchParams.set("project", projectKey);
+  return url.toString();
+}
+
+function isWidgetConfigResponse(value: unknown): value is WidgetConfigResponse {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return true;
 }

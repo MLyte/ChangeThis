@@ -46,6 +46,7 @@ export const demoProject: ChangeThisProject = {
   widgetButtonPosition: "bottom-right",
   widgetButtonVariant: "default",
   widgetReporterFields: "optional",
+  issueCreationMode: "manual",
   issueTarget: {
     provider: "github",
     namespace: "MLyte",

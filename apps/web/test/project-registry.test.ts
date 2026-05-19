@@ -44,6 +44,7 @@ test("creates a connected GitHub site with the selected repository and integrati
   assert.equal(site.issueTarget.project, "product-site");
   assert.equal(site.issueTarget.integrationId, "integration_github_mlyte");
   assert.equal(site.issueTarget.webUrl, "https://github.com/agency/product-site");
+  assert.equal(site.issueCreationMode, "manual");
 
   const configured = await listConfiguredProjects();
   assert.equal(configured.some((project) => project.publicKey === site.publicKey), true);

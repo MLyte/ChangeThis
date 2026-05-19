@@ -41,6 +41,7 @@ const requiredPatterns = [
   ["provider credential iv field", /\biv\b/],
   ["provider credential tag field", /\btag\b/],
   ["project widget settings", /widget_locale.*widget_button_position.*widget_button_variant/s],
+  ["project issue creation mode", /issue_creation_mode[\s\S]*manual[\s\S]*automatic/],
   ["feedback screenshot transition column", /screenshot_data_url/],
   ["idempotent issue target unique migration", /drop constraint if exists issue_targets_project_unique[\s\S]*add constraint issue_targets_project_unique unique \(project_id\)/],
   ["project updated_at trigger", /projects_updated_at/],

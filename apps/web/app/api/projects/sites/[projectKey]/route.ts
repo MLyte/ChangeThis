@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { IssueCreationMode } from "@changethis/shared";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { logError, requestIdFrom } from "../../../../../lib/logger";
@@ -48,8 +49,9 @@ export async function PATCH(
     || !isWidgetLocale(body.widgetLocale)
     || !isWidgetButtonPosition(body.widgetButtonPosition)
     || !isWidgetButtonVariant(body.widgetButtonVariant)
-    || !isWidgetReporterFields(body.widgetReporterFields)) {
-    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant and widgetReporterFields are required" }, { status: 422 });
+    || !isWidgetReporterFields(body.widgetReporterFields)
+    || !isIssueCreationMode(body.issueCreationMode)) {
+    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant, widgetReporterFields and issueCreationMode are required" }, { status: 422 });
   }
 
   const { projectKey } = await context.params;
@@ -60,7 +62,8 @@ export async function PATCH(
       widgetLocale: body.widgetLocale,
       widgetButtonPosition: body.widgetButtonPosition,
       widgetButtonVariant: body.widgetButtonVariant,
-      widgetReporterFields: body.widgetReporterFields
+      widgetReporterFields: body.widgetReporterFields,
+      issueCreationMode: body.issueCreationMode
     }, session.workspace.id);
 
     return NextResponse.json({
@@ -134,4 +137,8 @@ function isWidgetButtonVariant(value: unknown): value is "default" | "subtle" {
 
 function isWidgetReporterFields(value: unknown): value is "hidden" | "optional" | "required" {
   return value === "hidden" || value === "optional" || value === "required";
+}
+
+function isIssueCreationMode(value: unknown): value is IssueCreationMode {
+  return value === "manual" || value === "automatic";
 }

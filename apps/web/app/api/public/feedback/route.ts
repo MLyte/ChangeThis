@@ -4,7 +4,8 @@ import { methodNotAllowed } from "../../../../lib/api-security";
 import { getCurrentSession } from "../../../../lib/auth";
 import { demoProject } from "../../../../lib/demo-project";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
-import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
+import { createIssueForFeedback } from "../../../../lib/issue-workflow";
+import { logError, logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
 import { ensureIssueTargetConfigured, ensureWorkspaceDemoProject, findConfiguredProjectByKey, isKnownOrigin } from "../../../../lib/project-registry";
 
 const maxBodyBytes = 2_500_000;
@@ -122,18 +123,37 @@ export async function POST(request: Request) {
     workspaceId: project.workspaceId
   });
 
+  let processedFeedback = feedback;
+
+  if (project.issueCreationMode === "automatic") {
+    try {
+      processedFeedback = await createIssueForFeedback(feedback, requestId, {
+        workspaceId: project.workspaceId
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown automatic issue creation error";
+      logError("feedback_auto_issue_create_unhandled", {
+        request_id: requestId,
+        project_id: project.publicKey,
+        feedback_id: feedback.id,
+        error: message
+      });
+    }
+  }
+
   logInfo("feedback_received", {
     request_id: requestId,
     project_id: project.publicKey,
-    feedback_id: feedback.id,
+    feedback_id: processedFeedback.id,
     issue_provider: issueTarget.provider,
-    has_screenshot: Boolean(feedback.screenshotAsset)
+    issue_creation_mode: project.issueCreationMode,
+    has_screenshot: Boolean(processedFeedback.screenshotAsset)
   });
 
   return NextResponse.json({
-    id: feedback.id,
-    status: "received",
-    next: "issue_creation",
+    id: processedFeedback.id,
+    status: processedFeedback.status,
+    next: project.issueCreationMode === "automatic" ? "automatic_issue_creation" : "issue_creation",
     project: {
       name: project.name,
       issueTarget: {
@@ -143,6 +163,8 @@ export async function POST(request: Request) {
         webUrl: issueTarget.webUrl
       }
     },
+    externalIssue: processedFeedback.externalIssue,
+    lastError: processedFeedback.lastError,
     issueDraft
   }, { headers: { ...headers, "X-Request-Id": requestId } });
 }

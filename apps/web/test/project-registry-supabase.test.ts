@@ -39,6 +39,7 @@ test("lists Supabase projects with active keys, issue targets, and workspace sco
         widget_button_position: "bottom-left",
         widget_button_variant: "subtle",
         widget_reporter_fields: "required",
+        issue_creation_mode: "automatic",
         created_at: "2026-05-02T08:00:00.000Z",
         updated_at: "2026-05-02T09:00:00.000Z"
       }]);
@@ -88,6 +89,7 @@ test("lists Supabase projects with active keys, issue targets, and workspace sco
     widgetButtonPosition: "bottom-left",
     widgetButtonVariant: "subtle",
     widgetReporterFields: "required",
+    issueCreationMode: "automatic",
     issueTarget: {
       provider: "github",
       namespace: "agency",
@@ -144,7 +146,8 @@ test("creates a workspace-scoped demo project in Supabase mode", async () => {
         widget_locale: "fr",
         widget_button_position: "bottom-right",
         widget_button_variant: "default",
-        widget_reporter_fields: "optional"
+        widget_reporter_fields: "optional",
+        issue_creation_mode: "manual"
       });
 
       return jsonResponse([{
@@ -157,6 +160,7 @@ test("creates a workspace-scoped demo project in Supabase mode", async () => {
         widget_button_position: "bottom-right",
         widget_button_variant: "default",
         widget_reporter_fields: "optional",
+        issue_creation_mode: "manual",
         created_at: "2026-05-19T10:00:00.000Z",
         updated_at: "2026-05-19T10:00:00.000Z"
       }]);
@@ -225,7 +229,7 @@ test("updates widget settings without reporter fields when Supabase schema is be
     }
 
     if (url.pathname === "/rest/v1/projects" && method === "PATCH") {
-      if (body && "widget_reporter_fields" in body) {
+      if (body && ("widget_reporter_fields" in body || "issue_creation_mode" in body)) {
         return new Response(JSON.stringify({ message: "column projects.widget_reporter_fields does not exist" }), {
           headers: { "Content-Type": "application/json" },
           status: 400
@@ -238,6 +242,7 @@ test("updates widget settings without reporter fields when Supabase schema is be
         widget_button_variant: "subtle"
       });
       assert.equal(url.searchParams.get("select")?.includes("widget_reporter_fields"), false);
+      assert.equal(url.searchParams.get("select")?.includes("issue_creation_mode"), false);
 
       return jsonResponse([baseSupabaseProjectRow({
         id: projectId,
@@ -269,12 +274,14 @@ test("updates widget settings without reporter fields when Supabase schema is be
     widgetLocale: "fr",
     widgetButtonPosition: "top-left",
     widgetButtonVariant: "subtle",
-    widgetReporterFields: "required"
+    widgetReporterFields: "required",
+    issueCreationMode: "automatic"
   }, workspaceId);
 
   assert.equal(project.widgetButtonPosition, "top-left");
   assert.equal(project.widgetButtonVariant, "subtle");
   assert.equal(project.widgetReporterFields, "optional");
+  assert.equal(project.issueCreationMode, "manual");
   assert.equal(calls.filter((call) => call.method === "PATCH").length, 2);
 });
 
@@ -298,6 +305,7 @@ function baseSupabaseProjectRow(overrides: Record<string, unknown> = {}): Record
     widget_button_position: "bottom-left",
     widget_button_variant: "default",
     widget_reporter_fields: "optional",
+    issue_creation_mode: "manual",
     created_at: "2026-05-02T08:00:00.000Z",
     updated_at: "2026-05-02T09:00:00.000Z",
     ...overrides

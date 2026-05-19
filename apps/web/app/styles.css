@@ -5776,7 +5776,7 @@ dd {
   border-top: 1px solid var(--line);
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(220px, 0.5fr) minmax(460px, 1.15fr) minmax(280px, 0.65fr);
+  grid-template-columns: minmax(220px, 0.48fr) minmax(430px, 1fr) minmax(220px, 0.46fr) minmax(250px, 0.52fr);
   padding-top: 12px;
 }
 
@@ -5867,6 +5867,20 @@ dd {
   min-height: 36px;
   min-width: 0;
   padding: 8px 28px 8px 10px;
+}
+
+.issue-automation-settings {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.issue-automation-settings p {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+  margin: 0;
 }
 
 .site-script {
