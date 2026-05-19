@@ -7,6 +7,7 @@ export type Locale = "fr" | "en";
 type Dictionary = Record<string, string>;
 
 const storageKey = "changethis:preferredLanguage";
+const storageSourceKey = "changethis:preferredLanguageSource";
 
 const dictionaries: Record<Locale, Dictionary> = {
   fr: {
@@ -920,11 +921,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const savedLocale = window.localStorage.getItem(storageKey);
-    if (savedLocale !== "fr" && savedLocale !== "en") {
-      return;
-    }
+    const savedSource = window.localStorage.getItem(storageSourceKey);
+    const initialLocale = isLocale(savedLocale) && savedSource === "manual"
+      ? savedLocale
+      : inferBrowserLocale(window.navigator.languages, window.navigator.language);
 
-    window.setTimeout(() => setLocaleState(savedLocale), 0);
+    window.setTimeout(() => setLocaleState(initialLocale), 0);
+    window.localStorage.setItem(storageKey, initialLocale);
+    window.localStorage.setItem(storageSourceKey, savedSource === "manual" ? "manual" : "browser");
   }, []);
 
   useEffect(() => {
@@ -936,11 +940,23 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLocale: (nextLocale) => {
       setLocaleState(nextLocale);
       window.localStorage.setItem(storageKey, nextLocale);
+      window.localStorage.setItem(storageSourceKey, "manual");
     },
     t: (key) => dictionaries[locale][key] ?? dictionaries.fr[key] ?? key
   }), [locale]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+function inferBrowserLocale(languages: readonly string[] | undefined, fallbackLanguage: string | undefined): Locale {
+  const candidates = languages && languages.length > 0 ? languages : [fallbackLanguage ?? ""];
+  const browserLocale = candidates.find((item) => item.trim().length > 0)?.toLowerCase() ?? "";
+
+  return browserLocale.startsWith("fr") ? "fr" : "en";
+}
+
+function isLocale(value: string | null): value is Locale {
+  return value === "fr" || value === "en";
 }
 
 export function useLanguage() {
