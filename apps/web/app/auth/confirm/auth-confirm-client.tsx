@@ -26,7 +26,7 @@ export function AuthConfirmClient() {
     }
 
     if (confirmationUrl) {
-      setCallbackUrl(confirmationUrl);
+      queueMicrotask(() => setCallbackUrl(confirmationUrl));
       return;
     }
 
@@ -42,7 +42,7 @@ export function AuthConfirmClient() {
       callbackUrl.searchParams.set("token_hash", tokenHash);
       callbackUrl.searchParams.set("type", type ?? "email");
       callbackUrl.searchParams.set("next", nextPath);
-      setCallbackUrl(callbackUrl.toString());
+      queueMicrotask(() => setCallbackUrl(callbackUrl.toString()));
       return;
     }
 
