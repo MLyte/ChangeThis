@@ -45,11 +45,6 @@ const problemPoints: Array<{ sourceKey: string; realityKey: string; consequenceK
     sourceKey: "home.problem.example.2.source",
     realityKey: "home.problem.example.2.reality",
     consequenceKey: "home.problem.example.2.consequence"
-  },
-  {
-    sourceKey: "home.problem.example.3.source",
-    realityKey: "home.problem.example.3.reality",
-    consequenceKey: "home.problem.example.3.consequence"
   }
 ];
 
@@ -127,11 +122,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </span>
             <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
           </h1>
+          <p className="hero-product-promise"><T k="home.hero.promise" /></p>
           <HeroStatement />
           <p className="lede">
             <TRich k="home.hero.lede" />
           </p>
-          <div className="home-hero-proof-row" aria-label="Repères produit ChangeThis">
+          <span className="sr-only" id="home-hero-proof-label"><T k="home.aria.heroProof" /></span>
+          <div className="home-hero-proof-row" aria-labelledby="home-hero-proof-label">
             {heroProofItems.map((key) => (
               <span key={key}><T k={key} /></span>
             ))}
@@ -219,7 +216,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <p className="lede">
             <TRich k="home.closing.copy" />
           </p>
-          <div className="closing-proof-row" aria-label="Repères bêta ouverte">
+          <span className="sr-only" id="closing-proof-label"><T k="home.aria.betaProof" /></span>
+          <div className="closing-proof-row" aria-labelledby="closing-proof-label">
             <span><T k="home.closing.proof.beta" /></span>
             <span><T k="home.closing.proof.visitors" /></span>
             <span><T k="home.closing.proof.git" /></span>
@@ -235,7 +233,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <p><T k="home.closing.panel.copy" /></p>
             </div>
           </div>
-          <div className="closing-activation-list" aria-label="Étapes après inscription">
+          <span className="sr-only" id="closing-activation-label"><T k="home.aria.activationSteps" /></span>
+          <div className="closing-activation-list" aria-labelledby="closing-activation-label">
             {closingActivationItems.map(({ titleKey, copyKey, Icon }) => (
               <article className="closing-activation-item" key={titleKey}>
                 <Icon aria-hidden="true" size={18} strokeWidth={2.3} />
@@ -336,8 +335,10 @@ function MobilePreviewSection() {
         </p>
       </div>
 
-      <div className="mobile-device-pair" aria-label="Aperçus mobiles ChangeThis côté visiteur et côté équipe">
-        <div className="iphone-pro-max-mockup user-mobile-mockup" aria-label="Aperçu mobile visiteur ChangeThis">
+      <span className="sr-only" id="mobile-device-pair-label"><T k="home.aria.mobilePair" /></span>
+      <div className="mobile-device-pair" aria-labelledby="mobile-device-pair-label">
+        <span className="sr-only" id="mobile-visitor-label"><T k="home.aria.mobileVisitor" /></span>
+        <div className="iphone-pro-max-mockup user-mobile-mockup" aria-labelledby="mobile-visitor-label">
           <span className="mobile-device-label"><T k="home.mobile.label.visitor" /></span>
           <div className="iphone-frame">
             <div className="iphone-screen">
@@ -347,8 +348,8 @@ function MobilePreviewSection() {
               </div>
               <div className="mobile-demo-page">
                 <span className="mobile-demo-kicker">Atelier Nova</span>
-                <h3>Objets calmes pour maisons vivantes.</h3>
-                <p>Une page client avec formulaire, collection et zones à commenter.</p>
+                <h3><T k="home.mobile.mock.visitor.title" /></h3>
+                <p><T k="home.mobile.mock.visitor.copy" /></p>
                 <div className="mobile-demo-card" />
                 <div className="mobile-demo-lines">
                   <span />
@@ -358,23 +359,24 @@ function MobilePreviewSection() {
               </div>
               <div className="mobile-widget-panel">
                 <div className="mobile-widget-header">
-                  <strong>Retour</strong>
+                  <strong><T k="home.mobile.mock.widget.title" /></strong>
                   <span>Capture</span>
                 </div>
                 <div className="mobile-widget-tabs">
-                  <span>Note</span>
-                  <span className="active">Repère</span>
-                  <span>Capture</span>
+                  <span><T k="home.loop.widget.note" /></span>
+                  <span className="active"><T k="home.loop.widget.marker" /></span>
+                  <span><T k="home.loop.widget.capture" /></span>
                 </div>
-                <div className="mobile-widget-text">Le bouton devis est trop bas sur mobile.</div>
-                <button type="button">Envoyer</button>
+                <div className="mobile-widget-text"><T k="home.loop.widget.copy" /></div>
+                <button type="button"><T k="home.loop.widget.send" /></button>
               </div>
-              <button className="mobile-feedback-button" type="button">Retour</button>
+              <button className="mobile-feedback-button" type="button"><T k="home.mobile.mock.widget.title" /></button>
             </div>
           </div>
         </div>
 
-        <div className="iphone-pro-max-mockup admin-mobile-mockup" aria-label="Aperçu mobile équipe ChangeThis">
+        <span className="sr-only" id="mobile-team-label"><T k="home.aria.mobileTeam" /></span>
+        <div className="iphone-pro-max-mockup admin-mobile-mockup" aria-labelledby="mobile-team-label">
           <span className="mobile-device-label"><T k="home.mobile.label.team" /></span>
           <div className="iphone-frame">
             <div className="iphone-screen">
@@ -385,63 +387,63 @@ function MobilePreviewSection() {
               <div className="mobile-admin-console mobile-dashboard-shell">
                 <div className="mobile-dashboard-header">
                   <div>
-                    <span className="mobile-demo-kicker">Dashboard opérationnel</span>
-                    <strong>Retours ChangeThis</strong>
+                    <span className="mobile-demo-kicker"><T k="home.mobile.mock.dashboard.kicker" /></span>
+                    <strong><T k="home.mobile.mock.dashboard.title" /></strong>
                   </div>
-                  <button type="button">Tester</button>
+                  <button type="button"><T k="home.mobile.mock.dashboard.test" /></button>
                 </div>
                 <div className="mobile-dashboard-tabs" aria-hidden="true">
-                  <span className="active">File active <strong>3</strong></span>
-                  <span>Historique <strong>8</strong></span>
-                  <span>Tous <strong>11</strong></span>
+                  <span className="active"><T k="projects.tabs.active" /> <strong>3</strong></span>
+                  <span><T k="projects.tabs.history" /> <strong>8</strong></span>
+                  <span><T k="projects.tabs.all" /> <strong>11</strong></span>
                 </div>
                 <div className="mobile-dashboard-filters" aria-hidden="true">
-                  <span>Statut: action requise</span>
-                  <span>Site: tous</span>
-                  <span>Git: tous</span>
+                  <span><T k="home.mobile.mock.dashboard.filterStatus" /></span>
+                  <span><T k="home.mobile.mock.dashboard.filterSite" /></span>
+                  <span><T k="home.mobile.mock.dashboard.filterGit" /></span>
                 </div>
                 <div className="mobile-dashboard-feedback-list">
                   <article className="mobile-dashboard-feedback active">
                     <div className="mobile-dashboard-feedback-main">
                       <div className="mobile-dashboard-tags">
-                        <span className="status-badge needs_setup">À créer</span>
+                        <span className="status-badge needs_setup"><T k="status.raw" /></span>
                         <ProviderBadge provider="github" />
                       </div>
-                      <strong>Repère sur /checkout</strong>
-                      <p>Le bouton devis est trop bas sur mobile.</p>
-                      <span>Cabinet Orion · /checkout · il y a 4 min</span>
+                      <strong><T k="home.mobile.mock.feedback.first.title" /></strong>
+                      <p><T k="home.mobile.mock.feedback.first.copy" /></p>
+                      <span><T k="home.mobile.mock.feedback.first.meta" /></span>
                     </div>
                     <div className="mobile-dashboard-issue">
-                      <span>Brouillon, destination et contexte</span>
+                      <span><T k="projects.feedback.details" /></span>
                       <strong>cabinet-orion/booking-flow</strong>
                     </div>
                   </article>
                   <article className="mobile-dashboard-feedback">
                     <div className="mobile-dashboard-feedback-main">
                       <div className="mobile-dashboard-tags">
-                        <span className="status-badge issue_creation_pending">En file</span>
+                        <span className="status-badge issue_creation_pending"><T k="projects.filters.queued" /></span>
                         <ProviderBadge provider="gitlab" />
                       </div>
-                      <strong>Capture sur /pricing</strong>
-                      <p>La carte Pro masque le détail du tarif annuel.</p>
-                      <span>Studio Lumen · /pricing · il y a 18 min</span>
+                      <strong><T k="home.mobile.mock.feedback.second.title" /></strong>
+                      <p><T k="home.mobile.mock.feedback.second.copy" /></p>
+                      <span><T k="home.mobile.mock.feedback.second.meta" /></span>
                     </div>
                   </article>
                 </div>
                 <div className="mobile-dashboard-summary">
                   <div className="mobile-dashboard-summary-header">
-                    <span>Synthèse</span>
-                    <strong>File actuelle</strong>
+                    <span><T k="home.mobile.mock.summary" /></span>
+                    <strong><T k="home.mobile.mock.currentQueue" /></strong>
                   </div>
                   <div className="mobile-dashboard-metric-row">
-                    <span className="warning"><strong>1</strong> À traiter</span>
-                    <span><strong>1</strong> En file</span>
-                    <span className="ok"><strong>1</strong> Résolu</span>
+                    <span className="warning"><strong>1</strong> <T k="home.mobile.mock.toTriage" /></span>
+                    <span><strong>1</strong> <T k="home.mobile.mock.queued" /></span>
+                    <span className="ok"><strong>1</strong> <T k="home.mobile.mock.resolved" /></span>
                   </div>
                   <div className="mobile-dashboard-route">
-                    <span>Sites connectés</span>
+                    <span><T k="home.mobile.mock.connectedSites" /></span>
                     <strong>3/3</strong>
-                    <em>GitHub prêt · GitLab configuré</em>
+                    <em><T k="home.mobile.mock.gitReady" /></em>
                   </div>
                 </div>
               </div>
@@ -482,7 +484,9 @@ function SignupAccessCard({ compact = false, isSignedIn = false }: { compact?: b
         )}
       </div>
       {!compact ? (
-        <ul className="waitlist-points" aria-label="Détails de l'accès ChangeThis">
+        <>
+        <span className="sr-only" id="signup-access-details-label"><T k="home.aria.accessDetails" /></span>
+        <ul className="waitlist-points" aria-labelledby="signup-access-details-label">
           {waitlistPoints.map(({ key, Icon }) => (
             <li key={key}>
               <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
@@ -490,6 +494,7 @@ function SignupAccessCard({ compact = false, isSignedIn = false }: { compact?: b
             </li>
           ))}
         </ul>
+        </>
       ) : null}
     </div>
   );
@@ -526,7 +531,9 @@ function WaitlistForm({ action, compact = false, waitlistStatus }: WaitlistFormP
         </p>
       ) : null}
       {!compact ? (
-        <ul className="waitlist-points" aria-label="Détails de la bêta ChangeThis">
+        <>
+        <span className="sr-only" id="waitlist-beta-details-label"><T k="home.aria.betaDetails" /></span>
+        <ul className="waitlist-points" aria-labelledby="waitlist-beta-details-label">
           {waitlistPoints.map(({ key, Icon }) => (
             <li key={key}>
               <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
@@ -534,6 +541,7 @@ function WaitlistForm({ action, compact = false, waitlistStatus }: WaitlistFormP
             </li>
           ))}
         </ul>
+        </>
       ) : null}
     </form>
   );

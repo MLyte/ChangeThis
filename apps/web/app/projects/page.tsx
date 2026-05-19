@@ -182,17 +182,18 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
                 {filteredFeedbacks.length === 0 ? (
                   <div className="empty-state compact-empty-state">
-                    <h2>{hasActiveFilters ? "Aucun retour pour cette vue" : <T k="projects.empty.title" />}</h2>
-                    <p>{hasActiveFilters ? "Ajustez les filtres, passez en Historique, ou revenez à la File active." : <T k="projects.empty.copy" />}</p>
+                    <h2>{hasActiveFilters ? <T k="projects.empty.filtered.title" /> : <T k="projects.empty.title" />}</h2>
+                    <p>{hasActiveFilters ? <T k="projects.empty.filtered.copy" /> : <T k="projects.empty.copy" />}</p>
                     {hasActiveFilters ? (
-                      <Link className="button secondary-button" href="/projects">Réinitialiser les filtres</Link>
+                      <Link className="button secondary-button" href="/projects"><T k="projects.empty.filtered.reset" /></Link>
                     ) : (
                       <Link className="button" href="/demo"><T k="projects.inbox.test" /></Link>
                     )}
                   </div>
                 ) : (
                   <BulkIssueForm showTableHead>
-                    <div className="feedback-list" role="list" aria-label="Retours à traiter">
+                    <span className="sr-only" id="feedback-list-label"><T k="projects.list.aria" /></span>
+                    <div className="feedback-list" role="list" aria-labelledby="feedback-list-label">
                       {filteredFeedbacks.map((feedback) => <FeedbackCard feedback={feedback} key={feedback.id} />)}
                     </div>
                   </BulkIssueForm>
@@ -238,7 +239,8 @@ function ProjectRouteNavigation({
   resolvedCount: number;
 }) {
   return (
-    <aside className="project-route-panel" aria-label="Navigation par site connecté">
+    <aside className="project-route-panel" aria-labelledby="project-route-panel-label">
+      <span className="sr-only" id="project-route-panel-label"><T k="projects.sites.aria" /></span>
       <section className="side-panel-section project-route-nav">
         <div className="side-panel-heading">
           <p className="eyebrow">Routage</p>
@@ -256,10 +258,11 @@ function ProjectRouteNavigation({
           <ProviderCount provider="github" count={githubProjects} />
           <ProviderCount provider="gitlab" count={gitlabProjects} />
         </div>
-        <nav className="site-route-list" aria-label="Filtrer les feedbacks par site">
+        <span className="sr-only" id="site-route-list-label"><T k="projects.sites.filterAria" /></span>
+        <nav className="site-route-list" aria-labelledby="site-route-list-label">
           <Link className={`site-route-row${filters.site === "all" ? " active" : ""}`} href={dashboardSiteHref(filters, "all")}>
             <div>
-              <strong>Tous les sites</strong>
+              <strong><T k="projects.sites.all" /></strong>
               <span>Feedbacks tous projets</span>
             </div>
             <span className="site-route-count">{totalFeedbacks}</span>
@@ -314,7 +317,8 @@ function StatusSummary({
         <p className="eyebrow">Synthèse</p>
         <h2 id="status-side-title">File actuelle</h2>
       </div>
-      <div className="side-status-stack" aria-label="Synthèse opérationnelle">
+      <span className="sr-only" id="side-status-stack-label"><T k="projects.summary.aria" /></span>
+      <div className="side-status-stack" aria-labelledby="side-status-stack-label">
         <StatusMetric
           active={filters.status === "priority"}
           href={dashboardStatusHref(filters, "priority")}
@@ -368,7 +372,8 @@ function ProjectsOnboardingEmptyState({ steps }: { steps: OnboardingChecklistSte
         <h2>Préparez la file avant les retours clients</h2>
         <p>Connectez Git, créez un site autorisé, installez le script puis envoyez un feedback test depuis ce site pour vérifier le circuit complet.</p>
       </div>
-      <div className="onboarding-steps projects-onboarding-steps" aria-label="Étapes pour activer la file de retours">
+      <span className="sr-only" id="projects-onboarding-steps-label"><T k="projects.onboarding.aria" /></span>
+      <div className="onboarding-steps projects-onboarding-steps" aria-labelledby="projects-onboarding-steps-label">
         {steps.map((step) => <OnboardingStep key={step.index} {...step} />)}
       </div>
       <div className="empty-state-actions">
@@ -440,15 +445,16 @@ function DashboardViewTabs({
   totalCount: number;
 }) {
   return (
-    <nav className="dashboard-view-tabs" aria-label="Vue des retours">
+    <nav className="dashboard-view-tabs" aria-labelledby="dashboard-view-tabs-label">
+      <span className="sr-only" id="dashboard-view-tabs-label"><T k="projects.tabs.aria" /></span>
       <Link className={`view-tab${status === "active" ? " active" : ""}`} href="/projects">
-        File active <span>{activeCount}</span>
+        <T k="projects.tabs.active" /> <span>{activeCount}</span>
       </Link>
       <Link className={`view-tab${status === "history" ? " active" : ""}`} href="/projects?status=history">
-        Historique <span>{historyCount}</span>
+        <T k="projects.tabs.history" /> <span>{historyCount}</span>
       </Link>
       <Link className={`view-tab${status === "all" ? " active" : ""}`} href="/projects?status=all">
-        Tous <span>{totalCount}</span>
+        <T k="projects.tabs.all" /> <span>{totalCount}</span>
       </Link>
     </nav>
   );
@@ -489,27 +495,27 @@ function DashboardFilterBar({
       </div>
 
       <div className="filter-field">
-        <label htmlFor="dashboard-filter-status">Statut</label>
+        <label htmlFor="dashboard-filter-status"><T k="projects.filters.status" /></label>
         <select defaultValue={filters.status} id="dashboard-filter-status" name="status">
-          <option value="active">File active ({activeCount})</option>
-          <option value="history">Historique ({historyCount})</option>
-          <option value="all">Tous ({totalCount})</option>
-          <option value="priority">Action requise ({priorityCount})</option>
-          <option value="raw">Nouveaux ({statusCounts.raw})</option>
-          <option value="issue_creation_pending">En file ({statusCounts.issue_creation_pending})</option>
-          <option value="retrying">À réenvoyer ({statusCounts.retrying})</option>
-          <option value="failed">Échecs ({statusCounts.failed})</option>
-          <option value="sent_to_provider">Issues créées ({statusCounts.sent_to_provider})</option>
-          <option value="resolved">Résolus ({statusCounts.resolved})</option>
-          <option value="kept">Conservés ({statusCounts.kept})</option>
-          <option value="ignored">Ignorés ({statusCounts.ignored})</option>
+          <option value="active"><T k="projects.tabs.active" /> ({activeCount})</option>
+          <option value="history"><T k="projects.tabs.history" /> ({historyCount})</option>
+          <option value="all"><T k="projects.tabs.all" /> ({totalCount})</option>
+          <option value="priority"><T k="projects.filters.priority" /> ({priorityCount})</option>
+          <option value="raw"><T k="projects.filters.new" /> ({statusCounts.raw})</option>
+          <option value="issue_creation_pending"><T k="projects.filters.queued" /> ({statusCounts.issue_creation_pending})</option>
+          <option value="retrying"><T k="projects.filters.toRetry" /> ({statusCounts.retrying})</option>
+          <option value="failed"><T k="projects.filters.failed" /> ({statusCounts.failed})</option>
+          <option value="sent_to_provider"><T k="projects.filters.created" /> ({statusCounts.sent_to_provider})</option>
+          <option value="resolved"><T k="projects.filters.resolved" /> ({statusCounts.resolved})</option>
+          <option value="kept"><T k="projects.filters.kept" /> ({statusCounts.kept})</option>
+          <option value="ignored"><T k="projects.filters.ignored" /> ({statusCounts.ignored})</option>
         </select>
       </div>
 
       <div className="filter-field">
-        <label htmlFor="dashboard-filter-site">Site</label>
+        <label htmlFor="dashboard-filter-site"><T k="projects.filters.site" /></label>
         <select defaultValue={filters.site} id="dashboard-filter-site" name="site">
-          <option value="all">Tous les sites</option>
+          <option value="all"><T k="projects.sites.all" /></option>
           {projects.map((project) => (
             <option key={project.publicKey} value={project.publicKey}>{isDemoProject(project) ? workspaceDemoProjectName : project.name}</option>
           ))}
@@ -517,9 +523,9 @@ function DashboardFilterBar({
       </div>
 
       <div className="filter-field">
-        <label htmlFor="dashboard-filter-type">Type</label>
+        <label htmlFor="dashboard-filter-type"><T k="projects.filters.type" /></label>
         <select defaultValue={filters.type} id="dashboard-filter-type" name="type">
-          <option value="all">Tous</option>
+          <option value="all"><T k="projects.filters.all" /></option>
           <option value="comment">Note</option>
           <option value="pin">Pin</option>
           <option value="screenshot">Capture</option>
@@ -527,9 +533,9 @@ function DashboardFilterBar({
       </div>
 
       <div className="filter-field">
-        <label htmlFor="dashboard-filter-provider">Git</label>
+        <label htmlFor="dashboard-filter-provider"><T k="projects.filters.git" /></label>
         <select defaultValue={filters.provider} id="dashboard-filter-provider" name="provider">
-          <option value="all">Tous</option>
+          <option value="all"><T k="projects.filters.all" /></option>
           <option value="github">GitHub</option>
           <option value="gitlab">GitLab</option>
         </select>
@@ -681,7 +687,11 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const cardTitle = formatFeedbackCardTitle(feedback, demoFeedback ? workspaceDemoProjectName : feedback.projectName);
   const canBulkCreateIssue = feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
-  const issueLabel = feedback.externalIssue?.url ? "Créée" : feedback.status === "issue_creation_pending" ? "En cours" : "Non créée";
+  const issueLabelKey = feedback.externalIssue?.url
+    ? "projects.feedback.issue.created"
+    : feedback.status === "issue_creation_pending"
+      ? "projects.feedback.issue.inProgress"
+      : "projects.feedback.issue.notCreated";
   const errorSeverity = feedback.status === "failed" ? "danger" : "warning";
 
   return (
@@ -717,18 +727,18 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
           </div>
         ) : null}
         <div className="feedback-meta">
-          {displayMessage.reporter ? <span>Envoyé par {displayMessage.reporter}</span> : null}
-          <span>Le {formatDate(feedback.createdAt)}</span>
+          {displayMessage.reporter ? <span><T k="projects.feedback.sentBy" /> {displayMessage.reporter}</span> : null}
+          <span><T k="projects.feedback.createdAtPrefix" /> {formatDate(feedback.createdAt)}</span>
         </div>
         <details className="feedback-disclosure" open={feedback.status === "failed" || feedback.status === "retrying"}>
-          <summary>Brouillon, destination et contexte</summary>
+          <summary><T k="projects.feedback.details" /></summary>
           <div className="feedback-disclosure-grid">
             <div className="issue-draft compact-issue-draft">
               <div>
                 <p className="eyebrow"><T k="projects.feedback.draft" /></p>
                 <strong>{demoFeedback ? workspaceDemoProjectName : `${feedback.issueTarget.namespace}/${feedback.issueTarget.project}`}</strong>
               </div>
-              <span>{demoFeedback ? "Feedback de démonstration" : draftLabels}</span>
+              <span>{demoFeedback ? <T k="projects.feedback.demo" /> : draftLabels}</span>
               {feedback.payload.pins?.length ? (
                 <span>{feedback.payload.pins.length} pin{feedback.payload.pins.length > 1 ? "s" : ""}</span>
               ) : feedback.payload.pin ? (
@@ -788,7 +798,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
       <div className="feedback-issue-cell">
         <div className="feedback-issue-destination">
           {demoFeedback ? <DemoBadge /> : <ProviderBadge provider={feedback.issueTarget.provider} />}
-          <span>{demoFeedback ? "Demo" : issueLabel}</span>
+          <span>{demoFeedback ? "Demo" : <T k={issueLabelKey} />}</span>
         </div>
       </div>
       <div className="feedback-received-cell">
