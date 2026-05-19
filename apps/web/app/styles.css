@@ -397,7 +397,10 @@ textarea,
 
 .button {
   background: var(--accent);
+  border: 1px solid transparent;
+  box-shadow: none;
   color: white;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
 .button:hover {
@@ -406,6 +409,13 @@ textarea,
 
 .button:active {
   background: var(--primary-active);
+  box-shadow: none;
+}
+
+.button:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--primary-border);
+  outline-offset: 2px;
 }
 
 .secondary-button {
@@ -5740,7 +5750,13 @@ dd {
 
 .danger-button:active {
   background: #ef9a9a;
+  box-shadow: none;
   color: #751a1a;
+}
+
+.danger-button:focus-visible {
+  box-shadow: none;
+  outline-color: #ef9a9a;
 }
 
 .settings-modal {
