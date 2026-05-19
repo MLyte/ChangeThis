@@ -713,12 +713,16 @@ h3 {
 }
 
 .hero-statement {
-  color: var(--accent);
+  color: var(--ink);
   font-size: clamp(25px, 3vw, 38px);
   font-weight: 650;
   line-height: 1.12;
   margin-bottom: 18px;
   max-width: 720px;
+}
+
+.hero-statement-emphasis {
+  color: var(--primary);
 }
 
 .hero-product-promise {
@@ -747,11 +751,11 @@ h3 {
 }
 
 .hero-provider.github {
-  color: var(--github);
+  color: inherit;
 }
 
 .hero-provider.gitlab {
-  color: var(--gitlab);
+  color: inherit;
 }
 
 .lede {
@@ -781,6 +785,10 @@ h3 {
   font-weight: 850;
   min-height: 30px;
   padding: 6px 10px;
+}
+
+.home-hero-proof-row .tech-word {
+  margin-inline: 0.18em;
 }
 
 .app-home .lede strong,

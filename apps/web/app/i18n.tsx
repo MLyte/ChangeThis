@@ -1118,9 +1118,9 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
       case "home.hero.lede":
         return <>Install a feedback <span className="tech-word">widget</span> on a real site, centralize returns in your team workspace, then send only useful topics to <span className="tech-word">Git</span>.</>;
       case "home.hero.proof.git":
-        return <><span className="tech-word">GitHub</span> or <span className="tech-word">GitLab</span></>;
+        return <><span className="tech-word">GitHub</span>{" "}or{" "}<span className="tech-word">GitLab</span></>;
       case "home.hero.proof.browser":
-        return <>No <span className="tech-word">Git</span> token in the browser</>;
+        return <>No token{" "}<span className="tech-word">Git</span>{" "}in the browser</>;
       case "home.waitlist.point.2":
         return <>Install the <span className="tech-word">script</span>.</>;
       case "home.waitlist.point.4":
@@ -1190,9 +1190,9 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
     case "home.hero.lede":
       return <>Installez un <span className="tech-word">widget</span> de feedback sur un vrai site, centralisez les feedbacks dans votre espace équipe, puis envoyez seulement les sujets utiles vers <span className="tech-word">Git</span>.</>;
     case "home.hero.proof.git":
-      return <><span className="tech-word">GitHub</span> ou <span className="tech-word">GitLab</span></>;
+      return <><span className="tech-word">GitHub</span>{" "}ou{" "}<span className="tech-word">GitLab</span></>;
     case "home.hero.proof.browser":
-      return <>Aucun token <span className="tech-word">Git</span> côté navigateur</>;
+      return <>Aucun token{" "}<span className="tech-word">Git</span>{" "}côté navigateur</>;
     case "home.waitlist.point.2":
       return <>Installer le <span className="tech-word">script</span>.</>;
     case "home.waitlist.point.4":

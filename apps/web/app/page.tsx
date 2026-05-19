@@ -560,7 +560,7 @@ function HeroStatement() {
         <ProviderIcon provider="gitlab" className="hero-provider-icon" />
         <span>GitLab</span>
       </span>
-      <T k="home.hero.statement.suffix" />
+      <span className="hero-statement-emphasis"><T k="home.hero.statement.suffix" /></span>
     </p>
   );
 }
