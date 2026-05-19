@@ -708,14 +708,14 @@ export function initChangeThis(options: WidgetOptions): void {
           color: #6b7280;
           font-size: 12px;
           line-height: 1.4;
-          margin: 8px 0 0;
+          margin: 4px 0 0;
         }
         .shortcut-hint {
           color: #6b7280;
           font-size: 11px;
           font-weight: 750;
           line-height: 1.3;
-          margin: 5px 0 0;
+          margin: 4px 0 0;
         }
         .selection-summary {
           border: 1px solid #e5e7eb;
@@ -1146,7 +1146,11 @@ export function initChangeThis(options: WidgetOptions): void {
             font-size: 10px;
             margin-top: 2px;
           }
-          .meta,
+          .meta {
+            font-size: 11px;
+            margin-top: 3px;
+            padding: 0;
+          }
           .selection-summary {
             font-size: 11px;
             margin-top: 6px;
