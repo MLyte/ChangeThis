@@ -138,6 +138,10 @@ function isSupportedEmailOtpType(value: string): boolean {
   ].includes(value);
 }
 
+function normalizeEmailOtpType(value: string): string {
+  return value === "signup" ? "email" : value;
+}
+
 export function isSupabaseAuthConfigured(): boolean {
   return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
 }
@@ -262,7 +266,7 @@ export async function verifySupabaseOtpTokenHash(input: {
     },
     body: JSON.stringify({
       token_hash: input.tokenHash,
-      type: input.type
+      type: normalizeEmailOtpType(input.type)
     }),
     cache: "no-store"
   });

@@ -90,7 +90,7 @@ test("auth callback POST exchanges a Supabase token hash for session cookies", a
   assert.equal(requestHeaders?.get("authorization"), "Bearer anon-test-key");
   assert.deepEqual(requestBody, {
     token_hash: "signup-token-hash",
-    type: "signup"
+    type: "email"
   });
 
   const setCookie = response.headers.get("set-cookie") ?? "";

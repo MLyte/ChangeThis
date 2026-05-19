@@ -16,6 +16,7 @@ Dans Supabase Dashboard:
 3. Authentication > Email Templates
    - Modifier le template `Confirm signup`.
    - Pour eviter qu'Outlook/SafeLinks consomme le lien Supabase direct, faire pointer le bouton vers ChangeThis avec `{{ .TokenHash }}`.
+   - Pour le template `Confirm signup`, utiliser `type=email`, comme dans la documentation Supabase `verifyOtp`.
    - Si le template `Magic Link` est utilise plus tard, reprendre le meme principe avec `type=magiclink`.
 4. Authentication > SMTP Settings
    - Utiliser le SMTP choisi pour l'envoi réel.
@@ -42,12 +43,12 @@ Finalisez votre accès ChangeThis
       <p style="margin:0 0 24px;color:#52525b;font-size:14px;line-height:1.5;">
         Ce lien est personnel. Si vous n'avez pas demandé cet accès, vous pouvez ignorer cet e-mail.
       </p>
-      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/signup/set-password" style="display:inline-block;background:#3f51b5;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 16px;font-size:14px;font-weight:800;">
+      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/signup/set-password" style="display:inline-block;background:#3f51b5;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 16px;font-size:14px;font-weight:800;">
         Choisir mon mot de passe
       </a>
       <p style="margin:24px 0 0;color:#71717a;font-size:12px;line-height:1.5;">
         Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur:<br>
-        <span style="word-break:break-all;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/signup/set-password</span>
+        <span style="word-break:break-all;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/signup/set-password</span>
       </p>
     </div>
   </div>
