@@ -751,11 +751,11 @@ h3 {
 }
 
 .hero-provider.github {
-  color: inherit;
+  color: var(--github);
 }
 
 .hero-provider.gitlab {
-  color: inherit;
+  color: var(--gitlab);
 }
 
 .lede {
