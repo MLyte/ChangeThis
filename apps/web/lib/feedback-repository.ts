@@ -588,7 +588,7 @@ export class SupabaseFeedbackRepository implements FeedbackRepository {
       params.set("project_id", inFilter(projects.map((project) => project.id)));
     }
 
-    const rows = await supabaseServiceRest<SupabaseFeedbackRow[]>(`/rest/v1/feedbacks?${params.toString()}`);
+    const rows = await fetchSupabaseFeedbackRows(params);
     return hydrateSupabaseFeedbacks(rows, projects);
   }
 
@@ -847,7 +847,7 @@ export class SupabaseFeedbackRepository implements FeedbackRepository {
       id: inFilter(validIds),
       select: supabaseFeedbackSelect()
     });
-    const rows = await supabaseServiceRest<SupabaseFeedbackRow[]>(`/rest/v1/feedbacks?${params.toString()}`);
+    const rows = await fetchSupabaseFeedbackRows(params);
     const projectIds = unique(rows.map((row) => row.project_id).filter(isUuid));
     const projects = await listSupabaseProjectsByIds(projectIds, filters.workspaceId);
     return hydrateSupabaseFeedbacks(rows, projects);
@@ -1436,7 +1436,21 @@ function supabaseIssueTargetSelect(): string {
   return "id,project_id,integration_id,provider,namespace,project_name,external_project_id,web_url";
 }
 
-function supabaseFeedbackSelect(): string {
+async function fetchSupabaseFeedbackRows(params: URLSearchParams): Promise<SupabaseFeedbackRow[]> {
+  try {
+    return await supabaseServiceRest<SupabaseFeedbackRow[]>(`/rest/v1/feedbacks?${params.toString()}`);
+  } catch (error) {
+    if (!params.get("select")?.includes("screenshot_thumbnail_data_url")) {
+      throw error;
+    }
+
+    const fallbackParams = new URLSearchParams(params);
+    fallbackParams.set("select", supabaseFeedbackSelect(false));
+    return supabaseServiceRest<SupabaseFeedbackRow[]>(`/rest/v1/feedbacks?${fallbackParams.toString()}`);
+  }
+}
+
+function supabaseFeedbackSelect(includeScreenshotLifecycle = true): string {
   return [
     "id",
     "project_id",
@@ -1460,20 +1474,20 @@ function supabaseFeedbackSelect(): string {
     "issue_draft_description",
     "issue_draft_labels",
     "screenshot_data_url",
-    "screenshot_thumbnail_data_url",
     "screenshot_mime_type",
     "screenshot_bytes",
-    "screenshot_original_bytes",
-    "screenshot_hash",
-    "screenshot_status",
-    "screenshot_storage_path",
-    "screenshot_last_used_at",
-    "screenshot_usage_count",
-    "screenshot_archived_at",
-    "screenshot_deleted_at",
+    includeScreenshotLifecycle ? "screenshot_thumbnail_data_url" : undefined,
+    includeScreenshotLifecycle ? "screenshot_original_bytes" : undefined,
+    includeScreenshotLifecycle ? "screenshot_hash" : undefined,
+    includeScreenshotLifecycle ? "screenshot_status" : undefined,
+    includeScreenshotLifecycle ? "screenshot_storage_path" : undefined,
+    includeScreenshotLifecycle ? "screenshot_last_used_at" : undefined,
+    includeScreenshotLifecycle ? "screenshot_usage_count" : undefined,
+    includeScreenshotLifecycle ? "screenshot_archived_at" : undefined,
+    includeScreenshotLifecycle ? "screenshot_deleted_at" : undefined,
     "created_at",
     "updated_at"
-  ].join(",");
+  ].filter(Boolean).join(",");
 }
 
 function supabaseFeedbackEventSelect(): string {
