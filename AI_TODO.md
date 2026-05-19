@@ -341,6 +341,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Valider les clients pilotes et le périmètre du dry-run staging.
 
 ## Journal
+- [2026-05-19] Auth token_hash cote serveur: les liens `/auth/confirm?token_hash=...` basculent maintenant vers un GET `/api/auth/callback` qui echange le token, pose les cookies et redirige sans fetch client intermediaire. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] Correctif type Supabase token_hash: le template `Confirm signup` documente maintenant `type=email`, et le backend normalise les anciens liens `type=signup` vers `email` avant `verifyOtp`, conformément a la doc Supabase. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] UX signup lien envoye: quand `/signup?sent=1` est affiche, le formulaire e-mail et le bouton `Recevoir le lien securise` sont masques pour ne garder que la confirmation et le lien de connexion. Validation ciblee: typecheck web OK, tests web OK.
 - [2026-05-19] Correctif verification token_hash Supabase: l'echange serveur `/auth/v1/verify` envoie maintenant aussi `Authorization: Bearer <anon key>`, comme le client officiel GoTrue, avec test des headers de callback. Validation ciblee: tests web OK, typecheck web OK.

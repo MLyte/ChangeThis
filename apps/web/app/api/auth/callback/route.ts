@@ -14,7 +14,28 @@ export async function GET(request: Request) {
   const accessToken = url.searchParams.get("access_token");
   const refreshToken = url.searchParams.get("refresh_token");
   const expiresIn = parseInt(url.searchParams.get("expires_in") ?? "", 10);
+  const tokenHash = url.searchParams.get("token_hash");
+  const type = url.searchParams.get("type") ?? "";
   const nextPath = sanitizeNextPath(url.searchParams.get("next"));
+
+  if (tokenHash) {
+    const verifyResult = await verifySupabaseOtpTokenHash({
+      tokenHash,
+      type
+    });
+
+    if (!verifyResult.ok) {
+      return NextResponse.redirect(publicRedirectUrl(request, `/login?error=${encodeURIComponent(verifyResult.error)}&next=${encodeURIComponent(nextPath)}`));
+    }
+
+    return createAuthRedirectResponse(
+      request,
+      nextPath,
+      verifyResult.accessToken,
+      verifyResult.refreshToken ?? null,
+      verifyResult.expiresIn ?? Number.NaN
+    );
+  }
 
   if (!accessToken) {
     return NextResponse.redirect(publicRedirectUrl(request, `/login?error=missing_token&next=${encodeURIComponent(nextPath)}`));

@@ -98,6 +98,38 @@ test("auth callback POST exchanges a Supabase token hash for session cookies", a
   assert.match(setCookie, /supabase-refresh-token=verified-refresh-token/);
 });
 
+test("auth callback GET exchanges a Supabase token hash and redirects to the next path", async () => {
+  let requestUrl = "";
+  let requestBody: unknown;
+
+  globalThis.fetch = async (input, init) => {
+    requestUrl = String(input);
+    requestBody = JSON.parse(String(init?.body));
+
+    return Response.json({
+      access_token: "verified-access-token",
+      refresh_token: "verified-refresh-token",
+      expires_in: 3600
+    });
+  };
+
+  const response = await authCallbackRoute.GET(
+    new Request("https://localhost:8080/api/auth/callback?token_hash=signup-token-hash&type=magiclink&next=%2Fsignup%2Fset-password")
+  );
+
+  assert.equal(response.status, 307);
+  assert.equal(response.headers.get("location"), "https://app.changethis.dev/signup/set-password");
+  assert.equal(requestUrl, "https://supabase.example.test/auth/v1/verify");
+  assert.deepEqual(requestBody, {
+    token_hash: "signup-token-hash",
+    type: "magiclink"
+  });
+
+  const setCookie = response.headers.get("set-cookie") ?? "";
+  assert.match(setCookie, /changethis_access_token=verified-access-token/);
+  assert.match(setCookie, /supabase-refresh-token=verified-refresh-token/);
+});
+
 test("auth callback GET redirects with the configured public origin", async () => {
   const response = await authCallbackRoute.GET(
     new Request("https://localhost:8080/api/auth/callback?error=access_denied&next=%2Fsignup%2Fset-password")

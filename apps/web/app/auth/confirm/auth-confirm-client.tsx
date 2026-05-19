@@ -29,6 +29,15 @@ export function AuthConfirmClient() {
       return;
     }
 
+    if (tokenHash) {
+      const callbackUrl = new URL("/api/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("token_hash", tokenHash);
+      callbackUrl.searchParams.set("type", type ?? "email");
+      callbackUrl.searchParams.set("next", nextPath);
+      window.location.replace(callbackUrl.toString());
+      return;
+    }
+
     void fetch("/api/auth/callback", {
       method: "POST",
       headers: {
