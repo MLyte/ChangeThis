@@ -1,7 +1,7 @@
 # Template e-mail Supabase Auth
 
 ## Objectif
-Le signup ChangeThis demande uniquement l'e-mail. Supabase envoie ensuite un lien sécurisé qui vérifie l'adresse, pose la session via `/auth/confirm`, puis redirige vers `/signup/set-password` pour choisir le mot de passe.
+Le signup ChangeThis demande uniquement l'e-mail. Supabase envoie ensuite un code à usage unique que l'utilisateur recopie dans ChangeThis. Après vérification du code, ChangeThis pose la session puis redirige vers `/signup/set-password` pour choisir le mot de passe.
 
 ## Configuration Supabase
 Dans Supabase Dashboard:
@@ -14,9 +14,9 @@ Dans Supabase Dashboard:
 2. Authentication > Providers > Email
    - Activer `Confirm email`.
 3. Authentication > Email Templates
-   - Modifier le template `Confirm signup`.
-   - Pour eviter qu'Outlook/SafeLinks consomme le lien Supabase direct, faire pointer le bouton vers ChangeThis avec `{{ .ConfirmationURL | urlquery }}`.
-   - ChangeThis affiche ensuite un bouton humain avant de declencher l'URL officielle Supabase.
+   - Modifier le template `Magic Link`.
+   - Afficher le code `{{ .Token }}` dans l'e-mail.
+   - Ne pas utiliser `{{ .ConfirmationURL }}` pour ce flow: certaines protections mail comme SafeLinks peuvent ouvrir le lien avant l'utilisateur.
 4. Authentication > SMTP Settings
    - Utiliser le SMTP choisi pour l'envoi réel.
    - Pour OVH: renseigner l'hôte, le port, l'utilisateur et le mot de passe SMTP OVH du domaine.
@@ -24,7 +24,7 @@ Dans Supabase Dashboard:
 
 ## Sujet conseillé
 ```text
-Finalisez votre accès ChangeThis
+Votre code ChangeThis
 ```
 
 ## HTML conseillé
@@ -33,21 +33,20 @@ Finalisez votre accès ChangeThis
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d8d8dd;border-radius:12px;overflow:hidden;">
     <div style="padding:28px 30px 18px;border-bottom:1px solid #ececef;">
       <p style="margin:0 0 8px;color:#3f51b5;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">ChangeThis</p>
-      <h1 style="margin:0;color:#171717;font-size:24px;line-height:1.15;">Finalisez votre accès</h1>
+      <h1 style="margin:0;color:#171717;font-size:24px;line-height:1.15;">Votre code de vérification</h1>
     </div>
     <div style="padding:24px 30px 30px;">
       <p style="margin:0 0 16px;color:#3f3f46;font-size:15px;line-height:1.55;">
-        Confirmez cette adresse e-mail pour choisir votre mot de passe et ouvrir votre espace ChangeThis.
+        Copiez ce code dans ChangeThis pour vérifier votre adresse e-mail et choisir votre mot de passe.
       </p>
       <p style="margin:0 0 24px;color:#52525b;font-size:14px;line-height:1.5;">
-        Ce lien est personnel. Si vous n'avez pas demandé cet accès, vous pouvez ignorer cet e-mail.
+        Ce code est personnel. Si vous n'avez pas demandé cet accès, vous pouvez ignorer cet e-mail.
       </p>
-      <a href="{{ .SiteURL }}/auth/confirm?confirmation_url={{ .ConfirmationURL | urlquery }}" style="display:inline-block;background:#3f51b5;color:#ffffff;text-decoration:none;border-radius:8px;padding:12px 16px;font-size:14px;font-weight:800;">
-        Choisir mon mot de passe
-      </a>
-      <p style="margin:24px 0 0;color:#71717a;font-size:12px;line-height:1.5;">
-        Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur:<br>
-        <span style="word-break:break-all;">{{ .SiteURL }}/auth/confirm?confirmation_url={{ .ConfirmationURL | urlquery }}</span>
+      <p style="margin:0 0 24px;background:#f4f5ff;border:1px solid #d9ddff;border-radius:10px;color:#3f51b5;font-size:32px;font-weight:800;letter-spacing:.14em;line-height:1;text-align:center;padding:18px 16px;">
+        {{ .Token }}
+      </p>
+      <p style="margin:0;color:#71717a;font-size:12px;line-height:1.5;">
+        Le code expire rapidement. Retournez sur ChangeThis et collez-le dans le champ prévu.
       </p>
     </div>
   </div>

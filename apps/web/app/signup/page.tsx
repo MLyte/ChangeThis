@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, isPublicSignupEnabled } from "../../lib/auth";
-import { isSupabaseServiceConfigured, requestSignUpEmail } from "../../lib/supabase-server";
+import { setSupabaseSessionCookies } from "../../lib/auth-session-cookies";
+import { isSupabaseServiceConfigured, requestSignUpCode, verifySupabaseEmailCode } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
@@ -9,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 type SignUpPageProps = {
   searchParams?: Promise<{
+    email?: string;
     error?: string;
     sent?: string;
   }>;
@@ -47,6 +50,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const params = await searchParams;
   const hasError = Boolean(params?.error);
   const isSent = params?.sent === "1";
+  const sentEmail = params?.email ?? "";
   const isLocalMode = getAuthMode() === "local";
 
   async function signUpAction(formData: FormData) {
@@ -63,16 +67,41 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       redirect("/signup?error=workspace");
     }
 
-    const signUpResult = await requestSignUpEmail({
-      email,
-      redirectTo: `${publicAppUrl()}/auth/confirm?next=/signup/set-password`
-    });
+    const signUpResult = await requestSignUpCode({ email });
 
     if (!signUpResult.ok) {
       redirect(`/signup?error=${encodeURIComponent(signUpResult.error)}`);
     }
 
-    redirect("/signup?sent=1");
+    redirect(`/signup?sent=1&email=${encodeURIComponent(email)}`);
+  }
+
+  async function verifyCodeAction(formData: FormData) {
+    "use server";
+
+    const authMode = getAuthMode();
+    const email = formData.get("email")?.toString().trim() ?? "";
+    const token = formData.get("token")?.toString().replace(/\s+/g, "") ?? "";
+
+    if (authMode === "local") {
+      redirect("/settings/connected-sites");
+    }
+
+    const verifyResult = await verifySupabaseEmailCode({ email, token });
+
+    if (!verifyResult.ok) {
+      redirect(`/signup?sent=1&email=${encodeURIComponent(email)}&error=${encodeURIComponent(verifyResult.error)}`);
+    }
+
+    const cookieStore = await cookies();
+    setSupabaseSessionCookies({
+      cookieStore,
+      accessToken: verifyResult.accessToken,
+      refreshToken: verifyResult.refreshToken,
+      expiresIn: verifyResult.expiresIn
+    });
+
+    redirect("/signup/set-password");
   }
 
   return (
@@ -112,7 +141,26 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             </div>
           ) : null}
 
-          {!isSent ? (
+          {isSent ? (
+            <form action={verifyCodeAction} className="auth-form">
+              <input name="email" type="hidden" value={sentEmail} />
+              <label>
+                <T k="signup.code" />
+                <input
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  name="token"
+                  pattern="[0-9 ]+"
+                  required
+                  type="text"
+                />
+              </label>
+              <p className="microcopy"><T k="signup.codeHint" /></p>
+              <button className="button" type="submit">
+                <T k="signup.verifyCode" />
+              </button>
+            </form>
+          ) : (
             <form action={signUpAction} className="auth-form">
               <label>
                 <T k="login.email" />
@@ -123,7 +171,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                 <T k={isLocalMode ? "signup.localSubmit" : "signup.submit"} />
               </button>
             </form>
-          ) : null}
+          )}
 
           <p className="microcopy">
             <T k="signup.loginHint" /> <a className="inline-link" href="/login"><T k="nav.login" /></a>
@@ -133,8 +181,4 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       <AppFooter />
     </main>
   );
-}
-
-function publicAppUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }

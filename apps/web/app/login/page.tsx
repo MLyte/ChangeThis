@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, getCurrentSession, isPublicSignupEnabled } from "../../lib/auth";
+import { setSupabaseSessionCookies } from "../../lib/auth-session-cookies";
 import { signInWithPassword } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
@@ -53,24 +54,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     }
 
     const cookieStore = await cookies();
-    const cookieConfig = {
-      httpOnly: true,
-      path: "/",
-      sameSite: "lax" as const,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: signInResult.expiresIn && Number.isFinite(signInResult.expiresIn) && signInResult.expiresIn > 0
-        ? Math.floor(signInResult.expiresIn)
-        : 60 * 60
-    };
-
-    cookieStore.set("changethis_access_token", signInResult.accessToken, cookieConfig);
-    cookieStore.set("supabase-auth-token", signInResult.accessToken, cookieConfig);
-    if (signInResult.refreshToken) {
-      cookieStore.set("supabase-refresh-token", signInResult.refreshToken, {
-        ...cookieConfig,
-        maxAge: 60 * 60 * 24 * 30
-      });
-    }
+    setSupabaseSessionCookies({
+      cookieStore,
+      accessToken: signInResult.accessToken,
+      refreshToken: signInResult.refreshToken,
+      expiresIn: signInResult.expiresIn
+    });
     redirect(targetPath);
   }
 

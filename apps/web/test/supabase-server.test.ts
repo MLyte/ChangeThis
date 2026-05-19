@@ -72,3 +72,65 @@ test("signup emails pass the requested auth redirect URL to Supabase", async () 
     password: (requestBody as { password: string }).password
   });
 });
+
+test("signup codes request a Supabase email OTP without a link redirect", async () => {
+  let requestUrl = "";
+  let requestBody: unknown;
+
+  globalThis.fetch = async (input, init) => {
+    requestUrl = String(input);
+    requestBody = JSON.parse(String(init?.body));
+
+    return new Response(null, { status: 200 });
+  };
+
+  const result = await supabaseModule.requestSignUpCode({
+    email: "mathieu@example.test"
+  });
+
+  assert.deepEqual(result, { ok: true });
+  const sentUrl = new URL(requestUrl);
+  assert.equal(sentUrl.pathname, "/auth/v1/otp");
+  assert.deepEqual(requestBody, {
+    email: "mathieu@example.test",
+    create_user: true
+  });
+});
+
+test("email codes are verified with email and token", async () => {
+  let requestUrl = "";
+  let requestHeaders: Headers | undefined;
+  let requestBody: unknown;
+
+  globalThis.fetch = async (input, init) => {
+    requestUrl = String(input);
+    requestHeaders = new Headers(init?.headers);
+    requestBody = JSON.parse(String(init?.body));
+
+    return Response.json({
+      access_token: "verified-access-token",
+      refresh_token: "verified-refresh-token",
+      expires_in: 3600
+    });
+  };
+
+  const result = await supabaseModule.verifySupabaseEmailCode({
+    email: "mathieu@example.test",
+    token: "123456"
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    accessToken: "verified-access-token",
+    refreshToken: "verified-refresh-token",
+    expiresIn: 3600
+  });
+  assert.equal(requestUrl, "https://supabase.example.test/auth/v1/verify");
+  assert.equal(requestHeaders?.get("apikey"), "anon-test-key");
+  assert.equal(requestHeaders?.get("authorization"), "Bearer anon-test-key");
+  assert.deepEqual(requestBody, {
+    email: "mathieu@example.test",
+    token: "123456",
+    type: "email"
+  });
+});

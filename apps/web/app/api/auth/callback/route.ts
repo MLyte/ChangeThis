@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { setSupabaseSessionCookies } from "../../../../lib/auth-session-cookies";
 import { verifySupabaseOtpTokenHash } from "../../../../lib/supabase-server";
 
 export async function GET(request: Request) {
@@ -114,27 +115,12 @@ function publicRedirectUrl(request: Request, path: string): URL {
 }
 
 function setAuthCookies(response: NextResponse, accessToken: string, refreshToken: string | null, expiresIn: number) {
-  const maxAge = Number.isFinite(expiresIn) && expiresIn > 0
-    ? expiresIn
-    : 60 * 60;
-
-  const cookieConfig = {
-    httpOnly: true,
-    path: "/",
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    maxAge
-  };
-
-  response.cookies.set("changethis_access_token", accessToken, cookieConfig);
-  response.cookies.set("supabase-auth-token", accessToken, cookieConfig);
-
-  if (refreshToken) {
-    response.cookies.set("supabase-refresh-token", refreshToken, {
-      ...cookieConfig,
-      maxAge: 60 * 60 * 24 * 30
-    });
-  }
+  setSupabaseSessionCookies({
+    cookieStore: response.cookies,
+    accessToken,
+    refreshToken,
+    expiresIn
+  });
 }
 
 function sanitizeNextPath(value: string | null): string {

@@ -294,6 +294,60 @@ export async function verifySupabaseOtpTokenHash(input: {
   };
 }
 
+export async function verifySupabaseEmailCode(input: {
+  email: string;
+  token: string;
+}): Promise<SupabaseOtpVerifyResult> {
+  if (!getSupabaseUrl() || !getSupabaseAnonKey()) {
+    return {
+      ok: false,
+      error: "unavailable"
+    };
+  }
+
+  if (!input.email || !input.token) {
+    return {
+      ok: false,
+      error: "missing"
+    };
+  }
+
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/verify`, {
+    method: "POST",
+    headers: {
+      apikey: getSupabaseAnonKey()!,
+      Authorization: `Bearer ${getSupabaseAnonKey()!}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email: input.email,
+      token: input.token,
+      type: "email"
+    }),
+    cache: "no-store"
+  });
+
+  const body = await response.json() as SupabaseAuthTokenResponse;
+
+  if (!response.ok || typeof body.access_token !== "string") {
+    return {
+      ok: false,
+      error: "invalid"
+    };
+  }
+
+  const expiresIn = typeof body.expires_in === "number" && Number.isFinite(body.expires_in)
+    ? body.expires_in
+    : undefined;
+
+  return {
+    ok: true,
+    accessToken: body.access_token,
+    refreshToken: typeof body.refresh_token === "string" ? body.refresh_token : undefined,
+    expiresIn
+  };
+}
+
 export async function signUpWithPassword(input: {
   email: string;
   password: string;
@@ -380,6 +434,48 @@ export async function requestSignUpEmail(input: {
     body: JSON.stringify({
       email: input.email,
       password: randomTemporaryPassword()
+    }),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: "invalid"
+    };
+  }
+
+  return {
+    ok: true
+  };
+}
+
+export async function requestSignUpCode(input: {
+  email: string;
+}): Promise<SupabaseEmailSignUpResult> {
+  if (!getSupabaseUrl() || !getSupabaseAnonKey()) {
+    return {
+      ok: false,
+      error: "unavailable"
+    };
+  }
+
+  if (!input.email) {
+    return {
+      ok: false,
+      error: "missing"
+    };
+  }
+
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/otp`, {
+    method: "POST",
+    headers: {
+      apikey: getSupabaseAnonKey()!,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email: input.email,
+      create_user: true
     }),
     cache: "no-store"
   });
