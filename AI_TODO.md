@@ -121,8 +121,8 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter la désactivation temporaire d'un site sans supprimer son historique.
 - [ ] Ajouter la suppression d'un site avec confirmation et impact affiché.
 - [x] Ajouter la gestion des connexions Git par workspace et non seulement par environnement serveur.
-- [ ] Ajouter l'état d'expiration ou d'erreur des tokens GitHub/GitLab.
-- [ ] Ajouter un test de connexion provider depuis la carte GitHub/GitLab.
+- [x] Ajouter l'état d'expiration ou d'erreur des tokens GitHub/GitLab.
+- [x] Ajouter un test de connexion provider depuis la carte GitHub/GitLab.
 - [x] Ajouter le choix du dépôt cible depuis la liste provider.
 - [ ] Ajouter la recherche serveur des dépôts providers dans la modale site connecté.
 - [ ] Ajouter la configuration des labels d'issue par site.
