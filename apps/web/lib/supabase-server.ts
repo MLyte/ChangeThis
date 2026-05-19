@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 type SupabaseUser = {
   id: string;
   email?: string;
@@ -366,10 +368,10 @@ export async function requestSignUpEmail(input: {
     };
   }
 
-  const otpUrl = new URL("/auth/v1/otp", getSupabaseUrl());
-  otpUrl.searchParams.set("redirect_to", input.redirectTo);
+  const signupUrl = new URL("/auth/v1/signup", getSupabaseUrl());
+  signupUrl.searchParams.set("redirect_to", input.redirectTo);
 
-  const response = await fetch(otpUrl, {
+  const response = await fetch(signupUrl, {
     method: "POST",
     headers: {
       apikey: getSupabaseAnonKey()!,
@@ -377,7 +379,7 @@ export async function requestSignUpEmail(input: {
     },
     body: JSON.stringify({
       email: input.email,
-      create_user: true
+      password: randomTemporaryPassword()
     }),
     cache: "no-store"
   });
@@ -392,6 +394,10 @@ export async function requestSignUpEmail(input: {
   return {
     ok: true
   };
+}
+
+function randomTemporaryPassword(): string {
+  return `${randomBytes(32).toString("base64url")}Aa1!`;
 }
 
 export async function updateSupabasePassword(input: {

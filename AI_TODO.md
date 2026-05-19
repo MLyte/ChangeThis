@@ -341,6 +341,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Valider les clients pilotes et le périmètre du dry-run staging.
 
 ## Journal
+- [2026-05-19] Signup Supabase standardise: `requestSignUpEmail` utilise maintenant `/auth/v1/signup` avec mot de passe temporaire aleatoire et `redirect_to`, au lieu de `/auth/v1/otp`, afin de generer un vrai jeton `Confirm signup` compatible `TokenHash`. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] Correctif type Magic Link token_hash: le backend normalise aussi `magiclink` vers `email` avant l'appel Supabase `verifyOtp`, et la doc indique d'utiliser `type=email` pour le template Magic Link avec `{{ .TokenHash }}`. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] Auth token_hash cote serveur: les liens `/auth/confirm?token_hash=...` basculent maintenant vers un GET `/api/auth/callback` qui echange le token, pose les cookies et redirige sans fetch client intermediaire. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] Correctif type Supabase token_hash: le template `Confirm signup` documente maintenant `type=email`, et le backend normalise les anciens liens `type=signup` vers `email` avant `verifyOtp`, conformément a la doc Supabase. Validation ciblee: tests web OK, typecheck web OK.

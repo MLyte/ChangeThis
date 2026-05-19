@@ -63,10 +63,12 @@ test("signup emails pass the requested auth redirect URL to Supabase", async () 
 
   assert.deepEqual(result, { ok: true });
   const sentUrl = new URL(requestUrl);
-  assert.equal(sentUrl.pathname, "/auth/v1/otp");
+  assert.equal(sentUrl.pathname, "/auth/v1/signup");
   assert.equal(sentUrl.searchParams.get("redirect_to"), redirectTo);
+  assert.equal(typeof (requestBody as { password?: unknown }).password, "string");
+  assert.ok(((requestBody as { password: string }).password).length >= 32);
   assert.deepEqual(requestBody, {
     email: "mathieu@example.test",
-    create_user: true
+    password: (requestBody as { password: string }).password
   });
 });
