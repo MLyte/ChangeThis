@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { FileText, LifeBuoy, LogOut, Rocket, ShieldCheck, UserRound } from "lucide-react";
+import { FileText, LifeBuoy, LogOut, Rocket, ShieldCheck, ShipWheel, UserRound } from "lucide-react";
 import { getCurrentSession } from "../lib/auth";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
@@ -69,6 +69,7 @@ export async function AppFooter({ suppressSession = false }: AppFooterProps) {
             <T k="footer.license" />
           </a>
           <a className="footer-creator-link" href="https://mathieuluyten.be" rel="noreferrer" target="_blank">
+            <ShipWheel aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
             <T k="footer.creator" />
           </a>
         </nav>

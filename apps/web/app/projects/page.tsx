@@ -10,7 +10,7 @@ import { listConfiguredProjects } from "../../lib/project-registry";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
-import { ProviderBadge } from "../provider-badge";
+import { ProviderBadge, ProviderIcon } from "../provider-badge";
 import { FeedbackActions } from "./feedback-actions";
 import { BulkIssueForm } from "./bulk-issue-form";
 import { DashboardFilterAutoSubmit } from "./dashboard-filter-auto-submit";
@@ -644,6 +644,7 @@ function ProjectRouteRow({
   project: ChangeThisProject;
 }) {
   const demoProject = isDemoProject(project);
+  const providerLabel = project.issueTarget.provider === "gitlab" ? "GitLab" : "GitHub";
 
   return (
     <Link className={`site-route-row${active ? " active" : ""}`} href={dashboardSiteHref(filters, project.publicKey)}>
@@ -652,7 +653,13 @@ function ProjectRouteRow({
         <span>{demoProject ? "Feedbacks de démonstration" : `${project.issueTarget.namespace}/${project.issueTarget.project}`}</span>
       </div>
       <span className="site-route-meta">
-        {demoProject ? <DemoBadge /> : <ProviderBadge provider={project.issueTarget.provider} />}
+        {demoProject ? (
+          <DemoBadge />
+        ) : (
+          <span aria-label={providerLabel} className={`site-route-provider-mark ${project.issueTarget.provider}`} title={providerLabel}>
+            <ProviderIcon provider={project.issueTarget.provider} />
+          </span>
+        )}
         <span className="site-route-count">{count}</span>
       </span>
     </Link>
