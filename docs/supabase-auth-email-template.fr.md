@@ -17,7 +17,7 @@ Dans Supabase Dashboard:
    - Modifier le template `Confirm signup`.
    - Pour eviter qu'Outlook/SafeLinks consomme le lien Supabase direct, faire pointer le bouton vers ChangeThis avec `{{ .TokenHash }}`.
    - Pour le template `Confirm signup`, utiliser `type=email`, comme dans la documentation Supabase `verifyOtp`.
-   - Si le template `Magic Link` est utilise plus tard, reprendre le meme principe avec `type=magiclink`.
+   - Si le template `Magic Link` est utilise plus tard, reprendre le meme principe avec `type=email`.
 4. Authentication > SMTP Settings
    - Utiliser le SMTP choisi pour l'envoi réel.
    - Pour OVH: renseigner l'hôte, le port, l'utilisateur et le mot de passe SMTP OVH du domaine.

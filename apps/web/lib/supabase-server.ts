@@ -139,7 +139,7 @@ function isSupportedEmailOtpType(value: string): boolean {
 }
 
 function normalizeEmailOtpType(value: string): string {
-  return value === "signup" ? "email" : value;
+  return value === "signup" || value === "magiclink" ? "email" : value;
 }
 
 export function isSupabaseAuthConfigured(): boolean {

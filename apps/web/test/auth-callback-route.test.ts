@@ -122,7 +122,7 @@ test("auth callback GET exchanges a Supabase token hash and redirects to the nex
   assert.equal(requestUrl, "https://supabase.example.test/auth/v1/verify");
   assert.deepEqual(requestBody, {
     token_hash: "signup-token-hash",
-    type: "magiclink"
+    type: "email"
   });
 
   const setCookie = response.headers.get("set-cookie") ?? "";
