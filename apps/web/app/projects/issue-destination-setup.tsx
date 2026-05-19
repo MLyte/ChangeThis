@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { type FocusEvent, type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Copy,
@@ -121,7 +121,7 @@ export function IssueDestinationSetup({
   const [workspaceUsers, setWorkspaceUsers] = useState<WorkspaceUserView[]>(users);
   const firstConnectedProvider = integrations.find((integration) => integration.status === "connected")?.provider ?? "github";
   const [selectedProvider, setSelectedProvider] = useState<IssueProvider>(firstConnectedProvider);
-  const [message, setMessage] = useState(t("destinations.message.initial"));
+  const [, setMessage] = useState(t("destinations.message.initial"));
   const [isPending, startTransition] = useTransition();
   const [isSiteModalOpen, setIsSiteModalOpen] = useState(false);
   const [repositoryOptions, setRepositoryOptions] = useState<RepositoryOption[]>([]);
@@ -242,8 +242,8 @@ export function IssueDestinationSetup({
   function copyInstallSnippet(project: ProjectView) {
     void navigator.clipboard?.writeText(project.installSnippet ?? installSnippet(project))
       .then(() => {
-        toast.success("Script copié", {
-          description: `${project.name} est prêt à être installé.`
+        toast.success("Script copié dans le presse-papier", {
+          description: `Vous pouvez le coller sur ${project.name}.`
         });
       })
       .catch(() => {
@@ -571,7 +571,6 @@ export function IssueDestinationSetup({
               isPending={isPending}
               isSiteModalOpen={isSiteModalOpen}
               installChecks={installChecks}
-              message={message}
               onCloseModal={() => setIsSiteModalOpen(false)}
               onCreateSite={createSite}
               onDeleteSite={deleteSite}
@@ -694,15 +693,19 @@ function UsersSection({
                   placeholder="email@exemple.com"
                   required
                 />
-                <select
-                  aria-label="Rôle du membre"
-                  value={inviteRole}
-                  onChange={(event) => onInviteRoleChange(event.target.value as "viewer" | "member" | "admin")}
-                >
-                  <option value="member">Membre</option>
-                  <option value="admin">Admin</option>
-                  <option value="viewer">Lecteur</option>
-                </select>
+                <div className="member-role-segment" aria-label="Rôle du membre" role="group">
+                  {memberRoleOptions.map((option) => (
+                    <button
+                      aria-pressed={inviteRole === option.value}
+                      className={inviteRole === option.value ? "active" : ""}
+                      key={option.value}
+                      onClick={() => onInviteRoleChange(option.value)}
+                      type="button"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <button className="button secondary-button" type="submit">
                 <Mail aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
@@ -748,6 +751,81 @@ function UsersSection({
         </div>
       </div>
     </section>
+  );
+}
+
+const memberRoleOptions: Array<{ label: string; value: "viewer" | "member" | "admin" }> = [
+  { label: "Membre", value: "member" },
+  { label: "Admin", value: "admin" },
+  { label: "Lecteur", value: "viewer" }
+];
+
+type ThemeDropdownOption<T extends string> = {
+  label: string;
+  value: T;
+};
+
+function ThemeDropdown<T extends string>({
+  disabled = false,
+  label,
+  onChange,
+  options,
+  value
+}: {
+  disabled?: boolean;
+  label: string;
+  onChange: (value: T) => void;
+  options: Array<ThemeDropdownOption<T>>;
+  value: T;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const selectedOption = options.find((option) => option.value === value) ?? options[0];
+
+  function closeWhenFocusLeaves(event: FocusEvent<HTMLDivElement>) {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) {
+      return;
+    }
+    setIsOpen(false);
+  }
+
+  function selectOption(nextValue: T) {
+    onChange(nextValue);
+    setIsOpen(false);
+    dropdownRef.current?.querySelector<HTMLButtonElement>(".theme-dropdown-trigger")?.focus();
+  }
+
+  return (
+    <div className={`theme-dropdown${isOpen ? " is-open" : ""}${disabled ? " is-disabled" : ""}`} onBlur={closeWhenFocusLeaves} ref={dropdownRef}>
+      <span className="theme-dropdown-label">{label}</span>
+      <button
+        aria-expanded={isOpen}
+        className="theme-dropdown-trigger"
+        disabled={disabled}
+        onClick={() => setIsOpen((current) => !current)}
+        type="button"
+      >
+        <span>{selectedOption.label}</span>
+        <span className="theme-dropdown-chevron" aria-hidden="true" />
+      </button>
+      {isOpen ? (
+        <div className="theme-dropdown-menu" role="listbox">
+          {options.map((option) => (
+            <button
+              aria-selected={option.value === value}
+              className={option.value === value ? "is-selected" : ""}
+              key={option.value}
+              onClick={() => selectOption(option.value)}
+              role="option"
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -1448,7 +1526,6 @@ function ConnectedSitesSection({
   isPending,
   isSiteModalOpen,
   installChecks,
-  message,
   onCloseModal,
   onCreateSite,
   onDeleteSite,
@@ -1484,7 +1561,6 @@ function ConnectedSitesSection({
   isPending: boolean;
   isSiteModalOpen: boolean;
   installChecks: Record<string, InstallCheckResult>;
-  message: string;
   onCloseModal: () => void;
   onCreateSite: () => void;
   onDeleteSite: (projectKey: string) => void;
@@ -1619,6 +1695,7 @@ function ConnectedSitesSection({
             const providerConnected = connectedProviders.has(issueTarget.provider);
             const isReady = providerConnected && issueTarget.namespace && issueTarget.project;
             const originValidation = validateAllowedOrigins(project.allowedOrigins);
+            const snippet = project.installSnippet ?? installSnippet(project);
 
             return (
               <article className="site-repo-row connected-site-row" key={project.publicKey}>
@@ -1629,11 +1706,11 @@ function ConnectedSitesSection({
                       <span className={`status-badge ${isReady ? "connected" : "failed"}`}>
                         {isReady ? "Actif" : "Git déconnecté"}
                       </span>
+                      <ProviderBadge provider={issueTarget.provider} />
                     </div>
                     <p>{project.allowedOrigins.join(", ")}</p>
                   </div>
                   <div className="repo-destination">
-                    <ProviderBadge provider={issueTarget.provider} />
                     <div>
                       <span>Destination issue</span>
                       <strong>{issueTarget.namespace}/{issueTarget.project}</strong>
@@ -1666,54 +1743,34 @@ function ConnectedSitesSection({
                     <span><strong>{project.metrics?.failedIssues ?? 0}</strong><small>Échecs</small></span>
                   </div>
                   <div className="widget-settings">
-                    <label>
-                      <span>Langue widget</span>
-                      <select
-                        disabled={isPending}
-                        onChange={(event) => onUpdateWidgetSettings(project.publicKey, { widgetLocale: event.target.value as WidgetLocale })}
-                        value={project.widgetLocale}
-                      >
-                        {widgetLocaleOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Visibilité</span>
-                      <select
-                        disabled={isPending}
-                        onChange={(event) => onUpdateWidgetSettings(project.publicKey, { widgetButtonVariant: event.target.value as WidgetButtonVariant })}
-                        value={project.widgetButtonVariant}
-                      >
-                        {widgetVariantOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Position bouton</span>
-                      <select
-                        disabled={isPending}
-                        onChange={(event) => onUpdateWidgetSettings(project.publicKey, { widgetButtonPosition: event.target.value as WidgetButtonPosition })}
-                        value={project.widgetButtonPosition}
-                      >
-                        {widgetPositionOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Identité visiteur</span>
-                      <select
-                        disabled={isPending}
-                        onChange={(event) => onUpdateWidgetSettings(project.publicKey, { widgetReporterFields: event.target.value as WidgetReporterFields })}
-                        value={project.widgetReporterFields}
-                      >
-                        {widgetReporterFieldOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
-                    </label>
+                    <ThemeDropdown
+                      disabled={isPending}
+                      label="Langue widget"
+                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetLocale: value })}
+                      options={widgetLocaleOptions}
+                      value={project.widgetLocale}
+                    />
+                    <ThemeDropdown
+                      disabled={isPending}
+                      label="Visibilité"
+                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonVariant: value })}
+                      options={widgetVariantOptions}
+                      value={project.widgetButtonVariant}
+                    />
+                    <ThemeDropdown
+                      disabled={isPending}
+                      label="Position bouton"
+                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonPosition: value })}
+                      options={widgetPositionOptions}
+                      value={project.widgetButtonPosition}
+                    />
+                    <ThemeDropdown
+                      disabled={isPending}
+                      label="Identité visiteur"
+                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetReporterFields: value })}
+                      options={widgetReporterFieldOptions}
+                      value={project.widgetReporterFields}
+                    />
                   </div>
                   <div className="site-script">
                     <strong>Script widget</strong>
@@ -1747,15 +1804,18 @@ function ConnectedSitesSection({
                         className={`site-script-panel${openScriptForProject === project.publicKey ? " is-open" : ""}`}
                         hidden={openScriptForProject !== project.publicKey}
                       >
-                        <p className="site-script-instructions">
-                          Placez cette balise sur les pages du site autorisé (généralement juste avant &lt;/body&gt;). Le script créera le bouton de feedback avec la configuration du site.
-                        </p>
-                        <pre className="site-script-code">
-                          <code>{project.installSnippet ?? installSnippet(project)}</code>
-                        </pre>
-                        <button className="inline-action" disabled={!originValidation.ok} onClick={() => onCopyInstallSnippet(project)} type="button">
-                          <Copy aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-                          Copier le script
+                        <button className="site-script-copy-card" disabled={!originValidation.ok} onClick={() => onCopyInstallSnippet(project)} type="button">
+                          <span className="site-script-copy-topline">
+                            <span>
+                              <FileCode2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
+                              Script à installer
+                            </span>
+                            <span>
+                              <Copy aria-hidden="true" className="ui-icon" size={13} strokeWidth={2.2} />
+                              Cliquer pour copier
+                            </span>
+                          </span>
+                          <code>{snippet}</code>
                         </button>
                       </div>
                     ) : null}
@@ -1866,48 +1926,17 @@ function ConnectedSitesSection({
                     </span>
                   </span>
                   <input name="siteOrigin" onChange={(event) => setSiteOrigin(event.target.value)} placeholder="https://www.exemple.be" value={siteOrigin} />
+                  <span className={`origin-create-status ${siteOriginValidation.ok ? "success" : siteOrigin.trim() ? "error" : ""}`} role="status">
+                    {siteOriginValidation.message}
+                  </span>
                 </label>
-                <p className={`origin-create-status ${siteOriginValidation.ok ? "success" : siteOrigin.trim() ? "error" : ""}`} role="status">
-                  {siteOriginValidation.message}
-                </p>
                 <fieldset className="site-create-widget-options">
                   <legend>Options de placement du feedback</legend>
-                  <label>
-                    <span>Langue</span>
-                    <select name="widgetLocale" onChange={(event) => setSiteWidgetLocale(event.target.value as WidgetLocale)} value={siteWidgetLocale}>
-                      {widgetLocaleOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Visibilité</span>
-                    <select name="widgetButtonVariant" onChange={(event) => setSiteWidgetButtonVariant(event.target.value as WidgetButtonVariant)} value={siteWidgetButtonVariant}>
-                      {widgetVariantOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Position bouton</span>
-                    <select name="widgetButtonPosition" onChange={(event) => setSiteWidgetButtonPosition(event.target.value as WidgetButtonPosition)} value={siteWidgetButtonPosition}>
-                      {widgetPositionOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Identité visiteur</span>
-                    <select name="widgetReporterFields" onChange={(event) => setSiteWidgetReporterFields(event.target.value as WidgetReporterFields)} value={siteWidgetReporterFields}>
-                      {widgetReporterFieldOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <ThemeDropdown label="Langue" onChange={setSiteWidgetLocale} options={widgetLocaleOptions} value={siteWidgetLocale} />
+                  <ThemeDropdown label="Visibilité" onChange={setSiteWidgetButtonVariant} options={widgetVariantOptions} value={siteWidgetButtonVariant} />
+                  <ThemeDropdown label="Position bouton" onChange={setSiteWidgetButtonPosition} options={widgetPositionOptions} value={siteWidgetButtonPosition} />
+                  <ThemeDropdown label="Identité visiteur" onChange={setSiteWidgetReporterFields} options={widgetReporterFieldOptions} value={siteWidgetReporterFields} />
                 </fieldset>
-                <p className="form-status site-create-status" role="status">
-                  {message}
-                </p>
                 <div className="site-create-actions">
                   <button className="button" disabled={isPending || !siteOriginValidation.ok || !hasRepositoryDestination || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
                     <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />

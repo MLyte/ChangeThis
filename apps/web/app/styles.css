@@ -4680,13 +4680,12 @@ dd {
   border: 1px solid var(--line);
   border-radius: 7px;
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(118px, auto);
+  grid-template-columns: minmax(190px, 1fr) auto;
   min-height: 38px;
   overflow: hidden;
 }
 
-.member-invite-fields input,
-.member-invite-fields select {
+.member-invite-fields input {
   appearance: none;
   background: white;
   border: 0;
@@ -4700,12 +4699,35 @@ dd {
   border-right: 1px solid var(--line);
 }
 
-.member-invite-fields select {
-  background:
-    linear-gradient(45deg, transparent 50%, var(--muted) 50%) calc(100% - 15px) 50% / 5px 5px no-repeat,
-    linear-gradient(135deg, var(--muted) 50%, transparent 50%) calc(100% - 10px) 50% / 5px 5px no-repeat,
-    white;
-  padding-right: 28px;
+.member-role-segment {
+  background: white;
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(3, minmax(70px, 1fr));
+  padding: 3px;
+}
+
+.member-role-segment button {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  min-height: 32px;
+  padding: 6px 9px;
+}
+
+.member-role-segment button:hover {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.member-role-segment button.active {
+  background: var(--primary-soft);
+  box-shadow: var(--active-control-shadow);
+  color: var(--primary);
 }
 
 .member-invite-fields:focus-within {
@@ -5134,6 +5156,16 @@ dd {
   padding: 6px 8px;
 }
 
+.site-title-row .provider-badge,
+.site-title-row .status-badge {
+  min-height: 24px;
+  padding: 4px 7px;
+}
+
+.site-title-row .provider-badge {
+  box-shadow: var(--active-control-shadow);
+}
+
 .provider-icon {
   flex: 0 0 auto;
   fill: currentColor;
@@ -5254,16 +5286,17 @@ dd {
   content: attr(data-tooltip);
   font-size: 12px;
   font-weight: 750;
-  left: 50%;
+  left: auto;
   line-height: 1.35;
   opacity: 0;
   padding: 8px 10px;
   pointer-events: none;
   position: absolute;
-  transform: translateX(-50%) translateY(3px);
+  right: -8px;
+  transform: translateY(3px);
   transition: opacity 0.15s ease, transform 0.15s ease;
   visibility: hidden;
-  width: min(300px, 72vw);
+  width: min(300px, calc(100vw - 48px));
   z-index: 20;
 }
 
@@ -5275,8 +5308,13 @@ dd {
 .tooltip-icon:hover::after,
 .tooltip-icon:focus-visible::after {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
   visibility: visible;
+}
+
+.site-origin-field .tooltip-icon::after {
+  left: -26px;
+  right: auto;
 }
 
 .repo-form input,
@@ -5312,9 +5350,9 @@ dd {
   border: 1px solid var(--line);
   border-radius: 7px;
   color: var(--muted);
+  display: block;
   font-size: 13px;
   font-weight: 850;
-  grid-column: 1;
   line-height: 1.4;
   margin: 0;
   padding: 10px 12px;
@@ -5338,8 +5376,129 @@ dd {
   padding: 0 6px;
 }
 
-.site-create-widget-options label {
+.site-create-widget-options label,
+.site-create-widget-options .theme-dropdown {
   min-width: 0;
+}
+
+.theme-dropdown {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  position: relative;
+}
+
+.theme-dropdown-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.theme-dropdown-trigger {
+  align-items: center;
+  appearance: none;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  display: flex;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 850;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 40px;
+  min-width: 0;
+  padding: 9px 11px;
+  text-align: left;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  width: 100%;
+}
+
+.theme-dropdown-trigger span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-dropdown-trigger:hover {
+  background: var(--primary-softer);
+  border-color: var(--primary-border);
+}
+
+.theme-dropdown-trigger:focus-visible,
+.theme-dropdown.is-open .theme-dropdown-trigger {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+  outline: 0;
+}
+
+.theme-dropdown.is-disabled {
+  opacity: 0.62;
+}
+
+.theme-dropdown-chevron {
+  border-bottom: 2px solid var(--muted);
+  border-right: 2px solid var(--muted);
+  flex: 0 0 7px;
+  height: 7px;
+  margin-right: 2px;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 150ms ease;
+  width: 7px;
+}
+
+.theme-dropdown.is-open .theme-dropdown-chevron {
+  transform: rotate(225deg) translateY(-1px);
+}
+
+.theme-dropdown-menu {
+  background: white;
+  border: 1px solid var(--primary-border);
+  border-radius: 7px;
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.14);
+  display: grid;
+  gap: 3px;
+  left: 0;
+  margin-top: 5px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 4px;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 40;
+}
+
+.theme-dropdown-menu button {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.theme-dropdown-menu button:hover,
+.theme-dropdown-menu button:focus-visible {
+  background: var(--primary-softer);
+  color: var(--primary);
+  outline: 0;
+}
+
+.theme-dropdown-menu button.is-selected {
+  background: var(--primary-soft);
+  box-shadow: var(--active-control-shadow);
+  color: var(--primary);
 }
 
 .origin-create-status.success {
@@ -5635,13 +5794,15 @@ dd {
   min-width: 0;
 }
 
-.widget-settings label {
+.widget-settings label,
+.widget-settings .theme-dropdown {
   display: grid;
   gap: 5px;
   min-width: 0;
 }
 
-.widget-settings span {
+.widget-settings > label > span,
+.widget-settings .theme-dropdown-label {
   color: var(--muted);
   font-size: 11px;
   font-weight: 850;
@@ -5676,8 +5837,7 @@ dd {
   font-weight: 900;
 }
 
-.site-script code,
-.site-script-code code {
+.site-script code {
   background: var(--soft);
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -5705,26 +5865,72 @@ dd {
   display: grid;
 }
 
+.site-script-copy-card {
+  appearance: none;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
+  text-align: left;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  width: 100%;
+}
+
+.site-script-copy-card:hover {
+  background: var(--primary-softer);
+  border-color: var(--primary-border);
+}
+
+.site-script-copy-card:active {
+  transform: translateY(1px);
+}
+
+.site-script-copy-card:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+  outline: 0;
+}
+
+.site-script-copy-topline {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 8px 14px;
+  justify-content: space-between;
+}
+
+.site-script-copy-topline span {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+}
+
+.site-script-copy-topline span:first-child {
+  color: var(--ink);
+  font-weight: 900;
+}
+
 .site-script-toggle {
   justify-self: start;
 }
 
-.site-script-instructions {
-  color: var(--muted);
-  display: grid;
-  font-size: 12px;
-  gap: 8px;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.site-script-code {
-  margin: 0;
-}
-
-.site-script-code code {
+.site-script-copy-card code {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
   display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.45;
   overflow-x: auto;
+  padding: 10px;
   text-overflow: clip;
   white-space: pre-wrap;
   word-break: break-word;
@@ -6126,6 +6332,16 @@ code {
 
   .users-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .member-invite-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .member-invite-fields input {
+    border-bottom: 1px solid var(--line);
+    border-right: 0;
+    min-height: 38px;
   }
 
   .compact-issue-draft {
