@@ -1111,8 +1111,20 @@ export function TRich({ k }: { k: string }) {
 function richText(locale: Locale, key: string): ReactNode | undefined {
   if (locale === "en") {
     switch (key) {
+      case "home.hero.promise":
+        return <>A feedback <span className="tech-word">widget</span> that turns every web return into an actionable <span className="tech-word">issue</span>.</>;
+      case "home.hero.statement.prefix":
+        return <>Receive feedback from your sites with useful context, then create the <span className="tech-word">issue</span> in</>;
       case "home.hero.lede":
-        return <>ChangeThis is in <strong>open beta</strong>. Create your team workspace and connect your first site now.</>;
+        return <>Install a feedback <span className="tech-word">widget</span> on a real site, centralize returns in your team workspace, then send only useful topics to <span className="tech-word">Git</span>.</>;
+      case "home.hero.proof.git":
+        return <><span className="tech-word">GitHub</span> or <span className="tech-word">GitLab</span></>;
+      case "home.hero.proof.browser":
+        return <>No <span className="tech-word">Git</span> token in the browser</>;
+      case "home.waitlist.point.2":
+        return <>Install the <span className="tech-word">script</span>.</>;
+      case "home.waitlist.point.4":
+        return <>Create the useful <span className="tech-word">issue</span>.</>;
       case "home.waitlist.callout.copy":
         return <>Enter your work email to start or receive access <strong>as soon as a seat is available</strong>.</>;
       case "home.signup.callout.copy":
@@ -1133,6 +1145,8 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
         return <>Someone mentions a button, but not the exact <strong>page, screen size, selected element</strong>, or screenshot.</>;
       case "home.problem.example.2.consequence":
         return <>The team has to reconstruct the case before <strong>understanding what to fix</strong>.</>;
+      case "home.problem.intro":
+        return <>ChangeThis keeps a review step between customer feedback and the <span className="tech-word">Git</span> repository, to avoid back-and-forth, duplicates, and already handled <span className="tech-word">issues</span>.</>;
       case "home.problem.example.3.reality":
         return <>A small doubt quickly becomes <strong>a Git task</strong>, even when it only needs clarification or archiving.</>;
       case "home.problem.example.3.consequence":
@@ -1145,6 +1159,8 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
         return <>A clear draft with <strong>all useful context</strong>.</>;
       case "home.beta.access.copy":
         return <>Each site can point to <strong>the right GitHub or GitLab repository</strong>.</>;
+      case "home.context.routing.copy":
+        return <>Site, team workspace, and planned <span className="tech-word">Git</span> repository stay ready for the task.</>;
       case "home.mobile.copy":
         return <>For visitors, the button stays discreet.<br />For teams, context arrives <strong>ready to process</strong>.</>;
       case "home.workflow.capture.copy":
@@ -1160,15 +1176,27 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
       case "home.beta.note.3":
         return <>Works on <strong>desktop, mobile, and tablet</strong>.</>;
       case "home.closing.copy":
-        return <>Create your team workspace to prepare your first site: <strong>script to install, feedback to review, Git issues to send</strong>.</>;
+        return <>Create your team workspace to prepare your first site: <span className="tech-word">script</span> to install, feedback to review, <span className="tech-word">Git</span> issues to send.</>;
       default:
         return undefined;
     }
   }
 
   switch (key) {
+    case "home.hero.promise":
+      return <>Un <span className="tech-word">widget</span> de feedback qui transforme chaque retour web en <span className="tech-word">issue</span> exploitable.</>;
+    case "home.hero.statement.prefix":
+      return <>Recevez les feedbacks de vos sites avec le contexte utile, puis créez l&apos;<span className="tech-word">issue</span> dans</>;
     case "home.hero.lede":
-      return <>ChangeThis est en <strong>bêta ouverte</strong>. Créez votre espace équipe et connectez votre premier site dès maintenant.</>;
+      return <>Installez un <span className="tech-word">widget</span> de feedback sur un vrai site, centralisez les feedbacks dans votre espace équipe, puis envoyez seulement les sujets utiles vers <span className="tech-word">Git</span>.</>;
+    case "home.hero.proof.git":
+      return <><span className="tech-word">GitHub</span> ou <span className="tech-word">GitLab</span></>;
+    case "home.hero.proof.browser":
+      return <>Aucun token <span className="tech-word">Git</span> côté navigateur</>;
+    case "home.waitlist.point.2":
+      return <>Installer le <span className="tech-word">script</span>.</>;
+    case "home.waitlist.point.4":
+      return <>Créer l&apos;<span className="tech-word">issue</span> utile.</>;
     case "home.waitlist.callout.copy":
       return <>Entrez votre e-mail professionnel pour démarrer ou recevoir un accès <strong>dès qu&apos;une place est disponible</strong>.</>;
     case "home.signup.callout.copy":
@@ -1189,6 +1217,8 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
       return <>On parle d&apos;un bouton, mais pas de la <strong>page exacte</strong>, de la <strong>taille d&apos;écran</strong>, ni de <strong>l&apos;élément visé</strong>.</>;
     case "home.problem.example.2.consequence":
       return <>L&apos;équipe doit rejouer la scène avant même de <strong>comprendre quoi corriger</strong>.</>;
+    case "home.problem.intro":
+      return <>ChangeThis garde une étape de tri entre le retour client et le dépôt <span className="tech-word">Git</span>, pour éviter les allers-retours, les doublons et les <span className="tech-word">issues</span> déjà traitées.</>;
     case "home.problem.example.3.reality":
       return <>Un petit doute devient vite <strong>une tâche Git</strong>, même quand il faudrait juste clarifier ou archiver.</>;
     case "home.problem.example.3.consequence":
@@ -1201,6 +1231,8 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
       return <>Un brouillon clair avec <strong>tout le contexte utile</strong>.</>;
     case "home.beta.access.copy":
       return <>Chaque site peut pointer vers <strong>le bon dépôt GitHub ou GitLab</strong>.</>;
+    case "home.context.routing.copy":
+      return <>Site, espace d&apos;équipe et dépôt <span className="tech-word">Git</span> prévu pour préparer la tâche.</>;
     case "home.mobile.copy":
       return <>Côté visiteur, le bouton reste discret.<br />Côté équipe, le contexte arrive <strong>prêt à traiter</strong>.</>;
     case "home.workflow.capture.copy":
@@ -1216,7 +1248,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
     case "home.beta.note.3":
       return <>Fonctionne sur <strong>ordinateur, mobile et tablette</strong>.</>;
     case "home.closing.copy":
-      return <>Créez votre espace pour préparer votre premier site{"\u00a0"}: <strong>script à installer, retours à qualifier, tâches Git à envoyer</strong>.</>;
+      return <>Créez votre espace pour préparer votre premier site{"\u00a0"}: <span className="tech-word">script</span> à installer, retours à qualifier, tâches <span className="tech-word">Git</span> à envoyer.</>;
     default:
       return undefined;
   }

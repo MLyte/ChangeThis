@@ -122,7 +122,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </span>
             <Image src={logoChangeThis} alt="" aria-hidden="true" className="product-title-logo" priority />
           </h1>
-          <p className="hero-product-promise"><T k="home.hero.promise" /></p>
+          <p className="hero-product-promise"><TRich k="home.hero.promise" /></p>
           <HeroStatement />
           <p className="lede">
             <TRich k="home.hero.lede" />
@@ -130,7 +130,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <span className="sr-only" id="home-hero-proof-label"><T k="home.aria.heroProof" /></span>
           <div className="home-hero-proof-row" aria-labelledby="home-hero-proof-label">
             {heroProofItems.map((key) => (
-              <span key={key}><T k={key} /></span>
+              <span key={key}><TRich k={key} /></span>
             ))}
           </div>
         </div>
@@ -159,7 +159,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <div className="home-section-header">
           <p className="eyebrow"><T k="home.problem.eyebrow" /></p>
           <h2><T k="home.problem.question" /></h2>
-          <p className="problem-intro"><T k="home.problem.intro" /></p>
+          <p className="problem-intro"><TRich k="home.problem.intro" /></p>
         </div>
         <div className="problem-list problem-quotes">
           {problemPoints.map(({ sourceKey, realityKey, consequenceKey }) => (
@@ -191,7 +191,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </span>
               <div>
                 <h3><T k={titleKey} /></h3>
-                <p><T k={copyKey} /></p>
+                <p><TRich k={copyKey} /></p>
               </div>
             </article>
           ))}
@@ -490,7 +490,7 @@ function SignupAccessCard({ compact = false, isSignedIn = false }: { compact?: b
           {waitlistPoints.map(({ key, Icon }) => (
             <li key={key}>
               <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
-              <span><T k={key} /></span>
+              <span><TRich k={key} /></span>
             </li>
           ))}
         </ul>
@@ -537,7 +537,7 @@ function WaitlistForm({ action, compact = false, waitlistStatus }: WaitlistFormP
           {waitlistPoints.map(({ key, Icon }) => (
             <li key={key}>
               <Icon size={15} strokeWidth={2.4} aria-hidden="true" />
-              <span><T k={key} /></span>
+              <span><TRich k={key} /></span>
             </li>
           ))}
         </ul>
@@ -550,7 +550,7 @@ function WaitlistForm({ action, compact = false, waitlistStatus }: WaitlistFormP
 function HeroStatement() {
   return (
     <p className="hero-statement">
-      <T k="home.hero.statement.prefix" />{" "}
+      <TRich k="home.hero.statement.prefix" />{" "}
       <span className="hero-provider github">
         <ProviderIcon provider="github" className="hero-provider-icon" />
         <span>GitHub</span>
