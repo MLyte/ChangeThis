@@ -471,8 +471,6 @@ export function initChangeThis(options: WidgetOptions): void {
           justify-content: center;
           opacity: 0.46;
           padding: 0;
-          transform: scale(0.92);
-          transform-origin: bottom right;
           width: 42px;
         }
         .button[data-variant="subtle"] .lucide-icon {
@@ -483,7 +481,6 @@ export function initChangeThis(options: WidgetOptions): void {
         .button[data-variant="subtle"]:focus-visible,
         .button[data-variant="subtle"][aria-expanded="true"] {
           opacity: 1;
-          transform: scale(1);
         }
         .button-state {
           border-radius: 999px;
@@ -498,6 +495,7 @@ export function initChangeThis(options: WidgetOptions): void {
         .panel {
           position: fixed;
           z-index: 2147483647;
+          box-sizing: border-box;
           width: min(400px, calc(100vw - 24px));
           max-height: min(760px, calc(100dvh - 88px - env(safe-area-inset-bottom)));
           border: 1px solid #c5cae9;
@@ -508,9 +506,13 @@ export function initChangeThis(options: WidgetOptions): void {
           box-shadow: 0 20px 50px rgba(17, 24, 39, 0.18);
           display: grid;
           gap: 12px;
-          overflow: auto;
+          overflow-x: hidden;
+          overflow-y: auto;
           overscroll-behavior: contain;
           padding: 14px;
+        }
+        .panel * {
+          box-sizing: border-box;
         }
         .panel[data-position="bottom-right"] { right: 20px; bottom: calc(76px + var(--ct-footer-offset, 0px)); }
         .panel[data-position="bottom-left"] { left: 20px; bottom: calc(76px + var(--ct-footer-offset, 0px)); }
@@ -610,7 +612,11 @@ export function initChangeThis(options: WidgetOptions): void {
           color: #6b7280;
           margin-bottom: -1px;
           min-height: 38px;
+          min-width: 0;
+          overflow: hidden;
           padding: 8px 6px 10px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         .mode:hover {
           background: #f9fafb;
@@ -723,6 +729,7 @@ export function initChangeThis(options: WidgetOptions): void {
         .selection-header {
           align-items: center;
           display: flex;
+          flex-wrap: wrap;
           gap: 8px;
           justify-content: space-between;
           margin-bottom: 6px;
@@ -818,8 +825,10 @@ export function initChangeThis(options: WidgetOptions): void {
           font-weight: 800;
           gap: 6px;
           justify-content: center;
+          max-width: 100%;
           min-height: 28px;
           padding: 5px 8px;
+          white-space: normal;
         }
         .manager-button {
           align-items: center;
