@@ -37,6 +37,8 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
   const previewUrl = asset.thumbnailDataUrl ?? asset.dataUrl;
   const fullImageUrl = asset.dataUrl ?? asset.thumbnailDataUrl;
   const viewport = `${metadata.viewport.width} x ${metadata.viewport.height}`;
+  const deviceContext = formatDeviceContext(metadata);
+  const browserContext = formatBrowserContext(metadata.userAgent);
   const isMobileCapture = metadata.viewport.width < 700 && metadata.viewport.height > metadata.viewport.width;
   const pinPositions = (pins?.length ? pins : pin ? [pin] : []).map((item) => pinImagePosition(item, metadata));
   const modalImageSize = displayImageSize(metadata.viewport, feedback.type);
@@ -133,6 +135,22 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
                     <dd>{viewport}</dd>
                   </div>
                   <div>
+                    <dt>Écran</dt>
+                    <dd>{deviceContext}</dd>
+                  </div>
+                  {browserContext ? (
+                    <div>
+                      <dt>Navigateur</dt>
+                      <dd>{browserContext}</dd>
+                    </div>
+                  ) : null}
+                  <div>
+                    <dt>URL</dt>
+                    <dd>
+                      <a className="inline-link" href={metadata.url}>{metadata.url}</a>
+                    </dd>
+                  </div>
+                  <div>
                     <dt>Reçu</dt>
                     <dd>{formatDate(feedback.createdAt)}</dd>
                   </div>
@@ -182,6 +200,126 @@ function displayImageSize(viewport: FeedbackMetadata["viewport"], type: Feedback
   const height = Math.max(1, Math.round(viewport.height * scale));
 
   return { width, height };
+}
+
+function formatDeviceContext(metadata: FeedbackMetadata): string {
+  const { height, width } = metadata.viewport;
+  const deviceLabel = inferDeviceLabel(width, height, metadata.userAgent);
+  const orientation = height >= width ? "portrait" : "paysage";
+  const ratio = Number.isFinite(metadata.devicePixelRatio) && metadata.devicePixelRatio > 0
+    ? ` · DPR ${formatCompactNumber(metadata.devicePixelRatio)}`
+    : "";
+  const screen = metadata.screen?.width && metadata.screen?.height
+    ? ` · écran ${metadata.screen.width} x ${metadata.screen.height}`
+    : "";
+
+  return `${deviceLabel} ${orientation} · viewport ${width} x ${height}${ratio}${screen}`;
+}
+
+function inferDeviceLabel(width: number, height: number, userAgent: string): string {
+  const shortSide = Math.min(width, height);
+  const longSide = Math.max(width, height);
+
+  if (/\biPad\b/i.test(userAgent)) {
+    return "iPad";
+  }
+
+  if (/\biPhone\b|\biPod\b/i.test(userAgent)) {
+    return "Mobile iPhone";
+  }
+
+  if (/Android/i.test(userAgent) && !/Mobile/i.test(userAgent)) {
+    return "Tablette Android";
+  }
+
+  if (/Mobile|Android|Windows Phone/i.test(userAgent) || shortSide < 700) {
+    return "Mobile";
+  }
+
+  if (shortSide < 1024 && longSide < 1400) {
+    return "Tablette";
+  }
+
+  return "Desktop";
+}
+
+function formatBrowserContext(userAgent: string): string | undefined {
+  const browser = inferBrowserLabel(userAgent);
+  const os = inferOperatingSystemLabel(userAgent);
+
+  if (!browser && !os) {
+    return undefined;
+  }
+
+  return [browser, os].filter(Boolean).join(" · ");
+}
+
+function inferBrowserLabel(userAgent: string): string | undefined {
+  if (/Edg\//i.test(userAgent)) {
+    return "Edge";
+  }
+
+  if (/OPR\//i.test(userAgent)) {
+    return "Opera";
+  }
+
+  if (/SamsungBrowser\//i.test(userAgent)) {
+    return "Samsung Internet";
+  }
+
+  if (/CriOS\//i.test(userAgent)) {
+    return "Chrome iOS";
+  }
+
+  if (/Chrome\//i.test(userAgent)) {
+    return "Chrome";
+  }
+
+  if (/FxiOS\//i.test(userAgent)) {
+    return "Firefox iOS";
+  }
+
+  if (/Firefox\//i.test(userAgent)) {
+    return "Firefox";
+  }
+
+  if (/Version\/.+Safari\//i.test(userAgent)) {
+    return "Safari";
+  }
+
+  return undefined;
+}
+
+function inferOperatingSystemLabel(userAgent: string): string | undefined {
+  if (/\biPad\b/i.test(userAgent)) {
+    return "iPadOS";
+  }
+
+  if (/\biPhone\b|\biPod\b/i.test(userAgent)) {
+    return "iOS";
+  }
+
+  if (/Android/i.test(userAgent)) {
+    return "Android";
+  }
+
+  if (/Windows NT/i.test(userAgent)) {
+    return "Windows";
+  }
+
+  if (/Mac OS X|Macintosh/i.test(userAgent)) {
+    return "macOS";
+  }
+
+  if (/Linux/i.test(userAgent)) {
+    return "Linux";
+  }
+
+  return undefined;
+}
+
+function formatCompactNumber(value: number): string {
+  return Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 function formatDate(value: string): string {
