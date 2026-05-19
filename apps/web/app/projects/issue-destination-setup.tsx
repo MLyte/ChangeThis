@@ -356,10 +356,11 @@ export function IssueDestinationSetup({
           },
           body: JSON.stringify(nextSettings)
         });
-        const body = (await response.json()) as { site?: ProjectView; installSnippet?: string; error?: string };
+        const body = await parseJsonResponse<{ site?: ProjectView; installSnippet?: string; error?: string; requestId?: string }>(response);
 
-        if (!response.ok || !body.site) {
-          throw new Error(body.error ?? "Impossible d'enregistrer la configuration widget.");
+        if (!response.ok || !body?.site) {
+          const requestId = body?.requestId ? ` (${body.requestId})` : "";
+          throw new Error(`${body?.error ?? "Impossible d'enregistrer la configuration widget."}${requestId}`);
         }
 
         setProjectViews((current) => current.map((item) => item.publicKey === projectKey
@@ -499,21 +500,24 @@ export function IssueDestinationSetup({
         const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/script-test`, {
           method: "POST"
         });
-        const body = (await response.json()) as { message?: string; error?: string };
+        const body = await parseJsonResponse<{ message?: string; error?: string; requestId?: string }>(response);
+        const message = body?.message ?? body?.error ?? (response.ok ? "Test terminé." : "Test impossible.");
+        const requestId = body?.requestId ? ` (${body.requestId})` : "";
+
         setInstallChecks((current) => ({
           ...current,
           [projectKey]: {
             ok: response.ok,
-            message: body.message ?? body.error ?? "Test terminé."
+            message: `${message}${requestId}`
           }
         }));
         if (response.ok) {
           toast.success("Script détecté", {
-            description: body.message ?? "Le widget est installé sur l'URL du site."
+            description: body?.message ?? "Le widget est installé sur l'URL du site."
           });
         } else {
           toast.error("Script non détecté", {
-            description: body.message ?? body.error ?? "Vérifiez que le snippet est installé sur l'URL du site."
+            description: `${body?.message ?? body?.error ?? "Vérifiez que le snippet est installé sur l'URL du site."}${requestId}`
           });
         }
       } catch (error) {

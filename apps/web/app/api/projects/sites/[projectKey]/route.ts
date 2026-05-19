@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
+import { logError, requestIdFrom } from "../../../../../lib/logger";
 import {
   deleteConnectedSite,
   installSnippet,
@@ -12,6 +13,7 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ projectKey: string }> }
 ) {
+  const requestId = requestIdFrom(request);
   const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
 
   if (isAuthFailure(session)) {
@@ -70,7 +72,17 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
-    throw error;
+    const message = error instanceof Error ? error.message : "Unknown widget settings update error";
+    logError("connected_site_widget_settings_update_failed", {
+      request_id: requestId,
+      workspace_id: session.workspace.id,
+      error: message
+    });
+
+    return NextResponse.json(
+      { error: "Impossible d'enregistrer la configuration widget pour le moment.", requestId },
+      { status: 500 }
+    );
   }
 }
 

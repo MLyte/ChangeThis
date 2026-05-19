@@ -598,17 +598,11 @@ async function updateSupabaseProjectWidgetSettings(
     params.set("organization_id", `eq.${workspaceId}`);
   }
 
-  const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`, {
-    method: "PATCH",
-    headers: {
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify({
-      widget_locale: update.widgetLocale,
-      widget_button_position: update.widgetButtonPosition,
-      widget_button_variant: update.widgetButtonVariant,
-      widget_reporter_fields: update.widgetReporterFields
-    })
+  const projectRows = await patchSupabaseProject(params, {
+    widget_locale: update.widgetLocale,
+    widget_button_position: update.widgetButtonPosition,
+    widget_button_variant: update.widgetButtonVariant,
+    widget_reporter_fields: update.widgetReporterFields
   });
   const updatedProject = mapSupabaseProject(projectRows[0], project.publicKey, toSupabaseIssueTargetRow(project.id, project.issueTarget));
 
@@ -724,6 +718,35 @@ async function insertSupabaseProject(payload: Record<string, unknown>): Promise<
 
     return supabaseServiceRest<SupabaseProjectRow[]>("/rest/v1/projects", {
       method: "POST",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(fallbackPayload)
+    });
+  }
+}
+
+async function patchSupabaseProject(params: URLSearchParams, payload: Record<string, unknown>): Promise<SupabaseProjectRow[]> {
+  try {
+    return await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`, {
+      method: "PATCH",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    if (!("widget_reporter_fields" in payload)) {
+      throw error;
+    }
+
+    const fallbackPayload = { ...payload };
+    delete fallbackPayload.widget_reporter_fields;
+    const fallbackParams = new URLSearchParams(params);
+    fallbackParams.set("select", supabaseProjectSelect(false));
+
+    return supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${fallbackParams.toString()}`, {
+      method: "PATCH",
       headers: {
         Prefer: "return=representation"
       },

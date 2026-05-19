@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
 import { requirePrivateMutationOrigin } from "../../../../../../lib/api-security";
+import { logError, requestIdFrom } from "../../../../../../lib/logger";
 import { findConfiguredProjectByKey, installSnippet } from "../../../../../../lib/project-registry";
 
 const scriptFetchTimeoutMs = 8000;
@@ -9,6 +10,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ projectKey: string }> }
 ) {
+  const requestId = requestIdFrom(request);
   const session = requireWorkspaceRole(await requireWorkspaceSession(request), "admin");
 
   if (isAuthFailure(session)) {
@@ -25,82 +27,96 @@ export async function POST(
     return csrfFailure;
   }
 
-  const { projectKey } = await context.params;
-  const project = await findConfiguredProjectByKey(projectKey, session.workspace.id);
+  try {
+    const { projectKey } = await context.params;
+    const project = await findConfiguredProjectByKey(projectKey, session.workspace.id);
 
-  if (!project) {
-    return NextResponse.json({ error: "Site not found" }, { status: 404 });
-  }
+    if (!project) {
+      return NextResponse.json({ error: "Site not found" }, { status: 404 });
+    }
 
-  const url = new URL(request.url);
-  const configUrl = new URL("/api/widget/config", url.origin);
-  configUrl.searchParams.set("project", project.publicKey);
-  const configResponse = await fetch(configUrl);
-  const pageUrl = project.allowedOrigins[0];
+    const url = new URL(request.url);
+    const configUrl = new URL("/api/widget/config", url.origin);
+    configUrl.searchParams.set("project", project.publicKey);
+    const configResponse = await fetch(configUrl);
+    const pageUrl = project.allowedOrigins[0];
 
-  if (!configResponse.ok) {
+    if (!configResponse.ok) {
+      return NextResponse.json({
+        ok: false,
+        status: "config_error",
+        message: "Configuration widget indisponible pour cette clé publique.",
+        installSnippet: installSnippet(project),
+        checkedUrl: pageUrl
+      }, { status: 409 });
+    }
+
+    if (!pageUrl) {
+      return NextResponse.json({
+        ok: false,
+        status: "missing_site_url",
+        message: "Aucune URL de site n'est configurée pour tester l'installation du script.",
+        installSnippet: installSnippet(project)
+      }, { status: 409 });
+    }
+
+    const pageCheck = await fetchSitePage(pageUrl);
+
+    if (!pageCheck.ok) {
+      return NextResponse.json({
+        ok: false,
+        status: pageCheck.status,
+        message: pageCheck.message,
+        installSnippet: installSnippet(project),
+        checkedUrl: pageUrl
+      }, { status: 409 });
+    }
+
+    const scriptCheck = detectWidgetScript(pageCheck.html, project.publicKey);
+
+    if (!scriptCheck.ok) {
+      return NextResponse.json({
+        ok: false,
+        status: scriptCheck.status,
+        message: scriptCheck.message,
+        installSnippet: installSnippet(project),
+        checkedUrl: pageUrl
+      }, { status: 409 });
+    }
+
+    const cspCheck = detectWidgetCsp(pageCheck.contentSecurityPolicy, url.origin);
+
+    if (!cspCheck.ok) {
+      return NextResponse.json({
+        ok: false,
+        status: cspCheck.status,
+        message: cspCheck.message,
+        installSnippet: installSnippet(project),
+        checkedUrl: pageUrl,
+        cspDirectives: cspCheck.directives
+      }, { status: 409 });
+    }
+
     return NextResponse.json({
-      ok: false,
-      status: "config_error",
-      message: "Configuration widget indisponible pour cette clé publique.",
-      installSnippet: installSnippet(project),
-      checkedUrl: pageUrl
-    }, { status: 409 });
-  }
-
-  if (!pageUrl) {
-    return NextResponse.json({
-      ok: false,
-      status: "missing_site_url",
-      message: "Aucune URL de site n'est configurée pour tester l'installation du script.",
-      installSnippet: installSnippet(project)
-    }, { status: 409 });
-  }
-
-  const pageCheck = await fetchSitePage(pageUrl);
-
-  if (!pageCheck.ok) {
-    return NextResponse.json({
-      ok: false,
-      status: pageCheck.status,
-      message: pageCheck.message,
-      installSnippet: installSnippet(project),
-      checkedUrl: pageUrl
-    }, { status: 409 });
-  }
-
-  const scriptCheck = detectWidgetScript(pageCheck.html, project.publicKey);
-
-  if (!scriptCheck.ok) {
-    return NextResponse.json({
-      ok: false,
+      ok: true,
       status: scriptCheck.status,
       message: scriptCheck.message,
       installSnippet: installSnippet(project),
       checkedUrl: pageUrl
-    }, { status: 409 });
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown script test error";
+    logError("connected_site_script_test_failed", {
+      request_id: requestId,
+      workspace_id: session.workspace.id,
+      error: message
+    });
+
+    return NextResponse.json(
+      { error: "Impossible de tester le script pour le moment.", requestId },
+      { status: 500 }
+    );
   }
-
-  const cspCheck = detectWidgetCsp(pageCheck.contentSecurityPolicy, url.origin);
-
-  if (!cspCheck.ok) {
-    return NextResponse.json({
-      ok: false,
-      status: cspCheck.status,
-      message: cspCheck.message,
-      installSnippet: installSnippet(project),
-      checkedUrl: pageUrl,
-      cspDirectives: cspCheck.directives
-    }, { status: 409 });
-  }
-
-  return NextResponse.json({
-    ok: true,
-    status: scriptCheck.status,
-    message: scriptCheck.message,
-    installSnippet: installSnippet(project),
-    checkedUrl: pageUrl
-  });
 }
 
 async function fetchSitePage(url: string): Promise<
