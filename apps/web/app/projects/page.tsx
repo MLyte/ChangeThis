@@ -671,6 +671,10 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const demoFeedback = isDemoFeedback(feedback);
   const draftLabels = feedback.issueDraft.labels.join(" / ");
   const viewport = `${feedback.payload.metadata.viewport.width} x ${feedback.payload.metadata.viewport.height}`;
+  const deviceContext = formatDeviceContext(feedback.payload.metadata);
+  const browserContext = formatBrowserContext(feedback.payload.metadata.userAgent);
+  const documentContext = formatDocumentContext(feedback.payload.metadata);
+  const networkContext = formatNetworkContext(feedback.payload.metadata.network);
   const appEnvironment = feedback.payload.metadata.app;
   const appEnvironmentSummary = formatAppEnvironmentSummary(appEnvironment);
   const displayMessage = formatFeedbackMessage(feedback);
@@ -737,6 +741,10 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
               )}
             </div>
             <div className="feedback-technical-summary">
+              <span>Écran: {deviceContext}</span>
+              {browserContext ? <span>Navigateur: {browserContext}</span> : null}
+              {documentContext ? <span>Page: {documentContext}</span> : null}
+              {networkContext ? <span>Réseau: {networkContext}</span> : null}
               <span>Viewport: {viewport}</span>
               {appEnvironmentSummary ? <span>{appEnvironmentSummary}</span> : null}
               <span>URL: {feedback.payload.metadata.url}</span>
@@ -1049,6 +1057,152 @@ function formatFeedbackCardTitle(feedback: StoredFeedback, projectName: string):
   const path = feedback.payload.metadata.path || "/";
 
   return `${typeLabel[feedback.payload.type]} sur ${projectName}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function formatDeviceContext(metadata: StoredFeedback["payload"]["metadata"]): string {
+  const { height, width } = metadata.viewport;
+  const userAgent = metadata.userAgent;
+  const deviceLabel = inferDeviceLabel(width, height, userAgent);
+  const orientation = height >= width ? "portrait" : "paysage";
+  const ratio = Number.isFinite(metadata.devicePixelRatio) && metadata.devicePixelRatio > 0
+    ? ` · DPR ${formatCompactNumber(metadata.devicePixelRatio)}`
+    : "";
+  const screen = metadata.screen?.width && metadata.screen?.height
+    ? ` · écran ${metadata.screen.width} x ${metadata.screen.height}`
+    : "";
+
+  return `${deviceLabel} ${orientation} · viewport ${width} x ${height}${ratio}${screen}`;
+}
+
+function inferDeviceLabel(width: number, height: number, userAgent: string): string {
+  const shortSide = Math.min(width, height);
+  const longSide = Math.max(width, height);
+
+  if (/\biPad\b/i.test(userAgent)) {
+    return "iPad";
+  }
+
+  if (/\biPhone\b|\biPod\b/i.test(userAgent)) {
+    return "Mobile iPhone";
+  }
+
+  if (/Android/i.test(userAgent) && !/Mobile/i.test(userAgent)) {
+    return "Tablette Android";
+  }
+
+  if (/Mobile|Android|Windows Phone/i.test(userAgent) || shortSide < 700) {
+    return "Mobile";
+  }
+
+  if (shortSide < 1024 && longSide < 1400) {
+    return "Tablette";
+  }
+
+  return "Desktop";
+}
+
+function formatBrowserContext(userAgent: string): string | undefined {
+  const browser = inferBrowserLabel(userAgent);
+  const os = inferOperatingSystemLabel(userAgent);
+
+  if (!browser && !os) {
+    return undefined;
+  }
+
+  return [browser, os].filter(Boolean).join(" · ");
+}
+
+function formatDocumentContext(metadata: StoredFeedback["payload"]["metadata"]): string | undefined {
+  if (!metadata.document) {
+    return undefined;
+  }
+
+  const scroll = metadata.scroll ? ` · scroll ${Math.round(metadata.scroll.x)} x ${Math.round(metadata.scroll.y)}` : "";
+  return `document ${metadata.document.width} x ${metadata.document.height}${scroll}`;
+}
+
+function formatNetworkContext(network: StoredFeedback["payload"]["metadata"]["network"]): string | undefined {
+  if (!network) {
+    return undefined;
+  }
+
+  const parts = [
+    network.effectiveType,
+    network.type,
+    typeof network.downlink === "number" ? `${formatCompactNumber(network.downlink)} Mbps` : undefined,
+    typeof network.rtt === "number" ? `${Math.round(network.rtt)} ms` : undefined,
+    typeof network.saveData === "boolean" ? `économie données ${network.saveData ? "active" : "inactive"}` : undefined
+  ].filter((part): part is string => Boolean(part));
+
+  return parts.length ? parts.join(" · ") : undefined;
+}
+
+function inferBrowserLabel(userAgent: string): string | undefined {
+  if (/Edg\//i.test(userAgent)) {
+    return "Edge";
+  }
+
+  if (/OPR\//i.test(userAgent)) {
+    return "Opera";
+  }
+
+  if (/SamsungBrowser\//i.test(userAgent)) {
+    return "Samsung Internet";
+  }
+
+  if (/CriOS\//i.test(userAgent)) {
+    return "Chrome iOS";
+  }
+
+  if (/Chrome\//i.test(userAgent)) {
+    return "Chrome";
+  }
+
+  if (/FxiOS\//i.test(userAgent)) {
+    return "Firefox iOS";
+  }
+
+  if (/Firefox\//i.test(userAgent)) {
+    return "Firefox";
+  }
+
+  if (/Version\/.+Safari\//i.test(userAgent)) {
+    return "Safari";
+  }
+
+  return undefined;
+}
+
+function inferOperatingSystemLabel(userAgent: string): string | undefined {
+  if (/\biPad\b/i.test(userAgent)) {
+    return "iPadOS";
+  }
+
+  if (/\biPhone\b|\biPod\b/i.test(userAgent)) {
+    return "iOS";
+  }
+
+  if (/Android/i.test(userAgent)) {
+    return "Android";
+  }
+
+  if (/Windows NT/i.test(userAgent)) {
+    return "Windows";
+  }
+
+  if (/Mac OS X|Macintosh/i.test(userAgent)) {
+    return "macOS";
+  }
+
+  if (/Linux/i.test(userAgent)) {
+    return "Linux";
+  }
+
+  return undefined;
+}
+
+function formatCompactNumber(value: number): string {
+  return Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 function formatAppEnvironmentSummary(app?: StoredFeedback["payload"]["metadata"]["app"]): string | undefined {

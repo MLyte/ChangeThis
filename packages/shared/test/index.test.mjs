@@ -38,6 +38,37 @@ test("validateFeedbackPayload accepts a complete feedback payload", () => {
   assert.equal(result.value.metadata.path, "/contact");
 });
 
+test("validateFeedbackPayload accepts developer diagnostics metadata", () => {
+  const result = validateFeedbackPayload(validPayload({
+    metadata: {
+      ...validPayload().metadata,
+      document: {
+        width: 1440,
+        height: 3200
+      },
+      network: {
+        effectiveType: "4g",
+        downlink: 10,
+        rtt: 50,
+        saveData: false
+      }
+    }
+  }));
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value.metadata.document, {
+    width: 1440,
+    height: 3200
+  });
+  assert.deepEqual(result.value.metadata.network, {
+    effectiveType: "4g",
+    type: undefined,
+    downlink: 10,
+    rtt: 50,
+    saveData: false
+  });
+});
+
 test("validateFeedbackPayload accepts reporter contact details", () => {
   const result = validateFeedbackPayload(validPayload({
     reporter: {
@@ -191,6 +222,30 @@ test("buildIssueDraft does not imply screenshots are attached to Git issues", ()
   assert.match(draft.description, /Capture disponible dans ChangeThis/);
   assert.match(draft.description, /n'est pas jointe a l'issue Git/);
   assert.doesNotMatch(draft.description, /Supabase Storage/);
+});
+
+test("buildIssueDraft includes developer diagnostics metadata", () => {
+  const validation = validateFeedbackPayload(validPayload({
+    metadata: {
+      ...validPayload().metadata,
+      document: {
+        width: 1440,
+        height: 3200
+      },
+      network: {
+        effectiveType: "4g",
+        downlink: 10,
+        rtt: 50,
+        saveData: false
+      }
+    }
+  }));
+  assert.equal(validation.ok, true);
+
+  const draft = buildIssueDraft(validation.value);
+
+  assert.match(draft.description, /Document: 1440x3200/);
+  assert.match(draft.description, /Reseau: 4g · 10 Mbps · 50 ms · economie donnees desactivee/);
 });
 
 test("buildGitHubIssueDraft remains as a compatibility alias", () => {

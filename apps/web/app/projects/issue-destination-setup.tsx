@@ -762,7 +762,7 @@ function UsersSection({
         <div className="user-management-heading">
           <div>
             <strong>{workspaceName ?? "Workspace ChangeThis"}</strong>
-            <span>Les feedbacks publics restent ouverts. Cette liste ne concerne que l&apos;accès à la console.</span>
+            <span>Les feedbacks publics restent ouverts. Cette liste ne concerne que l&apos;accès au dashboard.</span>
           </div>
           {canManageMembers ? (
             <form className="member-invite-form" onSubmit={onInvite}>

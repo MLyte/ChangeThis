@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Accessibility, CheckCircle2, ClipboardCheck, FileText, GitBranch, Globe2, Mail, MonitorCheck, Pin, ShieldCheck, SlidersHorizontal, Sparkles, Users, type LucideIcon } from "lucide-react";
+import { Accessibility, ClipboardCheck, Code2, FileText, GitBranch, Globe2, Mail, MonitorCheck, Pin, ShieldCheck, SlidersHorizontal, Sparkles, Users, type LucideIcon } from "lucide-react";
 import { getCurrentSession, isPublicSignupEnabled } from "../lib/auth";
 import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
@@ -22,8 +22,17 @@ const feedbackContextItems: Array<{ titleKey: string; copyKey: string; Icon: Luc
 ];
 
 const waitlistPoints: Array<{ key: string; Icon: LucideIcon }> = [
-  { key: "home.waitlist.point.1", Icon: CheckCircle2 },
-  { key: "home.waitlist.point.2", Icon: GitBranch }
+  { key: "home.waitlist.point.1", Icon: Globe2 },
+  { key: "home.waitlist.point.2", Icon: Code2 },
+  { key: "home.waitlist.point.3", Icon: ClipboardCheck },
+  { key: "home.waitlist.point.4", Icon: GitBranch }
+];
+
+const heroProofItems = [
+  "home.hero.proof.visitor",
+  "home.hero.proof.context",
+  "home.hero.proof.git",
+  "home.hero.proof.browser"
 ];
 
 const problemPoints: Array<{ sourceKey: string; realityKey: string; consequenceKey: string }> = [
@@ -122,6 +131,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <p className="lede">
             <TRich k="home.hero.lede" />
           </p>
+          <div className="home-hero-proof-row" aria-label="Repères produit ChangeThis">
+            {heroProofItems.map((key) => (
+              <span key={key}><T k={key} /></span>
+            ))}
+          </div>
         </div>
 
         <div className="home-hero-action">
@@ -133,6 +147,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <WaitlistForm action={waitlistAction} waitlistStatus={waitlistStatus} />
           )}
         </div>
+      </section>
+
+      <section className="home-section product-loop-section" aria-labelledby="product-loop-title">
+        <div className="home-section-header compact">
+          <p className="eyebrow"><T k="home.loop.section.eyebrow" /></p>
+          <h2 id="product-loop-title"><T k="home.loop.section.title" /></h2>
+          <p className="section-lede"><T k="home.loop.section.copy" /></p>
+        </div>
+        <MarketingConsolePreview />
       </section>
 
       <section className="home-section problem-section problem-editorial">
@@ -155,15 +178,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </article>
           ))}
         </div>
-      </section>
-
-      <section className="home-section product-loop-section" aria-labelledby="product-loop-title">
-        <div className="home-section-header compact">
-          <p className="eyebrow"><T k="home.loop.section.eyebrow" /></p>
-          <h2 id="product-loop-title"><T k="home.loop.section.title" /></h2>
-          <p className="section-lede"><T k="home.loop.section.copy" /></p>
-        </div>
-        <MarketingConsolePreview />
       </section>
 
       <section className="home-section feedback-context-section" aria-labelledby="feedback-context-title">
@@ -371,7 +385,7 @@ function MobilePreviewSection() {
               <div className="mobile-admin-console mobile-dashboard-shell">
                 <div className="mobile-dashboard-header">
                   <div>
-                    <span className="mobile-demo-kicker">Console opérationnelle</span>
+                    <span className="mobile-demo-kicker">Dashboard opérationnel</span>
                     <strong>Retours ChangeThis</strong>
                   </div>
                   <button type="button">Tester</button>
@@ -462,6 +476,7 @@ function SignupAccessCard({ compact = false, isSignedIn = false }: { compact?: b
         ) : (
           <>
             <Link className="button" href="/signup"><T k="home.hero.signup" /></Link>
+            <Link className="button secondary-button" href="/demo"><T k="home.hero.secondary" /></Link>
             <HomeLoginLink><T k="home.hero.login" /></HomeLoginLink>
           </>
         )}
@@ -536,7 +551,8 @@ function HeroStatement() {
       <span className="hero-provider gitlab">
         <ProviderIcon provider="gitlab" className="hero-provider-icon" />
         <span>GitLab</span>
-      </span>.
+      </span>
+      <T k="home.hero.statement.suffix" />
     </p>
   );
 }

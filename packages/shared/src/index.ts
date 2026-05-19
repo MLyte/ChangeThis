@@ -104,6 +104,17 @@ export type FeedbackMetadata = {
     colorDepth?: number;
     pixelDepth?: number;
   };
+  document?: {
+    width: number;
+    height: number;
+  };
+  network?: {
+    effectiveType?: string;
+    type?: string;
+    downlink?: number;
+    rtt?: number;
+    saveData?: boolean;
+  };
   devicePixelRatio: number;
   language: string;
   timezone?: string;
@@ -385,10 +396,12 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     `- Mode: ${feedback.type}`,
     `- Viewport: ${feedback.metadata.viewport.width}x${feedback.metadata.viewport.height}`,
     feedback.metadata.screen ? `- Ecran: ${feedback.metadata.screen.width}x${feedback.metadata.screen.height}` : undefined,
+    feedback.metadata.document ? `- Document: ${feedback.metadata.document.width}x${feedback.metadata.document.height}` : undefined,
     `- Device pixel ratio: ${feedback.metadata.devicePixelRatio}`,
     `- Langue: ${feedback.metadata.language}`,
     feedback.metadata.timezone ? `- Fuseau horaire: ${feedback.metadata.timezone}` : undefined,
     typeof feedback.metadata.online === "boolean" ? `- En ligne: ${feedback.metadata.online ? "oui" : "non"}` : undefined,
+    feedback.metadata.network ? `- Reseau: ${formatNetworkForIssue(feedback.metadata.network)}` : undefined,
     `- Date: ${feedback.metadata.createdAt}`,
     "",
     ...appEnvironmentLines,
@@ -579,6 +592,58 @@ function validateMetadata(value: unknown): MetadataValidationResult {
     };
   }
 
+  if (value.document !== undefined) {
+    const documentSize = value.document;
+    if (!isRecord(documentSize)
+      || !isPositiveInteger(documentSize.width, 200_000)
+      || !isPositiveInteger(documentSize.height, 200_000)) {
+      return invalid("metadata.document must contain positive width and height");
+    }
+
+    metadata.document = {
+      width: documentSize.width,
+      height: documentSize.height
+    };
+  }
+
+  if (value.network !== undefined) {
+    const network = value.network;
+    if (!isRecord(network)) {
+      return invalid("metadata.network must be an object");
+    }
+
+    const effectiveType = normalizeOptionalString(network.effectiveType, 32);
+    const type = normalizeOptionalString(network.type, 32);
+
+    if (effectiveType === false) {
+      return invalid("metadata.network.effectiveType must be a string");
+    }
+
+    if (type === false) {
+      return invalid("metadata.network.type must be a string");
+    }
+
+    if (network.downlink !== undefined && !isNonNegativeNumber(network.downlink, 10_000)) {
+      return invalid("metadata.network.downlink must be a non-negative number");
+    }
+
+    if (network.rtt !== undefined && !isNonNegativeNumber(network.rtt, 120_000)) {
+      return invalid("metadata.network.rtt must be a non-negative number");
+    }
+
+    if (network.saveData !== undefined && typeof network.saveData !== "boolean") {
+      return invalid("metadata.network.saveData must be a boolean");
+    }
+
+    metadata.network = {
+      effectiveType,
+      type,
+      downlink: network.downlink,
+      rtt: network.rtt,
+      saveData: network.saveData
+    };
+  }
+
   if (value.timezone !== undefined) {
     if (typeof value.timezone !== "string" || value.timezone.length > 128) {
       return invalid("metadata.timezone must be a string");
@@ -708,6 +773,18 @@ function formatAppEnvironmentForIssue(app: FeedbackAppEnvironment | undefined): 
   ].filter((line): line is string => typeof line === "string");
 
   return lines.length ? ["## Environnement client/test", "", ...lines] : [];
+}
+
+function formatNetworkForIssue(network: NonNullable<FeedbackMetadata["network"]>): string {
+  const parts = [
+    network.effectiveType,
+    network.type,
+    typeof network.downlink === "number" ? `${network.downlink} Mbps` : undefined,
+    typeof network.rtt === "number" ? `${network.rtt} ms` : undefined,
+    typeof network.saveData === "boolean" ? `economie donnees ${network.saveData ? "activee" : "desactivee"}` : undefined
+  ].filter((part): part is string => Boolean(part));
+
+  return parts.length ? parts.join(" · ") : "Non disponible";
 }
 
 function validatePin(value: unknown): PinValidationResult {

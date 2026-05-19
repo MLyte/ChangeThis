@@ -1143,8 +1143,7 @@ export function initChangeThis(options: WidgetOptions): void {
             padding: 8px;
           }
           .shortcut-hint {
-            font-size: 10px;
-            margin-top: 2px;
+            display: none;
           }
           .meta {
             font-size: 11px;
@@ -1925,6 +1924,8 @@ async function submitFeedback(params: {
         colorDepth: window.screen.colorDepth,
         pixelDepth: window.screen.pixelDepth
       },
+      document: collectDocumentSize(),
+      network: collectNetworkInfo(),
       devicePixelRatio: window.devicePixelRatio,
       language: navigator.language,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -2790,6 +2791,45 @@ function safeDataValue(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed.slice(0, 128) : undefined;
 }
+
+function collectDocumentSize(): FeedbackPayload["metadata"]["document"] {
+  const root = document.documentElement;
+  const body = document.body;
+
+  return {
+    width: Math.max(root.scrollWidth, root.clientWidth, body?.scrollWidth ?? 0, body?.clientWidth ?? 0, window.innerWidth),
+    height: Math.max(root.scrollHeight, root.clientHeight, body?.scrollHeight ?? 0, body?.clientHeight ?? 0, window.innerHeight)
+  };
+}
+
+function collectNetworkInfo(): FeedbackPayload["metadata"]["network"] {
+  const extendedNavigator = navigator as Navigator & {
+    connection?: NetworkInformationLike;
+    mozConnection?: NetworkInformationLike;
+    webkitConnection?: NetworkInformationLike;
+  };
+  const connection = extendedNavigator.connection ?? extendedNavigator.mozConnection ?? extendedNavigator.webkitConnection;
+
+  if (!connection) {
+    return undefined;
+  }
+
+  return {
+    effectiveType: typeof connection.effectiveType === "string" ? connection.effectiveType : undefined,
+    type: typeof connection.type === "string" ? connection.type : undefined,
+    downlink: typeof connection.downlink === "number" ? connection.downlink : undefined,
+    rtt: typeof connection.rtt === "number" ? connection.rtt : undefined,
+    saveData: typeof connection.saveData === "boolean" ? connection.saveData : undefined
+  };
+}
+
+type NetworkInformationLike = {
+  effectiveType?: string;
+  type?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+};
 
 function httpOrigin(value: string): string | undefined {
   return value.startsWith("http://") || value.startsWith("https://") ? value : undefined;
