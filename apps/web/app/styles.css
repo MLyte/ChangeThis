@@ -3725,7 +3725,7 @@ dd {
   font-size: 11px;
   font-weight: 950;
   gap: 12px;
-  grid-template-columns: 28px minmax(280px, 1.36fr) minmax(170px, 0.64fr) minmax(120px, 0.4fr) minmax(112px, 0.34fr) minmax(126px, 0.42fr) minmax(96px, 0.34fr) minmax(132px, 150px);
+  grid-template-columns: 28px minmax(360px, 2.1fr) minmax(130px, 0.45fr) minmax(92px, 0.24fr) minmax(90px, 0.25fr) minmax(110px, 0.32fr) minmax(88px, 0.24fr) minmax(132px, 150px);
   letter-spacing: 0.04em;
   padding: 9px 16px;
   text-transform: uppercase;
@@ -3983,7 +3983,7 @@ dd {
   border-top: 1px solid var(--line);
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr);
+  grid-template-columns: minmax(220px, 0.8fr) minmax(320px, 1.2fr);
   margin-top: 8px;
   padding-top: 8px;
 }
@@ -3998,9 +3998,8 @@ dd {
 }
 
 .feedback-technical-summary span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .feedback-site-cell,
