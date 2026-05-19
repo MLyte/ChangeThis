@@ -52,7 +52,7 @@ export type ProviderRepository = {
 };
 
 type TokenResolver = () => Promise<string | undefined>;
-const defaultProviderTimeoutMs = 10_000;
+const defaultProviderTimeoutMs = 30_000;
 
 export function getIssueProviderClient(provider: IssueProvider, options: IssueProviderClientOptions = {}): IssueProviderClient {
   if (provider === "github") {

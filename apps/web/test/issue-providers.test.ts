@@ -91,6 +91,26 @@ test("lists GitLab projects and preserves the numeric external project id", asyn
   ]);
 });
 
+test("uses a 30 second default provider timeout", async () => {
+  delete process.env.ISSUE_PROVIDER_TIMEOUT_MS;
+  const originalSetTimeout = globalThis.setTimeout;
+  const timeoutDelays: number[] = [];
+
+  globalThis.fetch = async () => Response.json([]);
+  globalThis.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+    timeoutDelays.push(Number(timeout));
+    return originalSetTimeout(handler, timeout, ...args);
+  }) as typeof setTimeout;
+
+  try {
+    await listIssueProviderRepositories("gitlab", { token: "gitlab-token" });
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
+
+  assert.equal(timeoutDelays[0], 30_000);
+});
+
 test("creates provider issues with the selected target", async () => {
   const requests: Request[] = [];
   globalThis.fetch = async (input, init) => {
