@@ -38,57 +38,59 @@ export async function AppHeader({
 
   return (
     <header className="topbar app-header">
-      <Link className="brand" href="/">
-        <span className="brand-wordmark" aria-label="ChangeThis">
-          <span>Change</span><span className="brand-wordmark-accent">This</span>
-        </span>
-        <Image src={logoChangeThis} alt="" aria-hidden="true" className="brand-logo" priority />
-      </Link>
+      <div className="topbar-inner">
+        <Link className="brand" href="/">
+          <span className="brand-wordmark" aria-label="ChangeThis">
+            <span>Change</span><span className="brand-wordmark-accent">This</span>
+          </span>
+          <Image src={logoChangeThis} alt="" aria-hidden="true" className="brand-logo" priority />
+        </Link>
 
-      <div className="topbar-actions">
-        {showPrimaryNav ? (
-          <nav className="primary-nav" aria-label="Application">
-            {navItems.map((item) => (
-              <AppNavLink href={item.href} key={item.href}>
-                <NavIcon labelKey={item.labelKey} />
-                <T k={item.labelKey} />
-              </AppNavLink>
-            ))}
-          </nav>
-        ) : null}
+        <div className="topbar-actions">
+          {showPrimaryNav ? (
+            <nav className="primary-nav" aria-label="Application">
+              {navItems.map((item) => (
+                <AppNavLink href={item.href} key={item.href}>
+                  <NavIcon labelKey={item.labelKey} />
+                  <T k={item.labelKey} />
+                </AppNavLink>
+              ))}
+            </nav>
+          ) : null}
 
-        {showConsoleShortcut ? (
-          <Link className="button header-console-link" href="/projects">
-            <Inbox aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            <T k="nav.openConsole" />
-          </Link>
-        ) : null}
-
-        <LanguageSwitch />
-
-        {showPublicAuthActions ? (
-          <div className="public-auth-actions">
-            <Link className="link" href="/login">
-              <T k="nav.login" />
+          {showConsoleShortcut ? (
+            <Link className="button header-console-link" href="/projects">
+              <Inbox aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+              <T k="nav.openConsole" />
             </Link>
-            {showAuthLinks || publicSignupEnabled ? (
-              <Link className="button" href="/signup">
-                <T k="nav.signup" />
-              </Link>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
 
-        {showHeaderSession ? (
-          <div className="session-menu" aria-label="Session">
-            <UserRound aria-hidden="true" className="ui-icon muted-icon" size={16} strokeWidth={2.2} />
-            <span>{resolvedSession.email}</span>
-            <a className="link session-link" href="/logout">
-              <LogOut aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
-              <T k="nav.logout" />
-            </a>
-          </div>
-        ) : null}
+          <LanguageSwitch />
+
+          {showPublicAuthActions ? (
+            <div className="public-auth-actions">
+              <Link className="link" href="/login">
+                <T k="nav.login" />
+              </Link>
+              {showAuthLinks || publicSignupEnabled ? (
+                <Link className="button" href="/signup">
+                  <T k="nav.signup" />
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
+
+          {showHeaderSession ? (
+            <div className="session-menu" aria-label="Session">
+              <UserRound aria-hidden="true" className="ui-icon muted-icon" size={16} strokeWidth={2.2} />
+              <span>{resolvedSession.email}</span>
+              <a className="link session-link" href="/logout">
+                <LogOut aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+                <T k="nav.logout" />
+              </a>
+            </div>
+          ) : null}
+        </div>
       </div>
     </header>
   );
