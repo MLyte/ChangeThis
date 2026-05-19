@@ -4994,10 +4994,11 @@ dd {
 }
 
 .provider-token-form {
+  background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   padding: 12px;
 }
 
@@ -5013,27 +5014,52 @@ dd {
 }
 
 .provider-token-form > div {
-  align-items: stretch;
-  display: flex;
-  gap: 8px;
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .provider-token-form input {
-  background: white;
+  appearance: none;
+  background: var(--soft);
   border: 1px solid var(--line-strong);
   border-radius: 7px;
   color: var(--ink);
   flex: 1 1 auto;
   font: inherit;
+  font-size: 14px;
+  font-weight: 800;
   min-height: 38px;
   min-width: 0;
   padding: 9px 10px;
+  width: 100%;
+}
+
+.provider-token-form input::placeholder {
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .provider-token-form input:focus {
+  background: white;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.14);
   outline: none;
+}
+
+.provider-token-form input:disabled {
+  background: var(--secondary-soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.provider-token-form input:-webkit-autofill,
+.provider-token-form input:-webkit-autofill:hover,
+.provider-token-form input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--soft) inset;
+  -webkit-text-fill-color: var(--ink);
+  border-color: var(--line-strong);
 }
 
 .provider-token-form p {
@@ -5179,6 +5205,10 @@ dd {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.site-create-form {
+  align-items: start;
+}
+
 .repo-form label {
   color: var(--muted);
   display: grid;
@@ -5282,6 +5312,28 @@ dd {
   line-height: 1.4;
   margin: 0;
   padding: 10px 12px;
+}
+
+.site-create-widget-options {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 2px 0 0;
+  padding: 14px;
+}
+
+.site-create-widget-options legend {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0 6px;
+}
+
+.site-create-widget-options label {
+  min-width: 0;
 }
 
 .origin-create-status.success {
@@ -5993,6 +6045,7 @@ code {
   }
 
   .repo-form,
+  .site-create-widget-options,
   .waitlist-form,
   .site-repo-row,
   .site-row-main,

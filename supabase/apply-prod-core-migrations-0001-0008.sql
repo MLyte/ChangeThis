@@ -502,6 +502,14 @@ as $$
   );
 $$;
 
+revoke execute on function public.is_organization_member(uuid) from public;
+revoke execute on function public.is_organization_member(uuid) from anon;
+revoke execute on function public.is_organization_member(uuid) from authenticated;
+
+revoke execute on function public.can_manage_organization(uuid) from public;
+revoke execute on function public.can_manage_organization(uuid) from anon;
+revoke execute on function public.can_manage_organization(uuid) from authenticated;
+
 alter table workspace_members enable row level security;
 alter table provider_integration_credentials enable row level security;
 alter table project_public_keys enable row level security;

@@ -127,6 +127,10 @@ export function IssueDestinationSetup({
   const [repositoryUrl, setRepositoryUrl] = useState("");
   const [siteName, setSiteName] = useState("");
   const [siteOrigin, setSiteOrigin] = useState("");
+  const [siteWidgetLocale, setSiteWidgetLocale] = useState<WidgetLocale>("fr");
+  const [siteWidgetButtonVariant, setSiteWidgetButtonVariant] = useState<WidgetButtonVariant>("default");
+  const [siteWidgetButtonPosition, setSiteWidgetButtonPosition] = useState<WidgetButtonPosition>("bottom-right");
+  const [siteWidgetReporterFields, setSiteWidgetReporterFields] = useState<WidgetReporterFields>("optional");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
   const [installChecks, setInstallChecks] = useState<Record<string, InstallCheckResult>>({});
@@ -203,9 +207,23 @@ export function IssueDestinationSetup({
     setSelectedProvider(provider);
     setSelectedRepositoryId("");
     setRepositoryUrl("");
+    setSiteName("");
     setRepositoryOptions([]);
     setRepositoryLoadState("idle");
     setRepositoryLoadMessage("");
+  }
+
+  function selectRepository(repositoryId: string) {
+    const repository = repositoryOptions.find((option) => option.id === repositoryId);
+
+    setSelectedRepositoryId(repositoryId);
+    setRepositoryUrl("");
+
+    if (repository) {
+      setSiteName(repository.project);
+    } else {
+      setSiteName("");
+    }
   }
 
   function openSiteModal() {
@@ -249,7 +267,11 @@ export function IssueDestinationSetup({
             provider: selectedProvider,
             integrationId: selectedIntegration.id,
             repositoryId: selectedRepository?.id,
-            repositoryUrl: normalizedRepositoryUrl || undefined
+            repositoryUrl: normalizedRepositoryUrl || undefined,
+            widgetLocale: siteWidgetLocale,
+            widgetButtonPosition: siteWidgetButtonPosition,
+            widgetButtonVariant: siteWidgetButtonVariant,
+            widgetReporterFields: siteWidgetReporterFields
           })
         });
 
@@ -273,8 +295,13 @@ export function IssueDestinationSetup({
         setProjectViews((current) => [nextSite, ...current]);
         setMessage(`${body.site.name} est prêt. Placez le script sur ${body.site.allowedOrigins[0]}.`);
         setSelectedRepositoryId("");
+        setRepositoryUrl("");
         setSiteName("");
         setSiteOrigin("");
+        setSiteWidgetLocale("fr");
+        setSiteWidgetButtonVariant("default");
+        setSiteWidgetButtonPosition("bottom-right");
+        setSiteWidgetReporterFields("optional");
         setIsSiteModalOpen(false);
         toast.success("Site connecté", {
           description: `${body.site.name} est prêt. Copiez le script depuis la liste des sites.`
@@ -548,12 +575,20 @@ export function IssueDestinationSetup({
               repositoryUrl={repositoryUrl}
               selectedProvider={selectedProvider}
               selectedRepositoryId={selectedRepositoryId}
+              setSiteWidgetButtonPosition={setSiteWidgetButtonPosition}
+              setSiteWidgetButtonVariant={setSiteWidgetButtonVariant}
+              setSiteWidgetLocale={setSiteWidgetLocale}
+              setSiteWidgetReporterFields={setSiteWidgetReporterFields}
               setRepositoryUrl={setRepositoryUrl}
-              setSelectedRepositoryId={setSelectedRepositoryId}
+              setSelectedRepositoryId={selectRepository}
               setSiteName={setSiteName}
               setSiteOrigin={setSiteOrigin}
               siteName={siteName}
               siteOrigin={siteOrigin}
+              siteWidgetButtonPosition={siteWidgetButtonPosition}
+              siteWidgetButtonVariant={siteWidgetButtonVariant}
+              siteWidgetLocale={siteWidgetLocale}
+              siteWidgetReporterFields={siteWidgetReporterFields}
             />
           ) : null}
 
@@ -1398,12 +1433,20 @@ function ConnectedSitesSection({
   repositoryUrl,
   selectedProvider,
   selectedRepositoryId,
+  setSiteWidgetButtonPosition,
+  setSiteWidgetButtonVariant,
+  setSiteWidgetLocale,
+  setSiteWidgetReporterFields,
   setRepositoryUrl,
   setSelectedRepositoryId,
   setSiteName,
   setSiteOrigin,
   siteName,
-  siteOrigin
+  siteOrigin,
+  siteWidgetButtonPosition,
+  siteWidgetButtonVariant,
+  siteWidgetLocale,
+  siteWidgetReporterFields
 }: {
   connectedProviders: Set<IssueProvider>;
   isPending: boolean;
@@ -1425,12 +1468,20 @@ function ConnectedSitesSection({
   repositoryUrl: string;
   selectedProvider: IssueProvider;
   selectedRepositoryId: string;
+  setSiteWidgetButtonPosition: (position: WidgetButtonPosition) => void;
+  setSiteWidgetButtonVariant: (variant: WidgetButtonVariant) => void;
+  setSiteWidgetLocale: (locale: WidgetLocale) => void;
+  setSiteWidgetReporterFields: (fields: WidgetReporterFields) => void;
   setRepositoryUrl: (repositoryUrl: string) => void;
   setSelectedRepositoryId: (repositoryId: string) => void;
   setSiteName: (name: string) => void;
   setSiteOrigin: (origin: string) => void;
   siteName: string;
   siteOrigin: string;
+  siteWidgetButtonPosition: WidgetButtonPosition;
+  siteWidgetButtonVariant: WidgetButtonVariant;
+  siteWidgetLocale: WidgetLocale;
+  siteWidgetReporterFields: WidgetReporterFields;
 }) {
   const isSelectedProviderConnected = connectedProviders.has(selectedProvider);
   const [openScriptForProject, setOpenScriptForProject] = useState<string | null>(null);
@@ -1702,29 +1753,7 @@ function ConnectedSitesSection({
                   <span>{repositoryStatusText(repositoryLoadState, repositoryLoadMessage)}</span>
                 </div>
               ) : null}
-              <form className="repo-form" onSubmit={(event) => event.preventDefault()}>
-                <label>
-                  Nom du site
-                  <input name="siteName" onChange={(event) => setSiteName(event.target.value)} placeholder="Site vitrine" value={siteName} />
-                </label>
-                <label>
-                  <span className="field-label">
-                    URL du site
-                    <span
-                      className="tooltip-icon"
-                      role="img"
-                      aria-label="Cette URL limite l'envoi de feedbacks aux pages de ce domaine. Si quelqu'un récupère la clé publique du widget, l'API refusera les retours venant d'un autre site."
-                      data-tooltip="Cette URL limite l'envoi de feedbacks aux pages de ce domaine. Si quelqu'un récupère la clé publique du widget, l'API refusera les retours venant d'un autre site."
-                      tabIndex={0}
-                    >
-                      <Info aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.3} />
-                    </span>
-                  </span>
-                  <input name="siteOrigin" onChange={(event) => setSiteOrigin(event.target.value)} placeholder="https://www.exemple.be" value={siteOrigin} />
-                </label>
-                <p className={`origin-create-status ${siteOriginValidation.ok ? "success" : siteOrigin.trim() ? "error" : ""}`} role="status">
-                  {siteOriginValidation.message}
-                </p>
+              <form className="repo-form site-create-form" onSubmit={(event) => event.preventDefault()}>
                 <label>
                   Service Git
                   <select name="provider" value={selectedProvider} onChange={(event) => onSelectProvider(event.target.value as IssueProvider)}>
@@ -1733,7 +1762,7 @@ function ConnectedSitesSection({
                   </select>
                 </label>
                 <label className="repo-select-field">
-                  Repository connecté
+                  Dépôt connecté
                   <select
                     disabled={isRepositorySelectDisabled}
                     name="repositorySelect"
@@ -1763,6 +1792,63 @@ function ConnectedSitesSection({
                     value={repositoryUrl}
                   />
                 </label>
+                <label>
+                  Nom du projet
+                  <input name="siteName" onChange={(event) => setSiteName(event.target.value)} placeholder="Nom repris depuis le dépôt choisi" value={siteName} />
+                </label>
+                <label className="site-origin-field">
+                  <span className="field-label">
+                    URL du site
+                    <span
+                      className="tooltip-icon"
+                      role="img"
+                      aria-label="Cette URL limite l'envoi de feedbacks aux pages de ce domaine. Si quelqu'un récupère la clé publique du widget, l'API refusera les retours venant d'un autre site."
+                      data-tooltip="Cette URL limite l'envoi de feedbacks aux pages de ce domaine. Si quelqu'un récupère la clé publique du widget, l'API refusera les retours venant d'un autre site."
+                      tabIndex={0}
+                    >
+                      <Info aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.3} />
+                    </span>
+                  </span>
+                  <input name="siteOrigin" onChange={(event) => setSiteOrigin(event.target.value)} placeholder="https://www.exemple.be" value={siteOrigin} />
+                </label>
+                <p className={`origin-create-status ${siteOriginValidation.ok ? "success" : siteOrigin.trim() ? "error" : ""}`} role="status">
+                  {siteOriginValidation.message}
+                </p>
+                <fieldset className="site-create-widget-options">
+                  <legend>Options de placement du feedback</legend>
+                  <label>
+                    <span>Langue</span>
+                    <select name="widgetLocale" onChange={(event) => setSiteWidgetLocale(event.target.value as WidgetLocale)} value={siteWidgetLocale}>
+                      {widgetLocaleOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Visibilité</span>
+                    <select name="widgetButtonVariant" onChange={(event) => setSiteWidgetButtonVariant(event.target.value as WidgetButtonVariant)} value={siteWidgetButtonVariant}>
+                      {widgetVariantOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Position bouton</span>
+                    <select name="widgetButtonPosition" onChange={(event) => setSiteWidgetButtonPosition(event.target.value as WidgetButtonPosition)} value={siteWidgetButtonPosition}>
+                      {widgetPositionOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Identité visiteur</span>
+                    <select name="widgetReporterFields" onChange={(event) => setSiteWidgetReporterFields(event.target.value as WidgetReporterFields)} value={siteWidgetReporterFields}>
+                      {widgetReporterFieldOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </fieldset>
                 <p className="form-status site-create-status" role="status">
                   {message}
                 </p>

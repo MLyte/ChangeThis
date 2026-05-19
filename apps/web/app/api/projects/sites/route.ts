@@ -1,4 +1,4 @@
-import type { IssueProvider } from "@changethis/shared";
+import type { IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetReporterFields } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
@@ -110,7 +110,11 @@ export async function POST(request: Request) {
       repositoryUrl: repository.webUrl,
       integrationId: integration.id,
       externalProjectId: repository.externalProjectId,
-      workspaceId: session.workspace.id
+      workspaceId: session.workspace.id,
+      widgetLocale: parseWidgetLocale(body.widgetLocale),
+      widgetButtonPosition: parseWidgetButtonPosition(body.widgetButtonPosition),
+      widgetButtonVariant: parseWidgetButtonVariant(body.widgetButtonVariant),
+      widgetReporterFields: parseWidgetReporterFields(body.widgetReporterFields)
     });
 
     return NextResponse.json({
@@ -141,6 +145,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isIssueProvider(value: unknown): value is IssueProvider {
   return value === "github" || value === "gitlab";
+}
+
+function parseWidgetLocale(value: unknown): WidgetLocale | undefined {
+  return value === "fr" || value === "en" ? value : undefined;
+}
+
+function parseWidgetButtonPosition(value: unknown): WidgetButtonPosition | undefined {
+  return value === "bottom-right" || value === "bottom-left" || value === "top-right" || value === "top-left" ? value : undefined;
+}
+
+function parseWidgetButtonVariant(value: unknown): WidgetButtonVariant | undefined {
+  return value === "default" || value === "subtle" ? value : undefined;
+}
+
+function parseWidgetReporterFields(value: unknown): WidgetReporterFields | undefined {
+  return value === "hidden" || value === "optional" || value === "required" ? value : undefined;
 }
 
 async function findRepositoryById(provider: IssueProvider, repositoryId: string, integrationId: string, workspaceId: string) {

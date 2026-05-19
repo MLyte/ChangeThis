@@ -46,6 +46,10 @@ const requiredPatterns = [
   ["project updated_at trigger", /projects_updated_at/],
   ["provider integrations updated_at trigger", /provider_integrations_updated_at/],
   ["feedback dashboard index", /create index if not exists feedbacks_project_status_created_at_idx[\s\S]*on feedbacks \(project_id, status, created_at desc\)/],
+  ["membership helper execute revoked from anon", /revoke execute on function public\.is_organization_member\(uuid\) from anon/],
+  ["membership helper execute revoked from authenticated", /revoke execute on function public\.is_organization_member\(uuid\) from authenticated/],
+  ["admin helper execute revoked from anon", /revoke execute on function public\.can_manage_organization\(uuid\) from anon/],
+  ["admin helper execute revoked from authenticated", /revoke execute on function public\.can_manage_organization\(uuid\) from authenticated/],
 ];
 
 for (const [label, pattern] of requiredPatterns) {
