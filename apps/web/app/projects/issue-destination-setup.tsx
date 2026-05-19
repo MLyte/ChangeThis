@@ -11,7 +11,6 @@ import {
   Info,
   Link2,
   Mail,
-  FileCode2,
   Plus,
   RefreshCw,
   ShieldCheck,
@@ -1592,7 +1591,6 @@ function ConnectedSitesSection({
   siteWidgetReporterFields: WidgetReporterFields;
 }) {
   const isSelectedProviderConnected = connectedProviders.has(selectedProvider);
-  const [openScriptForProject, setOpenScriptForProject] = useState<string | null>(null);
   const shouldShowRepositoryStatus = isSelectedProviderConnected && repositoryLoadState !== "idle";
   const isRepositorySelectDisabled = !isSelectedProviderConnected || repositoryLoadState === "loading" || repositoryOptions.length === 0;
   const canUseRepositoryUrlFallback = isSelectedProviderConnected
@@ -1613,10 +1611,6 @@ function ConnectedSitesSection({
     };
   });
   const siteOriginValidation = validateAllowedOrigin(siteOrigin);
-
-  function toggleScriptPanel(projectKey: string) {
-    setOpenScriptForProject((current) => (current === projectKey ? null : projectKey));
-  }
 
   return (
     <section className="settings-section linked-sites" aria-labelledby="linked-sites-title">
@@ -1738,9 +1732,9 @@ function ConnectedSitesSection({
                 </div>
                 <div className="site-row-meta">
                   <div className="site-metrics">
-                    <span><strong>{project.metrics?.feedbacksReceived ?? 0}</strong><small>Retours</small></span>
-                    <span><strong>{project.metrics?.issuesCreated ?? 0}</strong><small>Issues</small></span>
-                    <span><strong>{project.metrics?.failedIssues ?? 0}</strong><small>Échecs</small></span>
+                    <span title="Feedbacks reçus depuis ce site"><strong>{project.metrics?.feedbacksReceived ?? 0}</strong><small>Feedbacks reçus</small></span>
+                    <span title="Issues Git créées depuis ces feedbacks"><strong>{project.metrics?.issuesCreated ?? 0}</strong><small>Issues Git créées</small></span>
+                    <span title="Créations d'issues Git en échec"><strong>{project.metrics?.failedIssues ?? 0}</strong><small>Échecs Git</small></span>
                   </div>
                   <div className="widget-settings">
                     <ThemeDropdown
@@ -1773,52 +1767,13 @@ function ConnectedSitesSection({
                     />
                   </div>
                   <div className="site-script">
-                    <strong>Script widget</strong>
                     {originValidation.ok ? (
-                      <button
-                        className="inline-action site-script-toggle"
-                        aria-controls={`site-script-${project.publicKey}`}
-                        aria-expanded={openScriptForProject === project.publicKey}
-                        onClick={() => toggleScriptPanel(project.publicKey)}
-                        type="button"
-                      >
-                        <FileCode2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-                        {openScriptForProject === project.publicKey ? "Masquer le script" : "Voir le script"}
+                      <button aria-label="Copier le script widget" className="site-script-copy-card" onClick={() => onCopyInstallSnippet(project)} type="button">
+                        <code>{snippet}</code>
                       </button>
                     ) : (
                       <span className="site-script-placeholder">Origine autorisée à corriger avant installation.</span>
                     )}
-                    <div className="site-script-actions">
-                      <span className={`origin-check-result ${originValidation.ok ? "success" : "error"}`} role="status">
-                        {originValidation.message}
-                      </span>
-                      {installChecks[project.publicKey] ? (
-                        <span className={`script-check-result ${installChecks[project.publicKey].ok ? "success" : "error"}`}>
-                          {installChecks[project.publicKey].message}
-                        </span>
-                      ) : null}
-                    </div>
-                    {originValidation.ok ? (
-                      <div
-                        id={`site-script-${project.publicKey}`}
-                        className={`site-script-panel${openScriptForProject === project.publicKey ? " is-open" : ""}`}
-                        hidden={openScriptForProject !== project.publicKey}
-                      >
-                        <button className="site-script-copy-card" disabled={!originValidation.ok} onClick={() => onCopyInstallSnippet(project)} type="button">
-                          <span className="site-script-copy-topline">
-                            <span>
-                              <FileCode2 aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-                              Script à installer
-                            </span>
-                            <span>
-                              <Copy aria-hidden="true" className="ui-icon" size={13} strokeWidth={2.2} />
-                              Cliquer pour copier
-                            </span>
-                          </span>
-                          <code>{snippet}</code>
-                        </button>
-                      </div>
-                    ) : null}
                   </div>
                 </div>
               </article>

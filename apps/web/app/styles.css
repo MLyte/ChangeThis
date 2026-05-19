@@ -5776,7 +5776,7 @@ dd {
   border-top: 1px solid var(--line);
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(190px, 0.44fr) minmax(220px, 0.52fr) minmax(0, 1.04fr);
+  grid-template-columns: minmax(220px, 0.5fr) minmax(460px, 1.15fr) minmax(280px, 0.65fr);
   padding-top: 12px;
 }
 
@@ -5827,7 +5827,7 @@ dd {
 
 .site-metrics small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 850;
   line-height: 1.1;
   text-transform: uppercase;
@@ -5870,45 +5870,8 @@ dd {
 }
 
 .site-script {
-  align-items: center;
-  display: grid;
-  gap: 8px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  min-width: 0;
-}
-
-.site-script strong {
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.site-script code {
-  background: var(--soft);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  color: var(--ink);
   display: block;
-  font-size: 12px;
-  line-height: 1.4;
-  overflow: hidden;
-  padding: 8px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.site-script-panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  display: none;
-  grid-column: 1 / -1;
-  gap: 10px;
-  padding: 10px;
-}
-
-.site-script-panel.is-open {
-  display: grid;
+  min-width: 0;
 }
 
 .site-script-copy-card {
@@ -5916,10 +5879,9 @@ dd {
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
-  display: grid;
-  gap: 9px;
+  display: block;
   min-width: 0;
-  padding: 10px;
+  padding: 0;
   text-align: left;
   transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
   width: 100%;
@@ -5940,42 +5902,17 @@ dd {
   outline: 0;
 }
 
-.site-script-copy-topline {
-  align-items: center;
-  color: var(--muted);
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 12px;
-  font-weight: 850;
-  gap: 8px 14px;
-  justify-content: space-between;
-}
-
-.site-script-copy-topline span {
-  align-items: center;
-  display: inline-flex;
-  gap: 5px;
-}
-
-.site-script-copy-topline span:first-child {
-  color: var(--ink);
-  font-weight: 900;
-}
-
-.site-script-toggle {
-  justify-self: start;
-}
-
 .site-script-copy-card code {
   background: var(--soft);
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 7px;
   color: var(--ink);
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.45;
-  overflow-x: auto;
+  max-height: 70px;
+  overflow: auto;
   padding: 10px;
   text-overflow: clip;
   white-space: pre-wrap;
@@ -5995,42 +5932,6 @@ dd {
   padding: 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.site-script-actions {
-  align-items: center;
-  display: inline-flex;
-  gap: 10px;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-.script-check-result {
-  font-size: 12px;
-  font-weight: 850;
-  line-height: 1.35;
-}
-
-.origin-check-result {
-  font-size: 12px;
-  font-weight: 850;
-  line-height: 1.35;
-}
-
-.origin-check-result.success {
-  color: var(--success);
-}
-
-.origin-check-result.error {
-  color: var(--coral);
-}
-
-.script-check-result.success {
-  color: var(--accent);
-}
-
-.script-check-result.error {
-  color: var(--primary-dark);
 }
 
 .inline-action {
