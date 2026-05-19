@@ -10,6 +10,8 @@ export function AuthConfirmClient() {
     const accessToken = hashParams.get("access_token") ?? currentUrl.searchParams.get("access_token");
     const refreshToken = hashParams.get("refresh_token") ?? currentUrl.searchParams.get("refresh_token");
     const expiresIn = hashParams.get("expires_in") ?? currentUrl.searchParams.get("expires_in");
+    const tokenHash = currentUrl.searchParams.get("token_hash");
+    const type = currentUrl.searchParams.get("type");
     const error = hashParams.get("error") ?? currentUrl.searchParams.get("error");
 
     if (error) {
@@ -20,7 +22,7 @@ export function AuthConfirmClient() {
       return;
     }
 
-    if (!accessToken) {
+    if (!accessToken && !tokenHash) {
       const callbackUrl = new URL("/api/auth/callback", window.location.origin);
       callbackUrl.searchParams.set("next", nextPath);
       window.location.replace(callbackUrl.toString());
@@ -36,10 +38,16 @@ export function AuthConfirmClient() {
         accessToken,
         refreshToken,
         expiresIn,
+        tokenHash,
+        type,
         next: nextPath
       })
     })
       .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("auth_callback_failed");
+        }
+
         const body = await response.json().catch(() => null) as { redirectTo?: string } | null;
         window.location.replace(body?.redirectTo ?? nextPath);
       })

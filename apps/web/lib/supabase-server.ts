@@ -68,6 +68,8 @@ export type SupabasePasswordSignInResult =
       error: "invalid" | "unavailable" | "missing";
     };
 
+export type SupabaseOtpVerifyResult = SupabasePasswordSignInResult;
+
 export type SupabaseSignUpResult =
   | {
       ok: true;
@@ -123,6 +125,17 @@ function getSupabaseRestTimeoutMs(): number {
   return Number.isFinite(timeoutMs) && timeoutMs > 0
     ? Math.floor(timeoutMs)
     : DEFAULT_SUPABASE_REST_TIMEOUT_MS;
+}
+
+function isSupportedEmailOtpType(value: string): boolean {
+  return [
+    "signup",
+    "magiclink",
+    "recovery",
+    "invite",
+    "email_change",
+    "email"
+  ].includes(value);
 }
 
 export function isSupabaseAuthConfigured(): boolean {
@@ -204,6 +217,58 @@ export async function signInWithPassword(input: {
   }
 
   if (typeof body.access_token !== "string") {
+    return {
+      ok: false,
+      error: "invalid"
+    };
+  }
+
+  const expiresIn = typeof body.expires_in === "number" && Number.isFinite(body.expires_in)
+    ? body.expires_in
+    : undefined;
+
+  return {
+    ok: true,
+    accessToken: body.access_token,
+    refreshToken: typeof body.refresh_token === "string" ? body.refresh_token : undefined,
+    expiresIn
+  };
+}
+
+export async function verifySupabaseOtpTokenHash(input: {
+  tokenHash: string;
+  type: string;
+}): Promise<SupabaseOtpVerifyResult> {
+  if (!getSupabaseUrl() || !getSupabaseAnonKey()) {
+    return {
+      ok: false,
+      error: "unavailable"
+    };
+  }
+
+  if (!input.tokenHash || !isSupportedEmailOtpType(input.type)) {
+    return {
+      ok: false,
+      error: "missing"
+    };
+  }
+
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/verify`, {
+    method: "POST",
+    headers: {
+      apikey: getSupabaseAnonKey()!,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      token_hash: input.tokenHash,
+      type: input.type
+    }),
+    cache: "no-store"
+  });
+
+  const body = await response.json() as SupabaseAuthTokenResponse;
+
+  if (!response.ok || typeof body.access_token !== "string") {
     return {
       ok: false,
       error: "invalid"

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifySupabaseOtpTokenHash } from "../../../../lib/supabase-server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
     accessToken?: unknown;
     refreshToken?: unknown;
     expiresIn?: unknown;
+    tokenHash?: unknown;
+    type?: unknown;
     next?: unknown;
   };
 
@@ -38,14 +41,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_callback" }, { status: 400 });
   }
 
-  const accessToken = typeof body.accessToken === "string" ? body.accessToken : "";
-  const refreshToken = typeof body.refreshToken === "string" ? body.refreshToken : null;
-  const expiresIn = typeof body.expiresIn === "string"
+  let accessToken = typeof body.accessToken === "string" ? body.accessToken : "";
+  let refreshToken = typeof body.refreshToken === "string" ? body.refreshToken : null;
+  let expiresIn = typeof body.expiresIn === "string"
     ? parseInt(body.expiresIn, 10)
     : typeof body.expiresIn === "number"
       ? body.expiresIn
       : Number.NaN;
+  const tokenHash = typeof body.tokenHash === "string" ? body.tokenHash : "";
+  const type = typeof body.type === "string" ? body.type : "";
   const nextPath = sanitizeNextPath(typeof body.next === "string" ? body.next : null);
+
+  if (!accessToken && tokenHash) {
+    const verifyResult = await verifySupabaseOtpTokenHash({
+      tokenHash,
+      type
+    });
+
+    if (!verifyResult.ok) {
+      return NextResponse.json({ error: verifyResult.error }, { status: 400 });
+    }
+
+    accessToken = verifyResult.accessToken;
+    refreshToken = verifyResult.refreshToken ?? null;
+    expiresIn = verifyResult.expiresIn ?? Number.NaN;
+  }
 
   if (!accessToken) {
     return NextResponse.json({ error: "missing_token" }, { status: 400 });

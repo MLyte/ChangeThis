@@ -341,6 +341,7 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Valider les clients pilotes et le périmètre du dry-run staging.
 
 ## Journal
+- [2026-05-19] Auth signup robuste aux scanners mail: ajout du support `token_hash` Supabase sur `/auth/confirm` + `/api/auth/callback`, avec echange serveur via `/auth/v1/verify`, cookies de session poses cote app, et documentation du template `Confirm signup` utilisant `{{ .TokenHash }}` au lieu du lien Supabase direct. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] Correctif callback auth Railway: `/api/auth/callback` construit maintenant ses redirects absolus depuis `NEXT_PUBLIC_APP_URL` au lieu de `request.url`, qui peut valoir `https://localhost:8080` dans le runtime Railway. Ajout d'un test reproduisant l'erreur `localhost:8080/login`. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] Correctif redirection signup Supabase REST: alignement sur le client officiel GoTrue, avec `redirect_to` en query string de `/auth/v1/otp` et `create_user` dans le body. Le lien Outlook/SafeLinks n'etait pas la cause de la redirection racine, meme s'il peut consommer un token. Validation ciblee: tests web OK, typecheck web OK.
 - [2026-05-19] Correctif redirection magic link Supabase: l'appel REST `/auth/v1/otp` envoie maintenant `options.redirectTo` au lieu de `email_redirect_to`, qui etait ignore par l'API REST et faisait retomber les liens sur la Site URL racine. Ajout d'un test verrouillant le payload. Validation ciblee: tests web OK, typecheck web OK.

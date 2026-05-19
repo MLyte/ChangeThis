@@ -3,10 +3,17 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 process.env.NEXT_PUBLIC_APP_URL = "https://app.changethis.dev";
+process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.example.test";
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-test-key";
 
 type AuthCallbackRouteModule = typeof import("../app/api/auth/callback/route.ts");
 
 const authCallbackRoute = await import(pathToFileURL(`${process.cwd()}/app/api/auth/callback/route.ts`).href) as AuthCallbackRouteModule;
+const originalFetch = globalThis.fetch;
+
+test.afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
 
 test("auth callback POST stores Supabase tokens without requiring query-string tokens", async () => {
   const response = await authCallbackRoute.POST(new Request("http://localhost:3000/api/auth/callback", {
@@ -45,6 +52,46 @@ test("auth callback POST rejects missing token", async () => {
 
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { error: "missing_token" });
+});
+
+test("auth callback POST exchanges a Supabase token hash for session cookies", async () => {
+  let requestUrl = "";
+  let requestBody: unknown;
+
+  globalThis.fetch = async (input, init) => {
+    requestUrl = String(input);
+    requestBody = JSON.parse(String(init?.body));
+
+    return Response.json({
+      access_token: "verified-access-token",
+      refresh_token: "verified-refresh-token",
+      expires_in: 3600
+    });
+  };
+
+  const response = await authCallbackRoute.POST(new Request("https://app.changethis.dev/api/auth/callback", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      tokenHash: "signup-token-hash",
+      type: "signup",
+      next: "/signup/set-password"
+    })
+  }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { redirectTo: "/signup/set-password" });
+  assert.equal(requestUrl, "https://supabase.example.test/auth/v1/verify");
+  assert.deepEqual(requestBody, {
+    token_hash: "signup-token-hash",
+    type: "signup"
+  });
+
+  const setCookie = response.headers.get("set-cookie") ?? "";
+  assert.match(setCookie, /changethis_access_token=verified-access-token/);
+  assert.match(setCookie, /supabase-refresh-token=verified-refresh-token/);
 });
 
 test("auth callback GET redirects with the configured public origin", async () => {
