@@ -518,13 +518,7 @@ export class SupabaseFeedbackRepository implements FeedbackRepository {
       throw new Error(`Project ${input.projectKey} does not have an issue target`);
     }
 
-    const feedbackRows = await supabaseServiceRest<SupabaseFeedbackRow[]>("/rest/v1/feedbacks", {
-      method: "POST",
-      headers: {
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(toSupabaseFeedbackInsert(input, project.id, issueTarget.id))
-    });
+    const feedbackRows = await insertSupabaseFeedback(input, project.id, issueTarget.id);
     const feedbackRow = feedbackRows[0];
 
     if (!feedbackRow) {
@@ -1134,7 +1128,31 @@ function mapSupabaseFeedback(
   };
 }
 
-function toSupabaseFeedbackInsert(input: CreateFeedbackInput, projectId: string, issueTargetId: string): Record<string, unknown> {
+async function insertSupabaseFeedback(input: CreateFeedbackInput, projectId: string, issueTargetId: string): Promise<SupabaseFeedbackRow[]> {
+  try {
+    return await supabaseServiceRest<SupabaseFeedbackRow[]>("/rest/v1/feedbacks", {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(toSupabaseFeedbackInsert(input, projectId, issueTargetId))
+    });
+  } catch (error) {
+    if (!input.screenshotDataUrl) {
+      throw error;
+    }
+
+    return supabaseServiceRest<SupabaseFeedbackRow[]>("/rest/v1/feedbacks", {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(toSupabaseFeedbackInsert(input, projectId, issueTargetId, false))
+    });
+  }
+}
+
+function toSupabaseFeedbackInsert(input: CreateFeedbackInput, projectId: string, issueTargetId: string, includeScreenshotLifecycle = true): Record<string, unknown> {
   const pin = input.payload.pin ?? input.payload.pins?.[0];
   const screenshotMimeType = input.screenshotDataUrl ? parseDataUrlMimeType(input.screenshotDataUrl) : undefined;
   const screenshotBytes = input.screenshotDataUrl ? estimateDataUrlBytes(input.screenshotDataUrl) : undefined;
@@ -1162,15 +1180,15 @@ function toSupabaseFeedbackInsert(input: CreateFeedbackInput, projectId: string,
     element_selector: pin?.selector,
     element_text: pin?.text,
     screenshot_data_url: input.screenshotDataUrl,
-    screenshot_thumbnail_data_url: input.payload.screenshotThumbnailDataUrl,
     screenshot_mime_type: screenshotMimeType,
     screenshot_bytes: screenshotBytes,
-    screenshot_original_bytes: screenshotBytes,
-    screenshot_hash: screenshotHash,
-    screenshot_status: input.screenshotDataUrl ? "active" : undefined,
-    screenshot_storage_path: input.screenshotDataUrl ? `hot/${projectId}/${crypto.randomUUID()}.${extensionFromMimeType(screenshotMimeType)}` : undefined,
-    screenshot_last_used_at: input.screenshotDataUrl ? now : undefined,
-    screenshot_usage_count: input.screenshotDataUrl ? 1 : undefined
+    screenshot_thumbnail_data_url: includeScreenshotLifecycle ? input.payload.screenshotThumbnailDataUrl : undefined,
+    screenshot_original_bytes: includeScreenshotLifecycle ? screenshotBytes : undefined,
+    screenshot_hash: includeScreenshotLifecycle ? screenshotHash : undefined,
+    screenshot_status: includeScreenshotLifecycle && input.screenshotDataUrl ? "active" : undefined,
+    screenshot_storage_path: includeScreenshotLifecycle && input.screenshotDataUrl ? `hot/${projectId}/${crypto.randomUUID()}.${extensionFromMimeType(screenshotMimeType)}` : undefined,
+    screenshot_last_used_at: includeScreenshotLifecycle && input.screenshotDataUrl ? now : undefined,
+    screenshot_usage_count: includeScreenshotLifecycle && input.screenshotDataUrl ? 1 : undefined
   };
 }
 
