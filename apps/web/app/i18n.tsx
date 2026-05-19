@@ -50,7 +50,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "login.error": "Connexion impossible pour le moment. Vérifiez vos informations puis réessayez.",
     "login.redirectHint": "Vous serez redirigé vers la page demandée après connexion.",
     "login.noBackend": "Authentification serveur indisponible dans cet environnement.",
-    "login.privateBeta.title": "Bêta ouverte contrôlée",
+    "login.privateBeta.title": "Inscriptions en pause",
     "login.privateBeta.copy": "Les inscriptions peuvent être temporairement fermées pendant une opération. Connectez-vous avec un compte existant ou réessayez plus tard.",
     "auth.confirm.title": "Connexion sécurisée en cours.",
     "auth.confirm.copy": "Nous vérifions le lien reçu par e-mail avant de finaliser votre compte.",
@@ -102,13 +102,13 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.hero.statement.prefix": "Transformez les retours clients de vos sites en tâches prêtes à envoyer vers",
     "home.hero.statement.or": "ou",
     "home.hero.statement.suffix": "",
-    "home.hero.lede": "ChangeThis est en bêta ouverte contrôlée. Les accès restent progressifs pour garder un support propre.",
+    "home.hero.lede": "ChangeThis est en bêta ouverte. Créez votre espace et connectez votre premier site dès maintenant.",
     "home.hero.primary": "Traiter les retours",
     "home.hero.signup": "S'inscrire",
     "home.hero.login": "Connexion",
     "home.hero.secondary": "Envoyer un retour test",
     "home.hero.trust": "Les visiteurs envoient des retours sans compte. Seul votre espace d'équipe est protégé.",
-    "home.hero.privateBeta": "Bêta ouverte contrôlée\u00a0: les inscriptions peuvent être temporairement fermées pendant une opération.",
+    "home.hero.privateBeta": "Les inscriptions sont temporairement en pause. Les comptes existants peuvent toujours se connecter.",
     "home.waitlist.callout.title": "Inscriptions en pause",
     "home.waitlist.callout.copy": "Laissez votre e-mail professionnel. Nous vous prévenons dès que les inscriptions rouvrent.",
     "home.signup.callout.title": "Accès ouvert",
@@ -204,7 +204,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.workflow.issue.title": "La tâche part au bon endroit",
     "home.workflow.issue.copy": "Le contexte utile accompagne la tâche Git, au lieu de rester perdu dans un fil de discussion.",
     "home.beta.scope.eyebrow": "Cadre bêta ouverte",
-    "home.beta.scope.title.main": "Ouverte progressivement.",
+    "home.beta.scope.title.main": "Ouverte maintenant.",
     "home.beta.note.1": "Les visiteurs n'ont pas besoin de compte pour envoyer un retour.",
     "home.beta.note.2": "Retrouvez vos repos dans le dashboard pour lier correctement vos sites et projets.",
     "home.beta.note.3": "Fonctionnel sur desktop, mobile et tablette.",
@@ -212,7 +212,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.closing.title.small": "Créez votre accès",
     "home.closing.title.main": "dès maintenant",
     "home.closing.copy": "Créez votre espace pour préparer votre premier site\u00a0: script à installer, retours à qualifier, tâches Git à envoyer.",
-    "home.closing.proof.beta": "Bêta ouverte contrôlée",
+    "home.closing.proof.beta": "Bêta ouverte",
     "home.closing.proof.visitors": "Retours sans compte visiteur",
     "home.closing.proof.git": "GitHub ou GitLab",
     "home.closing.panel.title": "Activez un vrai site, pas une démo.",
@@ -492,7 +492,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "login.error": "Sign-in is not available right now. Check your details and try again.",
     "login.redirectHint": "You will be redirected to the requested page after sign-in.",
     "login.noBackend": "Server authentication is unavailable in this environment.",
-    "login.privateBeta.title": "Controlled open beta",
+    "login.privateBeta.title": "Signups paused",
     "login.privateBeta.copy": "Signups can be temporarily closed during operations. Sign in with an existing account or try again later.",
     "auth.confirm.title": "Secure sign-in in progress.",
     "auth.confirm.copy": "We are verifying the email link before finalizing your account.",
@@ -544,7 +544,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.hero.statement.prefix": "Turn website customer feedback into tasks ready for",
     "home.hero.statement.or": "or",
     "home.hero.statement.suffix": "",
-    "home.hero.lede": "ChangeThis is in controlled open beta. Access stays progressive so support remains clean.",
+    "home.hero.lede": "ChangeThis is in open beta. Create your workspace and connect your first site now.",
     "home.hero.primary": "Review feedback",
     "home.hero.signup": "Sign up",
     "home.hero.login": "Sign in",
@@ -646,7 +646,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.workflow.issue.title": "The task lands correctly",
     "home.workflow.issue.copy": "Useful context follows the Git task instead of getting lost in a chat thread.",
     "home.beta.scope.eyebrow": "Open beta scope",
-    "home.beta.scope.title.main": "Opening progressively.",
+    "home.beta.scope.title.main": "Open now.",
     "home.beta.note.1": "Visitors do not need an account to send feedback.",
     "home.beta.note.2": "Find your repos in the dashboard to connect each site to the right project.",
     "home.beta.note.3": "Works on desktop, mobile, and tablet.",
@@ -654,7 +654,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.closing.title.small": "Create your access",
     "home.closing.title.main": "now",
     "home.closing.copy": "Create your workspace to prepare your first site: script to install, feedback to review, Git tasks to send.",
-    "home.closing.proof.beta": "Controlled open beta",
+    "home.closing.proof.beta": "Open beta",
     "home.closing.proof.visitors": "Visitor feedback without account",
     "home.closing.proof.git": "GitHub or GitLab",
     "home.closing.panel.title": "Activate a real site, not a demo.",
@@ -954,7 +954,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
   if (locale === "en") {
     switch (key) {
       case "home.hero.lede":
-        return <>ChangeThis is in <strong>controlled open beta</strong>. Access stays progressive so support remains clean.</>;
+        return <>ChangeThis is in <strong>open beta</strong>. Create your workspace and connect your first site now.</>;
       case "home.waitlist.callout.copy":
         return <>Enter your work email to start or receive access <strong>as soon as a seat is available</strong>.</>;
       case "home.signup.callout.copy":
@@ -1010,7 +1010,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
 
   switch (key) {
     case "home.hero.lede":
-      return <>ChangeThis est en <strong>bêta ouverte contrôlée</strong>. Les accès restent progressifs pour garder un support propre.</>;
+      return <>ChangeThis est en <strong>bêta ouverte</strong>. Créez votre espace et connectez votre premier site dès maintenant.</>;
     case "home.waitlist.callout.copy":
       return <>Entrez votre e-mail professionnel pour démarrer ou recevoir un accès <strong>dès qu&apos;une place est disponible</strong>.</>;
     case "home.signup.callout.copy":
