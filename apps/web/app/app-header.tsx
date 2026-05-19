@@ -37,7 +37,7 @@ export async function AppHeader({
   const showHeaderSession = resolvedSession && !resolvedSession.isLocalMode;
 
   return (
-    <header className="topbar app-header">
+    <header className={`topbar app-header${showPrimaryNav ? " app-header-wide" : ""}`}>
       <div className="topbar-inner">
         <Link className="brand" href="/">
           <span className="brand-wordmark" aria-label="ChangeThis">

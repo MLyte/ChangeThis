@@ -137,6 +137,10 @@ textarea,
   width: 100%;
 }
 
+.app-header-wide .topbar-inner {
+  max-width: none;
+}
+
 .brand {
   align-items: center;
   cursor: pointer;
