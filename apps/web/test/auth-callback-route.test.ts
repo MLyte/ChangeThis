@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 
+process.env.NEXT_PUBLIC_APP_URL = "https://app.changethis.dev";
+
 type AuthCallbackRouteModule = typeof import("../app/api/auth/callback/route.ts");
 
 const authCallbackRoute = await import(pathToFileURL(`${process.cwd()}/app/api/auth/callback/route.ts`).href) as AuthCallbackRouteModule;
@@ -43,4 +45,16 @@ test("auth callback POST rejects missing token", async () => {
 
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { error: "missing_token" });
+});
+
+test("auth callback GET redirects with the configured public origin", async () => {
+  const response = await authCallbackRoute.GET(
+    new Request("https://localhost:8080/api/auth/callback?error=access_denied&next=%2Fsignup%2Fset-password")
+  );
+
+  assert.equal(response.status, 307);
+  assert.equal(
+    response.headers.get("location"),
+    "https://app.changethis.dev/login?error=access_denied&next=%2Fsignup%2Fset-password"
+  );
 });

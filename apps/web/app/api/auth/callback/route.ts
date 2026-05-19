@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   if (error) {
     const nextPath = sanitizeNextPath(url.searchParams.get("next"));
     const safeError = encodeURIComponent(error);
-    return NextResponse.redirect(new URL(`/login?error=${safeError}&next=${encodeURIComponent(nextPath)}`, url));
+    return NextResponse.redirect(publicRedirectUrl(request, `/login?error=${safeError}&next=${encodeURIComponent(nextPath)}`));
   }
 
   const accessToken = url.searchParams.get("access_token");
@@ -16,10 +16,10 @@ export async function GET(request: Request) {
   const nextPath = sanitizeNextPath(url.searchParams.get("next"));
 
   if (!accessToken) {
-    return NextResponse.redirect(new URL(`/login?error=missing_token&next=${encodeURIComponent(nextPath)}`, url));
+    return NextResponse.redirect(publicRedirectUrl(request, `/login?error=missing_token&next=${encodeURIComponent(nextPath)}`));
   }
 
-  const response = createAuthRedirectResponse(url, nextPath, accessToken, refreshToken, expiresIn);
+  const response = createAuthRedirectResponse(request, nextPath, accessToken, refreshToken, expiresIn);
   return response;
 }
 
@@ -56,10 +56,20 @@ export async function POST(request: Request) {
   return response;
 }
 
-function createAuthRedirectResponse(url: URL, nextPath: string, accessToken: string, refreshToken: string | null, expiresIn: number) {
-  const response = NextResponse.redirect(new URL(nextPath, url));
+function createAuthRedirectResponse(request: Request, nextPath: string, accessToken: string, refreshToken: string | null, expiresIn: number) {
+  const response = NextResponse.redirect(publicRedirectUrl(request, nextPath));
   setAuthCookies(response, accessToken, refreshToken, expiresIn);
   return response;
+}
+
+function publicRedirectUrl(request: Request, path: string): URL {
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  if (configuredAppUrl) {
+    return new URL(path, configuredAppUrl);
+  }
+
+  return new URL(path, request.url);
 }
 
 function setAuthCookies(response: NextResponse, accessToken: string, refreshToken: string | null, expiresIn: number) {
