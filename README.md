@@ -129,13 +129,13 @@ GITHUB_TOKEN=github_pat_or_classic_token
 # or
 CHANGETHIS_GITHUB_TOKEN=github_pat_or_classic_token
 
-GITLAB_TOKEN=gitlab_project_or_personal_token
+GITLAB_TOKEN=gitlab_personal_access_token
 # or
-CHANGETHIS_GITLAB_TOKEN=gitlab_project_or_personal_token
+CHANGETHIS_GITLAB_TOKEN=gitlab_personal_access_token
 GITLAB_BASE_URL=https://gitlab.com
 ```
 
-For a self-hosted GitLab, set `GITLAB_BASE_URL` to the instance base URL, for example `https://gitrural.cra.wallonie.be`.
+For GitLab, prefer a Personal Access Token with the `api` scope so ChangeThis can list every project the GitLab user can access and create issues in the selected project. For a self-hosted GitLab, set `GITLAB_BASE_URL` to the instance base URL, for example `https://gitrural.cra.wallonie.be`. A project-scoped token still works as a fallback when you paste the exact project URL in the connected-site form.
 
 For the real beta path, use Supabase:
 

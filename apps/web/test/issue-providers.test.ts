@@ -97,6 +97,32 @@ test("lists GitLab projects and preserves the numeric external project id", asyn
   ]);
 });
 
+test("lists self-hosted GitLab projects from the configured instance URL", async () => {
+  process.env.GITLAB_BASE_URL = "https://gitrural.cra.wallonie.be";
+  const requests: Request[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init);
+    requests.push(request);
+
+    return Response.json([
+      {
+        id: 287,
+        name: "phytorisk",
+        path_with_namespace: "eau/phytorisk",
+        web_url: "https://gitrural.cra.wallonie.be/eau/phytorisk",
+        visibility: "private",
+        default_branch: "main"
+      }
+    ]);
+  };
+
+  const repositories = await listIssueProviderRepositories("gitlab", { token: "gitlab-token" });
+
+  assert.equal(requests[0]?.url, "https://gitrural.cra.wallonie.be/api/v4/projects?membership=true&simple=true&per_page=100");
+  assert.equal(requests[0]?.headers.get("private-token"), "gitlab-token");
+  assert.equal(repositories[0]?.webUrl, "https://gitrural.cra.wallonie.be/eau/phytorisk");
+});
+
 test("resolves a single GitLab project URL with a project access token", async () => {
   const requests: Request[] = [];
   globalThis.fetch = async (input, init) => {

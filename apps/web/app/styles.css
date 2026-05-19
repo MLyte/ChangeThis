@@ -5007,6 +5007,11 @@ dd {
   font-weight: 900;
 }
 
+.provider-token-form .provider-token-instance {
+  display: grid;
+  gap: 6px;
+}
+
 .provider-token-form > div {
   align-items: stretch;
   display: flex;

@@ -870,7 +870,9 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
   const saveTokenConnection = useCallback(async (integration: ProviderIntegrationSummary, event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    const formData = new FormData(event.currentTarget);
     const token = tokenInputs[integration.provider]?.trim() ?? "";
+    const baseUrl = formData.get("gitlabBaseUrl")?.toString().trim() ?? "";
 
     if (token.length < 8) {
       toast.error("Token requis", {
@@ -895,7 +897,10 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
           Accept: "application/json",
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ token })
+        body: JSON.stringify({
+          token,
+          ...(integration.provider === "gitlab" && baseUrl ? { baseUrl } : {})
+        })
       });
       const body = await response.json().catch(() => undefined) as { error?: string } | undefined;
 
@@ -1148,7 +1153,22 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               ) : null}
               {!credentialConfigured ? (
                 <form className="provider-token-form" onSubmit={(event) => void saveTokenConnection(integration, event)}>
-                  <label htmlFor={`${integration.provider}-server-token`}>Token serveur {integration.name}</label>
+                  <label htmlFor={`${integration.provider}-server-token`}>
+                    {integration.provider === "gitlab" ? "Personal Access Token GitLab" : `Token serveur ${integration.name}`}
+                  </label>
+                  {integration.provider === "gitlab" ? (
+                    <label className="provider-token-instance" htmlFor={`${integration.provider}-base-url`}>
+                      Instance GitLab
+                      <input
+                        autoComplete="off"
+                        defaultValue={integration.baseUrl ?? "https://gitlab.com"}
+                        id={`${integration.provider}-base-url`}
+                        name="gitlabBaseUrl"
+                        placeholder="https://gitrural.cra.wallonie.be"
+                        type="url"
+                      />
+                    </label>
+                  ) : null}
                   <div>
                     <input
                       autoComplete="off"
@@ -1166,7 +1186,11 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
                       {isSavingToken ? "Enregistrement..." : "Enregistrer"}
                     </button>
                   </div>
-                  <p>Le token est stocké chiffré côté serveur et n&apos;est jamais envoyé au widget.</p>
+                  <p>
+                    {integration.provider === "gitlab"
+                      ? "Utilisez un Personal Access Token avec le scope api pour lister vos projets GitLab accessibles et créer les issues."
+                      : "Le token est stocké chiffré côté serveur et n'est jamais envoyé au widget."}
+                  </p>
                 </form>
               ) : null}
               {!credentialConfigured ? <ProviderTokenInstructions provider={integration.provider} /> : null}
@@ -1213,16 +1237,15 @@ function ProviderTokenInstructions({ provider }: { provider: IssueProvider }) {
       <div className="provider-token-help" aria-label="Instructions token GitLab">
         <div className="provider-token-help-title">
           <Info aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-          <strong>Project access token GitLab</strong>
+          <strong>Personal Access Token GitLab</strong>
         </div>
         <ol>
-          <li>Ouvrez les <strong>Project access tokens</strong> du projet GitLab cible.</li>
+          <li>Ouvrez votre profil GitLab, puis <strong>Access tokens</strong>.</li>
           <li>Choisissez une expiration raisonnable et un nom explicite, par exemple ChangeThis.</li>
-          <li>Choisissez le rôle <strong>Reporter</strong> minimum, ou <strong>Developer</strong> si GitLab refuse la création d&apos;issue.</li>
-          <li>Ajoutez uniquement le scope <strong>api</strong>. Les scopes registry ne sont pas nécessaires.</li>
+          <li>Ajoutez le scope <strong>api</strong>. Les scopes registry ne sont pas nécessaires.</li>
           <li>Générez le token, copiez-le une seule fois, puis collez-le ici dans ChangeThis.</li>
         </ol>
-        <p>Le token doit pouvoir lire les projets ciblés et créer des issues dans le projet choisi.</p>
+        <p>Le compte GitLab doit avoir accès aux projets à lister et le droit d&apos;y créer des issues.</p>
       </div>
     );
   }
@@ -1625,7 +1648,7 @@ function ConnectedSitesSection({
             <div className="repo-linker in-modal" id="site-repos">
               <div>
                 <h3>Choisir la destination des issues</h3>
-                <p>Utilisez la liste si elle est disponible. Pour un Project Access Token GitLab, collez directement l&apos;URL du projet cible.</p>
+                <p>Utilisez la liste avec une connexion Git active. Si un token GitLab est limité à un seul projet, l&apos;URL du dépôt cible reste disponible.</p>
               </div>
               {connectedIntegrations.length === 0 ? (
                 <div className="repository-loader unavailable" role="status">

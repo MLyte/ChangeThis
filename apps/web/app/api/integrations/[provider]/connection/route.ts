@@ -3,7 +3,12 @@ import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorksp
 import { requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { deleteProviderCredentialSecretsAsync, saveProviderCredentialSecretAsync } from "../../../../../lib/credential-store";
 import { disableProviderIntegrationAsync, enableProviderIntegrationAsync } from "../../../../../lib/provider-integration-state";
-import { ensureProviderIntegrationAsync, getProviderIntegrationAsync, isIssueProvider } from "../../../../../lib/provider-integrations";
+import { ensureProviderIntegrationAsync, getProviderIntegrationAsync, isIssueProvider, recordProviderConnection } from "../../../../../lib/provider-integrations";
+
+type TokenConnectionInput = {
+  token: string;
+  baseUrl?: string;
+};
 
 export async function DELETE(
   request: Request,
@@ -76,8 +81,14 @@ export async function POST(
       provider: integration.provider,
       integrationId: integration.id,
       kind: "access_token",
-      value: tokenInput,
+      value: tokenInput.token,
       scopes: integration.provider === "gitlab" ? ["api"] : ["repo"]
+    });
+    await recordProviderConnection({
+      provider: integration.provider,
+      workspaceId: workspaceId ?? "",
+      integrationId: integration.id,
+      baseUrl: integration.provider === "gitlab" ? normalizeGitLabBaseUrl(tokenInput.baseUrl) ?? integration.baseUrl : integration.baseUrl
     });
   }
 
@@ -100,7 +111,7 @@ export async function POST(
   });
 }
 
-async function parseTokenInput(request: Request): Promise<string | undefined | NextResponse> {
+async function parseTokenInput(request: Request): Promise<TokenConnectionInput | undefined | NextResponse> {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
 
   if (!contentType.includes("application/json")) {
@@ -129,7 +140,31 @@ async function parseTokenInput(request: Request): Promise<string | undefined | N
     return NextResponse.json({ error: "Provider token is too long" }, { status: 413 });
   }
 
-  return token;
+  const baseUrl = typeof body.baseUrl === "string" ? body.baseUrl.trim() : undefined;
+
+  if (baseUrl !== undefined && baseUrl !== "" && !normalizeGitLabBaseUrl(baseUrl)) {
+    return NextResponse.json({ error: "GitLab instance URL must be a valid HTTPS URL" }, { status: 422 });
+  }
+
+  return { token, baseUrl };
+}
+
+function normalizeGitLabBaseUrl(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (url.protocol !== "https:" && url.hostname !== "localhost") {
+      return undefined;
+    }
+
+    return url.origin;
+  } catch {
+    return undefined;
+  }
 }
 
 async function resolveIntegration(

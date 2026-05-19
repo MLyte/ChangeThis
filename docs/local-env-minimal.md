@@ -28,9 +28,9 @@ CHANGETHIS_DATA_DIR=.changethis-data
 | `CHANGETHIS_DATA_DIR` | Changer l’emplacement du store local | Emplacement alternatif du dossier de persistance locale. |
 | `GITHUB_TOKEN` | Activer la création d’issues GitHub | Provider token de secours pour `/projects` (si pas d’intégration App). |
 | `CHANGETHIS_GITHUB_TOKEN` | Même usage que `GITHUB_TOKEN` | Variante non conflictuelle avec le secret GitHub App. |
-| `GITLAB_TOKEN` | Activer la création d’issues GitLab | Provider token GitLab (défaut self-hosting via `GITLAB_BASE_URL`). |
+| `GITLAB_TOKEN` | Activer la création d’issues GitLab | Personal Access Token GitLab avec scope `api`, pour lister les projets accessibles et créer des issues. |
 | `CHANGETHIS_GITLAB_TOKEN` | Même usage que `GITLAB_TOKEN` | Variante non conflictuelle avec OAuth/token App. |
-| `GITLAB_BASE_URL` | Tester GitLab self-hosted | URL de votre instance GitLab. |
+| `GITLAB_BASE_URL` | Tester GitLab self-hosted | URL de votre instance GitLab, par exemple `https://gitrural.cra.wallonie.be`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Expérimenter le mode Supabase | Active le client Supabase public. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Expérimenter le mode Supabase | Clé anonyme Supabase côté client. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Expérimenter le mode Supabase | Requis pour les appels REST serveur Supabase. |

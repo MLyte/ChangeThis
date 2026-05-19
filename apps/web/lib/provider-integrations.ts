@@ -19,6 +19,7 @@ export type ProviderIntegrationSummary = {
   credentialConfigured: boolean;
   environmentCredentialConfigured: boolean;
   disabled: boolean;
+  baseUrl?: string;
   connectionConfigKeys: string[];
   credentialConfigKeys: string[];
   managePath?: string;
@@ -81,6 +82,7 @@ export function listProviderIntegrations(workspaceId?: string): ProviderIntegrat
     credentialConfigured: integration.credentialConfigured,
     environmentCredentialConfigured: integration.environmentCredentialConfigured,
     disabled: integration.disabled,
+    baseUrl: integration.baseUrl,
     connectionConfigKeys: integration.connectionConfigKeys,
     credentialConfigKeys: integration.credentialConfigKeys,
     managePath: integration.managePath
@@ -422,6 +424,7 @@ function toProviderIntegrationSummary(integration: RuntimeProviderIntegration): 
     credentialConfigured: integration.credentialConfigured,
     environmentCredentialConfigured: integration.environmentCredentialConfigured,
     disabled: integration.disabled,
+    baseUrl: integration.baseUrl,
     connectionConfigKeys: integration.connectionConfigKeys,
     credentialConfigKeys: integration.credentialConfigKeys,
     managePath: integration.managePath

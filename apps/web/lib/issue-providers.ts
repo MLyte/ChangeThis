@@ -2,7 +2,7 @@ import { createSign } from "node:crypto";
 import { validateIssueTarget, type ExternalIssueRef, type IssueDraft, type IssueProvider, type IssueTarget } from "@changethis/shared";
 import { getProviderCredentialSecretAsync } from "./credential-store";
 import { createDemoExternalIssueRef, demoRepositoriesForProvider, isDemoProviderToken } from "./demo-provider-data";
-import { getProviderIntegrationTokenAsync } from "./provider-integrations";
+import { getProviderIntegrationAsync, getProviderIntegrationTokenAsync } from "./provider-integrations";
 
 export type IssueProviderErrorCode =
   | "auth_failed"
@@ -438,7 +438,8 @@ async function listGitLabRepositories(options: IssueProviderClientOptions): Prom
     return demoRepositoriesForProvider("gitlab");
   }
 
-  const baseUrl = process.env.GITLAB_BASE_URL || "https://gitlab.com";
+  const integration = await getProviderIntegrationAsync("gitlab", options.integrationId, options.workspaceId);
+  const baseUrl = getGitLabApiBaseUrl(integration?.baseUrl);
   const projectsUrl = new URL("/api/v4/projects", baseUrl);
   projectsUrl.searchParams.set("membership", "true");
   projectsUrl.searchParams.set("simple", "true");
