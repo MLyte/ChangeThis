@@ -6112,6 +6112,65 @@ dd {
   line-height: 1.45;
 }
 
+.confirmation-modal-panel {
+  align-items: start;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 22px;
+  width: min(520px, 100%);
+}
+
+.confirmation-modal-icon {
+  align-items: center;
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  border-radius: 8px;
+  color: var(--primary);
+  display: inline-flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.confirmation-modal-content {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.confirmation-modal-content h2 {
+  font-size: 24px;
+  line-height: 1.08;
+  margin: 0;
+}
+
+.confirmation-modal-content p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.confirmation-modal-content strong {
+  color: var(--ink);
+}
+
+.confirmation-warning {
+  background: var(--soft);
+  border: 1px solid var(--primary-border);
+  border-radius: 7px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 12px;
+}
+
+.confirmation-modal-actions {
+  display: flex;
+  gap: 10px;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
 .table {
   overflow: hidden;
 }

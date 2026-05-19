@@ -111,6 +111,10 @@ type OriginValidation = {
   normalizedOrigin?: string;
 };
 
+type AutomaticIssueConfirmation = {
+  projectKey: string;
+};
+
 export function IssueDestinationSetup({
   projects,
   integrations,
@@ -143,6 +147,7 @@ export function IssueDestinationSetup({
   const [installChecks, setInstallChecks] = useState<Record<string, InstallCheckResult>>({});
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"viewer" | "member" | "admin">("member");
+  const [automaticIssueConfirmation, setAutomaticIssueConfirmation] = useState<AutomaticIssueConfirmation | undefined>();
 
   const connectedProviders = useMemo(
     () => new Set(integrations.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
@@ -341,15 +346,14 @@ export function IssueDestinationSetup({
     }
 
     if (update.issueCreationMode === "automatic" && project.issueCreationMode !== "automatic") {
-      const confirmed = window.confirm(
-        `Activer la création automatique d'issues pour ${project.name} ?\n\nLes prochains feedbacks reçus créeront directement une issue Git dans ${project.issueTarget.namespace}/${project.issueTarget.project}. ChangeThis garde les protections existantes, mais les retours incomplets, doublons ou déjà traités peuvent quand même arriver dans le dépôt.`
-      );
-
-      if (!confirmed) {
-        return;
-      }
+      setAutomaticIssueConfirmation({ projectKey });
+      return;
     }
 
+    applyWidgetSettings(project, update);
+  }
+
+  function applyWidgetSettings(project: ProjectView, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) {
     const nextSettings = {
       widgetLocale: update.widgetLocale ?? project.widgetLocale,
       widgetButtonPosition: update.widgetButtonPosition ?? project.widgetButtonPosition,
@@ -358,7 +362,7 @@ export function IssueDestinationSetup({
       issueCreationMode: update.issueCreationMode ?? project.issueCreationMode
     };
 
-    setProjectViews((current) => current.map((item) => item.publicKey === projectKey
+    setProjectViews((current) => current.map((item) => item.publicKey === project.publicKey
       ? {
           ...item,
           ...nextSettings,
@@ -368,7 +372,7 @@ export function IssueDestinationSetup({
 
     startTransition(async () => {
       try {
-        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}`, {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(project.publicKey)}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json"
@@ -382,7 +386,7 @@ export function IssueDestinationSetup({
           throw new Error(`${body?.error ?? "Impossible d'enregistrer la configuration widget."}${requestId}`);
         }
 
-        setProjectViews((current) => current.map((item) => item.publicKey === projectKey
+        setProjectViews((current) => current.map((item) => item.publicKey === project.publicKey
           ? {
               ...item,
               ...body.site,
@@ -395,7 +399,7 @@ export function IssueDestinationSetup({
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
-        setProjectViews((current) => current.map((item) => item.publicKey === projectKey ? project : item));
+        setProjectViews((current) => current.map((item) => item.publicKey === project.publicKey ? project : item));
         toast.error("Configuration non enregistrée", {
           description: errorMessage
         });
@@ -555,6 +559,20 @@ export function IssueDestinationSetup({
     });
   }
 
+  const pendingAutomaticIssueProject = automaticIssueConfirmation
+    ? projectViews.find((project) => project.publicKey === automaticIssueConfirmation.projectKey)
+    : undefined;
+
+  function confirmAutomaticIssueCreation() {
+    if (!pendingAutomaticIssueProject) {
+      setAutomaticIssueConfirmation(undefined);
+      return;
+    }
+
+    setAutomaticIssueConfirmation(undefined);
+    applyWidgetSettings(pendingAutomaticIssueProject, { issueCreationMode: "automatic" });
+  }
+
   return (
     <section className="setup-panel" id="settings" aria-labelledby="destinations-title">
       <div className="setup-heading">
@@ -643,6 +661,15 @@ export function IssueDestinationSetup({
           ) : null}
         </div>
       </div>
+
+      {pendingAutomaticIssueProject ? (
+        <AutomaticIssueConfirmationModal
+          isPending={isPending}
+          onCancel={() => setAutomaticIssueConfirmation(undefined)}
+          onConfirm={confirmAutomaticIssueCreation}
+          project={pendingAutomaticIssueProject}
+        />
+      ) : null}
     </section>
   );
 }
@@ -1542,6 +1569,48 @@ function roleLabel(role: WorkspaceUserView["role"]): string {
   }
 
   return role;
+}
+
+function AutomaticIssueConfirmationModal({
+  isPending,
+  onCancel,
+  onConfirm,
+  project
+}: {
+  isPending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  project: ProjectView;
+}) {
+  return (
+    <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="automatic-issues-title">
+      <button className="settings-modal-backdrop" aria-label="Annuler" onClick={onCancel} type="button" />
+      <div className="settings-modal-panel confirmation-modal-panel">
+        <div className="confirmation-modal-icon" aria-hidden="true">
+          <ShieldCheck className="ui-icon" size={22} strokeWidth={2.2} />
+        </div>
+        <div className="confirmation-modal-content">
+          <p className="eyebrow">Création automatique</p>
+          <h2 id="automatic-issues-title">Activer les issues automatiques ?</h2>
+          <p>
+            Les prochains feedbacks de <strong>{project.name}</strong> créeront directement une issue Git dans{" "}
+            <strong>{project.issueTarget.namespace}/{project.issueTarget.project}</strong>.
+          </p>
+          <div className="confirmation-warning">
+            ChangeThis garde les protections existantes, mais les retours incomplets, doublons ou déjà traités peuvent quand même arriver dans le dépôt.
+          </div>
+        </div>
+        <div className="confirmation-modal-actions">
+          <button className="button secondary-button" disabled={isPending} onClick={onCancel} type="button">
+            Annuler
+          </button>
+          <button className="button" disabled={isPending} onClick={onConfirm} type="button">
+            {isPending ? "Activation..." : "Activer"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ConnectedSitesSection({
