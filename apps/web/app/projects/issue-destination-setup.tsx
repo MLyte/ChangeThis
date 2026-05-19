@@ -71,6 +71,8 @@ type ConnectionTestResult = {
   checkedAt?: Date;
 };
 
+const providerOrder: IssueProvider[] = ["github", "gitlab"];
+
 const widgetLocaleOptions: Array<{ label: string; value: WidgetLocale }> = [
   { label: "Français", value: "fr" },
   { label: "English", value: "en" }
@@ -224,6 +226,11 @@ export function IssueDestinationSetup({
     } else {
       setSiteName("");
     }
+  }
+
+  function updateRepositoryUrl(value: string) {
+    setRepositoryUrl(value);
+    setSelectedRepositoryId("");
   }
 
   function openSiteModal() {
@@ -556,6 +563,7 @@ export function IssueDestinationSetup({
           {section === "connected-sites" ? (
             <ConnectedSitesSection
               connectedProviders={connectedProviders}
+              integrations={integrations}
               isPending={isPending}
               isSiteModalOpen={isSiteModalOpen}
               installChecks={installChecks}
@@ -579,8 +587,8 @@ export function IssueDestinationSetup({
               setSiteWidgetButtonVariant={setSiteWidgetButtonVariant}
               setSiteWidgetLocale={setSiteWidgetLocale}
               setSiteWidgetReporterFields={setSiteWidgetReporterFields}
-              setRepositoryUrl={setRepositoryUrl}
-              setSelectedRepositoryId={selectRepository}
+              onRepositoryUrlChange={updateRepositoryUrl}
+              onSelectRepository={selectRepository}
               setSiteName={setSiteName}
               setSiteOrigin={setSiteOrigin}
               siteName={siteName}
@@ -1376,6 +1384,24 @@ function connectionAccountLabel(integration: ProviderIntegrationSummary): string
   return integration.accountLabel;
 }
 
+function gitStatusDescription(provider: IssueProvider, connected: boolean, disabled: boolean, integration?: ProviderIntegrationSummary): string {
+  const name = provider === "github" ? "GitHub" : "GitLab";
+
+  if (connected) {
+    return "Prêt pour les dépôts et issues.";
+  }
+
+  if (disabled) {
+    return `${name} est coupé dans ChangeThis.`;
+  }
+
+  if (!integration?.connectConfigured && !integration?.credentialAvailable) {
+    return "Token ou connexion à ajouter.";
+  }
+
+  return "Connexion disponible à finaliser.";
+}
+
 function formatConnectionCheckDate(date: Date): string {
   return new Intl.DateTimeFormat("fr-BE", {
     hour: "2-digit",
@@ -1414,6 +1440,7 @@ function roleLabel(role: WorkspaceUserView["role"]): string {
 
 function ConnectedSitesSection({
   connectedProviders,
+  integrations,
   isPending,
   isSiteModalOpen,
   installChecks,
@@ -1424,7 +1451,9 @@ function ConnectedSitesSection({
   onTestScript,
   onCopyInstallSnippet,
   onOpenSiteModal,
+  onRepositoryUrlChange,
   onSelectProvider,
+  onSelectRepository,
   onUpdateWidgetSettings,
   projects,
   repositoryLoadMessage,
@@ -1437,8 +1466,6 @@ function ConnectedSitesSection({
   setSiteWidgetButtonVariant,
   setSiteWidgetLocale,
   setSiteWidgetReporterFields,
-  setRepositoryUrl,
-  setSelectedRepositoryId,
   setSiteName,
   setSiteOrigin,
   siteName,
@@ -1449,6 +1476,7 @@ function ConnectedSitesSection({
   siteWidgetReporterFields
 }: {
   connectedProviders: Set<IssueProvider>;
+  integrations: ProviderIntegrationSummary[];
   isPending: boolean;
   isSiteModalOpen: boolean;
   installChecks: Record<string, InstallCheckResult>;
@@ -1459,7 +1487,9 @@ function ConnectedSitesSection({
   onTestScript: (projectKey: string) => void;
   onCopyInstallSnippet: (project: ProjectView) => void;
   onOpenSiteModal: () => void;
+  onRepositoryUrlChange: (repositoryUrl: string) => void;
   onSelectProvider: (provider: IssueProvider) => void;
+  onSelectRepository: (repositoryId: string) => void;
   onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">>) => void;
   projects: ProjectView[];
   repositoryLoadMessage: string;
@@ -1472,8 +1502,6 @@ function ConnectedSitesSection({
   setSiteWidgetButtonVariant: (variant: WidgetButtonVariant) => void;
   setSiteWidgetLocale: (locale: WidgetLocale) => void;
   setSiteWidgetReporterFields: (fields: WidgetReporterFields) => void;
-  setRepositoryUrl: (repositoryUrl: string) => void;
-  setSelectedRepositoryId: (repositoryId: string) => void;
   setSiteName: (name: string) => void;
   setSiteOrigin: (origin: string) => void;
   siteName: string;
@@ -1490,6 +1518,18 @@ function ConnectedSitesSection({
   const hasRepositoryDestination = Boolean(selectedRepositoryId || repositoryUrl.trim());
   const connectedIntegrations = Array.from(connectedProviders);
   const hasConnectedProvider = connectedIntegrations.length > 0;
+  const gitConnectionSummaries = providerOrder.map((provider) => {
+    const integration = integrations.find((item) => item.provider === provider);
+    const connected = connectedProviders.has(provider);
+    const disabled = integration?.disabled === true;
+
+    return {
+      connected,
+      disabled,
+      integration,
+      provider
+    };
+  });
   const siteOriginValidation = validateAllowedOrigin(siteOrigin);
 
   function toggleScriptPanel(projectKey: string) {
@@ -1521,7 +1561,17 @@ function ConnectedSitesSection({
               <span>1</span>
               <div>
                 <strong>Connecter Git</strong>
-                <p>{hasConnectedProvider ? "Une connexion Git est active." : "Activez GitHub ou GitLab avant de créer le site."}</p>
+                <div className="git-status-summary" aria-label="Statut des connexions Git">
+                  {gitConnectionSummaries.map(({ connected, disabled, integration, provider }) => (
+                    <div className={`git-status-item ${connected ? "connected" : disabled ? "disabled" : "missing"}`} key={provider}>
+                      <ProviderBadge provider={provider} />
+                      <div>
+                        <strong>{connected ? "Connecté" : disabled ? "Désactivé" : "À connecter"}</strong>
+                        <span>{gitStatusDescription(provider, connected, disabled, integration)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             <div className={`onboarding-step${hasConnectedProvider ? " current" : ""}`}>
@@ -1768,8 +1818,7 @@ function ConnectedSitesSection({
                     name="repositorySelect"
                     value={selectedRepositoryId}
                     onChange={(event) => {
-                      setSelectedRepositoryId(event.target.value);
-                      setRepositoryUrl("");
+                      onSelectRepository(event.target.value);
                     }}
                   >
                     <option value="">{repositorySelectPlaceholder(repositoryLoadState, isSelectedProviderConnected)}</option>
@@ -1785,8 +1834,7 @@ function ConnectedSitesSection({
                   <input
                     name="repositoryUrl"
                     onChange={(event) => {
-                      setRepositoryUrl(event.target.value);
-                      setSelectedRepositoryId("");
+                      onRepositoryUrlChange(event.target.value);
                     }}
                     placeholder={selectedProvider === "gitlab" ? "https://gitlab.com/groupe/projet" : "https://github.com/organisation/projet"}
                     value={repositoryUrl}
