@@ -305,7 +305,9 @@ export async function requestSignUpEmail(input: {
     body: JSON.stringify({
       email: input.email,
       should_create_user: true,
-      email_redirect_to: input.redirectTo
+      options: {
+        redirectTo: input.redirectTo
+      }
     }),
     cache: "no-store"
   });

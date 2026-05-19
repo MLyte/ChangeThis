@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.example.test";
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-test-key";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
 
 type SupabaseServerModule = typeof import("../lib/supabase-server.ts");
@@ -41,4 +42,29 @@ test("Supabase REST requests use the configured timeout", async () => {
   );
 
   assert.equal(signalSeen, true);
+});
+
+test("signup emails pass the requested auth redirect URL to Supabase", async () => {
+  let requestBody: unknown;
+
+  globalThis.fetch = async (_input, init) => {
+    requestBody = JSON.parse(String(init?.body));
+
+    return new Response(null, { status: 200 });
+  };
+
+  const redirectTo = "https://app.changethis.dev/auth/confirm?next=/signup/set-password";
+  const result = await supabaseModule.requestSignUpEmail({
+    email: "mathieu@example.test",
+    redirectTo
+  });
+
+  assert.deepEqual(result, { ok: true });
+  assert.deepEqual(requestBody, {
+    email: "mathieu@example.test",
+    should_create_user: true,
+    options: {
+      redirectTo
+    }
+  });
 });
