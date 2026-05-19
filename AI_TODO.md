@@ -93,23 +93,23 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 ## 5. Intégrations GitHub/GitLab
 - [ ] Finaliser le flux GitHub App installation avec récupération et stockage de l'installation par workspace.
 - [ ] Finaliser la création de token GitHub installation par intégration workspace.
-- [ ] Associer chaque issue target GitHub à une intégration provider explicite.
-- [ ] Valider que le repository sélectionné appartient à l'intégration GitHub connectée.
+- [x] Associer chaque issue target GitHub à une intégration provider explicite.
+- [x] Valider que le repository sélectionné appartient à l'intégration GitHub connectée.
 - [ ] Finaliser le refresh token GitLab OAuth.
-- [ ] Associer chaque issue target GitLab à une intégration provider explicite.
-- [ ] Valider que le projet GitLab sélectionné appartient à l'intégration GitLab connectée.
-- [ ] Ajouter la déconnexion d'un compte GitHub.
-- [ ] Ajouter la déconnexion d'un compte GitLab.
-- [ ] Ajouter la reconnexion d'un provider en statut `needs_reconnect`.
+- [x] Associer chaque issue target GitLab à une intégration provider explicite.
+- [x] Valider que le projet GitLab sélectionné appartient à l'intégration GitLab connectée.
+- [x] Ajouter la déconnexion d'un compte GitHub.
+- [x] Ajouter la déconnexion d'un compte GitLab.
+- [x] Ajouter la reconnexion d'un provider en statut `needs_reconnect`.
 - [ ] Ajouter une vérification périodique de validité des credentials provider.
-- [ ] Ajouter la pagination complète des repositories GitHub au-delà de 100 résultats.
-- [ ] Ajouter la pagination complète des projets GitLab au-delà de 100 résultats.
+- [x] Ajouter la pagination complète des repositories GitHub au-delà de 100 résultats.
+- [x] Ajouter la pagination complète des projets GitLab au-delà de 100 résultats.
 - [ ] Ajouter la recherche serveur des repositories providers.
 - [ ] Ajouter une gestion explicite des permissions manquantes sur labels/issues.
 - [ ] Ajouter une création optionnelle des labels manquants côté provider.
 - [ ] Ajouter un fallback d'idempotence applicatif quand le provider ignore `Idempotency-Key`.
 - [ ] Ajouter le support d'attachement ou lien sécurisé de screenshot dans le corps d'issue.
-- [ ] Ajouter une synchronisation minimale du statut externe issue open/closed.
+- [x] Ajouter une synchronisation minimale du statut externe issue open/closed.
 - [ ] Ajouter des webhooks provider pour détecter installation supprimée ou token révoqué.
 - [x] Supporter les Personal Access Tokens GitHub/GitLab configurés par workspace.
 - [x] Supporter GitLab self-hosted par URL de dépôt/projet.
@@ -131,16 +131,16 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [ ] Ajouter une page profil utilisateur avec email, nom et préférences.
 - [ ] Ajouter une pagination serveur pour `/projects`.
 - [ ] Ajouter un tri serveur par date et statut pour l'inbox.
-- [ ] Ajouter un filtre par site sur l'inbox.
-- [ ] Ajouter un filtre par statut sur l'inbox.
+- [x] Ajouter un filtre par site sur l'inbox.
+- [x] Ajouter un filtre par statut sur l'inbox.
 - [ ] Ajouter un filtre par date sur l'inbox.
-- [ ] Ajouter une recherche texte dans les feedbacks.
+- [x] Ajouter une recherche texte dans les feedbacks.
 - [ ] Ajouter un export CSV des feedbacks filtrés.
 - [ ] Ajouter un tableau de bord volume feedback par période.
 - [ ] Ajouter un indicateur taux de conversion feedback vers issue créée.
 - [ ] Ajouter un indicateur temps médian entre feedback reçu et issue créée.
-- [ ] Ajouter une répartition des feedbacks par site.
-- [ ] Ajouter une répartition des feedbacks par statut.
+- [x] Ajouter une répartition des feedbacks par site.
+- [x] Ajouter une répartition des feedbacks par statut.
 - [ ] Ajouter une répartition des erreurs provider par cause.
 - [ ] Ajouter un suivi d'activation onboarding par workspace.
 - [ ] Ajouter un suivi des limites de plan consommées.
