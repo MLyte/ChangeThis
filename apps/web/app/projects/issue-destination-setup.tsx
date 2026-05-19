@@ -1138,7 +1138,7 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               {connectionState.checkedAt ? (
                 <p className="connection-last-check">Dernier contrôle: {formatConnectionCheckDate(connectionState.checkedAt)}</p>
               ) : null}
-              {!credentialConfigured && !isLocallyDisabled ? (
+              {!credentialConfigured ? (
                 <form className="provider-token-form" onSubmit={(event) => void saveTokenConnection(integration, event)}>
                   <label htmlFor={`${integration.provider}-server-token`}>Token serveur {integration.name}</label>
                   <div>
@@ -1161,7 +1161,7 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
                   <p>Le token est stocké chiffré côté serveur et n&apos;est jamais envoyé au widget.</p>
                 </form>
               ) : null}
-              {!credentialConfigured && !isLocallyDisabled ? <ProviderTokenInstructions provider={integration.provider} /> : null}
+              {!credentialConfigured ? <ProviderTokenInstructions provider={integration.provider} /> : null}
               <div className="integration-actions">
                 {credentialConfigured ? (
                   <button className="button danger-button" disabled={connectionState.state === "checking"} onClick={() => void disconnectConnection(integration)} type="button">
@@ -1205,12 +1205,13 @@ function ProviderTokenInstructions({ provider }: { provider: IssueProvider }) {
       <div className="provider-token-help" aria-label="Instructions token GitLab">
         <div className="provider-token-help-title">
           <Info aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-          <strong>Token GitLab personnel</strong>
+          <strong>Project access token GitLab</strong>
         </div>
         <ol>
-          <li>Ouvrez les <strong>Personal access tokens</strong> dans GitLab.</li>
+          <li>Ouvrez les <strong>Project access tokens</strong> du projet GitLab cible.</li>
           <li>Choisissez une expiration raisonnable et un nom explicite, par exemple ChangeThis.</li>
-          <li>Ajoutez les scopes <strong>api</strong> et <strong>read_user</strong>.</li>
+          <li>Choisissez le rôle <strong>Reporter</strong> minimum, ou <strong>Developer</strong> si GitLab refuse la création d&apos;issue.</li>
+          <li>Ajoutez uniquement le scope <strong>api</strong>. Les scopes registry ne sont pas nécessaires.</li>
           <li>Générez le token, copiez-le une seule fois, puis collez-le ici dans ChangeThis.</li>
         </ol>
         <p>Le token doit pouvoir lire les projets ciblés et créer des issues dans le projet choisi.</p>
