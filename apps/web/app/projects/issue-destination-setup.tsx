@@ -728,16 +728,17 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
     ])) as Partial<Record<IssueProvider, ConnectionTestResult>>
   ));
 
-  const refreshConnection = useCallback(async (integration: ProviderIntegrationSummary, signal?: AbortSignal, forceEnabled = false) => {
+  const refreshConnection = useCallback(async (integration: ProviderIntegrationSummary, signal?: AbortSignal, forceEnabled = false): Promise<ConnectionTestResult | undefined> => {
     if ((!integration.credentialConfigured && !forceEnabled) || (!forceEnabled && disabledProviders.has(integration.provider))) {
+      const inactiveState: ConnectionTestResult = {
+        state: "inactive",
+        message: "Ajoutez un token serveur pour activer cette connexion."
+      };
       setConnectionStates((current) => ({
         ...current,
-        [integration.provider]: {
-          state: "inactive",
-          message: "Ajoutez un token serveur pour activer cette connexion."
-        }
+        [integration.provider]: inactiveState
       }));
-      return;
+      return inactiveState;
     }
 
     setConnectionStates((current) => ({
@@ -759,44 +760,49 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
       const body = await response.json() as unknown;
 
       if (!response.ok) {
+        const errorState: ConnectionTestResult = {
+          state: "error",
+          message: integration.provider === "gitlab"
+            ? repositoryErrorMessage(body) ?? "Token enregistré. Avec un Project Access Token, collez l'URL du projet dans Sites connectés pour valider le dépôt cible."
+            : repositoryErrorMessage(body) ?? "Connexion impossible. Vérifiez le token ou les permissions.",
+          checkedAt: new Date()
+        };
         setConnectionStates((current) => ({
           ...current,
-          [integration.provider]: {
-            state: "error",
-            message: integration.provider === "gitlab"
-              ? repositoryErrorMessage(body) ?? "Token enregistré. Avec un Project Access Token, collez l'URL du projet dans Sites connectés pour valider le dépôt cible."
-              : repositoryErrorMessage(body) ?? "Connexion impossible. Vérifiez le token ou les permissions.",
-            checkedAt: new Date()
-          }
+          [integration.provider]: errorState
         }));
-        return;
+        return errorState;
       }
 
       const repositories = parseRepositoryOptions(body, integration.provider);
+      const activeState: ConnectionTestResult = {
+        state: "active",
+        repositoryCount: repositories.length,
+        checkedAt: new Date(),
+        message: repositories.length > 0
+          ? ""
+          : "Connexion active, mais aucun dépôt accessible avec ce token."
+      };
       setConnectionStates((current) => ({
         ...current,
-        [integration.provider]: {
-          state: "active",
-          repositoryCount: repositories.length,
-          checkedAt: new Date(),
-          message: repositories.length > 0
-            ? ""
-            : "Connexion active, mais aucun dépôt accessible avec ce token."
-        }
+        [integration.provider]: activeState
       }));
+      return activeState;
     } catch (error) {
       if (signal?.aborted) {
         return;
       }
 
+      const errorState: ConnectionTestResult = {
+        state: "error",
+        message: error instanceof Error ? error.message : "Connexion impossible.",
+        checkedAt: new Date()
+      };
       setConnectionStates((current) => ({
         ...current,
-        [integration.provider]: {
-          state: "error",
-          message: error instanceof Error ? error.message : "Connexion impossible.",
-          checkedAt: new Date()
-        }
+        [integration.provider]: errorState
       }));
+      return errorState;
     }
   }, [disabledProviders]);
 
@@ -930,10 +936,17 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
         ...current,
         [integration.provider]: ""
       }));
-      await refreshConnection(integration, undefined, true);
-      toast.success(`${integration.name} connecté`, {
-        description: "Le token a été enregistré et vérifié pour ce workspace."
-      });
+      const connectionResult = await refreshConnection(integration, undefined, true);
+
+      if (connectionResult?.state === "active") {
+        toast.success(`${integration.name} connecté`, {
+          description: "Le token a été enregistré et vérifié pour ce workspace."
+        });
+      } else {
+        toast.error("Connexion non validée", {
+          description: connectionResult?.message ?? "Le token est enregistré, mais la connexion n'a pas pu être vérifiée."
+        });
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : `Impossible d'enregistrer le token ${integration.name}.`;
       setConnectionStates((current) => ({

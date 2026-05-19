@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
 import { requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { deleteProviderCredentialSecretsAsync, saveProviderCredentialSecretAsync } from "../../../../../lib/credential-store";
+import { IssueProviderError, listIssueProviderRepositories } from "../../../../../lib/issue-providers";
 import { disableProviderIntegrationAsync, enableProviderIntegrationAsync } from "../../../../../lib/provider-integration-state";
 import { ensureProviderIntegrationAsync, getProviderIntegrationAsync, isIssueProvider, recordProviderConnection } from "../../../../../lib/provider-integrations";
 
@@ -93,6 +94,30 @@ export async function POST(
   }
 
   await enableProviderIntegrationAsync(integration.provider, integration.id, workspaceId);
+  if (tokenInput) {
+    try {
+      await listIssueProviderRepositories(integration.provider, {
+        integrationId: integration.id,
+        workspaceId
+      });
+    } catch (error) {
+      await disableProviderIntegrationAsync(integration.provider, integration.id, workspaceId);
+
+      if (error instanceof IssueProviderError) {
+        return NextResponse.json(
+          {
+            error: providerConnectionValidationMessage(error),
+            code: error.code,
+            provider: error.provider
+          },
+          { status: error.status ?? statusFromProviderErrorCode(error.code) }
+        );
+      }
+
+      throw error;
+    }
+  }
+
   const persistedIntegration = await getProviderIntegrationAsync(integration.provider, integration.id, workspaceId);
 
   if (!persistedIntegration || persistedIntegration.status !== "connected" || !persistedIntegration.credentialConfigured) {
@@ -109,6 +134,42 @@ export async function POST(
     disabled: persistedIntegration.disabled,
     status: tokenInput ? "connected" : "enabled"
   });
+}
+
+function providerConnectionValidationMessage(error: IssueProviderError): string {
+  if (error.provider === "gitlab" && error.status === 401) {
+    return "GitLab refuse ce token. Vérifiez l'instance GitLab, utilisez un Personal Access Token avec le scope api, puis réessayez.";
+  }
+
+  if (error.provider === "gitlab" && error.status === 403) {
+    return "GitLab accepte le token, mais ses permissions ne permettent pas de lister les projets. Vérifiez le scope api et les droits du compte.";
+  }
+
+  return error.message;
+}
+
+function statusFromProviderErrorCode(code: IssueProviderError["code"]): number {
+  if (code === "auth_failed") {
+    return 401;
+  }
+
+  if (code === "permission_denied") {
+    return 403;
+  }
+
+  if (code === "target_not_found") {
+    return 404;
+  }
+
+  if (code === "validation_failed") {
+    return 502;
+  }
+
+  if (code === "rate_limited") {
+    return 429;
+  }
+
+  return 502;
 }
 
 async function parseTokenInput(request: Request): Promise<TokenConnectionInput | undefined | NextResponse> {
