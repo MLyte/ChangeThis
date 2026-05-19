@@ -109,7 +109,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const resolvedFeedbacks = filteredFeedbacks.filter((feedback) => feedback.status === "resolved");
   const githubProjects = projects.filter((project) => project.issueTarget.provider === "github").length;
   const gitlabProjects = projects.filter((project) => project.issueTarget.provider === "gitlab").length;
-  const latestFeedback = feedbacks.at(0);
   const readyProjects = projects.filter((project) => project.issueTarget.namespace && project.issueTarget.project).length;
   const hasActiveFilters = isFilteringDashboard(filters);
   const hasConfiguredSite = projects.length > 0;
@@ -136,6 +135,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             readyProjects={readyProjects}
             feedbackCountsByProject={feedbackCountsByProject}
             totalFeedbacks={feedbacks.length}
+            priorityCount={priorityFeedbacks.length}
+            queuedCount={queuedFeedbacks.length}
+            retryCount={retryFeedbacks.length}
+            failedCount={failedFeedbacks.length}
+            resolvedCount={resolvedFeedbacks.length}
           />
 
           <section className="inbox-panel compact-inbox" id="issues" aria-labelledby="local-inbox-title">
@@ -194,72 +198,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             )}
           </section>
 
-          <aside className="dashboard-side-panel" aria-label="Contexte ChangeThis">
-            <section className="side-panel-section status-side-section" aria-labelledby="status-side-title">
-              <div className="side-panel-heading">
-                <p className="eyebrow">Synthèse</p>
-                <h2 id="status-side-title">File actuelle</h2>
-              </div>
-              <div className="side-status-stack" aria-label="Synthèse opérationnelle">
-                <StatusMetric
-                  active={filters.status === "priority"}
-                  href={dashboardStatusHref(filters, "priority")}
-                  icon={Inbox}
-                  label="À traiter"
-                  value={priorityFeedbacks.length}
-                  tone={priorityFeedbacks.length > 0 ? "warning" : "ok"}
-                />
-                <StatusMetric
-                  active={filters.status === "issue_creation_pending"}
-                  href={dashboardStatusHref(filters, "issue_creation_pending")}
-                  icon={Clock3}
-                  label="En file"
-                  value={queuedFeedbacks.length}
-                  tone="warning"
-                />
-                <StatusMetric
-                  active={filters.status === "retrying"}
-                  href={dashboardStatusHref(filters, "retrying")}
-                  icon={RotateCcw}
-                  label="Relances"
-                  value={retryFeedbacks.length}
-                  tone="warning"
-                />
-                <StatusMetric
-                  active={filters.status === "failed"}
-                  href={dashboardStatusHref(filters, "failed")}
-                  icon={AlertTriangle}
-                  label="Échecs"
-                  value={failedFeedbacks.length}
-                  tone="danger"
-                />
-                <StatusMetric
-                  active={filters.status === "resolved"}
-                  href={dashboardStatusHref(filters, "resolved")}
-                  icon={CheckCircle2}
-                  label="Résolus"
-                  value={resolvedFeedbacks.length}
-                  tone="ok"
-                />
-              </div>
-            </section>
-
-            <ProjectsOnboardingChecklist steps={onboardingSteps} />
-
-            <section className="side-panel-section">
-              <div className="side-panel-heading">
-                <p className="eyebrow">Signal</p>
-                <h2>Activité</h2>
-              </div>
-              <div className="activity-stack">
-                <ActivityItem label="Dernier retour" value={latestFeedback ? formatDate(latestFeedback.createdAt) : "—"} />
-                <ActivityItem label="Affichés" value={`${filteredFeedbacks.length}/${feedbacks.length}`} />
-                <ActivityItem label="Conservés" value={feedbacks.filter((feedback) => feedback.status === "kept").length} />
-                <ActivityItem label="Archivés" value={feedbacks.filter((feedback) => feedback.status === "ignored").length} />
-                <ActivityItem label="Total reçus" value={feedbacks.length} />
-              </div>
-            </section>
-          </aside>
         </div>
       </section>
       <AppFooter />
@@ -274,7 +212,12 @@ function ProjectRouteNavigation({
   projects,
   readyProjects,
   feedbackCountsByProject,
-  totalFeedbacks
+  totalFeedbacks,
+  priorityCount,
+  queuedCount,
+  retryCount,
+  failedCount,
+  resolvedCount
 }: {
   filters: DashboardFilters;
   githubProjects: number;
@@ -283,6 +226,11 @@ function ProjectRouteNavigation({
   readyProjects: number;
   feedbackCountsByProject: Map<string, number>;
   totalFeedbacks: number;
+  priorityCount: number;
+  queuedCount: number;
+  retryCount: number;
+  failedCount: number;
+  resolvedCount: number;
 }) {
   return (
     <aside className="project-route-panel" aria-label="Navigation par site connecté">
@@ -328,7 +276,82 @@ function ProjectRouteNavigation({
           )}
         </nav>
       </section>
+      <StatusSummary
+        failedCount={failedCount}
+        filters={filters}
+        priorityCount={priorityCount}
+        queuedCount={queuedCount}
+        resolvedCount={resolvedCount}
+        retryCount={retryCount}
+      />
     </aside>
+  );
+}
+
+function StatusSummary({
+  failedCount,
+  filters,
+  priorityCount,
+  queuedCount,
+  resolvedCount,
+  retryCount
+}: {
+  failedCount: number;
+  filters: DashboardFilters;
+  priorityCount: number;
+  queuedCount: number;
+  resolvedCount: number;
+  retryCount: number;
+}) {
+  return (
+    <section className="side-panel-section status-side-section" aria-labelledby="status-side-title">
+      <div className="side-panel-heading">
+        <p className="eyebrow">Synthèse</p>
+        <h2 id="status-side-title">File actuelle</h2>
+      </div>
+      <div className="side-status-stack" aria-label="Synthèse opérationnelle">
+        <StatusMetric
+          active={filters.status === "priority"}
+          href={dashboardStatusHref(filters, "priority")}
+          icon={Inbox}
+          label="À traiter"
+          value={priorityCount}
+          tone={priorityCount > 0 ? "warning" : "ok"}
+        />
+        <StatusMetric
+          active={filters.status === "issue_creation_pending"}
+          href={dashboardStatusHref(filters, "issue_creation_pending")}
+          icon={Clock3}
+          label="En file"
+          value={queuedCount}
+          tone="warning"
+        />
+        <StatusMetric
+          active={filters.status === "retrying"}
+          href={dashboardStatusHref(filters, "retrying")}
+          icon={RotateCcw}
+          label="Relances"
+          value={retryCount}
+          tone="warning"
+        />
+        <StatusMetric
+          active={filters.status === "failed"}
+          href={dashboardStatusHref(filters, "failed")}
+          icon={AlertTriangle}
+          label="Échecs"
+          value={failedCount}
+          tone="danger"
+        />
+        <StatusMetric
+          active={filters.status === "resolved"}
+          href={dashboardStatusHref(filters, "resolved")}
+          icon={CheckCircle2}
+          label="Résolus"
+          value={resolvedCount}
+          tone="ok"
+        />
+      </div>
+    </section>
   );
 }
 
@@ -358,26 +381,6 @@ function ProjectsOnboardingEmptyState({ steps }: { steps: OnboardingChecklistSte
         </Link>
       </div>
     </div>
-  );
-}
-
-function ProjectsOnboardingChecklist({ steps }: { steps: OnboardingChecklistStep[] }) {
-  const completedCount = steps.filter((step) => step.status === "done").length;
-
-  return (
-    <section className="side-panel-section beta-onboarding-checklist" aria-labelledby="beta-onboarding-title">
-      <div className="side-panel-heading">
-        <p className="eyebrow">Bêta ouverte</p>
-        <h2 id="beta-onboarding-title">Checklist activation</h2>
-      </div>
-      <div className="route-summary beta-onboarding-progress" aria-label={`${completedCount} étapes terminées sur ${steps.length}`}>
-        <strong>{completedCount}/{steps.length}</strong>
-        <span>boucle Git - site - script - feedback - issue</span>
-      </div>
-      <div className="onboarding-steps beta-onboarding-steps" aria-label="Checklist onboarding beta">
-        {steps.map((step) => <OnboardingStep key={step.index} {...step} compact />)}
-      </div>
-    </section>
   );
 }
 
@@ -646,15 +649,6 @@ function ProjectRouteRow({
         <span className="site-route-count">{count}</span>
       </span>
     </Link>
-  );
-}
-
-function ActivityItem({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="activity-item">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
   );
 }
 
