@@ -94,6 +94,9 @@ export async function POST(
   }
 
   await enableProviderIntegrationAsync(integration.provider, integration.id, workspaceId);
+  let repositoryListingVerified = true;
+  let repositoryListingWarning: string | undefined;
+
   if (tokenInput) {
     try {
       await listIssueProviderRepositories(integration.provider, {
@@ -101,9 +104,11 @@ export async function POST(
         workspaceId
       });
     } catch (error) {
-      await disableProviderIntegrationAsync(integration.provider, integration.id, workspaceId);
-
-      if (error instanceof IssueProviderError) {
+      if (error instanceof IssueProviderError && shouldAllowGitLabUrlFallback(error)) {
+        repositoryListingVerified = false;
+        repositoryListingWarning = providerConnectionValidationMessage(error);
+      } else if (error instanceof IssueProviderError) {
+        await disableProviderIntegrationAsync(integration.provider, integration.id, workspaceId);
         return NextResponse.json(
           {
             error: providerConnectionValidationMessage(error),
@@ -132,13 +137,21 @@ export async function POST(
     credentialAvailable: persistedIntegration.credentialAvailable,
     credentialConfigured: persistedIntegration.credentialConfigured,
     disabled: persistedIntegration.disabled,
+    repositoryListingVerified,
+    warning: repositoryListingWarning,
     status: tokenInput ? "connected" : "enabled"
   });
 }
 
+function shouldAllowGitLabUrlFallback(error: IssueProviderError): boolean {
+  return error.provider === "gitlab"
+    && error.code === "auth_failed"
+    && error.status === 401;
+}
+
 function providerConnectionValidationMessage(error: IssueProviderError): string {
   if (error.provider === "gitlab" && error.status === 401) {
-    return "GitLab refuse ce token. Vérifiez l'instance GitLab, utilisez un Personal Access Token avec le scope api, puis réessayez.";
+    return "Token GitLab enregistré, mais la liste des projets est indisponible. Si vous utilisez un Project Access Token ou un token limité, collez l'URL du dépôt cible dans Sites connectés.";
   }
 
   if (error.provider === "gitlab" && error.status === 403) {

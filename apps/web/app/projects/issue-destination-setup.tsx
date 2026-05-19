@@ -908,7 +908,11 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
           ...(integration.provider === "gitlab" && baseUrl ? { baseUrl } : {})
         })
       });
-      const body = await response.json().catch(() => undefined) as { error?: string } | undefined;
+      const body = await response.json().catch(() => undefined) as {
+        error?: string;
+        repositoryListingVerified?: boolean;
+        warning?: string;
+      } | undefined;
 
       if (!response.ok) {
         const errorMessage = body?.error ?? `Impossible d'enregistrer le token ${integration.name}.`;
@@ -936,11 +940,28 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
         ...current,
         [integration.provider]: ""
       }));
-      const connectionResult = await refreshConnection(integration, undefined, true);
+      const connectionResult = body?.repositoryListingVerified === false
+        ? {
+            state: "error" as const,
+            message: body.warning ?? "Token enregistré. Collez l'URL du dépôt cible dans Sites connectés pour valider le projet GitLab.",
+            checkedAt: new Date()
+          }
+        : await refreshConnection(integration, undefined, true);
+
+      if (body?.repositoryListingVerified === false) {
+        setConnectionStates((current) => ({
+          ...current,
+          [integration.provider]: connectionResult
+        }));
+      }
 
       if (connectionResult?.state === "active") {
         toast.success(`${integration.name} connecté`, {
           description: "Le token a été enregistré et vérifié pour ce workspace."
+        });
+      } else if (integration.provider === "gitlab" && body?.repositoryListingVerified === false) {
+        toast.success("Token GitLab enregistré", {
+          description: connectionResult?.message ?? body.warning
         });
       } else {
         toast.error("Connexion non validée", {

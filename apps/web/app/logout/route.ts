@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 function logout(request: Request) {
   const url = new URL(request.url);
   const nextPath = sanitizeNextPath(url.searchParams.get("next"));
-  const response = NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(nextPath)}`, url), { status: 303 });
+  const response = NextResponse.redirect(publicRedirectUrl(request, `/login?next=${encodeURIComponent(nextPath)}`), { status: 303 });
 
   for (const cookieName of authCookieNames) {
     response.cookies.set(cookieName, "", {
@@ -31,6 +31,16 @@ function logout(request: Request) {
   }
 
   return response;
+}
+
+function publicRedirectUrl(request: Request, path: string): URL {
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  if (configuredAppUrl) {
+    return new URL(path, configuredAppUrl);
+  }
+
+  return new URL(path, request.url);
 }
 
 function sanitizeNextPath(value: string | null): string {
