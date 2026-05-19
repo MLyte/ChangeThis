@@ -12,6 +12,7 @@ export function AuthConfirmClient() {
     const accessToken = hashParams.get("access_token") ?? currentUrl.searchParams.get("access_token");
     const refreshToken = hashParams.get("refresh_token") ?? currentUrl.searchParams.get("refresh_token");
     const expiresIn = hashParams.get("expires_in") ?? currentUrl.searchParams.get("expires_in");
+    const confirmationUrl = sanitizeConfirmationUrl(currentUrl.searchParams.get("confirmation_url"));
     const tokenHash = currentUrl.searchParams.get("token_hash");
     const type = currentUrl.searchParams.get("type");
     const error = hashParams.get("error") ?? currentUrl.searchParams.get("error");
@@ -21,6 +22,11 @@ export function AuthConfirmClient() {
       callbackUrl.searchParams.set("next", nextPath);
       callbackUrl.searchParams.set("error", error);
       window.location.replace(callbackUrl.toString());
+      return;
+    }
+
+    if (confirmationUrl) {
+      setCallbackUrl(confirmationUrl);
       return;
     }
 
@@ -96,4 +102,26 @@ function sanitizeNextPath(value: string | null): string {
   }
 
   return value;
+}
+
+function sanitizeConfirmationUrl(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || url.origin !== new URL(supabaseUrl).origin) {
+      return null;
+    }
+
+    if (url.pathname !== "/auth/v1/verify") {
+      return null;
+    }
+
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
