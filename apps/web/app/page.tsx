@@ -8,6 +8,7 @@ import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T, TRich } from "./i18n";
+import { HomeLoginLink } from "./home-login-link";
 import { MarketingConsolePreview } from "./marketing-console-preview";
 import { ProviderBadge, ProviderIcon } from "./provider-badge";
 
@@ -461,7 +462,7 @@ function SignupAccessCard({ compact = false, isSignedIn = false }: { compact?: b
         ) : (
           <>
             <Link className="button" href="/signup"><T k="home.hero.signup" /></Link>
-            <Link className="button secondary-button" href="/login"><T k="home.hero.login" /></Link>
+            <HomeLoginLink><T k="home.hero.login" /></HomeLoginLink>
           </>
         )}
       </div>

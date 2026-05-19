@@ -648,18 +648,19 @@ function ProjectRouteRow({
 
   return (
     <Link className={`site-route-row${active ? " active" : ""}`} href={dashboardSiteHref(filters, project.publicKey)}>
-      <div>
-        <strong>{demoProject ? workspaceDemoProjectName : project.name}</strong>
-        <span>{demoProject ? "Feedbacks de démonstration" : `${project.issueTarget.namespace}/${project.issueTarget.project}`}</span>
-      </div>
-      <span className="site-route-meta">
-        {demoProject ? (
-          <DemoBadge />
-        ) : (
+      <div className="site-route-label">
+        {demoProject ? null : (
           <span aria-label={providerLabel} className={`site-route-provider-mark ${project.issueTarget.provider}`} title={providerLabel}>
             <ProviderIcon provider={project.issueTarget.provider} />
           </span>
         )}
+        <span className="site-route-title-group">
+          <strong>{demoProject ? workspaceDemoProjectName : project.name}</strong>
+          <span>{demoProject ? "Feedbacks de démonstration" : `${project.issueTarget.namespace}/${project.issueTarget.project}`}</span>
+        </span>
+      </div>
+      <span className="site-route-meta">
+        {demoProject ? <DemoBadge /> : null}
         <span className="site-route-count">{count}</span>
       </span>
     </Link>

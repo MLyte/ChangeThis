@@ -122,7 +122,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.waitlist.status.joined": "C'est noté. Nous vous préviendrons dès que les inscriptions rouvrent.",
     "home.waitlist.status.existing": "Cet e-mail est déjà dans la liste. Votre demande est bien enregistrée.",
     "home.waitlist.status.error": "Inscription impossible pour le moment. Vérifiez l'e-mail puis réessayez.",
-    "home.waitlist.point.1": "Les comptes existants peuvent toujours se connecter.",
+    "home.waitlist.point.1": "Un espace équipe prêt à configurer.",
     "home.waitlist.point.2": "Pensé pour GitHub ou GitLab.",
     "home.problem.eyebrow": "Pourquoi ChangeThis",
     "home.problem.title": "Les retours web utiles se perdent avant d'arriver au bon endroit.",
@@ -133,13 +133,13 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.problem.point.3": "Les équipes perdent du temps à reformuler avant même de créer une tâche claire.",
     "home.problem.example.1.source": "Canaux dispersés",
     "home.problem.example.1.reality": "Un retour arrive par e-mail, Slack, Teams, un Word ou une phrase entre deux réunions.",
-    "home.problem.example.1.consequence": "La remarque existe, mais elle n'a pas encore d'endroit clair où vivre.",
+    "home.problem.example.1.consequence": "Le client veut aider, mais le retour part trop vite dans un Word, un message ou une note externe.",
     "home.problem.example.2.source": "Contexte absent",
     "home.problem.example.2.reality": "On parle d'un bouton, mais pas de la page exacte, de la taille d'écran, ni de l'élément visé.",
     "home.problem.example.2.consequence": "L'équipe doit rejouer la scène avant même de comprendre quoi corriger.",
     "home.problem.example.3.source": "Filtre manquant",
     "home.problem.example.3.reality": "Un petit doute devient vite une tâche Git, même quand il faudrait juste clarifier ou archiver.",
-    "home.problem.example.3.consequence": "Sans tri simple avant Git, le dépôt se remplit de bruit avant les vrais sujets.",
+    "home.problem.example.3.consequence": "Sans tri simple avant Git, le dépôt se remplit de bruit avant les vrais sujets, avec parfois des doublons ou des issues déjà traitées.",
     "home.beta.eyebrow": "Ce que fait ChangeThis",
     "home.beta.title": "Capturez le retour, décidez quoi en faire, puis préparez une tâche exploitable.",
     "home.beta.capture.title": "Retour bien situé",
@@ -564,7 +564,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.waitlist.status.joined": "You're on the list. We will let you know when signups reopen.",
     "home.waitlist.status.existing": "This email is already on the list. You're safely in.",
     "home.waitlist.status.error": "We cannot add this email right now. Check it and try again.",
-    "home.waitlist.point.1": "Existing accounts can still sign in.",
+    "home.waitlist.point.1": "A team workspace ready to configure.",
     "home.waitlist.point.2": "Built for GitHub or GitLab.",
     "home.problem.eyebrow": "Why ChangeThis",
     "home.problem.title": "Useful website feedback gets lost before it reaches the right place.",
@@ -575,13 +575,13 @@ const dictionaries: Record<Locale, Dictionary> = {
     "home.problem.point.3": "Teams lose time rewriting feedback before creating a clear task.",
     "home.problem.example.1.source": "Scattered channels",
     "home.problem.example.1.reality": "Feedback arrives through email, Slack, Teams, a Word document, or a sentence by the coffee machine.",
-    "home.problem.example.1.consequence": "The note exists, but nobody knows yet where to put it or who should handle it.",
+    "home.problem.example.1.consequence": "The client wants to help, but feedback too quickly moves into a document, a message, or an external note.",
     "home.problem.example.2.source": "Missing context",
     "home.problem.example.2.reality": "The message mentions a button, without the exact page, screen size, selected element, or clear screenshot.",
     "home.problem.example.2.consequence": "The team has to replay the issue, ask follow-up questions, and loses the initial thread.",
     "home.problem.example.3.source": "Missing filter",
     "home.problem.example.3.reality": "A small doubt quickly becomes a Git task, even when it only needs clarification or archiving.",
-    "home.problem.example.3.consequence": "Without a simple review step before Git, the repository fills with noise before the real topics.",
+    "home.problem.example.3.consequence": "Without a simple review step before Git, the repository fills with noise before the real topics, sometimes with duplicates or issues already handled.",
     "home.beta.eyebrow": "What ChangeThis does",
     "home.beta.title": "Capture feedback, decide what to do with it, then prepare an actionable task.",
     "home.beta.capture.title": "Well-located feedback",
@@ -970,7 +970,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
       case "home.problem.example.1.reality":
         return <>Feedback arrives through <strong>email, Slack, Teams</strong>, a Word document, or <strong>a sentence by the coffee machine</strong>.</>;
       case "home.problem.example.1.consequence":
-        return <>The note exists, but nobody knows yet <strong>where to put it</strong> or who should handle it.</>;
+        return <>The client wants to help, but feedback too quickly moves into <strong>a document, a message, or an external note</strong>.</>;
       case "home.problem.example.2.reality":
         return <>The message mentions a button, without the exact <strong>page, screen size, selected element</strong>, or clear screenshot.</>;
       case "home.problem.example.2.consequence":
@@ -978,7 +978,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
       case "home.problem.example.3.reality":
         return <>A small doubt quickly becomes <strong>a Git task</strong>, even when it only needs clarification or archiving.</>;
       case "home.problem.example.3.consequence":
-        return <>Without a <strong>simple review step before Git</strong>, the repository fills with noise before the real topics.</>;
+        return <>Without a <strong>simple review step before Git</strong>, the repository fills with noise before the real topics, sometimes with duplicates or issues already handled.</>;
       case "home.beta.capture.copy":
         return <>Message, page, screen size, marker, and screenshot grouped into <strong>one feedback item</strong>.</>;
       case "home.beta.inbox.copy":
@@ -1026,7 +1026,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
     case "home.problem.example.1.reality":
       return <>Un retour arrive par <strong>e-mail, Slack, Teams</strong>, un Word ou <strong>une phrase entre deux réunions</strong>.</>;
     case "home.problem.example.1.consequence":
-      return <>La remarque existe, mais elle n&apos;a pas encore <strong>d&apos;endroit clair où vivre</strong>.</>;
+      return <>Le client veut aider, mais le retour part trop vite dans <strong>un Word, un message ou une note externe</strong>.</>;
     case "home.problem.example.2.reality":
       return <>On parle d&apos;un bouton, mais pas de la <strong>page exacte</strong>, de la <strong>taille d&apos;écran</strong>, ni de <strong>l&apos;élément visé</strong>.</>;
     case "home.problem.example.2.consequence":
@@ -1034,7 +1034,7 @@ function richText(locale: Locale, key: string): ReactNode | undefined {
     case "home.problem.example.3.reality":
       return <>Un petit doute devient vite <strong>une tâche Git</strong>, même quand il faudrait juste clarifier ou archiver.</>;
     case "home.problem.example.3.consequence":
-      return <>Sans <strong>tri simple avant Git</strong>, le dépôt se remplit de bruit avant les vrais sujets.</>;
+      return <>Sans <strong>tri simple avant Git</strong>, le dépôt se remplit de bruit avant les vrais sujets, parfois avec des doublons ou des issues déjà traitées.</>;
     case "home.beta.capture.copy":
       return <>Message, page, taille d&apos;écran, repère et capture réunis dans <strong>un seul retour</strong>.</>;
     case "home.beta.inbox.copy":

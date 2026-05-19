@@ -4187,6 +4187,19 @@ dd {
   min-width: 0;
 }
 
+.site-route-row .site-route-label {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.site-route-title-group {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
 .site-route-row strong,
 .site-route-row span {
   overflow: hidden;
@@ -4250,8 +4263,8 @@ dd {
 }
 
 .site-route-provider-mark .provider-icon {
-  height: 17px;
-  width: 17px;
+  height: 18px;
+  width: 18px;
 }
 
 .site-route-count {
@@ -7581,7 +7594,12 @@ code {
 }
 
 .signup-access-card .signup-access-actions {
+  gap: 10px;
   margin-top: 0;
+}
+
+.signup-access-card {
+  gap: 10px;
 }
 
 .signup-access-card.compact .signup-access-actions {
@@ -7589,7 +7607,27 @@ code {
 }
 
 .signup-access-card .button {
+  margin-top: 0;
   min-height: 48px;
+}
+
+.home-login-link[aria-disabled="true"] {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.home-login-link.is-loading {
+  color: var(--muted);
+}
+
+.loading-spinner {
+  animation: changethis-spin 0.8s linear infinite;
+}
+
+@keyframes changethis-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .waitlist-form.compact .waitlist-form-header {
