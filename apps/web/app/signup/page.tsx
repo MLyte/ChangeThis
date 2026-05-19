@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getAuthMode, isPublicSignupEnabled } from "../../lib/auth";
+import { getAuthMode, getCurrentSession, isPublicSignupEnabled } from "../../lib/auth";
 import { setSupabaseSessionCookies } from "../../lib/auth-session-cookies";
 import { isSupabaseServiceConfigured, requestSignUpCode, verifySupabaseEmailCode } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
@@ -18,6 +18,16 @@ type SignUpPageProps = {
 };
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
+  const currentSession = await getCurrentSession();
+
+  if (currentSession?.workspace) {
+    redirect("/projects");
+  }
+
+  if (currentSession) {
+    redirect("/signup/set-password");
+  }
+
   const publicSignupEnabled = isPublicSignupEnabled();
 
   if (!publicSignupEnabled) {
@@ -57,7 +67,16 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     "use server";
 
     const authMode = getAuthMode();
+    const currentSession = await getCurrentSession();
     const email = formData.get("email")?.toString().trim() ?? "";
+
+    if (currentSession?.workspace) {
+      redirect("/projects");
+    }
+
+    if (currentSession) {
+      redirect("/signup/set-password");
+    }
 
     if (authMode === "local") {
       redirect("/settings/connected-sites");
@@ -80,8 +99,17 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     "use server";
 
     const authMode = getAuthMode();
+    const currentSession = await getCurrentSession();
     const email = formData.get("email")?.toString().trim() ?? "";
     const token = formData.get("token")?.toString().replace(/\s+/g, "") ?? "";
+
+    if (currentSession?.workspace) {
+      redirect("/projects");
+    }
+
+    if (currentSession) {
+      redirect("/signup/set-password");
+    }
 
     if (authMode === "local") {
       redirect("/settings/connected-sites");

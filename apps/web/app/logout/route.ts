@@ -18,10 +18,16 @@ export async function POST(request: Request) {
 function logout(request: Request) {
   const url = new URL(request.url);
   const nextPath = sanitizeNextPath(url.searchParams.get("next"));
-  const response = NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(nextPath)}`, url));
+  const response = NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(nextPath)}`, url), { status: 303 });
 
   for (const cookieName of authCookieNames) {
-    response.cookies.delete(cookieName);
+    response.cookies.set(cookieName, "", {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 0
+    });
   }
 
   return response;
