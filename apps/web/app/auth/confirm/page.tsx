@@ -13,8 +13,8 @@ export default function AuthConfirmPage() {
           <h1><T k="auth.confirm.title" /></h1>
           <p className="lede"><T k="auth.confirm.copy" /></p>
         </div>
+        <AuthConfirmClient />
       </section>
-      <AuthConfirmClient />
       <AppFooter />
     </main>
   );

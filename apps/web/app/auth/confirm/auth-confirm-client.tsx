@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function AuthConfirmClient() {
+  const [callbackUrl, setCallbackUrl] = useState<string | null>(null);
+
   useEffect(() => {
     const currentUrl = new URL(window.location.href);
     const hashParams = new URLSearchParams(currentUrl.hash.replace(/^#/, ""));
@@ -34,7 +36,7 @@ export function AuthConfirmClient() {
       callbackUrl.searchParams.set("token_hash", tokenHash);
       callbackUrl.searchParams.set("type", type ?? "email");
       callbackUrl.searchParams.set("next", nextPath);
-      window.location.replace(callbackUrl.toString());
+      setCallbackUrl(callbackUrl.toString());
       return;
     }
 
@@ -65,7 +67,27 @@ export function AuthConfirmClient() {
       });
   }, []);
 
-  return null;
+  if (!callbackUrl) {
+    return null;
+  }
+
+  return (
+    <div className="auth-panel" aria-label="Finaliser la vérification">
+      <div className="local-mode-callout" role="status">
+        <strong>Adresse e-mail prête à être vérifiée</strong>
+        <span>Finalisez la vérification pour choisir votre mot de passe.</span>
+      </div>
+      <button
+        className="button"
+        type="button"
+        onClick={() => {
+          window.location.replace(callbackUrl);
+        }}
+      >
+        Finaliser mon accès
+      </button>
+    </div>
+  );
 }
 
 function sanitizeNextPath(value: string | null): string {
