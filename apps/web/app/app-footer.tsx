@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { FileText, LifeBuoy, LogOut, Rocket, ShieldCheck, ShipWheel, UserRound } from "lucide-react";
-import { getCurrentSession } from "../lib/auth";
+import { getAuthMode, getCurrentSession } from "../lib/auth";
+import { getDataStoreMode } from "../lib/runtime";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
 
@@ -9,9 +10,10 @@ type AppFooterProps = {
 };
 
 export async function AppFooter({ suppressSession = false }: AppFooterProps) {
-  const authMode = process.env.AUTH_MODE === "supabase" ? "supabase" : "local";
-  const dataStore = process.env.DATA_STORE === "supabase" ? "supabase" : "local";
-  const isProductionReadyRuntime = authMode === "supabase" && dataStore === "supabase";
+  const authMode = getAuthMode();
+  const dataStore = getDataStoreMode();
+  const isProductionReadyRuntime = (authMode === "supabase" && dataStore === "supabase")
+    || (authMode === "craw" && dataStore === "postgres");
   const footerSession = suppressSession ? undefined : await loadFooterSession();
 
   return (

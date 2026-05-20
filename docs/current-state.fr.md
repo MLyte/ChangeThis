@@ -56,7 +56,5 @@ Ce document sert de source courte pour synchroniser les autres fichiers Markdown
 
 ## Licences
 
-- Licence repo par defaut: Elastic License 2.0.
-- `packages/widget`: Apache-2.0.
-- `packages/shared`: Apache-2.0.
-- Le modele est source-available/open-core: widget et protocole permissifs, service heberge et operations commerciales reserves.
+- Licence repo et packages internes: European Union Public Licence 1.2 (`EUPL-1.2`).
+- Les dependances tierces restent sous leurs propres licences.

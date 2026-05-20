@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { IssueProvider } from "@changethis/shared";
-import { getDataStoreMode } from "./runtime";
+import { getDataStoreMode, unsupportedPostgresStoreError } from "./runtime";
 import { supabaseServiceRest } from "./supabase-server";
 
 type StoredCredential = {
@@ -50,13 +50,19 @@ const localDataDir = process.env.CHANGETHIS_DATA_DIR ?? path.join(process.cwd(),
 const credentialStorePath = path.join(localDataDir, "provider-credentials.json");
 
 export function credentialStorageReference(provider: IssueProvider, integrationId: string, kind: string): string {
-  return `${getDataStoreMode() === "supabase" ? "supabase" : "local"}:${provider}:${integrationId}:${kind}`;
+  const dataStore = getDataStoreMode();
+  if (dataStore === "postgres") {
+    throw unsupportedPostgresStoreError("Credential store");
+  }
+
+  return `${dataStore === "supabase" ? "supabase" : "local"}:${provider}:${integrationId}:${kind}`;
 }
 
 export function saveProviderCredentialSecret(secret: ProviderCredentialSecret): string {
   if (getDataStoreMode() === "supabase" && isUuid(secret.integrationId)) {
     throw new Error("Use saveProviderCredentialSecretAsync when DATA_STORE=supabase");
   }
+  ensureFileCredentialStoreSupported();
 
   const key = encryptionKey();
   const iv = randomBytes(12);
@@ -89,8 +95,12 @@ export function saveProviderCredentialSecret(secret: ProviderCredentialSecret): 
 }
 
 export async function saveProviderCredentialSecretAsync(secret: ProviderCredentialSecret): Promise<string> {
-  if (getDataStoreMode() !== "supabase") {
+  const dataStore = getDataStoreMode();
+  if (dataStore === "file") {
     return saveProviderCredentialSecret(secret);
+  }
+  if (dataStore === "postgres") {
+    throw unsupportedPostgresStoreError("Credential store");
   }
 
   const encrypted = encryptSecret(secret.value);
@@ -144,6 +154,7 @@ export function getProviderCredentialSecret(
   if (getDataStoreMode() === "supabase" && integrationId && isUuid(integrationId)) {
     throw new Error("Use getProviderCredentialSecretAsync when DATA_STORE=supabase");
   }
+  ensureFileCredentialStoreSupported();
 
   const store = readStore();
   const credential = store.credentials.find((item) =>
@@ -176,8 +187,12 @@ export async function getProviderCredentialSecretAsync(
   kind: string,
   workspaceId?: string
 ): Promise<string | undefined> {
-  if (getDataStoreMode() !== "supabase" || !integrationId) {
+  const dataStore = getDataStoreMode();
+  if (dataStore === "file" || !integrationId) {
     return getProviderCredentialSecret(provider, integrationId, kind, workspaceId);
+  }
+  if (dataStore === "postgres") {
+    throw unsupportedPostgresStoreError("Credential store");
   }
 
   const credentialKind = toSupabaseCredentialKind(provider, kind);
@@ -201,6 +216,7 @@ export function deleteProviderCredentialSecrets(provider: IssueProvider, integra
   if (getDataStoreMode() === "supabase" && isUuid(integrationId)) {
     throw new Error("Use deleteProviderCredentialSecretsAsync when DATA_STORE=supabase");
   }
+  ensureFileCredentialStoreSupported();
 
   const store = readStore();
   const initialCount = store.credentials.length;
@@ -217,8 +233,12 @@ export function deleteProviderCredentialSecrets(provider: IssueProvider, integra
 }
 
 export async function deleteProviderCredentialSecretsAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<number> {
-  if (getDataStoreMode() !== "supabase") {
+  const dataStore = getDataStoreMode();
+  if (dataStore === "file") {
     return deleteProviderCredentialSecrets(provider, integrationId, workspaceId);
+  }
+  if (dataStore === "postgres") {
+    throw unsupportedPostgresStoreError("Credential store");
   }
 
   const rows = await supabaseServiceRest<Array<{ id: string }>>(
@@ -244,6 +264,12 @@ function readStore(): CredentialStore {
     return sanitizeStore(JSON.parse(readFileSync(credentialStorePath, "utf8")));
   } catch {
     return { credentials: [] };
+  }
+}
+
+function ensureFileCredentialStoreSupported(): void {
+  if (getDataStoreMode() === "postgres") {
+    throw unsupportedPostgresStoreError("Credential store");
   }
 }
 

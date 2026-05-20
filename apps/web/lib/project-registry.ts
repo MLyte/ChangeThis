@@ -18,7 +18,7 @@ import {
   workspaceDemoProjectName,
   type ChangeThisProject
 } from "./demo-project";
-import { getDataStoreMode } from "./runtime";
+import { getDataStoreMode, unsupportedPostgresStoreError } from "./runtime";
 import { isSupabaseServiceConfigured, supabaseServiceRest } from "./supabase-server";
 
 type StoredConnectedSite = Site & {
@@ -104,6 +104,7 @@ export async function listConfiguredProjects(workspaceId?: string): Promise<Chan
   if (usesSupabaseProjectRegistry()) {
     return listSupabaseConfiguredProjects(workspaceId);
   }
+  ensureFileProjectRegistrySupported();
 
   const store = await readStore();
   return store.sites
@@ -135,6 +136,7 @@ export async function ensureWorkspaceDemoProject(workspaceId: string, origin?: s
   if (usesSupabaseProjectRegistry()) {
     return ensureSupabaseWorkspaceDemoProject(workspaceId, allowedOrigins);
   }
+  ensureFileProjectRegistrySupported();
 
   return {
     ...demoProject,
@@ -163,6 +165,7 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
   if (usesSupabaseProjectRegistry()) {
     return createSupabaseConnectedSite(input, issueTarget, allowedOrigin);
   }
+  ensureFileProjectRegistrySupported();
 
   const workspaceId = input.workspaceId ?? localWorkspace.id;
   const now = new Date().toISOString();
@@ -196,6 +199,7 @@ export async function updateProjectWidgetSettings(
   if (usesSupabaseProjectRegistry()) {
     return updateSupabaseProjectWidgetSettings(update, workspaceId);
   }
+  ensureFileProjectRegistrySupported();
 
   let updatedProject: ChangeThisProject | undefined;
   const now = new Date().toISOString();
@@ -232,6 +236,7 @@ export async function deleteConnectedSite(projectKey: string, workspaceId?: stri
   if (usesSupabaseProjectRegistry()) {
     return deleteSupabaseConnectedSite(projectKey, workspaceId);
   }
+  ensureFileProjectRegistrySupported();
 
   let deleted = false;
 
@@ -254,6 +259,7 @@ export async function clearConnectedSites(workspaceId: string): Promise<number> 
   if (usesSupabaseProjectRegistry()) {
     return clearSupabaseConnectedSites(workspaceId);
   }
+  ensureFileProjectRegistrySupported();
 
   let deleted = 0;
 
@@ -277,6 +283,7 @@ export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate, w
   if (usesSupabaseProjectRegistry()) {
     return saveSupabaseProjectIssueTarget(update, workspaceId);
   }
+  ensureFileProjectRegistrySupported();
 
   const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === update.projectKey);
 
@@ -321,6 +328,7 @@ export async function isKnownOrigin(origin: string | null): Promise<boolean> {
   if (usesSupabaseProjectRegistry()) {
     return isKnownSupabaseOrigin(origin);
   }
+  ensureFileProjectRegistrySupported();
 
   const store = await readStore();
   return demoProject.allowedOrigins.includes(origin) || store.sites.some((site) => site.allowedOrigins.includes(origin));
@@ -366,6 +374,12 @@ export class ProjectTargetValidationError extends Error {
 
 function usesSupabaseProjectRegistry(): boolean {
   return getDataStoreMode() === "supabase";
+}
+
+function ensureFileProjectRegistrySupported(): void {
+  if (getDataStoreMode() !== "file") {
+    throw unsupportedPostgresStoreError("Project registry");
+  }
 }
 
 function ensureSupabaseProjectRegistryConfigured(): void {

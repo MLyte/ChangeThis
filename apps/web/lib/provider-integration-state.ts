@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { IssueProvider } from "@changethis/shared";
-import { getDataStoreMode } from "./runtime";
+import { getDataStoreMode, unsupportedPostgresStoreError } from "./runtime";
 import { isSupabaseServiceConfigured, supabaseServiceRest } from "./supabase-server";
 
 type DisabledProviderIntegration = {
@@ -24,6 +24,7 @@ export function isProviderIntegrationDisabled(provider: IssueProvider, integrati
   if (getDataStoreMode() === "supabase" && isUuid(integrationId) && isSupabaseServiceConfigured()) {
     throw new Error("Use isProviderIntegrationDisabledAsync when DATA_STORE=supabase");
   }
+  ensureFileProviderIntegrationStateSupported();
 
   return readStore().disabledIntegrations.some((integration) =>
     integration.workspaceId === workspaceId && integration.provider === provider && integration.integrationId === integrationId
@@ -31,8 +32,12 @@ export function isProviderIntegrationDisabled(provider: IssueProvider, integrati
 }
 
 export async function isProviderIntegrationDisabledAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<boolean> {
-  if (getDataStoreMode() !== "supabase" || !isUuid(integrationId) || !isSupabaseServiceConfigured()) {
+  const dataStore = getDataStoreMode();
+  if (dataStore === "file" || !isUuid(integrationId) || !isSupabaseServiceConfigured()) {
     return isProviderIntegrationDisabled(provider, integrationId, workspaceId);
+  }
+  if (dataStore === "postgres") {
+    throw unsupportedPostgresStoreError("Provider integration state");
   }
 
   const params = new URLSearchParams({
@@ -55,6 +60,7 @@ export function disableProviderIntegration(provider: IssueProvider, integrationI
   if (getDataStoreMode() === "supabase" && isUuid(integrationId) && isSupabaseServiceConfigured()) {
     throw new Error("Use disableProviderIntegrationAsync when DATA_STORE=supabase");
   }
+  ensureFileProviderIntegrationStateSupported();
 
   const store = readStore();
 
@@ -74,9 +80,13 @@ export function disableProviderIntegration(provider: IssueProvider, integrationI
 }
 
 export async function disableProviderIntegrationAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<void> {
-  if (getDataStoreMode() !== "supabase" || !isUuid(integrationId) || !isSupabaseServiceConfigured()) {
+  const dataStore = getDataStoreMode();
+  if (dataStore === "file" || !isUuid(integrationId) || !isSupabaseServiceConfigured()) {
     disableProviderIntegration(provider, integrationId, workspaceId);
     return;
+  }
+  if (dataStore === "postgres") {
+    throw unsupportedPostgresStoreError("Provider integration state");
   }
 
   const params = providerIntegrationPatchParams(provider, integrationId, workspaceId);
@@ -93,6 +103,7 @@ export function enableProviderIntegration(provider: IssueProvider, integrationId
   if (getDataStoreMode() === "supabase" && isUuid(integrationId) && isSupabaseServiceConfigured()) {
     throw new Error("Use enableProviderIntegrationAsync when DATA_STORE=supabase");
   }
+  ensureFileProviderIntegrationStateSupported();
 
   const store = readStore();
 
@@ -104,9 +115,13 @@ export function enableProviderIntegration(provider: IssueProvider, integrationId
 }
 
 export async function enableProviderIntegrationAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<void> {
-  if (getDataStoreMode() !== "supabase" || !isUuid(integrationId) || !isSupabaseServiceConfigured()) {
+  const dataStore = getDataStoreMode();
+  if (dataStore === "file" || !isUuid(integrationId) || !isSupabaseServiceConfigured()) {
     enableProviderIntegration(provider, integrationId, workspaceId);
     return;
+  }
+  if (dataStore === "postgres") {
+    throw unsupportedPostgresStoreError("Provider integration state");
   }
 
   const params = providerIntegrationPatchParams(provider, integrationId, workspaceId);
@@ -124,6 +139,12 @@ function readStore(): ProviderIntegrationStateStore {
     return sanitizeStore(JSON.parse(readFileSync(providerIntegrationStatePath, "utf8")));
   } catch {
     return { disabledIntegrations: [] };
+  }
+}
+
+function ensureFileProviderIntegrationStateSupported(): void {
+  if (getDataStoreMode() === "postgres") {
+    throw unsupportedPostgresStoreError("Provider integration state");
   }
 }
 

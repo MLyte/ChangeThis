@@ -1,11 +1,9 @@
 # ChangeThis Shared Package License
 
-The `@changethis/shared` package is licensed under the Apache License 2.0.
+The `@changethis/shared` package is licensed under the European Union Public Licence, version 1.2.
 
-SPDX-License-Identifier: Apache-2.0
+SPDX-License-Identifier: EUPL-1.2
 
-Official license text: https://www.apache.org/licenses/LICENSE-2.0
+Official license text: https://interoperable-europe.ec.europa.eu/licence/european-union-public-licence-version-12-eupl
 
 Copyright (c) 2026 Mathieu Luyten.
-
-This package-specific license overrides the repository default license for files inside `packages/shared`, unless a file explicitly states otherwise.

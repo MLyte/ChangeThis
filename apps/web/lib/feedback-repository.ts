@@ -12,7 +12,7 @@ import type {
   IssueProvider,
   IssueTarget
 } from "@changethis/shared";
-import { getDataStoreMode } from "./runtime";
+import { getDataStoreMode, unsupportedPostgresStoreError } from "./runtime";
 import { isSupabaseServiceConfigured, supabaseServiceRest } from "./supabase-server";
 
 export type StoredFeedback = {
@@ -217,9 +217,17 @@ let repository: FeedbackRepository | undefined;
 let fileLock: Promise<unknown> = Promise.resolve();
 
 export function getFeedbackRepository(): FeedbackRepository {
-  repository ??= getDataStoreMode() === "supabase"
-    ? new SupabaseFeedbackRepository()
-    : new FileFeedbackRepository(localDataFile);
+  if (!repository) {
+    const dataStore = getDataStoreMode();
+    if (dataStore === "supabase") {
+      repository = new SupabaseFeedbackRepository();
+    } else if (dataStore === "file") {
+      repository = new FileFeedbackRepository(localDataFile);
+    } else {
+      throw unsupportedPostgresStoreError("Feedback repository");
+    }
+  }
+
   return repository;
 }
 

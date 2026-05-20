@@ -6,6 +6,7 @@ const requiredForSupabase = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
 ];
+const requiredForPostgres = ["DATABASE_URL"];
 const fallbackProjectKeys = [
   "NEXT_PUBLIC_DEMO_PROJECT_KEY",
   "NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY",
@@ -46,14 +47,20 @@ for (const key of requiredBase) {
 if (isProduction && raw.AUTH_MODE === "local") {
   blockers.push("AUTH_MODE is not allowed to be local in production");
 }
-if (isProduction && raw.AUTH_MODE !== "supabase") {
-  blockers.push("AUTH_MODE must be supabase for the current production beta path");
+if (isProduction && !["supabase", "craw"].includes(raw.AUTH_MODE)) {
+  blockers.push("AUTH_MODE must be supabase or craw in production");
 }
 if (isProduction && raw.DATA_STORE === "file") {
   blockers.push("DATA_STORE is not allowed to be file in production");
 }
-if (isProduction && raw.DATA_STORE !== "supabase") {
-  blockers.push("DATA_STORE must be supabase for the current production beta path");
+if (isProduction && !["supabase", "postgres"].includes(raw.DATA_STORE)) {
+  blockers.push("DATA_STORE must be supabase or postgres in production");
+}
+if (raw.AUTH_MODE === "craw" && raw.DATA_STORE !== "postgres") {
+  blockers.push("AUTH_MODE=craw requires DATA_STORE=postgres");
+}
+if (raw.DATA_STORE === "postgres" && raw.AUTH_MODE !== "craw") {
+  blockers.push("DATA_STORE=postgres requires AUTH_MODE=craw");
 }
 if (isProduction) {
   if (raw.NEXT_PUBLIC_APP_URL && !raw.NEXT_PUBLIC_APP_URL.startsWith("https://")) {
@@ -78,6 +85,20 @@ if (raw.AUTH_MODE === "supabase" || raw.DATA_STORE === "supabase") {
       missing.push(key);
     }
   }
+}
+if (raw.DATA_STORE === "postgres") {
+  for (const key of requiredForPostgres) {
+    if (!raw[key]) {
+      missing.push(key);
+    }
+  }
+
+  if (raw.DATABASE_URL && !/^postgres(?:ql)?:\/\//.test(raw.DATABASE_URL)) {
+    blockers.push("DATABASE_URL must start with postgres:// or postgresql://");
+  }
+}
+if (raw.AUTH_MODE === "craw" && !raw.CRAW_AUTH_SHARED_SECRET && !raw.CRAW_AUTH_JWKS_URL) {
+  missing.push("CRAW_AUTH_SHARED_SECRET or CRAW_AUTH_JWKS_URL");
 }
 
 if (isProduction && !raw.CHANGETHIS_SECRET_KEY) {

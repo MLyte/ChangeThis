@@ -7,7 +7,7 @@ Clients click a fixed feedback button, add a note, pin one or more page elements
 ## Product Direction
 
 - **Audience:** freelancers, small web agencies, studios, and product/design teams shipping client websites.
-- **Model:** source-available/open-core. The widget and shared protocol are permissive; hosted dashboard, managed provider integrations, storage, teams, and AI triage stay in the commercial hosted layer.
+- **Model:** open source under the European Union Public Licence 1.2, with hosted operations and support offered by ChangeThis.
 - **Promise:** clients point at what needs changing; teams receive actionable feedback, decide whether to create an issue, and keep a traceable history.
 - **Current beta posture:** controlled open beta, Railway app hosting, Supabase Auth/DB for the real path, OVH DNS for `app.changethis.dev`.
 
@@ -62,15 +62,9 @@ For a quick local smoke test, use `/demo`; it loads the real widget bundle and s
 
 ## License
 
-ChangeThis is public source and open-core, with different licenses by scope:
+ChangeThis is licensed under the European Union Public Licence, version 1.2 (`EUPL-1.2`).
 
-| Scope | License |
-| --- | --- |
-| Hosted app, dashboard, API, storage, integrations, operations, and documentation | Elastic License 2.0 |
-| `packages/widget` | Apache-2.0 |
-| `packages/shared` | Apache-2.0 |
-
-The default repository license is source-available and is not intended to allow third parties to operate a competing hosted ChangeThis service without written permission. The widget and shared package stay permissive so customers can embed, audit, and integrate the client-side pieces. See `LICENSE.md`, `COMMERCIAL-LICENSE.md`, and the package-level license files for details.
+See `LICENSE.md`, `NOTICE.md`, and the package-level license files for details. Third-party dependencies remain under their own licenses.
 
 ## Development
 
@@ -150,6 +144,18 @@ CHANGETHIS_SECRET_KEY=...
 
 `AUTH_MODE=local` and `DATA_STORE=file` are disabled/no-go for production beta. Railway PostgreSQL native `DATABASE_URL` is not consumed by the current code path.
 
+On the `CRAW` branch, the self-hosted target is being introduced behind explicit runtime flags:
+
+```env
+AUTH_MODE=craw
+DATA_STORE=postgres
+DATABASE_URL=postgresql://...
+CRAW_AUTH_SHARED_SECRET=...
+# or CRAW_AUTH_JWKS_URL=https://...
+```
+
+This mode is a migration target, not a complete replacement yet: Supabase-backed repositories still carry the current beta path until the Postgres adapters are implemented.
+
 ## Validation
 
 ```bash
@@ -174,6 +180,12 @@ npm run prod:check
 npm run build:prod
 npm run build
 ```
+
+## Self-Hosted Runtime
+
+La branche experimentale `infra/self-hosted-runtime` documente un runtime Docker alternatif pour VPS, Coolify ou Proxmox/LXC, en conservant Supabase pour PostgreSQL/Auth/Storage. Voir [docs/self-hosted-runtime.md](docs/self-hosted-runtime.md).
+
+La branche `CRAW` va plus loin et cible une installation sans Railway ni Supabase. Voir [docs/craw-self-hosted-plan.fr.md](docs/craw-self-hosted-plan.fr.md).
 
 ## Frontend Dependency Policy
 

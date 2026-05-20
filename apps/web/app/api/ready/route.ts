@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { getAuthMode } from "../../../lib/auth";
+import { isCrawAuthConfigured } from "../../../lib/craw-auth";
+import { isPostgresStoreConfigured } from "../../../lib/postgres-server";
 import { isSupabaseAuthConfigured, isSupabaseServiceConfigured, supabaseServiceRest } from "../../../lib/supabase-server";
 import { getDataStoreMode, isProductionRuntime, usesUnsafeLocalDataStoreInProduction } from "../../../lib/runtime";
 
 export async function GET() {
   const authMode = getAuthMode();
   const dataStore = getDataStoreMode();
-  const authReady = authMode === "local" || isSupabaseAuthConfigured();
-  const productionAuthSafe = !isProductionRuntime || authMode === "supabase";
+  const authReady = authMode === "local"
+    || (authMode === "craw" && isCrawAuthConfigured())
+    || isSupabaseAuthConfigured();
+  const productionAuthSafe = !isProductionRuntime || authMode !== "local";
   const fileStoreUnsafe = usesUnsafeLocalDataStoreInProduction();
   const supabaseStoreConfigured = dataStore !== "supabase" || isSupabaseServiceConfigured();
+  const postgresStoreConfigured = dataStore !== "postgres" || isPostgresStoreConfigured();
   const database = dataStore === "supabase"
     ? await probeSupabaseDatabase()
     : { ok: true, failedTables: [] };
@@ -17,9 +22,11 @@ export async function GET() {
   const providerConfigReady = Boolean(process.env.CHANGETHIS_SECRET_KEY);
   const checks = {
     auth: authReady,
+    crawAuth: authMode !== "craw" || isCrawAuthConfigured(),
     productionAuth: productionAuthSafe,
     dataStore: !fileStoreUnsafe,
     supabaseService: supabaseStoreConfigured,
+    postgresService: postgresStoreConfigured,
     database: databaseReady,
     providerSecrets: providerConfigReady
   };

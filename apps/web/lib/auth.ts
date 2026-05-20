@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
+import { isCrawAuthConfigured } from "./craw-auth";
 import { getFirstWorkspaceForUser, getSupabaseUser, isSupabaseAuthConfigured } from "./supabase-server";
 
 export type WorkspaceRole = "viewer" | "member" | "admin" | "owner";
@@ -49,6 +50,14 @@ export async function getCurrentSession(request?: Request): Promise<AuthSession 
     }
 
     return localDevSession;
+  }
+
+  if (getAuthMode() === "craw") {
+    if (!isCrawAuthConfigured()) {
+      return null;
+    }
+
+    return null;
   }
 
   if (!isSupabaseAuthConfigured()) {
@@ -156,8 +165,10 @@ export function authFailureResponse(failure: AuthFailure): NextResponse {
   return NextResponse.json({ error: failure.error }, { status: failure.status });
 }
 
-export function getAuthMode(): "local" | "supabase" {
-  if (process.env.AUTH_MODE === "local" || process.env.AUTH_MODE === "supabase") {
+export type AuthMode = "local" | "supabase" | "craw";
+
+export function getAuthMode(): AuthMode {
+  if (process.env.AUTH_MODE === "local" || process.env.AUTH_MODE === "supabase" || process.env.AUTH_MODE === "craw") {
     return process.env.AUTH_MODE;
   }
 
