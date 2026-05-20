@@ -1,27 +1,18 @@
 # ChangeThis License
 
-Unless a file, package, or directory declares a different license, ChangeThis is licensed under the Elastic License 2.0.
+ChangeThis is licensed under the European Union Public Licence, version 1.2.
 
-SPDX-License-Identifier: Elastic-2.0
+SPDX-License-Identifier: EUPL-1.2
 
-Official license text: https://spdx.org/licenses/Elastic-2.0.html
+Official license text: https://interoperable-europe.ec.europa.eu/licence/european-union-public-licence-version-12-eupl
 
 ## Scope
 
-This default license applies to the hosted app, dashboard, API routes, storage and provider integration code, operational scripts, documentation, and any other repository content that does not carry a more specific license notice.
-
-The widget and shared protocol packages are intentionally licensed separately under Apache-2.0 so customers can embed and integrate them with less friction. See:
-
-- `packages/widget/LICENSE.md`
-- `packages/shared/LICENSE.md`
+Unless a file, package, or directory declares a different license, this license applies to the hosted app, dashboard, API routes, storage and provider integration code, operational scripts, documentation, widget package, shared protocol package, and any other repository content.
 
 ## Commercial Use
 
-ChangeThis is source-available and open-core. You may inspect, run, modify, and distribute the software under the Elastic License 2.0 terms.
-
-Running ChangeThis for your own internal use, beta testing, evaluation, or contribution is allowed under the default license. Offering ChangeThis, a substantially similar hosted service, or managed ChangeThis functionality to third parties as a commercial service requires a separate written commercial license from the copyright holder.
-
-For commercial licensing, contact: support@changethis.dev
+Commercial use, modification, redistribution, and network use are governed by the EUPL-1.2 terms. Separate written agreements may still be offered for support, hosting, enterprise services, or different licensing needs, but they are not required for permissions already granted by the EUPL-1.2.
 
 ## Notices
 
