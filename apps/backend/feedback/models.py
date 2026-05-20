@@ -87,6 +87,12 @@ class Feedback(TimeStampedModel):
     screenshot_hash = models.CharField(max_length=96, blank=True)
     screenshot_bytes = models.PositiveIntegerField(default=0)
     screenshot_mime = models.CharField(max_length=80, blank=True)
+    screenshot_removed_at = models.DateTimeField(null=True, blank=True)
+    provider_attachment_provider = models.CharField(max_length=20, blank=True)
+    provider_attachment_url = models.URLField(max_length=1200, blank=True)
+    provider_attachment_markdown = models.TextField(blank=True)
+    provider_attachment_path = models.CharField(max_length=800, blank=True)
+    provider_attachment_raw_payload = models.JSONField(default=dict, blank=True)
 
     class Meta:
         indexes = [
@@ -131,4 +137,6 @@ class ExternalIssue(TimeStampedModel):
     number = models.CharField(max_length=80, blank=True)
     title = models.CharField(max_length=320)
     web_url = models.URLField(max_length=1200, blank=True)
+    provider_attachment_url = models.URLField(max_length=1200, blank=True)
+    provider_attachment_markdown = models.TextField(blank=True)
     raw_payload = models.JSONField(default=dict, blank=True)

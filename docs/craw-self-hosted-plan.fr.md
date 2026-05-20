@@ -68,4 +68,5 @@ La base stocke chemin relatif, hash SHA-256, taille, MIME type et statut. Un NAS
 - Signup/login/session fonctionnent via Django.
 - `POST /api/public/feedback` persiste en PostgreSQL et stocke le screenshot sur disque.
 - `/projects` liste les feedbacks depuis Django.
+- Les screenshots associes a une issue GitLab sont uploades dans le projet GitLab et purges du disque local.
 - Plus aucun chemin actif ne requiert Supabase, Railway ou Next.js.

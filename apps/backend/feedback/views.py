@@ -55,6 +55,7 @@ def create_public_feedback(request: HttpRequest) -> JsonResponse:
     if project is None:
         return JsonResponse({"error": "project not found"}, status=404)
     issue_target = _project_issue_target(project)
+    raw_payload = _payload_without_screenshot(body)
     feedback = Feedback.objects.create(
         project=project,
         issue_target=issue_target,
@@ -64,7 +65,7 @@ def create_public_feedback(request: HttpRequest) -> JsonResponse:
         reporter_email=str(body.get("reporterEmail", ""))[:254],
         reporter_name=str(body.get("reporterName", ""))[:160],
         metadata=body.get("metadata") if isinstance(body.get("metadata"), dict) else {},
-        raw_payload=body,
+        raw_payload=raw_payload,
     )
     screenshot_data_url = str(body.get("screenshot") or body.get("screenshotDataUrl") or "")
     if screenshot_data_url:
@@ -335,3 +336,11 @@ def _project_issue_target(project: Project) -> IssueTarget | None:
         return project.issue_target
     except IssueTarget.DoesNotExist:
         return None
+
+
+def _payload_without_screenshot(body: dict) -> dict:
+    sanitized = dict(body)
+    for key in ("screenshot", "screenshotDataUrl"):
+        if key in sanitized:
+            sanitized[key] = "[stored as file]"
+    return sanitized

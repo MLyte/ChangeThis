@@ -45,6 +45,7 @@ Ce document synchronise la branche `CRAW`. Il ne decrit pas le chemin heberge de
 - Les credentials provider sont stockes en base en clair dans cette premiere tranche; un coffre ou chiffrement applicatif doit etre ajoute avant production sensible.
 - Les retries sont synchrones via commande Django, pas une queue durable.
 - Les webhooks provider et la synchronisation avancee open/closed ne sont pas encore reportes.
+- CRAW envoie les screenshots vers GitLab lors de la creation d'issue quand une destination GitLab est configuree, puis supprime le fichier local apres upload provider. GitHub reste en fallback sans upload direct via l'API Issues.
 
 ## Licences
 

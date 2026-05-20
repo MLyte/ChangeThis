@@ -10,6 +10,7 @@ from django.utils import timezone
 
 
 DATA_URL_RE = re.compile(r"^data:(?P<mime>[-\w.]+/[-\w.+]+);base64,(?P<data>.+)$", re.DOTALL)
+ALLOWED_SCREENSHOT_MIME_TYPES = {"image/png", "image/jpeg", "image/webp"}
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,8 @@ def store_screenshot_data_url(data_url: str, workspace_id: str, project_id: str)
     if len(raw) > settings.MAX_SCREENSHOT_BYTES:
         raise ValueError("screenshot is too large")
     mime = match.group("mime")
+    if mime not in ALLOWED_SCREENSHOT_MIME_TYPES:
+        raise ValueError("screenshot MIME type is not allowed")
     suffix = _suffix_for_mime(mime)
     digest = hashlib.sha256(raw).hexdigest()
     today = timezone.localdate().isoformat()
@@ -51,16 +54,21 @@ def store_screenshot_data_url(data_url: str, workspace_id: str, project_id: str)
 
 
 def delete_relative_file(relative_path: str) -> bool:
-    if not relative_path:
-        return False
-    root = settings.FILES_ROOT.resolve()
-    target = (root / relative_path).resolve()
-    if root not in target.parents and target != root:
-        return False
+    target = resolve_relative_file(relative_path)
     if not target.exists():
         return False
     target.unlink()
     return True
+
+
+def resolve_relative_file(relative_path: str) -> Path:
+    if not relative_path:
+        raise ValueError("relative path is required")
+    root = settings.FILES_ROOT.resolve()
+    target = (root / relative_path).resolve()
+    if root not in target.parents and target != root:
+        raise ValueError("relative path escapes FILES_ROOT")
+    return target
 
 
 def _suffix_for_mime(mime: str) -> str:
