@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Accessibility, ClipboardCheck, Code2, FileText, GitBranch, Globe2, Mail, MonitorCheck, Pin, ShieldCheck, SlidersHorizontal, Sparkles, Users, type LucideIcon } from "lucide-react";
+import { Accessibility, ClipboardCheck, Code2, FileText, GitBranch, Globe2, Mail, MonitorCheck, Pin, ShieldCheck, SlidersHorizontal, Sparkles, UserPlus, Users, type LucideIcon } from "lucide-react";
 import { getCurrentSession, isPublicSignupEnabled } from "../lib/auth";
 import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
@@ -472,13 +472,21 @@ function SignupAccessCard({ compact = false, isSignedIn = false }: { compact?: b
       <div className="hero-actions signup-access-actions">
         {isSignedIn ? (
           <>
-            <Link className="button" href="/projects"><T k="home.console.primary" /></Link>
-            <Link className="button secondary-button" href="/settings/connected-sites"><T k="home.console.secondary" /></Link>
+            <Link className="button" href="/projects">
+              <MonitorCheck aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.3} />
+              <span><T k="home.console.primary" /></span>
+            </Link>
+            <Link className="button secondary-button" href="/settings/connected-sites">
+              <SlidersHorizontal aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.3} />
+              <span><T k="home.console.secondary" /></span>
+            </Link>
           </>
         ) : (
           <>
-            <Link className="button" href="/signup"><T k="home.hero.signup" /></Link>
-            <Link className="button secondary-button" href="/demo"><T k="home.hero.secondary" /></Link>
+            <Link className="button" href="/signup">
+              <UserPlus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.3} />
+              <span><T k="home.hero.signup" /></span>
+            </Link>
             <HomeLoginLink><T k="home.hero.login" /></HomeLoginLink>
           </>
         )}

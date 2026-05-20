@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import { type MouseEvent, type ReactNode, useState } from "react";
 
 export function HomeLoginLink({ children }: { children: ReactNode }) {
@@ -20,7 +20,11 @@ export function HomeLoginLink({ children }: { children: ReactNode }) {
         setIsLoading(true);
       }}
     >
-      {isLoading ? <Loader2 aria-hidden="true" className="ui-icon loading-spinner" size={16} strokeWidth={2.2} /> : null}
+      {isLoading ? (
+        <Loader2 aria-hidden="true" className="ui-icon loading-spinner" size={16} strokeWidth={2.2} />
+      ) : (
+        <LogIn aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+      )}
       <span>{isLoading ? "Connexion..." : children}</span>
     </Link>
   );
