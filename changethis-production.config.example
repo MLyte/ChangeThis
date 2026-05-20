@@ -1,34 +1,31 @@
-# ChangeThis production setup checklist.
+# ChangeThis CRAW production setup checklist.
 # Copy the relevant values into the real deployment environment.
 # This file is safe to commit: it contains no secrets.
 
-# App public URL, used by embeds and generated links.
-# NEXT_PUBLIC_APP_URL=https://app.changethis.dev
+# App public URL.
+# PUBLIC_APP_URL=https://app.example.internal
 
-# Public project keys used by the widget embeds.
-# These must match the keys injected on client websites.
-# NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY=changethis_project_key
-# NEXT_PUBLIC_ANDENNE_BEARS_PROJECT_KEY=andenne_bears_project_key
-# NEXT_PUBLIC_OPTIMASTER_PROJECT_KEY=optimaster_project_key
-# NEXT_PUBLIC_YODA_CARROSSERIE_PROJECT_KEY=yoda_carrosserie_project_key
+# Django runtime.
+# DJANGO_SECRET_KEY=
+# DJANGO_DEBUG=false
+# ALLOWED_HOSTS=app.example.internal
+# CSRF_TRUSTED_ORIGINS=https://app.example.internal
+# CORS_ALLOWED_ORIGINS=
 
-# Domain action still required if the production endpoint remains app.changethis.dev:
-# Add DNS for app.changethis.dev to the hosting provider that serves ChangeThis.
-# Then verify:
-#   https://app.changethis.dev/api/public/feedback
+# PostgreSQL/PostGIS.
+# DATABASE_URL=postgresql://changethis:PASSWORD@postgres:5432/changethis
 
-# GitHub issue creation setup.
-# Create/configure the GitHub App, then set these deployment secrets.
-# GITHUB_APP_SLUG=
-# GITHUB_APP_ID=
-# GITHUB_APP_PRIVATE_KEY=
-# GITHUB_WEBHOOK_SECRET=
+# Server filesystem or mounted NAS paths.
+# FILES_ROOT=/var/lib/changethis/files
+# TEMP_DIR=/var/lib/changethis/tmp
 
-# Optional hosted persistence layer.
-# NEXT_PUBLIC_SUPABASE_URL=
-# NEXT_PUBLIC_SUPABASE_ANON_KEY=
-# SUPABASE_SERVICE_ROLE_KEY=
+# Optional Git provider tokens.
+# GITHUB_TOKEN=
+# GITLAB_BASE_URL=https://gitlab.com
+# GITLAB_TOKEN=
 
 # Smoke test after deployment.
-# From an allowed origin such as https://mathieuluyten.be, submit a widget note.
-# Expected result: the API returns 200 and either creates/stages a GitHub issue draft.
+# 1. GET /api/health
+# 2. GET /api/ready
+# 3. Sign up, create a site, install /widget.js on an allowed origin.
+# 4. Submit widget feedback and verify it appears in /projects.

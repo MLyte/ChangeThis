@@ -1,54 +1,48 @@
-# Variables d’environnement minimales (local)
+# Environnement local minimal CRAW
 
-Etat actuel: voir [current-state.fr.md](current-state.fr.md).
+## Python
 
-Ce document liste le minimum utile pour lancer ChangeThis en local et les variables à activer pour tester des features complètes.
-
-## TL;DR
-
-- `npm run dev` en local fonctionne avec :
-  - `NEXT_PUBLIC_APP_URL` (URL de l’app)
-  - `AUTH_MODE=local`
-  - `DATA_STORE=file`
-- Les autres variables sont optionnelles selon le flux que vous voulez activer.
-
-## Variables minimales recommandées
-
-```env
-NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
-AUTH_MODE=local
-DATA_STORE=file
-CHANGETHIS_DATA_DIR=.changethis-data
+```bash
+python -m pip install -r apps/backend/requirements.txt
 ```
 
-## Variables optionnelles en local
+## JavaScript
 
-| Variable | Quand l’ajouter | Utilité |
-|---|---|---|
-| `CHANGETHIS_DATA_DIR` | Changer l’emplacement du store local | Emplacement alternatif du dossier de persistance locale. |
-| `GITHUB_TOKEN` | Activer la création d’issues GitHub | Provider token de secours pour `/projects` (si pas d’intégration App). |
-| `CHANGETHIS_GITHUB_TOKEN` | Même usage que `GITHUB_TOKEN` | Variante non conflictuelle avec le secret GitHub App. |
-| `GITLAB_TOKEN` | Activer la création d’issues GitLab | Personal Access Token GitLab avec scope `api`, pour lister les projets accessibles et créer des issues. |
-| `CHANGETHIS_GITLAB_TOKEN` | Même usage que `GITLAB_TOKEN` | Variante non conflictuelle avec OAuth/token App. |
-| `GITLAB_BASE_URL` | Tester GitLab self-hosted | URL de votre instance GitLab, par exemple `https://gitrural.cra.wallonie.be`. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Expérimenter le mode Supabase | Active le client Supabase public. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Expérimenter le mode Supabase | Clé anonyme Supabase côté client. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Expérimenter le mode Supabase | Requis pour les appels REST serveur Supabase. |
+```bash
+npm install
+```
 
-## Variables de production à connaître (références)
+## Variables
 
-- Chemin beta/prod actuel: `AUTH_MODE=supabase`, `DATA_STORE=supabase`, Railway app, Supabase Auth/DB.
-- `CHANGETHIS_SECRET_KEY` (obligatoire en production pour le stockage credential sécurisé).
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
-- `SUPABASE_REST_TIMEOUT_MS=10000` optionnel.
-- Variables `GITHUB_APP_*`, `GITHUB_INSTALLATION_ID`, `GITLAB_OAUTH_*`, `*_WEBHOOK_SECRET` quand les intégrations OAuth/App sont activées.
-- Intégrations par workspace: `*_PROVIDER_INTEGRATION_ID` et connexions persistées.
+```env
+PUBLIC_APP_URL=http://localhost:8000
+DJANGO_SECRET_KEY=change-me-only-for-local-development
+DJANGO_DEBUG=true
+ALLOWED_HOSTS=localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+DATABASE_URL=postgresql://changethis:changethis@localhost:5432/changethis
+FILES_ROOT=apps/backend/var/files
+TEMP_DIR=apps/backend/var/tmp
+```
 
-No-go production:
+Optional:
 
-- `AUTH_MODE=local`
-- `DATA_STORE=file`
-- `AUTH_MODE=ovh`
-- `DATA_STORE=postgres`
-- `DATABASE_URL` comme source applicative principale
-- `CHANGETHIS_DATA_DIR`
+```env
+GITHUB_TOKEN=
+GITLAB_BASE_URL=https://gitlab.com
+GITLAB_TOKEN=
+```
+
+## Lancement
+
+```bash
+npm run dev --workspace @changethis/frontend
+python apps/backend/manage.py runserver 127.0.0.1:8000
+```
+
+Ou:
+
+```bash
+docker compose up --build
+```

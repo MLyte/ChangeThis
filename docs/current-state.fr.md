@@ -1,58 +1,50 @@
-# Etat actuel ChangeThis
+# Etat actuel ChangeThis CRAW
 
-Date de reference: 2026-05-19
+Date de reference: 2026-05-20
 
-Ce document sert de source courte pour synchroniser les autres fichiers Markdown du repo.
+Ce document synchronise la branche `CRAW`. Il ne decrit pas le chemin heberge de `main`.
 
 ## Produit
 
-- ChangeThis est en beta ouverte controlee: le produit peut accueillir de vrais comptes, mais l'acces reste surveille et reversible.
-- Le signup public est ouvert par defaut pour la beta ouverte; definir `ENABLE_PUBLIC_SIGNUP=false` pour reserver un environnement ou mettre les inscriptions en pause operationnelle.
-- La boucle produit actuelle est: site connecte -> widget public -> feedback -> inbox `/projects` -> creation manuelle d'issue GitHub/GitLab.
-- Le widget peut demander l'identite visiteur par site (`hidden`, `optional`, `required`) et remonte `reporter.name` / `reporter.email` dans le dashboard et les brouillons d'issues.
-- La page `/demo` reste un bac a sable widget local/public, distinct d'un vrai test d'installation client.
-- Le dashboard ne contient plus de generateur de simulation realiste; la preuve beta passe par un site connecte reel et le test d'installation du script.
-- Le dashboard admin/app peut rester large; les pages publiques doivent eviter les layouts full-width non controles.
+- ChangeThis reste un widget de feedback et une inbox produit.
+- La boucle cible est: site connecte -> widget public -> feedback -> inbox `/projects` -> creation manuelle ou synchrone d'issue GitHub/GitLab.
+- CRA-W opere l'application sur ses propres serveurs.
 
-## Stack actuelle
+## Stack active CRAW
 
-- App web: Next.js App Router dans `apps/web`.
-- Widget public: `packages/widget`, servi par `/widget.js` et `/widget.global.js`.
+- Frontend: Vue 3 + Vite + TypeScript + Pinia dans `apps/frontend`.
+- Backend: Django dans `apps/backend`.
+- Widget public: `packages/widget`, servi par Django via `/widget.js` et `/widget.global.js`.
 - Types/protocole partages: `packages/shared`.
-- Hebergement beta/prod: Railway pour l'app.
-- DNS: OVH pour `changethis.dev`, cible app `https://app.changethis.dev`.
-- Auth beta/prod: Supabase Auth avec `AUTH_MODE=supabase`.
-- Store beta/prod: Supabase REST/Postgres avec `DATA_STORE=supabase`.
-- Store fichier: reserve au dev local avec `DATA_STORE=file`.
-- Railway PostgreSQL natif et `DATABASE_URL`: non consommes par le code actuel.
+- Base: PostgreSQL/PostGIS, migrations Django.
+- Stockage: filesystem serveur via `FILES_ROOT`; NAS supporte par montage systeme ou volume Docker.
+- Runtime: Docker Compose avec `frontend`, `backend`, `postgres`.
 
-## Garde-fous production actuels
+## Garde-fous actuels
 
-- `npm run env:check` valide les variables critiques.
-- `npm run migrations:check` verifie la couverture structurelle des migrations Supabase.
-- `npm run prod:check` combine env, migrations et typecheck.
-- `npm run build:prod` lance les checks prod puis le build complet.
-- `/api/health` repond minimalement et sans cache.
-- `/api/ready` verifie auth, mode prod, store, secret applicatif, service role et tables Supabase attendues.
-- `AUTH_MODE=local` et `DATA_STORE=file` sont des no-go en production.
+- `npm run build` construit `shared`, `widget` et `frontend`.
+- `npm run typecheck` verifie TypeScript.
+- `python apps/backend/manage.py check` verifie la configuration Django.
+- `docker compose config` valide la topologie locale.
+- `/api/health` expose la presence du backend.
+- `/api/ready` sonde database, PostGIS, `FILES_ROOT`, `TEMP_DIR` et bundle widget.
 
-## Donnees deja branchees
+## Donnees deja portees
 
-- Workspaces, membres et roles.
-- Sites/projets connectes et cles publiques actives.
-- Feedbacks, statuts, evenements, tentatives provider et issues externes.
-- Integrations provider par workspace et credentials chiffres applicativement.
-- Migrations Supabase `0001` a `0011`.
+- Users Django.
+- Organizations et membres workspace.
+- Projects/sites et cles publiques.
+- Feedbacks et evenements de statut.
+- Issue targets.
+- Integrations provider et credentials.
+- Provider issue attempts et external issues.
 
-## Limites connues avant production commerciale
+## Limites connues
 
-- Les screenshots entrants sont reduits cote widget (WebP, dimension max 1600px, miniature 400px) avant envoi. Ils restent transitoirement stockes en data URL, avec metadonnees de cycle de vie `active/archive/deleted`; Supabase Storage ou stockage objet reste a brancher.
-- La migration `0011_widget_reporter_fields.sql` doit etre appliquee en Supabase avant de persister le reglage `Identite visiteur` depuis la console.
-- Le rate limit public reste memoire et doit passer sur un store partage pour multi-instance.
-- L'idempotence provider et les verrous anti double issue doivent etre renforces.
-- Les retries ne remplacent pas encore une queue durable.
-- L'onboarding premier site reste a simplifier, mais le chemin Git -> site -> script -> feedback -> issue est utilisable.
-- Les tests RLS reels, backup/restore et rollback migrations restent a valider sur staging.
+- L'interface Vue est une base fonctionnelle, pas encore une migration UI complete de l'ancien dashboard.
+- Les credentials provider sont stockes en base en clair dans cette premiere tranche; un coffre ou chiffrement applicatif doit etre ajoute avant production sensible.
+- Les retries sont synchrones via commande Django, pas une queue durable.
+- Les webhooks provider et la synchronisation avancee open/closed ne sont pas encore reportes.
 
 ## Licences
 

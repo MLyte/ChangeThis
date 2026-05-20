@@ -10,14 +10,14 @@
 ## Priorisation active beta
 Cette priorisation remanie les tâches restantes selon **importance produit/sécurité**, **facilité technique** et **rapidité de livraison**. Elle sert de guide de choix avant l'ordre historique des sections.
 
-État courant synchronisé: voir `docs/current-state.fr.md`. Le chemin beta réelle est Railway app + Supabase Auth/DB + OVH DNS, avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`. `DATA_STORE=file` reste local/dev uniquement.
+État courant synchronisé: voir `docs/current-state.fr.md`. Sur la branche `CRAW`, le chemin actif est Vue 3 + Django + PostgreSQL/PostGIS + stockage filesystem serveur, sans dépendance runtime à Supabase, Railway ni Next.js.
 
 ### Piste CRAW self-hosted
-- [ ] Stabiliser la branche `CRAW` pour une cible serveurs CRAW sans Railway ni Supabase.
-- [ ] Remplacer Railway par Docker/Compose, reverse proxy et variables d'environnement CRAW.
-- [ ] Extraire les contrats auth/data/storage/jobs avant d'ajouter une alternative Supabase.
-- [ ] Ajouter `DATA_STORE=postgres` et des migrations PostgreSQL neutres.
-- [ ] Decider apres preuve Postgres si Django porte seulement auth/admin/jobs ou tout le backend API.
+- [x] Stabiliser la branche `CRAW` pour une cible serveurs CRAW sans Railway ni Supabase.
+- [x] Remplacer Railway par Docker/Compose, reverse proxy et variables d'environnement CRAW.
+- [x] Porter auth/data/storage/jobs dans Django pour supprimer le runtime Next/Supabase actif.
+- [x] Remplacer le schéma SQL neutre par des migrations Django sur PostgreSQL/PostGIS.
+- [x] Acter Django comme backend API/auth/admin/jobs de la branche CRAW.
 - Note de cadrage: voir `docs/craw-self-hosted-plan.fr.md`.
 
 ### P0 - Chemin critique beta vendable
@@ -755,3 +755,4 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 - [2026-05-20] Placement langue header: déplacement du toggle FR/EN en dernier élément des actions du header pour l'aligner tout à droite après la session ou les actions publiques. Validation ciblée: `npm.cmd run typecheck --workspace @changethis/web` OK, `npm.cmd run lint --workspace @changethis/web` OK.
 - [2026-05-20] Correction reprise migrations RLS: ajout de `drop policy if exists` avant les `create policy` des migrations initiales et du script prod consolidé pour éviter l'erreur `policy already exists` après exécution partielle. Validation ciblée: `npm.cmd run migrations:check` OK, `git diff --check` OK.
 - [2026-05-20] Bascule licence EUPL: remplacement de la licence Elastic/open-core par `EUPL-1.2` pour le repo et les packages internes, suppression du résumé commercial séparé, alignement README/NOTICE/current-state et métadonnées npm. Validation ciblée: `npm.cmd run typecheck` OK, `git diff --check` OK.
+- [2026-05-20] Pivot CRAW final: ajout de `apps/frontend` Vue 3/Vite/TS/Pinia, ajout de `apps/backend` Django avec auth sessions, API JSON, admin, migrations PostgreSQL/PostGIS, stockage filesystem, commandes `run_due_jobs`/`cleanup_storage`; retrait du runtime Next/Supabase/Railway actif, migration des docs actives vers CRAW et déplacement des docs hosted-main en historique. Validation ciblée: `python apps/backend/manage.py check` OK, `npm.cmd run build` OK, `npm.cmd run typecheck` OK, `npm.cmd run test` OK, `npm.cmd run env:check` OK avec env locale, `docker compose config` OK, `git diff --check` OK; `makemigrations --check` OK avec avertissement attendu car PostgreSQL local n'est pas lancé.

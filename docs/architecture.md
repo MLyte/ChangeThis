@@ -1,42 +1,35 @@
-# Architecture
+# Architecture CRAW
 
-Etat actuel: voir [current-state.fr.md](current-state.fr.md). Ce document décrit l'architecture active au 2026-05-02, pas une cible abstraite.
-
-## Stack
-
-- Next.js App Router for the dashboard and API
-- TypeScript across all packages
-- npm workspaces for the monorepo
-- Supabase Auth for production beta authentication (`AUTH_MODE=supabase`)
-- Supabase REST/Postgres for the real beta store (`DATA_STORE=supabase`)
-- Local file store only for development (`DATA_STORE=file`)
-- Railway for app hosting in the beta path
-- OVH DNS for `app.changethis.dev`
-- GitHub and GitLab issue providers for manual issue creation from the inbox
-- Public widget bundle served by the app through `/widget.js` and `/widget.global.js`
-
-## Data Flow
+`CRAW` targets a conventional self-hosted deployment operated on CRA-W infrastructure.
 
 ```mermaid
-flowchart LR
-  Site["Client staging site"] --> Widget["ChangeThis Widget"]
-  Widget --> Api["Next.js Public API"]
-  Api --> Db["Supabase Postgres"]
-  Api -. future .-> Storage["Object storage / Supabase Storage"]
-  Api --> Providers["Issue Provider Layer"]
-  Providers --> GitHub["GitHub Issues"]
-  Providers --> GitLab["GitLab Issues"]
-  Dashboard["Dashboard"] --> Api
+flowchart TD
+  Browser["Browser / connected site"] --> Widget["packages/widget"]
+  Browser --> Spa["Vue 3 SPA"]
+  Widget --> Api["Django JSON API"]
+  Spa --> Api
+  Api --> Db["PostgreSQL + PostGIS"]
+  Api --> Files["FILES_ROOT filesystem or mounted NAS"]
+  Api --> Providers["GitHub/GitLab APIs, optional"]
+  Admin["Django admin"] --> Api
 ```
+
+## Components
+
+- `apps/frontend`: Vue 3, Vite, TypeScript, Pinia and Vue Router.
+- `apps/backend`: Django sessions, API, admin, migrations, storage and synchronous jobs.
+- `packages/widget`: public browser widget served by Django.
+- `packages/shared`: TypeScript protocol shared by frontend/widget code.
+- PostgreSQL/PostGIS: single source of truth through Django migrations.
+- Filesystem: screenshots and generated files under `FILES_ROOT`.
+
+## Runtime
+
+Docker Compose starts `frontend`, `backend` and `postgres`. In production, a CRA-W reverse proxy can point users to Django directly; Django serves the built SPA and widget bundles.
 
 ## Security Baseline
 
-- The browser widget only receives a public project key.
-- Issue provider tokens never enter the browser.
-- API validates the request origin against project allowlists.
-- Screenshot uploads are size limited but still stored as data URLs in the current beta path; object storage with signed URLs is a known follow-up.
-- Form fields and sensitive elements should be masked before capture.
-- GitHub and GitLab webhooks must be verified before processing.
-- Supabase RLS should protect all private project data.
-- `/api/ready` checks auth, data store, service role, required secrets, and expected Supabase tables.
-- `DATA_STORE=file` and `AUTH_MODE=local` are no-go values in production beta.
+- Session cookies are HTTP-only and same-site.
+- Public feedback writes require a known project public key.
+- Provider tokens are optional and should be replaced by a stronger secret storage mechanism before sensitive production use.
+- Screenshots are stored as files; the database stores only relative paths and metadata.

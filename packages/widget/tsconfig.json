@@ -4,7 +4,7 @@
     "declarationMap": true,
     "emitDeclarationOnly": false,
     "esModuleInterop": true,
-    "lib": ["DOM", "ES2022"],
+    "lib": ["DOM", "ESNext"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist",

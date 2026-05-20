@@ -1,48 +1,46 @@
 services:
-  changethis:
+  backend:
     build:
       context: .
-    image: changethis:self-hosted
+    image: changethis:craw-backend
     ports:
-      - "${PORT:-3000}:3000"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
-      NODE_ENV: production
-      PORT: 3000
-      AUTH_MODE: ${AUTH_MODE:-supabase}
-      DATA_STORE: ${DATA_STORE:-supabase}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-      ENABLE_PUBLIC_SIGNUP: ${ENABLE_PUBLIC_SIGNUP:-false}
-      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
-      SUPABASE_REST_TIMEOUT_MS: ${SUPABASE_REST_TIMEOUT_MS:-10000}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:8000}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-only-for-local-development}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
       DATABASE_URL: ${DATABASE_URL:-postgresql://changethis:changethis@postgres:5432/changethis}
-      POSTGRES_POOL_MAX: ${POSTGRES_POOL_MAX:-5}
-      POSTGRES_CONNECTION_TIMEOUT_MS: ${POSTGRES_CONNECTION_TIMEOUT_MS:-5000}
-      POSTGRES_IDLE_TIMEOUT_MS: ${POSTGRES_IDLE_TIMEOUT_MS:-30000}
-      CRAW_AUTH_SHARED_SECRET: ${CRAW_AUTH_SHARED_SECRET:-}
-      CRAW_AUTH_JWKS_URL: ${CRAW_AUTH_JWKS_URL:-}
-      CHANGETHIS_SECRET_KEY: ${CHANGETHIS_SECRET_KEY:-}
-      CHANGETHIS_CRON_SECRET: ${CHANGETHIS_CRON_SECRET:-}
-      GITHUB_PROVIDER_INTEGRATION_ID: ${GITHUB_PROVIDER_INTEGRATION_ID:-}
-      GITHUB_APP_SLUG: ${GITHUB_APP_SLUG:-}
-      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
-      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
-      GITHUB_INSTALLATION_ID: ${GITHUB_INSTALLATION_ID:-}
-      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+      FILES_ROOT: /var/lib/changethis/files
+      TEMP_DIR: /var/lib/changethis/tmp
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
-      CHANGETHIS_GITHUB_TOKEN: ${CHANGETHIS_GITHUB_TOKEN:-}
-      GITLAB_PROVIDER_INTEGRATION_ID: ${GITLAB_PROVIDER_INTEGRATION_ID:-}
       GITLAB_BASE_URL: ${GITLAB_BASE_URL:-https://gitlab.com}
-      GITLAB_OAUTH_APP_ID: ${GITLAB_OAUTH_APP_ID:-}
-      GITLAB_OAUTH_APP_SECRET: ${GITLAB_OAUTH_APP_SECRET:-}
-      GITLAB_WEBHOOK_SECRET: ${GITLAB_WEBHOOK_SECRET:-}
       GITLAB_TOKEN: ${GITLAB_TOKEN:-}
-      CHANGETHIS_GITLAB_TOKEN: ${CHANGETHIS_GITLAB_TOKEN:-}
+    volumes:
+      - changethis-files:/var/lib/changethis/files
+      - changethis-tmp:/var/lib/changethis/tmp
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run build --workspace @changethis/shared && npm run build --workspace @changethis/frontend && npm run preview --workspace @changethis/frontend -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - .:/app
+    environment:
+      VITE_API_BASE_URL: ${PUBLIC_APP_URL:-http://localhost:8000}
+    depends_on:
+      - backend
     restart: unless-stopped
 
   postgres:
-    image: postgres:16-alpine
+    image: postgis/postgis:16-3.4
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-changethis}
       POSTGRES_USER: ${POSTGRES_USER:-changethis}
@@ -53,3 +51,5 @@ services:
 
 volumes:
   postgres-data:
+  changethis-files:
+  changethis-tmp:

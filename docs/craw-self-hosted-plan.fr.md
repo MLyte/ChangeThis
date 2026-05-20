@@ -1,192 +1,71 @@
-# Plan CRAW self-hosted
+# Plan CRAW final
 
-Objectif: disposer d'une branche ChangeThis deployable sur les serveurs CRAW, sans dependance obligatoire a Railway ni Supabase.
+Objectif: faire de `CRAW` une application interne CRA-W installable sur serveurs controles, sans dependance runtime a Supabase, Railway, Next.js, Redis ni MinIO.
 
-## Decision recommandee
+## Stack retenue
 
-Avancer en deux etapes:
+- Frontend: Vue 3 + Vite SPA + TypeScript + Pinia.
+- Backend: Django/Python.
+- Base: PostgreSQL avec extension PostGIS.
+- Stockage: filesystem serveur CRA-W via `FILES_ROOT`.
+- Runtime: Docker Compose avec `frontend`, `backend`, `postgres`.
 
-1. Sortir Railway du chemin de deploiement avec Docker/Compose, reverse proxy et variables d'environnement controlees par CRAW.
-2. Sortir Supabase par adaptateurs explicites, en gardant l'app Next.js et le widget existants pendant la migration.
+## Pourquoi
 
-Une reecriture totale Django n'est pas le meilleur premier pas. Django est pertinent comme backend/API CRAW, mais il faut d'abord stabiliser le contrat entre le dashboard, le widget et la couche data.
+CRA-W dispose deja d'une exploitation serveur classique: PostgreSQL/PostGIS, stockage disque ou NAS monte, fichiers GIS/QGIS temporaires, memoire locale Python, sessions Django/FastAPI et traitements synchrones. Cette branche s'aligne sur ces pratiques au lieu d'ajouter MinIO, Redis ou un runtime SaaS.
 
-## Ce qui remplace Railway
+## Responsabilites Django
 
-Railway est principalement un runtime. Le code actuel n'en depend pas fortement.
+- Auth email/password et sessions.
+- API JSON sous `/api/*`.
+- Admin interne.
+- Migrations Django comme source de verite.
+- Ecriture atomique des screenshots sur disque.
+- Creation d'issues GitHub/GitLab quand des tokens sont configures.
+- Retries simples via table PostgreSQL et `manage.py run_due_jobs`.
+- Cleanup fichiers via `manage.py cleanup_storage`.
 
-Remplacement cible:
+## Responsabilites Vue
 
-- Dockerfile du repo pour construire l'app.
-- Docker Compose, Coolify, Proxmox/LXC ou orchestrateur CRAW pour lancer le service.
-- Caddy ou Nginx devant Next.js pour TLS, headers `X-Forwarded-*` et domaine public.
-- Cron CRAW ou service worker dedie pour les taches planifiees.
+- Routes `/`, `/login`, `/signup`, `/projects`, `/settings`.
+- Stores Pinia pour session, sites, feedbacks et settings.
+- Appels API Django, cookies de session inclus.
 
-Variables cles:
+## Donnees
 
-```env
-NEXT_PUBLIC_APP_URL=https://app.example.craw
-PORT=3000
-CHANGETHIS_SECRET_KEY=...
-CHANGETHIS_CRON_SECRET=...
+Les modeles Django couvrent les objets principaux:
+
+- users Django;
+- organizations;
+- workspace members;
+- projects/sites;
+- project public keys;
+- feedbacks;
+- issue targets;
+- provider integrations;
+- credentials provider;
+- issue attempts;
+- external issues;
+- feedback status events.
+
+## Stockage
+
+Les screenshots sont recus via l'API publique, ecrits dans `TEMP_DIR`, puis deplaces vers:
+
+```txt
+FILES_ROOT/<workspace>/<project>/<date>/
 ```
 
-## Ce qui remplace Supabase
+La base stocke chemin relatif, hash SHA-256, taille, MIME type et statut. Un NAS reste un detail d'infrastructure: il suffit de monter le chemin sur `FILES_ROOT`.
 
-Supabase porte aujourd'hui plusieurs responsabilites:
+## Gates d'acceptation
 
-- Auth utilisateurs et sessions.
-- Base PostgreSQL exposee via REST.
-- Modele organisations, workspaces, membres, sites, feedbacks, integrations et credentials.
-- Migrations SQL.
-- A terme, stockage objet pour screenshots, meme si les screenshots sont encore en data URL dans le chemin beta.
-
-Remplacement cible:
-
-```env
-AUTH_MODE=craw
-DATA_STORE=postgres
-DATABASE_URL=postgresql://...
-CRAW_AUTH_SHARED_SECRET=...
-# ou CRAW_AUTH_JWKS_URL=https://...
-STORAGE_MODE=s3
-S3_ENDPOINT=https://...
-S3_BUCKET=changethis
-QUEUE_MODE=redis
-REDIS_URL=redis://...
-```
-
-Le mode `AUTH_MODE=craw` peut etre implemente de deux facons.
-
-## Option A: Next.js garde le backend principal
-
-Next.js continue de porter les routes API. On ajoute un store Postgres direct cote Node.js.
-
-Composants:
-
-- `DATA_STORE=postgres` avec Kysely, Drizzle, Prisma ou `pg`.
-- Migrations SQL versionnees hors Supabase.
-- Auth locale ou OIDC CRAW.
-- Stockage screenshots via S3 compatible, MinIO ou filesystem protege.
-- Jobs via Redis/BullMQ ou cron protege.
-
-Avantages:
-
-- Migration la plus courte.
-- Moins de duplication API.
-- Le widget et le dashboard changent peu.
-
-Inconvenients:
-
-- Il faut construire proprement l'auth et l'admin que Supabase donnait gratuitement.
-- Le backend reste dans Next.js, moins naturel si CRAW administre deja beaucoup en Django.
-
-## Option B: Django devient le backend CRAW
-
-Django porte auth, API, admin, migrations, stockage et jobs. Next.js devient frontend/dashboard et le widget poste vers Django.
-
-Composants:
-
-- Django + Django REST Framework.
-- PostgreSQL CRAW.
-- Django sessions ou JWT signe pour Next.js.
-- Celery + Redis pour creation d'issues, retries et taches de cleanup.
-- S3 compatible ou filesystem pour screenshots.
-- Admin Django pour support interne CRAW.
-
-Avantages:
-
-- Tres bon fit serveur propre, migrations, admin et operations.
-- Plus simple a exploiter sur infra classique.
-- Meilleure base pour queues/retries durables.
-
-Inconvenients:
-
-- Plus gros chantier.
-- Il faut figer un contrat API et migrer progressivement les routes Next.js.
-- Risque de double logique temporaire si on va trop vite.
-
-## Choix propose pour CRAW
-
-Demarrer par une architecture hybride reversible:
-
-- Garder Next.js et le widget.
-- Ajouter des interfaces internes pour auth, data, storage et jobs.
-- Implementer `DATA_STORE=postgres` avant de retirer `DATA_STORE=supabase`.
-- Introduire Django seulement pour les responsabilites ou il apporte un vrai gain: auth/admin/API stable/jobs.
-
-Ordre de migration recommande:
-
-1. Inventorier les appels Supabase dans `apps/web/lib/*` et les routes API.
-2. Extraire les contrats:
-   - `AuthProvider`
-   - `DataStore`
-   - `CredentialStore`
-   - `ObjectStorage`
-   - `JobQueue`
-3. Porter le schema Supabase vers migrations PostgreSQL neutres.
-4. Ajouter un `DATA_STORE=postgres` avec tests repository.
-5. Ajouter `AUTH_MODE=craw` avec sessions/JWT CRAW.
-6. Brancher stockage objet screenshots.
-7. Brancher queue durable pour creation d'issues et retries.
-8. Remplacer les checks `prod:check` pour accepter le runtime CRAW.
-9. Ajouter un guide de deploiement CRAW et un smoke test complet.
-
-## Stack cible minimale
-
-```text
-Internet
-  -> Caddy/Nginx
-  -> Next.js ChangeThis
-  -> PostgreSQL
-  -> Redis
-  -> MinIO ou S3 compatible
-  -> Worker jobs
-```
-
-Avec Django:
-
-```text
-Internet
-  -> Caddy/Nginx
-  -> Next.js dashboard/widget assets
-  -> Django API/Auth/Admin
-  -> PostgreSQL
-  -> Redis/Celery
-  -> MinIO ou S3 compatible
-```
-
-## Gates avant de couper Supabase
-
-- Signup/login fonctionnent sans Supabase.
-- Creation workspace owner fonctionne.
-- Creation site + cle publique fonctionne.
-- `/widget.js` charge la config site depuis le runtime CRAW.
-- `POST /api/public/feedback` persiste en Postgres CRAW.
-- Inbox `/projects` liste les feedbacks depuis Postgres CRAW.
-- Creation d'issue GitHub/GitLab fonctionne avec credentials chiffres.
-- Screenshots ne sont plus stockes en data URL longue duree.
-- `/api/health` et `/api/ready` valident les dependances CRAW.
-- Backup/restore Postgres et storage sont documentes et testes.
-
-## Premiere tranche concrete
-
-La premiere tranche ne doit pas encore introduire Django.
-
-Livrables:
-
-- `AUTH_MODE=craw` et `DATA_STORE=postgres` reconnus par le runtime.
-- Client Postgres minimal pour les checks de readiness.
-- Schema SQL neutre derive des migrations Supabase existantes dans `postgres/migrations`.
-- Repository feedback/projets avec implementation Postgres ciblee.
-- Tests de selection de store et d'ecriture feedback.
-- Documentation d'env CRAW.
-
-Etat courant de cette tranche:
-
-- `postgres/migrations/0001_craw_core_schema.sql` porte le schema applicatif sans RLS Supabase ni `auth.uid()`.
-- `npm run postgres:migrations:check` verifie la couverture structurelle du schema neutre.
-- `/api/ready` sonde les tables Postgres quand `DATA_STORE=postgres`.
-- Les repositories applicatifs Postgres restent a implementer; les stores non portes echouent explicitement au lieu de retomber sur les fichiers locaux.
-
-Ensuite seulement, decider si l'auth CRAW est implementee dans Next.js, via OIDC, ou via Django.
+- `python apps/backend/manage.py check` vert.
+- `npm run build` vert.
+- `docker compose config` vert.
+- `/api/health` vert.
+- `/api/ready` vert quand PostgreSQL/PostGIS et les volumes sont disponibles.
+- Signup/login/session fonctionnent via Django.
+- `POST /api/public/feedback` persiste en PostgreSQL et stocke le screenshot sur disque.
+- `/projects` liste les feedbacks depuis Django.
+- Plus aucun chemin actif ne requiert Supabase, Railway ou Next.js.

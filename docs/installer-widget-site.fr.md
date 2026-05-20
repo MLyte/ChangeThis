@@ -58,7 +58,7 @@ En développement local ChangeThis, utiliser le serveur web local :
 <script src="http://localhost:3000/widget.js" data-project="project_public_key"></script>
 ```
 
-Si Next.js démarre sur un autre port, remplacer `3000` par le port affiché par `npm run dev`.
+Si le backend Django ou le serveur Vue démarre sur un autre port, remplacer le port par celui affiché dans le terminal.
 
 Pour tester un site client lancé en local, ajouter son origine locale dans le site connecté, par exemple `http://localhost:5173`.
 
