@@ -130,12 +130,14 @@ alter table external_issues enable row level security;
 alter table feedback_status_events enable row level security;
 alter table provider_issue_attempts enable row level security;
 
+drop policy if exists "Organization owners can read their organizations" on organizations;
 create policy "Organization owners can read their organizations"
   on organizations
   for select
   to authenticated
   using (owner_id = auth.uid());
 
+drop policy if exists "Organization owners can update their organizations" on organizations;
 create policy "Organization owners can update their organizations"
   on organizations
   for update
@@ -143,6 +145,7 @@ create policy "Organization owners can update their organizations"
   using (owner_id = auth.uid())
   with check (owner_id = auth.uid());
 
+drop policy if exists "Organization owners can read projects" on projects;
 create policy "Organization owners can read projects"
   on projects
   for select
@@ -156,6 +159,7 @@ create policy "Organization owners can read projects"
     )
   );
 
+drop policy if exists "Organization owners can manage projects" on projects;
 create policy "Organization owners can manage projects"
   on projects
   for all
@@ -177,6 +181,7 @@ create policy "Organization owners can manage projects"
     )
   );
 
+drop policy if exists "Organization owners can read provider integrations" on provider_integrations;
 create policy "Organization owners can read provider integrations"
   on provider_integrations
   for select
@@ -190,6 +195,7 @@ create policy "Organization owners can read provider integrations"
     )
   );
 
+drop policy if exists "Organization owners can manage provider integrations" on provider_integrations;
 create policy "Organization owners can manage provider integrations"
   on provider_integrations
   for all
@@ -211,6 +217,7 @@ create policy "Organization owners can manage provider integrations"
     )
   );
 
+drop policy if exists "Organization owners can read issue targets" on issue_targets;
 create policy "Organization owners can read issue targets"
   on issue_targets
   for select
@@ -225,6 +232,7 @@ create policy "Organization owners can read issue targets"
     )
   );
 
+drop policy if exists "Organization owners can manage issue targets" on issue_targets;
 create policy "Organization owners can manage issue targets"
   on issue_targets
   for all
@@ -248,6 +256,7 @@ create policy "Organization owners can manage issue targets"
     )
   );
 
+drop policy if exists "Organization owners can read feedbacks" on feedbacks;
 create policy "Organization owners can read feedbacks"
   on feedbacks
   for select
@@ -262,6 +271,7 @@ create policy "Organization owners can read feedbacks"
     )
   );
 
+drop policy if exists "Organization owners can read external issues" on external_issues;
 create policy "Organization owners can read external issues"
   on external_issues
   for select
@@ -277,6 +287,7 @@ create policy "Organization owners can read external issues"
     )
   );
 
+drop policy if exists "Organization owners can read feedback status events" on feedback_status_events;
 create policy "Organization owners can read feedback status events"
   on feedback_status_events
   for select
@@ -292,6 +303,7 @@ create policy "Organization owners can read feedback status events"
     )
   );
 
+drop policy if exists "Organization owners can read provider issue attempts" on provider_issue_attempts;
 create policy "Organization owners can read provider issue attempts"
   on provider_issue_attempts
   for select
@@ -307,6 +319,7 @@ create policy "Organization owners can read provider issue attempts"
     )
   );
 
+drop policy if exists "Organization owners can manage external issues" on external_issues;
 create policy "Organization owners can manage external issues"
   on external_issues
   for all
@@ -332,6 +345,7 @@ create policy "Organization owners can manage external issues"
     )
   );
 
+drop policy if exists "Organization owners can manage feedbacks" on feedbacks;
 create policy "Organization owners can manage feedbacks"
   on feedbacks
   for all

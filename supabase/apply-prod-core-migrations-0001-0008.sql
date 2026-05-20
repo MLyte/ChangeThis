@@ -136,12 +136,14 @@ alter table external_issues enable row level security;
 alter table feedback_status_events enable row level security;
 alter table provider_issue_attempts enable row level security;
 
+drop policy if exists "Organization owners can read their organizations" on organizations;
 create policy "Organization owners can read their organizations"
   on organizations
   for select
   to authenticated
   using (owner_id = auth.uid());
 
+drop policy if exists "Organization owners can update their organizations" on organizations;
 create policy "Organization owners can update their organizations"
   on organizations
   for update
@@ -149,6 +151,7 @@ create policy "Organization owners can update their organizations"
   using (owner_id = auth.uid())
   with check (owner_id = auth.uid());
 
+drop policy if exists "Organization owners can read projects" on projects;
 create policy "Organization owners can read projects"
   on projects
   for select
@@ -162,6 +165,7 @@ create policy "Organization owners can read projects"
     )
   );
 
+drop policy if exists "Organization owners can manage projects" on projects;
 create policy "Organization owners can manage projects"
   on projects
   for all
@@ -183,6 +187,7 @@ create policy "Organization owners can manage projects"
     )
   );
 
+drop policy if exists "Organization owners can read provider integrations" on provider_integrations;
 create policy "Organization owners can read provider integrations"
   on provider_integrations
   for select
@@ -196,6 +201,7 @@ create policy "Organization owners can read provider integrations"
     )
   );
 
+drop policy if exists "Organization owners can manage provider integrations" on provider_integrations;
 create policy "Organization owners can manage provider integrations"
   on provider_integrations
   for all
@@ -217,6 +223,7 @@ create policy "Organization owners can manage provider integrations"
     )
   );
 
+drop policy if exists "Organization owners can read issue targets" on issue_targets;
 create policy "Organization owners can read issue targets"
   on issue_targets
   for select
@@ -231,6 +238,7 @@ create policy "Organization owners can read issue targets"
     )
   );
 
+drop policy if exists "Organization owners can manage issue targets" on issue_targets;
 create policy "Organization owners can manage issue targets"
   on issue_targets
   for all
@@ -254,6 +262,7 @@ create policy "Organization owners can manage issue targets"
     )
   );
 
+drop policy if exists "Organization owners can read feedbacks" on feedbacks;
 create policy "Organization owners can read feedbacks"
   on feedbacks
   for select
@@ -268,6 +277,7 @@ create policy "Organization owners can read feedbacks"
     )
   );
 
+drop policy if exists "Organization owners can read external issues" on external_issues;
 create policy "Organization owners can read external issues"
   on external_issues
   for select
@@ -283,6 +293,7 @@ create policy "Organization owners can read external issues"
     )
   );
 
+drop policy if exists "Organization owners can read feedback status events" on feedback_status_events;
 create policy "Organization owners can read feedback status events"
   on feedback_status_events
   for select
@@ -298,6 +309,7 @@ create policy "Organization owners can read feedback status events"
     )
   );
 
+drop policy if exists "Organization owners can read provider issue attempts" on provider_issue_attempts;
 create policy "Organization owners can read provider issue attempts"
   on provider_issue_attempts
   for select
@@ -313,6 +325,7 @@ create policy "Organization owners can read provider issue attempts"
     )
   );
 
+drop policy if exists "Organization owners can manage external issues" on external_issues;
 create policy "Organization owners can manage external issues"
   on external_issues
   for all
@@ -338,6 +351,7 @@ create policy "Organization owners can manage external issues"
     )
   );
 
+drop policy if exists "Organization owners can manage feedbacks" on feedbacks;
 create policy "Organization owners can manage feedbacks"
   on feedbacks
   for all
@@ -514,12 +528,14 @@ alter table workspace_members enable row level security;
 alter table provider_integration_credentials enable row level security;
 alter table project_public_keys enable row level security;
 
+drop policy if exists "Organization members can read their organizations" on organizations;
 create policy "Organization members can read their organizations"
   on organizations
   for select
   to authenticated
   using (public.is_organization_member(id));
 
+drop policy if exists "Organization admins can update their organizations" on organizations;
 create policy "Organization admins can update their organizations"
   on organizations
   for update
@@ -527,12 +543,14 @@ create policy "Organization admins can update their organizations"
   using (public.can_manage_organization(id))
   with check (public.can_manage_organization(id));
 
+drop policy if exists "Organization members can read workspace members" on workspace_members;
 create policy "Organization members can read workspace members"
   on workspace_members
   for select
   to authenticated
   using (public.is_organization_member(organization_id));
 
+drop policy if exists "Organization admins can manage workspace members" on workspace_members;
 create policy "Organization admins can manage workspace members"
   on workspace_members
   for all
@@ -540,12 +558,14 @@ create policy "Organization admins can manage workspace members"
   using (public.can_manage_organization(organization_id))
   with check (public.can_manage_organization(organization_id));
 
+drop policy if exists "Organization members can read projects" on projects;
 create policy "Organization members can read projects"
   on projects
   for select
   to authenticated
   using (public.is_organization_member(organization_id));
 
+drop policy if exists "Organization admins can manage projects" on projects;
 create policy "Organization admins can manage projects"
   on projects
   for all
@@ -553,12 +573,14 @@ create policy "Organization admins can manage projects"
   using (public.can_manage_organization(organization_id))
   with check (public.can_manage_organization(organization_id));
 
+drop policy if exists "Organization admins can read provider integrations" on provider_integrations;
 create policy "Organization admins can read provider integrations"
   on provider_integrations
   for select
   to authenticated
   using (public.can_manage_organization(organization_id));
 
+drop policy if exists "Organization admins can manage provider integrations" on provider_integrations;
 create policy "Organization admins can manage provider integrations"
   on provider_integrations
   for all
@@ -566,6 +588,7 @@ create policy "Organization admins can manage provider integrations"
   using (public.can_manage_organization(organization_id))
   with check (public.can_manage_organization(organization_id));
 
+drop policy if exists "Organization admins can read provider credential metadata" on provider_integration_credentials;
 create policy "Organization admins can read provider credential metadata"
   on provider_integration_credentials
   for select
@@ -579,6 +602,7 @@ create policy "Organization admins can read provider credential metadata"
     )
   );
 
+drop policy if exists "Organization admins can manage provider credential metadata" on provider_integration_credentials;
 create policy "Organization admins can manage provider credential metadata"
   on provider_integration_credentials
   for all
@@ -600,6 +624,7 @@ create policy "Organization admins can manage provider credential metadata"
     )
   );
 
+drop policy if exists "Organization members can read issue targets" on issue_targets;
 create policy "Organization members can read issue targets"
   on issue_targets
   for select
@@ -613,6 +638,7 @@ create policy "Organization members can read issue targets"
     )
   );
 
+drop policy if exists "Organization admins can manage issue targets" on issue_targets;
 create policy "Organization admins can manage issue targets"
   on issue_targets
   for all
@@ -634,6 +660,7 @@ create policy "Organization admins can manage issue targets"
     )
   );
 
+drop policy if exists "Organization members can read project public keys" on project_public_keys;
 create policy "Organization members can read project public keys"
   on project_public_keys
   for select
@@ -647,6 +674,7 @@ create policy "Organization members can read project public keys"
     )
   );
 
+drop policy if exists "Organization admins can manage project public keys" on project_public_keys;
 create policy "Organization admins can manage project public keys"
   on project_public_keys
   for all
@@ -668,6 +696,7 @@ create policy "Organization admins can manage project public keys"
     )
   );
 
+drop policy if exists "Organization members can read feedbacks" on feedbacks;
 create policy "Organization members can read feedbacks"
   on feedbacks
   for select
@@ -681,6 +710,7 @@ create policy "Organization members can read feedbacks"
     )
   );
 
+drop policy if exists "Organization admins can manage feedbacks" on feedbacks;
 create policy "Organization admins can manage feedbacks"
   on feedbacks
   for all
@@ -702,6 +732,7 @@ create policy "Organization admins can manage feedbacks"
     )
   );
 
+drop policy if exists "Organization members can read external issues" on external_issues;
 create policy "Organization members can read external issues"
   on external_issues
   for select
@@ -716,6 +747,7 @@ create policy "Organization members can read external issues"
     )
   );
 
+drop policy if exists "Organization admins can manage external issues" on external_issues;
 create policy "Organization admins can manage external issues"
   on external_issues
   for all
@@ -739,6 +771,7 @@ create policy "Organization admins can manage external issues"
     )
   );
 
+drop policy if exists "Organization members can read feedback status events" on feedback_status_events;
 create policy "Organization members can read feedback status events"
   on feedback_status_events
   for select
@@ -753,6 +786,7 @@ create policy "Organization members can read feedback status events"
     )
   );
 
+drop policy if exists "Organization members can read provider issue attempts" on provider_issue_attempts;
 create policy "Organization members can read provider issue attempts"
   on provider_issue_attempts
   for select
