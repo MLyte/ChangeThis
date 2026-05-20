@@ -1,5 +1,19 @@
 # ChangeThis
 
+## What Is Different From `main` And Why
+
+`CRAW` is the self-hosted migration branch. `main` remains the controlled beta path for ChangeThis hosted on Railway with Supabase Auth/Postgres. This branch explores how to run the project on CRAW-controlled servers and, progressively, how to remove the required Supabase and Railway dependencies.
+
+The intentional differences from `main` are:
+
+- **Deployment target:** adds Docker and Compose assets so the app can be built and run on a VPS, Proxmox/LXC, Coolify, or another CRAW-managed runtime instead of Railway.
+- **Runtime modes:** introduces `AUTH_MODE=craw` and `DATA_STORE=postgres` as explicit future modes. They are recognized by environment checks and readiness checks, but the full auth and Postgres adapters are not complete yet.
+- **Safety behavior:** when `DATA_STORE=postgres` is enabled, stores that have not been migrated fail clearly instead of silently falling back to local JSON files.
+- **Architecture notes:** adds a CRAW plan that favors a reversible migration: keep the current Next.js app and widget, add clean auth/data/storage/job contracts, then decide whether Django should own auth/admin/jobs or the full backend API.
+- **Current production status:** this branch is not the hosted beta production path. It is a work branch for CRAW infrastructure and self-hosted portability.
+
+Start with [docs/craw-self-hosted-plan.fr.md](docs/craw-self-hosted-plan.fr.md) for the target architecture and [docs/self-hosted-runtime.md](docs/self-hosted-runtime.md) for the Docker/Supabase runtime fallback.
+
 ChangeThis is a client feedback widget and product inbox for websites in development. Visitors can send feedback without creating an account; the product team signs in to triage those returns and turn them into GitHub or GitLab issues.
 
 Clients click a fixed feedback button, add a note, pin one or more page elements, or send a screenshot. ChangeThis stores the context, keeps a durable inbox, and creates a provider-neutral issue draft with URL, viewport, browser details, pins, screenshot metadata, and labels ready for triage.
