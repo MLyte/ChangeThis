@@ -59,6 +59,8 @@ export type ProviderIntegration = {
 export type PinTarget = {
   x: number;
   y: number;
+  elementOffsetX?: number;
+  elementOffsetY?: number;
   selector?: string;
   text?: string;
 };
@@ -804,6 +806,14 @@ function validatePin(value: unknown): PinValidationResult {
     return invalid("pin.selector must be a string");
   }
 
+  if (value.elementOffsetX !== undefined && !isNonNegativeNumber(value.elementOffsetX, 100_000)) {
+    return invalid("pin.elementOffsetX must be a non-negative number");
+  }
+
+  if (value.elementOffsetY !== undefined && !isNonNegativeNumber(value.elementOffsetY, 100_000)) {
+    return invalid("pin.elementOffsetY must be a non-negative number");
+  }
+
   if (value.text !== undefined && (typeof value.text !== "string" || value.text.length > 500)) {
     return invalid("pin.text must be a string");
   }
@@ -813,6 +823,8 @@ function validatePin(value: unknown): PinValidationResult {
     value: {
       x: value.x,
       y: value.y,
+      elementOffsetX: value.elementOffsetX,
+      elementOffsetY: value.elementOffsetY,
       selector: value.selector,
       text: value.text
     }

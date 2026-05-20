@@ -1854,14 +1854,14 @@ export function initChangeThis(options: WidgetOptions): void {
     });
   };
 
-  window.addEventListener("scroll", () => {
+  const handleScrollOrResize = () => {
     updatePinnedMarkers();
     updateFloatingOffset();
-  }, { passive: true });
-  window.addEventListener("resize", () => {
-    updatePinnedMarkers();
-    updateFloatingOffset();
-  });
+  };
+
+  window.addEventListener("scroll", handleScrollOrResize, { capture: true, passive: true });
+  document.addEventListener("scroll", handleScrollOrResize, { capture: true, passive: true });
+  window.addEventListener("resize", handleScrollOrResize);
   installNavigationListener(() => {
     if (syncDraftView()) {
       render();
@@ -2240,6 +2240,8 @@ function startPinMode(label: string, cancelLabel: string, onSelect: (pin: PinTar
     finish(() => onSelect({
       x: clientX + window.scrollX,
       y: clientY + window.scrollY,
+      elementOffsetX: target ? clientX - target.getBoundingClientRect().left : undefined,
+      elementOffsetY: target ? clientY - target.getBoundingClientRect().top : undefined,
       selector: target ? buildSelector(target) : undefined,
       text: target?.textContent?.trim().slice(0, 120)
     }));
@@ -2385,10 +2387,27 @@ function maskSensitiveFields(enabled: boolean): void {
 }
 
 function pinViewportPosition(pin: PinTarget): { x: number; y: number } {
+  const element = pin.selector ? safeQuerySelector(pin.selector) : null;
+  if (element && typeof pin.elementOffsetX === "number" && typeof pin.elementOffsetY === "number") {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: rect.left + pin.elementOffsetX,
+      y: rect.top + pin.elementOffsetY
+    };
+  }
+
   return {
     x: pin.x - window.scrollX,
     y: pin.y - window.scrollY
   };
+}
+
+function safeQuerySelector(selector: string): Element | null {
+  try {
+    return document.querySelector(selector);
+  } catch {
+    return null;
+  }
 }
 
 function currentViewKey(): string {
@@ -2646,6 +2665,8 @@ function parsePinTarget(value: Record<string, unknown>): PinTarget | undefined {
   return {
     x: value.x,
     y: value.y,
+    elementOffsetX: typeof value.elementOffsetX === "number" && Number.isFinite(value.elementOffsetX) ? value.elementOffsetX : undefined,
+    elementOffsetY: typeof value.elementOffsetY === "number" && Number.isFinite(value.elementOffsetY) ? value.elementOffsetY : undefined,
     selector: typeof value.selector === "string" ? value.selector : undefined,
     text: typeof value.text === "string" ? value.text : undefined
   };
