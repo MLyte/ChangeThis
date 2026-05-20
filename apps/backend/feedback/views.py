@@ -54,9 +54,10 @@ def create_public_feedback(request: HttpRequest) -> JsonResponse:
     project = Project.objects.filter(public_key=public_key, status=Project.Status.ACTIVE).first()
     if project is None:
         return JsonResponse({"error": "project not found"}, status=404)
+    issue_target = _project_issue_target(project)
     feedback = Feedback.objects.create(
         project=project,
-        issue_target=getattr(project, "issue_target", None),
+        issue_target=issue_target,
         kind=str(body.get("type") or body.get("kind") or "comment")[:40],
         message=str(body.get("message", ""))[:6000],
         page_url=str(body.get("url") or body.get("pageUrl") or "")[:1200],
@@ -78,10 +79,10 @@ def create_public_feedback(request: HttpRequest) -> JsonResponse:
             feedback.screenshot_mime = stored.mime
             feedback.save(update_fields=["screenshot_path", "screenshot_hash", "screenshot_bytes", "screenshot_mime"])
     FeedbackStatusEvent.objects.create(feedback=feedback, status=feedback.status, actor="widget")
-    if getattr(project, "issue_target", None) and project.issue_target.create_mode == "automatic":
+    if issue_target and issue_target.create_mode == "automatic":
         ProviderIssueAttempt.objects.create(
             feedback=feedback,
-            provider=project.issue_target.provider,
+            provider=issue_target.provider,
             due_at=timezone.now(),
             request_payload={"source": "automatic"},
         )
@@ -190,6 +191,10 @@ def create_issue(request: HttpRequest, feedback_id) -> JsonResponse:
     feedback = Feedback.objects.filter(id=feedback_id, project__organization=organization).first()
     if feedback is None:
         return JsonResponse({"error": "feedback not found"}, status=404)
+    if feedback.issue_target_id is None:
+        feedback.issue_target = _project_issue_target(feedback.project)
+        if feedback.issue_target is not None:
+            feedback.save(update_fields=["issue_target", "updated_at"])
     try:
         issue = create_external_issue(feedback)
     except Exception as cause:
@@ -284,6 +289,7 @@ def _set_feedback_status(request: HttpRequest, feedback_id, status: str) -> Json
 
 
 def _site_payload(project: Project) -> dict:
+    issue_target = _project_issue_target(project)
     return {
         "id": str(project.id),
         "publicKey": project.public_key,
@@ -291,6 +297,7 @@ def _site_payload(project: Project) -> dict:
         "status": project.status,
         "allowedOrigins": project.allowed_origins,
         "widgetSettings": project.widget_settings,
+        "issueTarget": _issue_target_payload(issue_target) if issue_target else None,
         "createdAt": project.created_at.isoformat(),
     }
 
@@ -321,3 +328,10 @@ def _issue_target_payload(target: IssueTarget) -> dict:
         "labels": target.labels,
         "createMode": target.create_mode,
     }
+
+
+def _project_issue_target(project: Project) -> IssueTarget | None:
+    try:
+        return project.issue_target
+    except IssueTarget.DoesNotExist:
+        return None
