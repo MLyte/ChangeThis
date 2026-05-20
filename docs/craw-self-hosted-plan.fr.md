@@ -176,10 +176,17 @@ La premiere tranche ne doit pas encore introduire Django.
 Livrables:
 
 - `AUTH_MODE=craw` et `DATA_STORE=postgres` reconnus par le runtime.
-- Client Postgres minimal.
-- Schema SQL neutre derive des migrations Supabase existantes.
+- Client Postgres minimal pour les checks de readiness.
+- Schema SQL neutre derive des migrations Supabase existantes dans `postgres/migrations`.
 - Repository feedback/projets avec implementation Postgres ciblee.
 - Tests de selection de store et d'ecriture feedback.
 - Documentation d'env CRAW.
+
+Etat courant de cette tranche:
+
+- `postgres/migrations/0001_craw_core_schema.sql` porte le schema applicatif sans RLS Supabase ni `auth.uid()`.
+- `npm run postgres:migrations:check` verifie la couverture structurelle du schema neutre.
+- `/api/ready` sonde les tables Postgres quand `DATA_STORE=postgres`.
+- Les repositories applicatifs Postgres restent a implementer; les stores non portes echouent explicitement au lieu de retomber sur les fichiers locaux.
 
 Ensuite seulement, decider si l'auth CRAW est implementee dans Next.js, via OIDC, ou via Django.

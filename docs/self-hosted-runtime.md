@@ -65,6 +65,14 @@ docker compose --env-file .env.production up --build
 
 Le service expose le port conteneur `3000` et mappe `${PORT:-3000}:3000` cote hote.
 
+Pour la cible CRAW/Postgres, appliquer le schema neutre avant d'attendre un `/api/ready` vert:
+
+```bash
+psql "$DATABASE_URL" -f postgres/migrations/0001_craw_core_schema.sql
+```
+
+Le mode `DATA_STORE=postgres` est encore une cible de migration: `/api/ready` peut verifier la base et les tables, mais les repositories applicatifs Postgres doivent encore etre implementes avant de remplacer Supabase en production.
+
 ## Notes de deploiement
 
 ### Coolify

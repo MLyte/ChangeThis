@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthMode } from "../../../lib/auth";
 import { isCrawAuthConfigured } from "../../../lib/craw-auth";
-import { isPostgresStoreConfigured } from "../../../lib/postgres-server";
+import { canReachPostgresTable, isPostgresStoreConfigured } from "../../../lib/postgres-server";
 import { isSupabaseAuthConfigured, isSupabaseServiceConfigured, supabaseServiceRest } from "../../../lib/supabase-server";
 import { getDataStoreMode, isProductionRuntime, usesUnsafeLocalDataStoreInProduction } from "../../../lib/runtime";
 
@@ -15,9 +15,7 @@ export async function GET() {
   const fileStoreUnsafe = usesUnsafeLocalDataStoreInProduction();
   const supabaseStoreConfigured = dataStore !== "supabase" || isSupabaseServiceConfigured();
   const postgresStoreConfigured = dataStore !== "postgres" || isPostgresStoreConfigured();
-  const database = dataStore === "supabase"
-    ? await probeSupabaseDatabase()
-    : { ok: true, failedTables: [] };
+  const database = await probeDatabase(dataStore);
   const databaseReady = database.ok;
   const providerConfigReady = Boolean(process.env.CHANGETHIS_SECRET_KEY);
   const checks = {
@@ -52,6 +50,18 @@ export async function GET() {
   );
 }
 
+async function probeDatabase(dataStore: string): Promise<{ ok: boolean; failedTables: string[] }> {
+  if (dataStore === "supabase") {
+    return probeSupabaseDatabase();
+  }
+
+  if (dataStore === "postgres") {
+    return probePostgresDatabase();
+  }
+
+  return { ok: true, failedTables: [] };
+}
+
 async function probeSupabaseDatabase(): Promise<{ ok: boolean; failedTables: string[] }> {
   if (!isSupabaseServiceConfigured()) {
     return { ok: false, failedTables: ["supabase_service"] };
@@ -73,6 +83,37 @@ async function probeSupabaseDatabase(): Promise<{ ok: boolean; failedTables: str
   ];
   const results = await Promise.all(tables.map(async (table) => ({
     ok: await canReachSupabaseTable(table),
+    table
+  })));
+  const failedTables = results.filter((result) => !result.ok).map((result) => result.table);
+
+  return {
+    ok: failedTables.length === 0,
+    failedTables
+  };
+}
+
+async function probePostgresDatabase(): Promise<{ ok: boolean; failedTables: string[] }> {
+  if (!isPostgresStoreConfigured()) {
+    return { ok: false, failedTables: ["postgres_service"] };
+  }
+
+  const tables = [
+    "organizations",
+    "workspace_members",
+    "projects",
+    "project_public_keys",
+    "feedbacks",
+    "feedback_status_events",
+    "issue_targets",
+    "provider_integrations",
+    "provider_integration_credentials",
+    "provider_issue_attempts",
+    "external_issues",
+    "public_launch_waitlist"
+  ];
+  const results = await Promise.all(tables.map(async (table) => ({
+    ok: await canReachPostgresTable(table),
     table
   })));
   const failedTables = results.filter((result) => !result.ok).map((result) => result.table);

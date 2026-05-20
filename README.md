@@ -170,6 +170,18 @@ CRAW_AUTH_SHARED_SECRET=...
 
 This mode is a migration target, not a complete replacement yet: Supabase-backed repositories still carry the current beta path until the Postgres adapters are implemented.
 
+The neutral PostgreSQL schema starts in `postgres/migrations`. Validate it with:
+
+```bash
+npm run postgres:migrations:check
+```
+
+Apply it to a CRAW database with:
+
+```bash
+psql "$DATABASE_URL" -f postgres/migrations/0001_craw_core_schema.sql
+```
+
 ## Validation
 
 ```bash

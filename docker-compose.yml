@@ -16,6 +16,12 @@ services:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
       SUPABASE_REST_TIMEOUT_MS: ${SUPABASE_REST_TIMEOUT_MS:-10000}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://changethis:changethis@postgres:5432/changethis}
+      POSTGRES_POOL_MAX: ${POSTGRES_POOL_MAX:-5}
+      POSTGRES_CONNECTION_TIMEOUT_MS: ${POSTGRES_CONNECTION_TIMEOUT_MS:-5000}
+      POSTGRES_IDLE_TIMEOUT_MS: ${POSTGRES_IDLE_TIMEOUT_MS:-30000}
+      CRAW_AUTH_SHARED_SECRET: ${CRAW_AUTH_SHARED_SECRET:-}
+      CRAW_AUTH_JWKS_URL: ${CRAW_AUTH_JWKS_URL:-}
       CHANGETHIS_SECRET_KEY: ${CHANGETHIS_SECRET_KEY:-}
       CHANGETHIS_CRON_SECRET: ${CHANGETHIS_CRON_SECRET:-}
       GITHUB_PROVIDER_INTEGRATION_ID: ${GITHUB_PROVIDER_INTEGRATION_ID:-}
@@ -34,3 +40,16 @@ services:
       GITLAB_TOKEN: ${GITLAB_TOKEN:-}
       CHANGETHIS_GITLAB_TOKEN: ${CHANGETHIS_GITLAB_TOKEN:-}
     restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-changethis}
+      POSTGRES_USER: ${POSTGRES_USER:-changethis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changethis}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
