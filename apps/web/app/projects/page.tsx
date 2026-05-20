@@ -111,7 +111,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const connectedProjects = projects.filter((project) => !isDemoProject(project));
   const githubProjects = connectedProjects.filter((project) => project.issueTarget.provider === "github").length;
   const gitlabProjects = connectedProjects.filter((project) => project.issueTarget.provider === "gitlab").length;
-  const readyProjects = connectedProjects.filter((project) => project.issueTarget.namespace && project.issueTarget.project).length;
   const hasActiveFilters = isFilteringDashboard(filters);
   const hasConfiguredSite = projects.length > 0;
   const onboardingSteps = buildOnboardingChecklist(projects, feedbacks);
@@ -134,7 +133,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             githubProjects={githubProjects}
             gitlabProjects={gitlabProjects}
             projects={projects}
-            readyProjects={readyProjects}
             connectedProjectCount={connectedProjects.length}
             feedbackCountsByProject={feedbackCountsByProject}
             totalFeedbacks={feedbacks.length}
@@ -214,7 +212,6 @@ function ProjectRouteNavigation({
   githubProjects,
   gitlabProjects,
   projects,
-  readyProjects,
   connectedProjectCount,
   feedbackCountsByProject,
   totalFeedbacks,
@@ -228,7 +225,6 @@ function ProjectRouteNavigation({
   githubProjects: number;
   gitlabProjects: number;
   projects: ChangeThisProject[];
-  readyProjects: number;
   connectedProjectCount: number;
   feedbackCountsByProject: Map<string, number>;
   totalFeedbacks: number;
@@ -244,15 +240,15 @@ function ProjectRouteNavigation({
       <section className="side-panel-section project-route-nav">
         <div className="side-panel-heading">
           <p className="eyebrow">Routage</p>
-          <h2>Sites connectés</h2>
         </div>
         <Link className="button secondary-button full-width-button" href="/settings/connected-sites">
           <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
           Sites connectés
         </Link>
         <div className="route-summary">
-          <strong>{readyProjects}/{connectedProjectCount}</strong>
-          <span>sites prêts à créer des issues</span>
+          <span>
+            <strong>{connectedProjectCount}</strong> site{connectedProjectCount > 1 ? "s" : ""} connecté{connectedProjectCount > 1 ? "s" : ""}
+          </span>
         </div>
         <div className="provider-split">
           <ProviderCount provider="github" count={githubProjects} />

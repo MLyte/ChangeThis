@@ -65,8 +65,6 @@ export async function AppHeader({
             </Link>
           ) : null}
 
-          <LanguageSwitch />
-
           {showPublicAuthActions ? (
             <div className="public-auth-actions">
               <Link className="link" href="/login">
@@ -90,6 +88,8 @@ export async function AppHeader({
               </a>
             </div>
           ) : null}
+
+          <LanguageSwitch />
         </div>
       </div>
     </header>
