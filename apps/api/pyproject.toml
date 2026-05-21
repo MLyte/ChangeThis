@@ -21,6 +21,10 @@ test = [
   "pytest-asyncio>=1.0.0"
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["alembic*"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
