@@ -108,23 +108,39 @@ curl -fsS https://changethis.cra.wallonie.be/api/health
 curl -fsS https://changethis.cra.wallonie.be/api/ready
 ```
 
-## Deploiement courant
+## Deploiement courant deux serveurs
 
-Depuis le serveur qui contient `/opt/changethis/repo`:
+Sur le serveur backend:
 
 ```bash
-sudo APP_URL=https://changethis.cra.wallonie.be scripts/internal/deploy.sh
+cd /opt/changethis/repo
+sudo API_URL=http://back.toolprod:8000 scripts/internal/deploy-backend.sh
 ```
 
-Le script fait:
+Le script backend fait:
+
+- `git pull --ff-only`
+- installation editable Python `apps/api`
+- `alembic upgrade head`
+- restart `changethis-api`
+- smoke checks FastAPI `/health` et `/ready`
+
+Sur le serveur frontend:
+
+```bash
+cd /opt/changethis/repo
+sudo APP_URL=https://changethis.cra.wallonie.be scripts/internal/deploy-frontend.sh
+```
+
+Le script frontend fait:
 
 - `git pull --ff-only`
 - `npm ci`
 - build `shared`, `widget`, `web`
-- installation editable Python `apps/api`
-- `alembic upgrade head`
-- restart `changethis-api` et `changethis-web`
-- smoke checks `/api/health` et `/api/ready`
+- restart `changethis-web`
+- smoke checks publics `/api/health` et `/api/ready`
+
+Le script `scripts/internal/deploy.sh` reste disponible pour une installation monserveur, mais il n'est pas adapte a deux machines separees.
 
 ## Rollback
 
