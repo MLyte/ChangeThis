@@ -15,8 +15,15 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _execute_statements(sql: str) -> None:
+    for statement in sql.split(";"):
+        statement = statement.strip()
+        if statement:
+            op.execute(statement)
+
+
 def upgrade() -> None:
-    op.execute(
+    _execute_statements(
         """
         create extension if not exists pgcrypto;
 
@@ -247,7 +254,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
+    _execute_statements(
         """
         drop table if exists external_issues;
         drop table if exists provider_issue_attempts;
