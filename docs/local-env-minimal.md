@@ -1,18 +1,10 @@
-# Variables d’environnement minimales (local)
+# Variables d'environnement minimales
 
 Etat actuel: voir [current-state.fr.md](current-state.fr.md).
 
-Ce document liste le minimum utile pour lancer ChangeThis en local et les variables à activer pour tester des features complètes.
+Ce document liste le minimum utile pour lancer ChangeThis en local et les variables a ajouter pour tester les autres profils.
 
-## TL;DR
-
-- `npm run dev` en local fonctionne avec :
-  - `NEXT_PUBLIC_APP_URL` (URL de l’app)
-  - `AUTH_MODE=local`
-  - `DATA_STORE=file`
-- Les autres variables sont optionnelles selon le flux que vous voulez activer.
-
-## Variables minimales recommandées
+## Local simple
 
 ```env
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
@@ -21,34 +13,74 @@ DATA_STORE=file
 CHANGETHIS_DATA_DIR=.changethis-data
 ```
 
-## Variables optionnelles en local
+Commande:
 
-| Variable | Quand l’ajouter | Utilité |
+```bash
+npm run dev
+```
+
+Ce mode est reserve au developpement. Il ne doit jamais servir une production.
+
+## Beta SaaS Supabase
+
+```env
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://app.changethis.dev
+AUTH_MODE=supabase
+DATA_STORE=supabase
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+CHANGETHIS_SECRET_KEY=...
+```
+
+Checks:
+
+```bash
+npm run env:check
+npm run migrations:check
+npm run prod:check
+```
+
+## Installation interne
+
+```env
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://changethis.toolprod
+AUTH_MODE=internal
+DATA_STORE=internal
+INTERNAL_API_URL=http://back.toolprod:8000
+CHANGETHIS_SECRET_KEY=...
+```
+
+Le backend FastAPI utilise son propre fichier d'environnement:
+
+```env
+DATABASE_URL=postgresql+asyncpg://changethis:<secret>@localhost:5432/changethis
+SESSION_SECRET=...
+CHANGETHIS_SECRET_KEY=...
+ALLOWED_PUBLIC_ORIGINS=https://changethis.toolprod
+```
+
+Runbook: [internal-ubuntu24-install.fr.md](internal-ubuntu24-install.fr.md).
+
+## Variables optionnelles utiles en local
+
+| Variable | Quand l'ajouter | Utilite |
 |---|---|---|
-| `CHANGETHIS_DATA_DIR` | Changer l’emplacement du store local | Emplacement alternatif du dossier de persistance locale. |
-| `GITHUB_TOKEN` | Activer la création d’issues GitHub | Provider token de secours pour `/projects` (si pas d’intégration App). |
-| `CHANGETHIS_GITHUB_TOKEN` | Même usage que `GITHUB_TOKEN` | Variante non conflictuelle avec le secret GitHub App. |
-| `GITLAB_TOKEN` | Activer la création d’issues GitLab | Personal Access Token GitLab avec scope `api`, pour lister les projets accessibles et créer des issues. |
-| `CHANGETHIS_GITLAB_TOKEN` | Même usage que `GITLAB_TOKEN` | Variante non conflictuelle avec OAuth/token App. |
-| `GITLAB_BASE_URL` | Tester GitLab self-hosted | URL de votre instance GitLab, par exemple `https://gitrural.cra.wallonie.be`. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Expérimenter le mode Supabase | Active le client Supabase public. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Expérimenter le mode Supabase | Clé anonyme Supabase côté client. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Expérimenter le mode Supabase | Requis pour les appels REST serveur Supabase. |
+| `GITHUB_TOKEN` | Tester creation d'issues GitHub sans integration workspace | Token provider de secours. |
+| `CHANGETHIS_GITHUB_TOKEN` | Meme usage que `GITHUB_TOKEN` | Variante non conflictuelle avec GitHub App. |
+| `GITLAB_TOKEN` | Tester GitLab local/pilote | Personal Access Token GitLab avec scope `api`. |
+| `CHANGETHIS_GITLAB_TOKEN` | Meme usage que `GITLAB_TOKEN` | Variante non conflictuelle avec OAuth/token App. |
+| `GITLAB_BASE_URL` | Tester GitLab self-hosted | Exemple: `https://gitrural.cra.wallonie.be`. |
+| `SUPABASE_REST_TIMEOUT_MS` | Tester latence/timeouts Supabase | Timeout REST serveur. |
+| `ENABLE_PUBLIC_SIGNUP=false` | Mettre le signup en pause | Utile pour staging prive. |
 
-## Variables de production à connaître (références)
-
-- Chemin beta/prod actuel: `AUTH_MODE=supabase`, `DATA_STORE=supabase`, Railway app, Supabase Auth/DB.
-- `CHANGETHIS_SECRET_KEY` (obligatoire en production pour le stockage credential sécurisé).
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
-- `SUPABASE_REST_TIMEOUT_MS=10000` optionnel.
-- Variables `GITHUB_APP_*`, `GITHUB_INSTALLATION_ID`, `GITLAB_OAUTH_*`, `*_WEBHOOK_SECRET` quand les intégrations OAuth/App sont activées.
-- Intégrations par workspace: `*_PROVIDER_INTEGRATION_ID` et connexions persistées.
-
-No-go production:
+## No-go production
 
 - `AUTH_MODE=local`
 - `DATA_STORE=file`
 - `AUTH_MODE=ovh`
 - `DATA_STORE=postgres`
-- `DATABASE_URL` comme source applicative principale
 - `CHANGETHIS_DATA_DIR`
+- secrets reels dans `.env.local` versionne ou dans Git

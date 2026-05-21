@@ -12,6 +12,10 @@ Cette priorisation remanie les tâches restantes selon **importance produit/séc
 
 État courant synchronisé: voir `docs/current-state.fr.md`. Le chemin beta réelle est Railway app + Supabase Auth/DB + OVH DNS, avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`. `DATA_STORE=file` reste local/dev uniquement.
 
+Note 2026-05-21: une cible interne Ubuntu 24 est amorcee en parallele du chemin beta: `AUTH_MODE=internal`, `DATA_STORE=internal`, backend FastAPI `apps/api`, scripts `scripts/internal/*` et runbook `docs/internal-ubuntu24-install.fr.md`. Les repositories Next.js restent a migrer progressivement vers FastAPI.
+
+Note 2026-05-21: `docs/` a ete remis en ordre avec `docs/README.md` comme index, `docs/current-state.fr.md` comme source courte, et l'ancien guide OVH natif deplace dans `docs/archive/`. Les docs actives distinguent maintenant beta SaaS Supabase et installation interne Ubuntu 24.
+
 ### P0 - Chemin critique beta vendable
 1. **Validation installation réelle**: le widget public est servi et configurable par site; ajouter un smoke test externe documenté qui prouve `/widget.js` sur un vrai domaine autorisé.
 2. **Onboarding premier site**: signup, workspace, connexions Git, création de site et script existent; resserrer la checklist Git -> site -> script -> feedback test -> issue créée.

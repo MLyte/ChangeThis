@@ -74,6 +74,11 @@ Appliquer les fichiers dans l'ordre:
 6. `supabase/migrations/0006_feedback_repository_model_columns.sql`
 7. `supabase/migrations/0007_provider_integrations_workspace_storage.sql`
 8. `supabase/migrations/0008_feedback_operational_indexes.sql`
+9. `supabase/migrations/0009_public_launch_waitlist.sql`
+10. `supabase/migrations/0010_feedback_screenshot_lifecycle.sql`
+11. `supabase/migrations/0011_widget_reporter_fields.sql`
+12. `supabase/migrations/0012_restrict_membership_helper_execution.sql`
+13. `supabase/migrations/0013_project_issue_creation_mode.sql`
 
 Option CLI Supabase:
 
@@ -121,6 +126,9 @@ DATA_STORE=file
 CHANGETHIS_DATA_DIR=.changethis-data
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 DATABASE_URL=...
+AUTH_MODE=internal
+DATA_STORE=internal
+INTERNAL_API_URL=...
 ```
 
 Ne pas laisser les public keys fallback:

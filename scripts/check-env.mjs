@@ -6,6 +6,9 @@ const requiredForSupabase = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
 ];
+const requiredForInternal = [
+  "INTERNAL_API_URL",
+];
 const fallbackProjectKeys = [
   "NEXT_PUBLIC_DEMO_PROJECT_KEY",
   "NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY",
@@ -46,14 +49,14 @@ for (const key of requiredBase) {
 if (isProduction && raw.AUTH_MODE === "local") {
   blockers.push("AUTH_MODE is not allowed to be local in production");
 }
-if (isProduction && raw.AUTH_MODE !== "supabase") {
-  blockers.push("AUTH_MODE must be supabase for the current production beta path");
+if (isProduction && !["supabase", "internal"].includes(raw.AUTH_MODE)) {
+  blockers.push("AUTH_MODE must be supabase or internal in production");
 }
 if (isProduction && raw.DATA_STORE === "file") {
   blockers.push("DATA_STORE is not allowed to be file in production");
 }
-if (isProduction && raw.DATA_STORE !== "supabase") {
-  blockers.push("DATA_STORE must be supabase for the current production beta path");
+if (isProduction && !["supabase", "internal"].includes(raw.DATA_STORE)) {
+  blockers.push("DATA_STORE must be supabase or internal in production");
 }
 if (isProduction) {
   if (raw.NEXT_PUBLIC_APP_URL && !raw.NEXT_PUBLIC_APP_URL.startsWith("https://")) {
@@ -74,6 +77,14 @@ if (isProduction) {
 
 if (raw.AUTH_MODE === "supabase" || raw.DATA_STORE === "supabase") {
   for (const key of requiredForSupabase) {
+    if (!raw[key]) {
+      missing.push(key);
+    }
+  }
+}
+
+if (raw.AUTH_MODE === "internal" || raw.DATA_STORE === "internal") {
+  for (const key of requiredForInternal) {
     if (!raw[key]) {
       missing.push(key);
     }

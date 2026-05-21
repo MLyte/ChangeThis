@@ -69,7 +69,7 @@ https://smoke.example/widget-external-smoke.html?app=https%3A%2F%2Fapp.changethi
 ## Checklist production
 
 - [ ] Migrations Supabase appliquees avant deploy.
-- [ ] Migrations `supabase/migrations/0001_*.sql` a `0011_*.sql` appliquees.
+- [ ] Migrations `supabase/migrations/0001_*.sql` a `0013_*.sql` appliquees.
 - [ ] `AUTH_MODE=supabase`, `DATA_STORE=supabase`, signup ouvert ou `ENABLE_PUBLIC_SIGNUP=false` volontairement choisi pour une pause.
 - [ ] `CHANGETHIS_CRON_SECRET` configure si le cron de cleanup screenshots est active.
 - [ ] Le reglage widget `Identite visiteur` est dans l'etat attendu pour le site smoke (`optional` par defaut, `required` si l'auteur doit etre obligatoire).

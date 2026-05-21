@@ -66,6 +66,11 @@ Option la plus simple si tu debutes:
    - `0006_feedback_repository_model_columns.sql`
    - `0007_provider_integrations_workspace_storage.sql`
    - `0008_feedback_operational_indexes.sql`
+   - `0009_public_launch_waitlist.sql`
+   - `0010_feedback_screenshot_lifecycle.sql`
+   - `0011_widget_reporter_fields.sql`
+   - `0012_restrict_membership_helper_execution.sql`
+   - `0013_project_issue_creation_mode.sql`
 
 Execute un seul fichier a la fois. Si Supabase affiche une erreur, arrete-toi et garde le message exact.
 
@@ -209,7 +214,7 @@ La beta ouverte est prete quand:
 
 - `AUTH_MODE=supabase`;
 - `DATA_STORE=supabase`;
-- les migrations `0001` a `0009` sont appliquees;
+- les migrations `0001` a `0013` sont appliquees;
 - `app.changethis.dev` pointe vers Railway en HTTPS;
 - `/api/health` et `/api/ready` sont OK;
 - un feedback reel cree depuis le widget arrive dans `/projects`;

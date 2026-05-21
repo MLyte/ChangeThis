@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
+import { getInternalCurrentSession } from "./internal-api";
 import { getFirstWorkspaceForUser, getSupabaseUser, isSupabaseAuthConfigured } from "./supabase-server";
 
 export type WorkspaceRole = "viewer" | "member" | "admin" | "owner";
@@ -49,6 +50,10 @@ export async function getCurrentSession(request?: Request): Promise<AuthSession 
     }
 
     return localDevSession;
+  }
+
+  if (getAuthMode() === "internal") {
+    return getInternalCurrentSession(request);
   }
 
   if (!isSupabaseAuthConfigured()) {
@@ -156,8 +161,8 @@ export function authFailureResponse(failure: AuthFailure): NextResponse {
   return NextResponse.json({ error: failure.error }, { status: failure.status });
 }
 
-export function getAuthMode(): "local" | "supabase" {
-  if (process.env.AUTH_MODE === "local" || process.env.AUTH_MODE === "supabase") {
+export function getAuthMode(): "local" | "supabase" | "internal" {
+  if (process.env.AUTH_MODE === "local" || process.env.AUTH_MODE === "supabase" || process.env.AUTH_MODE === "internal") {
     return process.env.AUTH_MODE;
   }
 

@@ -2,31 +2,42 @@
 
 Etat actuel: voir [current-state.fr.md](current-state.fr.md).
 
-## Go/No-Go checks
+Ce runbook couvre l'exploitation du chemin beta SaaS. Pour l'installation interne Ubuntu 24, utiliser [internal-ubuntu24-install.fr.md](internal-ubuntu24-install.fr.md).
 
-- `npm test`
-- `npm run typecheck`
-- `npm run lint`
-- `npm run build`
-- `npm run security:audit`
-- `npm run migrations:check`
-- `npm run prod:check`
-- `/api/health` returns `200`.
-- `/api/ready` returns `200`.
-- Submit one feedback from a real connected site, verify it remains visible in `/projects`.
-- Trigger manual issue creation from `/projects`.
+## Go/No-Go beta SaaS
 
-`npm run security:audit` is non destructive and runs `npm audit --audit-level=high`.
-Do not ship with a high or critical advisory unless the exception is documented
-with the package, CVE, impact, and correction plan.
+Checks locaux ou CI:
 
-## Runtime data
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npm run security:audit
+npm run migrations:check
+npm run prod:check
+```
 
-Local development can use `AUTH_MODE=local`, `DATA_STORE=file` and `CHANGETHIS_DATA_DIR=.changethis-data`.
+Checks runtime:
 
-Production beta must use:
+- `/api/health` retourne `200`.
+- `/api/ready` retourne `200`.
+- Un feedback soumis depuis un vrai site connecte apparait dans `/projects`.
+- Une issue GitHub ou GitLab peut etre creee manuellement depuis l'inbox.
+
+No-go si:
+
+- `AUTH_MODE=local` ou `DATA_STORE=file` est configure en production.
+- `AUTH_MODE=ovh` ou `DATA_STORE=postgres` est configure.
+- Les migrations Supabase attendues ne sont pas appliquees.
+- `/api/ready` retourne `503`.
+- Une exception `npm audit` high/critical n'est pas documentee avec package, CVE, impact et plan de correction.
+
+## Variables beta SaaS
 
 ```env
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://app.changethis.dev
 AUTH_MODE=supabase
 DATA_STORE=supabase
 NEXT_PUBLIC_SUPABASE_URL=...
@@ -35,29 +46,82 @@ SUPABASE_SERVICE_ROLE_KEY=...
 CHANGETHIS_SECRET_KEY=...
 ```
 
-Apply migrations `supabase/migrations/0001_*.sql` through `0009_*.sql` before a real beta smoke test.
-`CHANGETHIS_DATA_DIR` is not part of the production beta path.
+Optionnel selon les features activees:
+
+```env
+ENABLE_PUBLIC_SIGNUP=false
+SUPABASE_REST_TIMEOUT_MS=10000
+CHANGETHIS_CRON_SECRET=...
+GITHUB_APP_SLUG=...
+GITHUB_APP_ID=...
+GITHUB_APP_PRIVATE_KEY=...
+GITHUB_WEBHOOK_SECRET=...
+GITLAB_OAUTH_APP_ID=...
+GITLAB_OAUTH_APP_SECRET=...
+GITLAB_WEBHOOK_SECRET=...
+```
+
+## Migrations
+
+Appliquer les migrations Supabase dans l'ordre:
+
+- `0001_initial_schema.sql`
+- `0002_require_single_issue_target_per_project.sql`
+- `0003_membership_credentials_public_keys.sql`
+- `0004_feedback_resolution_statuses.sql`
+- `0005_project_widget_settings.sql`
+- `0006_feedback_repository_model_columns.sql`
+- `0007_provider_integrations_workspace_storage.sql`
+- `0008_feedback_operational_indexes.sql`
+- `0009_public_launch_waitlist.sql`
+- `0010_feedback_screenshot_lifecycle.sql`
+- `0011_widget_reporter_fields.sql`
+- `0012_restrict_membership_helper_execution.sql`
+- `0013_project_issue_creation_mode.sql`
+
+Verifier ensuite:
+
+```bash
+npm run migrations:check
+npm run prod:check
+```
 
 ## Provider credentials
 
-The preferred beta path is workspace-backed provider integrations:
+Chemin prefere beta:
 
 - GitHub App: `GITHUB_APP_SLUG`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`.
 - GitLab OAuth: `GITLAB_OAUTH_APP_ID`, `GITLAB_OAUTH_APP_SECRET`, optional `GITLAB_BASE_URL`.
-- Credentials are stored encrypted applicatively through `provider_integration_credentials` when `DATA_STORE=supabase`.
+- Credentials stockes par workspace via `provider_integration_credentials`.
 
-Fallback env tokens remain useful for local/pilot work:
+Fallback local/pilote:
 
-- `GITHUB_TOKEN` or `CHANGETHIS_GITHUB_TOKEN`
-- `GITLAB_TOKEN` or `CHANGETHIS_GITLAB_TOKEN`
+- `GITHUB_TOKEN` ou `CHANGETHIS_GITHUB_TOKEN`
+- `GITLAB_TOKEN` ou `CHANGETHIS_GITLAB_TOKEN`
 
-If a token is absent or the provider fails, the feedback is kept and marked as
-`retrying` or `failed`. Retryable failures include rate limits, network errors,
-and 5xx responses.
+Si un token est absent ou si le provider echoue, le feedback doit rester conserve et passer en `retrying` ou `failed`.
+
+## Smoke post-deploy
+
+Suivre [smoke-beta-controlee.fr.md](smoke-beta-controlee.fr.md).
+
+Minimum:
+
+```bash
+npm run smoke:widget -- --base-url https://app.changethis.dev
+```
+
+Puis valider manuellement:
+
+1. Connexion ou signup selon l'etat de `ENABLE_PUBLIC_SIGNUP`.
+2. Site connecte avec origine exacte.
+3. Widget visible sur une page externe.
+4. Feedback visible dans `/projects`.
+5. Issue creee dans le depot cible.
 
 ## Operational signals
 
-Logs should include or evolve toward:
+Logs a conserver ou renforcer:
 
 - `request_id`
 - `workspace_id`
@@ -66,17 +130,28 @@ Logs should include or evolve toward:
 - `provider`
 - `external_url`
 
-Alert on:
+Alertes minimales:
 
-- repeated `feedback_rejected_*` spikes
-- repeated `provider_issue_create_failed`
-- feedbacks stuck in `retrying` beyond the expected retry window
-- `/api/ready` returning `503`
+- `/api/ready` en `503`
+- pics `feedback_rejected_*`
+- `provider_issue_create_failed` repetes
+- feedbacks bloques en `retrying`
+- taux 5xx API inhabituel
 
-## Known beta caveats
+## Rollback
 
-- Public rate limiting is still memory-backed.
-- Screenshots are compressed client-side before upload, then tracked with `active`, `archived`, and `deleted` lifecycle metadata while object storage is pending. Run the weekly cleanup cron against `/api/cron/storage-cleanup` with `Authorization: Bearer $CHANGETHIS_CRON_SECRET`.
-- Reporter identity is controlled per site with `widget_reporter_fields` (`hidden`, `optional`, `required`) and defaults to `optional`.
-- Provider retry processing is not a full durable queue yet.
-- Rollback and backup/restore procedures must be validated on staging before wider beta.
+Rollback applicatif:
+
+1. Revenir au dernier commit stable.
+2. Relancer build et deploy.
+3. Ne rollback une migration DB que si elle est explicitement reversible et que la sauvegarde est verifiee.
+
+Le rollback DB reste a tester sur staging avant toute beta plus large.
+
+## Caveats beta
+
+- Rate limit public encore memoire.
+- Screenshots compresses cote widget, mais stockage objet final non branche.
+- Cron de nettoyage screenshots disponible via `/api/cron/storage-cleanup` si `CHANGETHIS_CRON_SECRET` est configure.
+- Retry provider pas encore une queue durable.
+- Webhooks provider incomplets.

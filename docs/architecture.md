@@ -1,42 +1,66 @@
 # Architecture
 
-Etat actuel: voir [current-state.fr.md](current-state.fr.md). Ce document décrit l'architecture active au 2026-05-02, pas une cible abstraite.
+Etat actuel: voir [current-state.fr.md](current-state.fr.md). Ce document decrit l'architecture effective et les deux profils de deploiement supportes au 2026-05-21.
 
-## Stack
+## Monorepo
 
-- Next.js App Router for the dashboard and API
-- TypeScript across all packages
-- npm workspaces for the monorepo
-- Supabase Auth for production beta authentication (`AUTH_MODE=supabase`)
-- Supabase REST/Postgres for the real beta store (`DATA_STORE=supabase`)
-- Local file store only for development (`DATA_STORE=file`)
-- Railway for app hosting in the beta path
-- OVH DNS for `app.changethis.dev`
-- GitHub and GitLab issue providers for manual issue creation from the inbox
-- Public widget bundle served by the app through `/widget.js` and `/widget.global.js`
+- `apps/web`: application Next.js App Router, dashboard, routes API navigateur et host du widget.
+- `apps/api`: backend FastAPI interne, PostgreSQL, SQLAlchemy et Alembic.
+- `packages/widget`: widget public charge par les sites clients.
+- `packages/shared`: types et validation de payload partages entre app et widget.
+- `supabase/migrations`: schema du chemin beta SaaS Supabase.
+- `scripts/internal`: installation native Ubuntu 24 et deploy `systemd`.
 
-## Data Flow
+## Profils de runtime
+
+| Profil | Usage | Auth | Store | Domaine |
+|---|---|---|---|---|
+| Local | Dev produit/front | `AUTH_MODE=local` | `DATA_STORE=file` | `http://127.0.0.1:3000` |
+| Beta SaaS | Chemin produit actuel | `AUTH_MODE=supabase` | `DATA_STORE=supabase` | `https://app.changethis.dev` |
+| Interne Ubuntu | Cible Toolprod en amorcage | `AUTH_MODE=internal` | `DATA_STORE=internal` | `https://changethis.toolprod` |
+
+## Flux beta SaaS actuel
 
 ```mermaid
 flowchart LR
-  Site["Client staging site"] --> Widget["ChangeThis Widget"]
-  Widget --> Api["Next.js Public API"]
-  Api --> Db["Supabase Postgres"]
-  Api -. future .-> Storage["Object storage / Supabase Storage"]
-  Api --> Providers["Issue Provider Layer"]
+  Site["Site client"] --> Widget["packages/widget"]
+  Widget --> PublicApi["Next.js /api/public/feedback"]
+  PublicApi --> Supabase["Supabase Postgres"]
+  Dashboard["Dashboard /projects"] --> NextApi["Next.js API privee"]
+  NextApi --> Supabase
+  NextApi --> Providers["Git provider layer"]
   Providers --> GitHub["GitHub Issues"]
   Providers --> GitLab["GitLab Issues"]
-  Dashboard["Dashboard"] --> Api
 ```
 
-## Security Baseline
+## Flux interne cible
 
-- The browser widget only receives a public project key.
-- Issue provider tokens never enter the browser.
-- API validates the request origin against project allowlists.
-- Screenshot uploads are size limited but still stored as data URLs in the current beta path; object storage with signed URLs is a known follow-up.
-- Form fields and sensitive elements should be masked before capture.
-- GitHub and GitLab webhooks must be verified before processing.
-- Supabase RLS should protect all private project data.
-- `/api/ready` checks auth, data store, service role, required secrets, and expected Supabase tables.
-- `DATA_STORE=file` and `AUTH_MODE=local` are no-go values in production beta.
+```mermaid
+flowchart LR
+  Site["Site interne/client"] --> Widget["packages/widget"]
+  Widget --> NextPublic["Next.js API meme domaine"]
+  NextPublic --> FastAPI["FastAPI apps/api"]
+  Dashboard["Dashboard Next.js"] --> FastAPI
+  FastAPI --> Postgres["PostgreSQL interne"]
+  FastAPI --> Providers["GitHub/GitLab APIs"]
+```
+
+Etat reel du flux interne: `apps/api` expose les endpoints et le schema de base; le dashboard Next.js doit encore migrer ses repositories depuis Supabase/fichier vers un client serveur FastAPI.
+
+## Frontend et BFF
+
+Le navigateur doit continuer a parler au meme domaine applicatif:
+
+- beta SaaS: `https://app.changethis.dev/api/...`
+- interne: `https://changethis.toolprod/api/...`
+
+Cette contrainte evite de complexifier CORS cote navigateur. En cible interne, Next.js reste la couche publique/BFF et dialogue avec FastAPI via `INTERNAL_API_URL`.
+
+## Donnees et securite
+
+- La cle projet du widget est publique; l'origine HTTP reste validee cote API.
+- Les tokens provider GitHub/GitLab ne doivent jamais entrer dans le navigateur.
+- Les credentials provider sont chiffres applicativement dans le chemin Supabase actuel.
+- Les screenshots restent une dette connue: data URL aujourd'hui, stockage objet a brancher.
+- `/api/ready` doit rester le check operationnel principal de l'app exposee.
+- Les modes non supportes (`AUTH_MODE=ovh`, `DATA_STORE=postgres`) ne doivent plus etre documentes comme deployables.

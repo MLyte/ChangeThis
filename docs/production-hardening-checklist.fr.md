@@ -1,19 +1,33 @@
 # Checklist hardening production — ChangeThis
 
-Version: 2026-05-04  
+Version: 2026-05-21
 Référence: `docs/current-state.fr.md`, `docs/production-runbook.md`, `docs/deploy-railway-ovh-changethis-dev.md`, `AI_TODO.md`
 
-Ce document propose une check-list opérationnelle pour passer de la bêta ouverte contrôlée à un fonctionnement production robuste, en distinguant:
+Ce document propose une check-list opérationnelle pour passer de la bêta ouverte contrôlée à un fonctionnement production robuste. Le chemin beta SaaS reste Railway + Supabase; le chemin interne Ubuntu 24 a son propre runbook et doit être durci séparément quand les repositories Next.js auront migré vers FastAPI.
+
+On distingue:
 - **Quick wins (2–4 semaines)**: actions à faible surface, rapide à exécuter, peu de refacto.
 - **Plus grand scope**: actions structurantes, plus coûteuses, à planifier par jalons.
 
 ## 0) Pré-conditions obligatoires
 
+### Beta SaaS
+
 - [ ] `AUTH_MODE=supabase`
 - [ ] `DATA_STORE=supabase`
 - [ ] `/api/ready` vert en staging et en production sur une vérification manuelle.
 - [ ] `npm run prod:check` vert avant chaque release candidate.
-- [ ] `supabase/migrations/0001` à `0008` applicées et vérifiées.
+- [ ] `supabase/migrations/0001` à `0013` applicées et vérifiées.
+- [ ] Smoke widget externe validé depuis une origine réellement autorisée.
+
+### Interne Ubuntu 24
+
+- [ ] `AUTH_MODE=internal`
+- [ ] `DATA_STORE=internal`
+- [ ] `INTERNAL_API_URL` pointe vers le service FastAPI attendu.
+- [ ] `alembic upgrade head` appliqué sur PostgreSQL interne.
+- [ ] `systemctl status changethis-web changethis-api` vert.
+- [ ] `/api/ready` vert via le domaine frontal.
 
 ## 1) Sécurité
 

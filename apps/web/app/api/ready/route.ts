@@ -1,18 +1,21 @@
 import { NextResponse } from "next/server";
 import { getAuthMode } from "../../../lib/auth";
+import { isInternalApiConfigured, probeInternalApi } from "../../../lib/internal-api";
 import { isSupabaseAuthConfigured, isSupabaseServiceConfigured, supabaseServiceRest } from "../../../lib/supabase-server";
 import { getDataStoreMode, isProductionRuntime, usesUnsafeLocalDataStoreInProduction } from "../../../lib/runtime";
 
 export async function GET() {
   const authMode = getAuthMode();
   const dataStore = getDataStoreMode();
-  const authReady = authMode === "local" || isSupabaseAuthConfigured();
-  const productionAuthSafe = !isProductionRuntime || authMode === "supabase";
+  const internalMode = authMode === "internal" || dataStore === "internal";
+  const authReady = authMode === "local" || (authMode === "internal" ? isInternalApiConfigured() : isSupabaseAuthConfigured());
+  const productionAuthSafe = !isProductionRuntime || authMode === "supabase" || authMode === "internal";
   const fileStoreUnsafe = usesUnsafeLocalDataStoreInProduction();
   const supabaseStoreConfigured = dataStore !== "supabase" || isSupabaseServiceConfigured();
+  const internalApiReady = internalMode ? await probeInternalApi("/ready") : true;
   const database = dataStore === "supabase"
     ? await probeSupabaseDatabase()
-    : { ok: true, failedTables: [] };
+    : { ok: internalApiReady, failedTables: internalApiReady ? [] : ["internal_api"] };
   const databaseReady = database.ok;
   const providerConfigReady = Boolean(process.env.CHANGETHIS_SECRET_KEY);
   const checks = {
@@ -20,6 +23,7 @@ export async function GET() {
     productionAuth: productionAuthSafe,
     dataStore: !fileStoreUnsafe,
     supabaseService: supabaseStoreConfigured,
+    internalApi: internalApiReady,
     database: databaseReady,
     providerSecrets: providerConfigReady
   };

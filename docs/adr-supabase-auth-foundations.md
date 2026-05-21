@@ -1,6 +1,6 @@
 # ADR: Supabase Auth foundations
 
-Status update 2026-05-19: still accepted for the controlled open beta. Supabase Auth is the production path (`AUTH_MODE=supabase`), and Supabase REST/Postgres is also the current real data path (`DATA_STORE=supabase`). The local file store remains a development default only.
+Status update 2026-05-21: still accepted for the controlled open beta. Supabase Auth is the beta SaaS production path (`AUTH_MODE=supabase`), and Supabase REST/Postgres is also the current real beta data path (`DATA_STORE=supabase`). The internal Ubuntu 24 path uses `AUTH_MODE=internal` / `DATA_STORE=internal` and does not invalidate this ADR for the SaaS beta.
 
 Current state reference: [current-state.fr.md](current-state.fr.md).
 

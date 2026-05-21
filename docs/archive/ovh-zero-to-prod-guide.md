@@ -1,10 +1,12 @@
-# OVH: partir de zero vers une prod ChangeThis
+# Archive - OVH: partir de zero vers une prod ChangeThis
+
+Statut 2026-05-21: archive. Ce document decrivait une cible OVH native future avec `AUTH_MODE=ovh` et `DATA_STORE=postgres`, qui n'est pas un mode supporte. Pour le chemin interne maintenant amorce, utiliser [`../internal-ubuntu24-install.fr.md`](../internal-ubuntu24-install.fr.md) avec `AUTH_MODE=internal` et `DATA_STORE=internal`. Pour la beta SaaS actuelle, utiliser [`../deploy-railway-ovh-changethis-dev.md`](../deploy-railway-ovh-changethis-dev.md).
 
 Date: 2026-04-30
 
-Mise a jour 2026-05-02: ce guide decrit une cible OVH/native future, pas le chemin beta actuellement implemente. Pour la beta actuelle, suivre [deploy-railway-ovh-changethis-dev.md](deploy-railway-ovh-changethis-dev.md): Railway heberge l'app, OVH gere le DNS, Supabase fournit Auth + DB avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`. `AUTH_MODE=ovh`, `DATA_STORE=postgres` et `DATABASE_URL` ne sont pas supportes par le code actuel.
+Mise a jour 2026-05-02: ce guide decrit une cible OVH/native future, pas le chemin beta actuellement implemente. Pour la beta actuelle, suivre [`../deploy-railway-ovh-changethis-dev.md`](../deploy-railway-ovh-changethis-dev.md): Railway heberge l'app, OVH gere le DNS, Supabase fournit Auth + DB avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`. `AUTH_MODE=ovh`, `DATA_STORE=postgres` et `DATABASE_URL` ne sont pas supportes par le code actuel.
 
-Etat actuel beta: voir [current-state.fr.md](current-state.fr.md).
+Etat actuel beta: voir [`../current-state.fr.md`](../current-state.fr.md).
 
 ## Constat depuis le manager OVH
 

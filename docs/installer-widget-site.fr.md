@@ -42,7 +42,7 @@ Coller le script juste avant `</body>` dans le layout global du site :
 
 Remplacer `project_public_key` par la clé publique fournie dans `/settings/connected-sites`.
 
-Le widget lit `data-project` pour identifier le site lors de l'envoi du feedback. Les options visibles du widget viennent aujourd'hui des attributs du script (`data-locale`, `data-position`, `data-button-variant`, `data-endpoint`) plutôt que d'un fetch automatique de `/api/widget/config`. Sans `data-project`, ou avec une clé d'un autre site, le feedback sera refusé.
+Le widget lit `data-project` pour identifier le site. Il charge ensuite `/api/widget/config?project=...` depuis le même domaine que le script afin de récupérer les options actives du site. Les attributs du script (`data-locale`, `data-position`, `data-button-variant`, `data-reporter-fields`, `data-endpoint`) restent des fallbacks utiles si la configuration dynamique est indisponible. Sans `data-project`, ou avec une clé d'un autre site, le feedback sera refusé.
 
 ## 3. Local vs production
 

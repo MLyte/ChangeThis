@@ -8,6 +8,7 @@ type AuthModule = typeof import("../lib/auth.ts");
 const originalEnv = {
   AUTH_MODE: process.env.AUTH_MODE,
   ENABLE_PUBLIC_SIGNUP: process.env.ENABLE_PUBLIC_SIGNUP,
+  INTERNAL_API_URL: process.env.INTERNAL_API_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NODE_ENV: process.env.NODE_ENV,
@@ -121,6 +122,49 @@ test("supabase auth resolves bearer token user and active workspace", async () =
   assert.equal(calls.some((call) => call.startsWith("/rest/v1/workspace_members?")), true);
 });
 
+test("internal auth resolves the session through the FastAPI backend", async () => {
+  process.env.AUTH_MODE = "internal";
+  process.env.INTERNAL_API_URL = "http://back.example.test:8000";
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(input.toString());
+    assert.equal(url.origin, "http://back.example.test:8000");
+    assert.equal(url.pathname, "/auth/session");
+    assert.equal(new Headers(init?.headers).get("cookie"), "changethis_internal_session=session-token");
+
+    return jsonResponse({
+      user: {
+        id: "user_internal",
+        email: "internal@example.test"
+      },
+      workspace: {
+        id: "workspace_internal",
+        name: "Internal Workspace",
+        role: "owner"
+      }
+    });
+  };
+
+  const auth = await importAuthModule();
+  const session = await auth.getCurrentSession(new Request("https://app.example.test", {
+    headers: {
+      Cookie: "changethis_internal_session=session-token"
+    }
+  }));
+
+  assert.deepEqual(session, {
+    user: {
+      id: "user_internal",
+      email: "internal@example.test"
+    },
+    workspace: {
+      id: "workspace_internal",
+      name: "Internal Workspace",
+      role: "owner"
+    }
+  });
+});
+
 test("workspace role checks enforce the configured hierarchy", async () => {
   const auth = await importAuthModule();
   const viewerSession: AuthSession = {
@@ -187,6 +231,7 @@ function jsonResponse(body: unknown): Response {
 function restoreEnv(): void {
   restoreEnvValue("AUTH_MODE", originalEnv.AUTH_MODE);
   restoreEnvValue("ENABLE_PUBLIC_SIGNUP", originalEnv.ENABLE_PUBLIC_SIGNUP);
+  restoreEnvValue("INTERNAL_API_URL", originalEnv.INTERNAL_API_URL);
   restoreEnvValue("NEXT_PUBLIC_SUPABASE_ANON_KEY", originalEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   restoreEnvValue("NEXT_PUBLIC_SUPABASE_URL", originalEnv.NEXT_PUBLIC_SUPABASE_URL);
   restoreEnvValue("NODE_ENV", originalEnv.NODE_ENV);

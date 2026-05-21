@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, getCurrentSession, isPublicSignupEnabled } from "../../lib/auth";
 import { setSupabaseSessionCookies } from "../../lib/auth-session-cookies";
+import { setInternalSessionCookie, signInWithInternalPassword } from "../../lib/internal-api";
 import { signInWithPassword } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
@@ -46,20 +47,32 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       redirect(targetPath);
     }
 
-    const signInResult = await signInWithPassword({ email, password });
+    const signInResult = authMode === "internal"
+      ? await signInWithInternalPassword({ email, password })
+      : await signInWithPassword({ email, password });
 
     if (!signInResult.ok) {
       const error = signInResult.error;
       redirect(`/login?error=${encodeURIComponent(error)}&next=${encodeURIComponent(targetPath)}`);
     }
 
-    const cookieStore = await cookies();
-    setSupabaseSessionCookies({
-      cookieStore,
-      accessToken: signInResult.accessToken,
-      refreshToken: signInResult.refreshToken,
-      expiresIn: signInResult.expiresIn
-    });
+    if (authMode === "internal") {
+      await setInternalSessionCookie(signInResult.accessToken);
+    } else {
+      const cookieStore = await cookies();
+      const refreshToken = "refreshToken" in signInResult && typeof signInResult.refreshToken === "string"
+        ? signInResult.refreshToken
+        : undefined;
+      const expiresIn = "expiresIn" in signInResult && typeof signInResult.expiresIn === "number"
+        ? signInResult.expiresIn
+        : undefined;
+      setSupabaseSessionCookies({
+        cookieStore,
+        accessToken: signInResult.accessToken,
+        refreshToken,
+        expiresIn
+      });
+    }
     redirect(targetPath);
   }
 
