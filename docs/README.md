@@ -2,31 +2,27 @@
 
 Date de reference: 2026-05-21
 
-La documentation est organisee autour de deux chemins distincts:
+La documentation active de `main` decrit l'installation interne CRA:
 
-- **Beta SaaS actuelle**: Railway + Supabase Auth/DB + OVH DNS pour `https://app.changethis.dev`.
-- **Installation interne Ubuntu 24**: Next.js + FastAPI + PostgreSQL interne pour `https://changethis.toolprod`.
+- domaine applicatif: `https://changethis.cra.wallonie.be`;
+- frontend: Next.js `apps/web`;
+- backend: FastAPI `apps/api`;
+- base: PostgreSQL interne;
+- deploiement: Ubuntu 24 natif avec `systemd`.
 
-Ne pas melanger les variables de ces deux chemins dans un meme environnement.
+Les anciens documents Railway/Supabase sont conserves dans `docs/archive/` pour historique, mais ils ne doivent plus guider l'installation ou la production de cette branche.
 
 ## Source de verite
 
 - [Etat actuel](current-state.fr.md): statut produit/technique court, a lire avant toute mise a jour generale.
-- [Architecture](architecture.md): vue systeme et profils de runtime.
+- [Architecture](architecture.md): vue systeme interne, dataflow et contraintes de runtime.
 - [AI_TODO](../AI_TODO.md): priorisation active et carnet de travail IA.
 
-## Exploitation beta SaaS
-
-- [Runbook production](production-runbook.md): gates, variables, signaux et rollback pour la beta SaaS.
-- [Deploy Railway + Supabase + OVH](deploy-railway-ovh-changethis-dev.md): guide operateur detaille pour `app.changethis.dev`.
-- [Guide debutant beta](guide-debutant-prod-railway-supabase-ovh.fr.md): version pas-a-pas du deploy beta.
-- [Smoke beta controlee](smoke-beta-controlee.fr.md): checklist post-deploy et test widget externe.
-- [Roadmap beta](beta-release-roadmap.fr.md): jalons de stabilisation.
-- [Checklist hardening](production-hardening-checklist.fr.md): dette priorisee avant production commerciale.
-
-## Installation interne
+## Installation et exploitation interne
 
 - [Installation interne Ubuntu 24](internal-ubuntu24-install.fr.md): runbook `systemd`, PostgreSQL, FastAPI et vhost interne.
+- [Runbook production](production-runbook.md): checks, variables, smoke tests, rollback et signaux operationnels pour l'installation interne.
+- [Checklist hardening](production-hardening-checklist.fr.md): dette securite/fiabilite priorisee avant usage production large.
 - Sources infra PDF non versionnees actuellement presentes dans `docs/`:
   - `Création d'un utilisateur applicatif sur serveur frontend.pdf`
   - `VHOST config.pdf`
@@ -37,17 +33,20 @@ Ne pas melanger les variables de ces deux chemins dans un meme environnement.
 - [Quick start client](quick-start-client.fr.md): premiere boucle site -> widget -> feedback -> issue.
 - [Installer le widget](installer-widget-site.fr.md): snippet, origines autorisees, CSP et erreurs frequentes.
 - [Configurer GitHub](configure-github.fr.md): connexion GitHub et permissions.
-- [Template e-mail Supabase Auth](supabase-auth-email-template.fr.md): OTP e-mail pour le chemin Supabase.
 
 ## Developpement local
 
-- [Variables locales minimales](local-env-minimal.md): `.env.local` minimal et modes supportes.
+- [Variables locales minimales](local-env-minimal.md): `.env.local` minimal et profil interne.
 - [Page HTML de smoke widget](widget-external-smoke.html): page hote externe pour tester `/widget.js`.
 
-## Decisions
+## Archive historique
 
-- [ADR Supabase Auth foundations](adr-supabase-auth-foundations.md): decision acceptee pour la beta SaaS actuelle.
+Ces documents decrivent l'ancienne experimentation SaaS ou des pistes non retenues. Ils restent consultables pour comprendre l'historique, pas pour installer ChangeThis en interne.
 
-## Archive
-
-- [OVH zero-to-prod guide](archive/ovh-zero-to-prod-guide.md): ancien guide cible OVH native. Archive conservee pour contexte, mais ne decrit plus un chemin implemente.
+- [ADR Supabase Auth foundations](archive/adr-supabase-auth-foundations.md)
+- [Roadmap beta SaaS](archive/beta-release-roadmap.fr.md)
+- [Deploy Railway + Supabase + OVH](archive/deploy-railway-ovh-changethis-dev.md)
+- [Guide debutant Railway/Supabase/OVH](archive/guide-debutant-prod-railway-supabase-ovh.fr.md)
+- [Smoke beta controlee](archive/smoke-beta-controlee.fr.md)
+- [Template e-mail Supabase Auth](archive/supabase-auth-email-template.fr.md)
+- [OVH zero-to-prod guide](archive/ovh-zero-to-prod-guide.md)

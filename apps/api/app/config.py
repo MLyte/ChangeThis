@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     database_url: str = Field(alias="DATABASE_URL")
     session_secret: str = Field(alias="SESSION_SECRET")
     changethis_secret_key: str | None = Field(default=None, alias="CHANGETHIS_SECRET_KEY")
-    allowed_public_origins: str = Field(default="https://changethis.toolprod", alias="ALLOWED_PUBLIC_ORIGINS")
+    allowed_public_origins: str = Field(default="https://changethis.cra.wallonie.be", alias="ALLOWED_PUBLIC_ORIGINS")
     session_cookie_name: str = "changethis_internal_session"
     session_ttl_seconds: int = 60 * 60 * 24 * 14
     github_app_id: str | None = Field(default=None, alias="GITHUB_APP_ID")

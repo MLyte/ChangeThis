@@ -2,7 +2,7 @@
 
 Etat actuel: voir [current-state.fr.md](current-state.fr.md).
 
-Ce document liste le minimum utile pour lancer ChangeThis en local et les variables a ajouter pour tester les autres profils.
+Ce document liste le minimum utile pour lancer ChangeThis en local et les variables a ajouter pour tester le profil interne.
 
 ## Local simple
 
@@ -21,32 +21,11 @@ npm run dev
 
 Ce mode est reserve au developpement. Il ne doit jamais servir une production.
 
-## Beta SaaS Supabase
-
-```env
-NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://app.changethis.dev
-AUTH_MODE=supabase
-DATA_STORE=supabase
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-CHANGETHIS_SECRET_KEY=...
-```
-
-Checks:
-
-```bash
-npm run env:check
-npm run migrations:check
-npm run prod:check
-```
-
 ## Installation interne
 
 ```env
 NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://changethis.toolprod
+NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
 AUTH_MODE=internal
 DATA_STORE=internal
 INTERNAL_API_URL=http://back.toolprod:8000
@@ -59,7 +38,7 @@ Le backend FastAPI utilise son propre fichier d'environnement:
 DATABASE_URL=postgresql+asyncpg://changethis:<secret>@localhost:5432/changethis
 SESSION_SECRET=...
 CHANGETHIS_SECRET_KEY=...
-ALLOWED_PUBLIC_ORIGINS=https://changethis.toolprod
+ALLOWED_PUBLIC_ORIGINS=https://changethis.cra.wallonie.be
 ```
 
 Runbook: [internal-ubuntu24-install.fr.md](internal-ubuntu24-install.fr.md).
@@ -73,7 +52,6 @@ Runbook: [internal-ubuntu24-install.fr.md](internal-ubuntu24-install.fr.md).
 | `GITLAB_TOKEN` | Tester GitLab local/pilote | Personal Access Token GitLab avec scope `api`. |
 | `CHANGETHIS_GITLAB_TOKEN` | Meme usage que `GITLAB_TOKEN` | Variante non conflictuelle avec OAuth/token App. |
 | `GITLAB_BASE_URL` | Tester GitLab self-hosted | Exemple: `https://gitrural.cra.wallonie.be`. |
-| `SUPABASE_REST_TIMEOUT_MS` | Tester latence/timeouts Supabase | Timeout REST serveur. |
 | `ENABLE_PUBLIC_SIGNUP=false` | Mettre le signup en pause | Utile pour staging prive. |
 
 ## No-go production

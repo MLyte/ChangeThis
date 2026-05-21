@@ -7,18 +7,20 @@
 - Cocher la tâche terminée et ajouter une note courte dans la section "Journal".
 - S'arrêter avant la section "Intervention utilisateur requise" si une tâche dépend d'une décision, d'un accès, d'un secret, d'un compte ou d'une validation humaine.
 
-## Priorisation active beta
+## Priorisation active installation interne CRA
 Cette priorisation remanie les tâches restantes selon **importance produit/sécurité**, **facilité technique** et **rapidité de livraison**. Elle sert de guide de choix avant l'ordre historique des sections.
 
-État courant synchronisé: voir `docs/current-state.fr.md`. Le chemin beta réelle est Railway app + Supabase Auth/DB + OVH DNS, avec `AUTH_MODE=supabase` et `DATA_STORE=supabase`. `DATA_STORE=file` reste local/dev uniquement.
+État courant synchronisé: voir `docs/current-state.fr.md`. La cible active de `main` est l'installation interne CRA: `https://changethis.cra.wallonie.be`, `AUTH_MODE=internal`, `DATA_STORE=internal`, Next.js + FastAPI + PostgreSQL interne. `DATA_STORE=file` reste local/dev uniquement.
 
-Note 2026-05-21: une cible interne Ubuntu 24 est amorcee en parallele du chemin beta: `AUTH_MODE=internal`, `DATA_STORE=internal`, backend FastAPI `apps/api`, scripts `scripts/internal/*` et runbook `docs/internal-ubuntu24-install.fr.md`. Les repositories Next.js restent a migrer progressivement vers FastAPI.
+Note 2026-05-21: le chemin interne Ubuntu 24 devient le cadrage actif de `main`: `AUTH_MODE=internal`, `DATA_STORE=internal`, backend FastAPI `apps/api`, scripts `scripts/internal/*` et runbook `docs/internal-ubuntu24-install.fr.md`. Les repositories Next.js restent a migrer progressivement vers FastAPI.
 
-Note 2026-05-21: `docs/` a ete remis en ordre avec `docs/README.md` comme index, `docs/current-state.fr.md` comme source courte, et l'ancien guide OVH natif deplace dans `docs/archive/`. Les docs actives distinguent maintenant beta SaaS Supabase et installation interne Ubuntu 24.
+Note 2026-05-21: `docs/` a ete remis en ordre avec `docs/README.md` comme index, `docs/current-state.fr.md` comme source courte, et les anciens guides Railway/Supabase/OVH deplaces dans `docs/archive/`.
 
 Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `changethis-production.config.example` et des scripts Windows locaux `run-agent.ps1` / `start-service.bat`; les exemples `.env*` et le `README.md` ont ete actualises pour le chemin interne.
 
-### P0 - Chemin critique beta vendable
+Note 2026-05-21: domaine applicatif interne retenu: `https://changethis.cra.wallonie.be`. Les noms `frontend.toolprod`/`back.toolprod` restent des alias techniques internes, pas l'URL utilisateur.
+
+### P0 - Chemin critique installation interne exploitable
 1. **Validation installation réelle**: le widget public est servi et configurable par site; ajouter un smoke test externe documenté qui prouve `/widget.js` sur un vrai domaine autorisé.
 2. **Onboarding premier site**: signup, workspace, connexions Git, création de site et script existent; resserrer la checklist Git -> site -> script -> feedback test -> issue créée.
 3. **Git providers beta**: les tokens GitHub/GitLab manuels fonctionnent; finaliser validation stricte du dépôt contre l'intégration, pagination/recherche et reconnexion propre.
@@ -26,7 +28,7 @@ Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `change
 5. **Fiabilité issue minimale restante**: idempotence/verrou anti double issue, relance manuelle propre, statut terminal simple, circuit breaker et backoff jitter.
 6. **Documentation client minimale restante**: configurer GitLab, domaines autorisés, installation widget, statuts de feedback et smoke checklist staging/production.
 
-### P1 - Beta confortable et sûre
+### P1 - Installation confortable et sûre
 1. Tests ciblés widget restants: Shadow DOM, messages/métadonnées HTML, masquage/restauration champs sensibles, sélection, scroll/resize, capture page légère.
 2. Stockage objet screenshots avec chemin/URL signée, TTL, hash et politique d'archivage vérifiée.
 3. Observabilité minimale: `request_id`, métriques API/provider/widget, audit log destinations/providers/membres, messages d'erreur actionnables.
@@ -34,7 +36,7 @@ Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `change
 5. Support léger: page aide intégrée, formulaire support et collecte contexte support.
 6. Export CSV et pagination/tri serveur seulement après volume réel.
 
-### P2 - Après beta privée
+### P2 - Après stabilisation interne
 1. Billing complet, paiement, portail client, trial expiré et logique upgrade/downgrade.
 2. GitLab complet, webhooks provider et synchronisation open/closed.
 3. Multi-workspace selector.
@@ -43,10 +45,10 @@ Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `change
 6. Procédures complètes backup/restore/export/suppression définitive et conformité élargie.
 
 ### Décisions gelées pour avancer vite
-- Bêta ouverte contrôlée: signup ouvert par défaut, pause possible avec `ENABLE_PUBLIC_SIGNUP=false`, accès surveillé et réversible.
+- Installation interne contrôlée: signup ouvert par défaut si l'environnement le permet, pause possible avec `ENABLE_PUBLIC_SIGNUP=false`, accès surveillé et réversible.
 - Connexions GitHub et GitLab prévues dans le parcours bêta selon la configuration de chaque équipe; ne pas présenter GitHub comme prioritaire par défaut.
 - Création d'issue manuelle depuis l'inbox reste le chemin par défaut; le mode automatique par site existe mais doit être fiabilisé avant d'être promu.
-- Railway app + Supabase Auth/DB + OVH DNS est le chemin beta par défaut; Railway PostgreSQL natif n'est pas consommé par le code actuel.
+- La cible active de `main` est l'installation interne CRA; les documents Railway/Supabase sont archives dans `docs/archive/`.
 
 ## 1. Auth, workspaces et rôles
 - [x] Ajouter un flux d'onboarding qui crée l'organisation, le workspace et l'owner.
@@ -63,7 +65,7 @@ Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `change
 
 ## 3. Données et stockage production
 - [ ] Ajouter une rotation des project public keys via `project_public_keys`.
-- [ ] Migrer les screenshots depuis les data URLs vers Supabase Storage ou stockage objet.
+- [ ] Migrer les screenshots depuis les data URLs vers un stockage objet interne.
 - [ ] Stocker uniquement un chemin d'objet ou une URL signée pour chaque screenshot.
 - [x] Ajouter une table ou colonne pour le hash de contenu des screenshots.
 - [x] Ajouter une colonne de configuration par site pour l'identité visiteur du widget.
@@ -72,10 +74,10 @@ Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `change
 - [ ] Ajouter une migration pour les timestamps `updated_at` automatiques.
 - [ ] Ajouter une migration pour conserver le raw payload provider des créations d'issues.
 - [ ] Ajouter un script de seed local non sensible pour créer un workspace et un site de démo.
-- [ ] Ajouter un script de migration du store fichier local vers Supabase.
+- [ ] Ajouter un script de migration du store fichier local vers PostgreSQL interne.
 - [ ] Ajouter une commande de vérification d'intégrité des feedbacks, assets et issue targets.
-- [ ] Ajouter une procédure de backup Supabase avec fréquence, rétention et owner.
-- [ ] Ajouter une procédure de restore Supabase testée sur environnement isolé.
+- [ ] Ajouter une procédure de backup PostgreSQL interne avec fréquence, rétention et owner.
+- [ ] Ajouter une procédure de restore PostgreSQL interne testée sur environnement isolé.
 - [ ] Ajouter une procédure d'export client des feedbacks d'un workspace.
 - [ ] Ajouter une procédure de suppression définitive workspace/projet/feedback.
 
@@ -179,10 +181,10 @@ Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `change
 - [ ] Ajouter un scan ou une stratégie de quarantaine pour les uploads image.
 - [ ] Ajouter une rotation documentée de `CHANGETHIS_SECRET_KEY`.
 - [ ] Remplacer le stockage local chiffré des credentials provider par un coffre compatible production.
-- [x] Révoquer l'exécution publique des fonctions RLS `SECURITY DEFINER` exposées par Supabase.
+- [x] Révoquer l'exécution publique des anciennes fonctions RLS `SECURITY DEFINER` exposees dans le chemin archive.
 - [ ] Ajouter la vérification des webhooks GitHub avec `GITHUB_WEBHOOK_SECRET`.
 - [ ] Ajouter la vérification des webhooks GitLab avec `GITLAB_WEBHOOK_SECRET`.
-- [ ] Ajouter une politique RLS d'insertion publique contrôlée pour les feedbacks si l'API écrit directement via Supabase.
+- [ ] Ajouter des controles d'insertion publique côté API interne pour les feedbacks.
 - [ ] Ajouter des tests RLS pour owner, admin, member, viewer et utilisateur externe.
 - [ ] Ajouter un scan de secrets local/CI sur l'historique et le workspace courant.
 
@@ -196,14 +198,14 @@ Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `change
 - [ ] Ajouter des tests API pour `/api/projects/retries`.
 - [ ] Ajouter des tests API pour `/api/integrations/[provider]/repositories`.
 - [ ] Ajouter des tests API pour les callbacks GitHub et GitLab.
-- [ ] Ajouter des tests d'intégration Supabase Storage screenshots.
+- [ ] Ajouter des tests d'intégration stockage objet screenshots.
 - [ ] Ajouter un scénario E2E `/demo` -> widget comment -> `/projects` visible.
 - [ ] Ajouter un scénario E2E widget mode pin avec coordonnées persistées.
 - [ ] Ajouter un scénario E2E widget mode capture avec asset screenshot persisté.
 - [ ] Ajouter un scénario E2E création d'issue GitHub mockée depuis `/projects`.
 - [ ] Ajouter un scénario E2E création d'issue GitLab mockée depuis `/projects`.
 - [ ] Ajouter un scénario E2E retry provider `failed/retrying` -> `sent_to_provider`.
-- [ ] Ajouter un scénario E2E accès `/projects` refusé sans session en `AUTH_MODE=supabase`.
+- [ ] Ajouter un scénario E2E accès `/projects` refusé sans session en `AUTH_MODE=internal`.
 - [ ] Ajouter un scénario E2E rôle `viewer` empêché de modifier les destinations d'issues.
 - [ ] Ajouter des tests cross-browser du widget sur Chromium, Firefox et WebKit.
 - [ ] Auditer `/`, `/demo`, `/login`, `/projects` et `/settings/*` avec axe automatisé.
@@ -324,12 +326,12 @@ Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `change
 - [ ] Choisir l'hébergeur production pour l'application Next.js.
 - [ ] Choisir le domaine public de l'application ChangeThis.
 - [ ] Configurer les DNS du domaine choisi vers l'hébergeur.
-- [ ] Créer le projet Supabase production.
-- [ ] Fournir `NEXT_PUBLIC_SUPABASE_URL` production.
-- [ ] Fournir `NEXT_PUBLIC_SUPABASE_ANON_KEY` production.
-- [ ] Fournir `SUPABASE_SERVICE_ROLE_KEY` production.
-- [ ] Créer le bucket Supabase Storage production pour les screenshots.
-- [ ] Choisir la solution de stockage objet production si Supabase Storage n'est pas retenu.
+- [ ] Créer la base PostgreSQL interne production.
+- [ ] Fournir `DATABASE_URL` backend interne.
+- [ ] Fournir `SESSION_SECRET` backend interne.
+- [ ] Fournir `INTERNAL_API_URL` frontend.
+- [ ] Créer le stockage objet interne production pour les screenshots.
+- [ ] Choisir la solution de stockage objet production.
 - [ ] Choisir la politique de rétention des feedbacks et screenshots.
 - [ ] Générer et fournir `CHANGETHIS_SECRET_KEY` production.
 - [ ] Créer ou valider la GitHub App ChangeThis.
@@ -359,6 +361,7 @@ Note 2026-05-21: racine du repo nettoyee: suppression du vieux manifeste `change
 - [ ] Valider les clients pilotes et le périmètre du dry-run staging.
 
 ## Journal
+- [2026-05-21] Recentrage documentation sur l'installation interne CRA: README, docs actives, exemples env et guides widget ne presentent plus Railway/Supabase comme chemin courant; les anciens guides sont archives dans `docs/archive/`. Validation: `env:check` avec `AUTH_MODE=internal` OK, liens markdown actifs OK, `git diff --check` OK.
 - [2026-05-20] Correction pin widget apres scroll: les pins gardent maintenant un offset relatif a l'element cible et se recalculent aussi sur les scrolls de conteneurs internes, avec compatibilite des anciens pins par coordonnees page. Validation ciblee: `npm.cmd run typecheck --workspace @changethis/widget` OK, `npm.cmd run test --workspace @changethis/shared` OK, `npm.cmd run widget:build` OK.
 - [2026-05-19] Resserrement section mobile home: suppression de la redondance `mobile` dans l'eyebrow/titre, reformulation en `Sur petit écran / Le contexte reste exploitable`, et séparation visuelle des lignes visiteur/équipe dans la lede. Validation ciblée: `npm.cmd run typecheck --workspace @changethis/web` OK, `npm.cmd run lint --workspace @changethis/web` OK, `git diff --check` OK.
 - [2026-05-19] Correction hauteur tuiles contexte home: la grille `feedback-context-grid` n'étire plus ses lignes verticalement et les cartes gardent une hauteur ajustée au contenu, ce qui retire les grands espaces vides visibles dans les tuiles. Validation ciblée: `npm.cmd run typecheck --workspace @changethis/web` OK, `npm.cmd run lint --workspace @changethis/web` OK, `git diff --check` OK.

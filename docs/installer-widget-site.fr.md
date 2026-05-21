@@ -37,7 +37,7 @@ Ne pas mélanger `http` et `https`, ni domaine racine et sous-domaine `www`.
 Coller le script juste avant `</body>` dans le layout global du site :
 
 ```html
-<script src="https://app.changethis.dev/widget.js" data-project="project_public_key"></script>
+<script src="https://changethis.cra.wallonie.be/widget.js" data-project="project_public_key"></script>
 ```
 
 Remplacer `project_public_key` par la clé publique fournie dans `/settings/connected-sites`.
@@ -49,7 +49,7 @@ Le widget lit `data-project` pour identifier le site. Il charge ensuite `/api/wi
 En production ou staging client, utiliser l'URL de l'application ChangeThis déployée :
 
 ```html
-<script src="https://app.changethis.dev/widget.js" data-project="project_public_key"></script>
+<script src="https://changethis.cra.wallonie.be/widget.js" data-project="project_public_key"></script>
 ```
 
 En développement local ChangeThis, utiliser le serveur web local :
@@ -77,8 +77,8 @@ En local ChangeThis pur, `/demo` reste le smoke test le plus simple : la page ch
 Sur un site qui utilise une Content Security Policy stricte, autoriser aussi ChangeThis :
 
 ```txt
-script-src https://app.changethis.dev
-connect-src https://app.changethis.dev
+script-src https://changethis.cra.wallonie.be
+connect-src https://changethis.cra.wallonie.be
 style-src 'unsafe-inline'
 ```
 
@@ -89,7 +89,7 @@ Ces directives doivent être fusionnées avec la CSP existante du site, pas forc
 ### Le bouton Feedback ne s'affiche pas
 
 - Vérifier que le snippet est présent dans le HTML final de la page.
-- Vérifier que `https://app.changethis.dev/widget.js` ou `http://localhost:3000/widget.js` répond bien.
+- Vérifier que `https://changethis.cra.wallonie.be/widget.js` ou `http://localhost:3000/widget.js` répond bien.
 - Vérifier qu'un bloqueur de script ou une règle CSP du site ne bloque pas le domaine ChangeThis.
 - Si le test d'installation signale `csp_blocks_widget`, ajouter les directives CSP affichées par ChangeThis.
 
@@ -116,4 +116,4 @@ Ces directives doivent être fusionnées avec la CSP existante du site, pas forc
 - Vérifier que le dépôt cible est configuré sur le site connecté.
 - Vérifier les permissions GitHub ou GitLab sur le dépôt.
 - Pour GitHub fine-grained PAT, vérifier `Repository access` sur le dépôt cible et `Repository permissions > Issues > Read and write`.
-- En beta actuelle, la création d'issue est déclenchée manuellement depuis `/projects`; elle n'est pas automatique après l'envoi du feedback.
+- Par défaut, la création d'issue est déclenchée manuellement depuis `/projects`; elle n'est pas automatique après l'envoi du feedback.

@@ -5,7 +5,7 @@ APP_ROOT="${APP_ROOT:-/opt/changethis}"
 APP_USER="${APP_USER:-changethis}"
 WEB_SERVICE="${WEB_SERVICE:-changethis-web}"
 API_SERVICE="${API_SERVICE:-changethis-api}"
-APP_URL="${APP_URL:-https://changethis.toolprod}"
+APP_URL="${APP_URL:-https://changethis.cra.wallonie.be}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "Run as root." >&2

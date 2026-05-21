@@ -7,7 +7,7 @@ REPO_URL="${REPO_URL:-git@gitrural:ChangeThis.git}"
 API_HOST="${API_HOST:-0.0.0.0}"
 API_PORT="${API_PORT:-8000}"
 DATABASE_URL="${DATABASE_URL:-postgresql+asyncpg://changethis:change-me@localhost:5432/changethis}"
-ALLOWED_PUBLIC_ORIGINS="${ALLOWED_PUBLIC_ORIGINS:-https://changethis.toolprod}"
+ALLOWED_PUBLIC_ORIGINS="${ALLOWED_PUBLIC_ORIGINS:-https://changethis.cra.wallonie.be}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "Run as root." >&2

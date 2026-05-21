@@ -2,7 +2,7 @@
 
 Etat actuel: voir [current-state.fr.md](current-state.fr.md).
 
-Ce guide aide un workspace en bêta ouverte contrôlée à recevoir un premier feedback exploitable depuis un site réel ou de test.
+Ce guide aide un workspace ChangeThis interne à recevoir un premier feedback exploitable depuis un site réel ou de test.
 
 ## Pré-requis
 
@@ -39,7 +39,7 @@ ChangeThis génère une clé publique de projet et un script widget lié à cett
 Copier le script fourni par ChangeThis dans le site client, avant `</body>` :
 
 ```html
-<script src="https://app.changethis.dev/widget.js" data-project="project_public_key"></script>
+<script src="https://changethis.cra.wallonie.be/widget.js" data-project="project_public_key"></script>
 ```
 
 En local, remplacer le domaine par l'URL du serveur de développement :
@@ -60,7 +60,7 @@ Retourner dans `/projects` et vérifier que le feedback apparaît dans l'inbox.
 
 Depuis `/projects`, ouvrir le feedback puis créer l'issue externe.
 
-En beta actuelle, cette étape est manuelle: ChangeThis prépare le contexte et le brouillon d'issue, mais ne crée pas automatiquement une issue dès la réception du feedback.
+Par défaut, cette étape est manuelle: ChangeThis prépare le contexte et le brouillon d'issue, mais ne crée pas automatiquement une issue dès la réception du feedback.
 
 La première boucle est validée quand :
 
@@ -74,5 +74,5 @@ La première boucle est validée quand :
 - Si l'envoi échoue avec une erreur d'origine, comparer l'origine configurée dans ChangeThis avec `window.location.origin` sur le site client.
 - Si les dépôts ne sont pas listés, vérifier la connexion Git dans `/settings/git-connections`.
 - Si l'issue n'est pas créée côté GitHub, vérifier que le fine-grained token inclut le dépôt cible dans `Repository access` et la permission `Repository permissions > Issues > Read and write`.
-- Si GitLab OAuth est utilisé, prévoir une reconnexion si le token expire; le refresh automatique complet reste une limite beta.
-- Les screenshots restent une fonctionnalité beta: ils sont acceptés, mais leur stockage objet définitif reste à finaliser.
+- Si GitLab OAuth est utilisé, prévoir une reconnexion si le token expire; le refresh automatique complet reste une limite connue.
+- Les screenshots sont acceptés, mais leur stockage objet définitif reste à finaliser.

@@ -4,7 +4,7 @@ set -euo pipefail
 APP_USER="${APP_USER:-changethis}"
 APP_ROOT="${APP_ROOT:-/opt/changethis}"
 REPO_URL="${REPO_URL:-git@gitrural:ChangeThis.git}"
-APP_DOMAIN="${APP_DOMAIN:-changethis.toolprod}"
+APP_DOMAIN="${APP_DOMAIN:-changethis.cra.wallonie.be}"
 WEB_HOST="${WEB_HOST:-127.0.0.1}"
 WEB_PORT="${WEB_PORT:-3000}"
 INTERNAL_API_URL="${INTERNAL_API_URL:-http://back.toolprod:8000}"

@@ -2,15 +2,15 @@
 
 Date de reference: 2026-05-21
 
-Ce runbook decrit la cible interne `Next.js + FastAPI + PostgreSQL` pour ChangeThis. Il complete le chemin beta Railway/Supabase decrit dans `docs/current-state.fr.md`; il ne le remplace pas pour les environnements publics existants.
+Ce runbook decrit la cible interne active `Next.js + FastAPI + PostgreSQL` pour ChangeThis. C'est le chemin de reference de la branche `main` pour l'installation CRA.
 
 ## Architecture cible
 
-- Domaine applicatif: `https://changethis.toolprod`.
+- Domaine applicatif: `https://changethis.cra.wallonie.be`.
 - Frontend: Next.js `apps/web`, service `changethis-web.service`, ecoute locale `127.0.0.1:3000` sur `frontend.toolprod`.
 - Backend: FastAPI `apps/api`, service `changethis-api.service`, ecoute `0.0.0.0:8000` ou IP privee backend sur `back.toolprod`.
 - Donnees: PostgreSQL interne, role applicatif limite `changethis`.
-- Proxy: vhost frontal `changethis.toolprod` vers Next.js. Les routes navigateur restent sous le meme domaine; Next.js peut proxyfier vers FastAPI via `INTERNAL_API_URL`.
+- Proxy: vhost frontal `changethis.cra.wallonie.be` vers Next.js. Les routes navigateur restent sous le meme domaine; Next.js peut proxyfier vers FastAPI via `INTERNAL_API_URL`.
 - Secrets: fichiers `/etc/changethis/web.env` et `/etc/changethis/api.env`, lisibles par l'utilisateur applicatif uniquement.
 
 Les PDF infra presents dans `docs/` sont utilises comme sources d'adaptation:
@@ -24,7 +24,7 @@ Les PDF infra presents dans `docs/` sont utilises comme sources d'adaptation:
 - Ubuntu 24.04 sur les serveurs frontend et backend.
 - Acces root ou sudo.
 - Resolution DNS interne:
-  - `changethis.toolprod` vers le frontal.
+  - `changethis.cra.wallonie.be` vers le frontal.
   - `back.toolprod` vers le serveur backend ou son IP privee.
 - Cle SSH GitRural installee pour l'utilisateur `changethis` ou agent SSH disponible pendant l'installation.
 - PostgreSQL installe sur le backend, ou installe par `scripts/internal/setup-postgres.sh`.
@@ -38,7 +38,7 @@ Frontend `/etc/changethis/web.env`:
 NODE_ENV=production
 AUTH_MODE=internal
 DATA_STORE=internal
-NEXT_PUBLIC_APP_URL=https://changethis.toolprod
+NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
 INTERNAL_API_URL=http://back.toolprod:8000
 CHANGETHIS_SECRET_KEY=<secret-32-caracteres-minimum>
 ```
@@ -49,7 +49,7 @@ Backend `/etc/changethis/api.env`:
 DATABASE_URL=postgresql+asyncpg://changethis:<secret>@localhost:5432/changethis
 SESSION_SECRET=<secret-32-caracteres-minimum>
 CHANGETHIS_SECRET_KEY=<secret-32-caracteres-minimum>
-ALLOWED_PUBLIC_ORIGINS=https://changethis.toolprod
+ALLOWED_PUBLIC_ORIGINS=https://changethis.cra.wallonie.be
 GITHUB_APP_ID=
 GITHUB_APP_PRIVATE_KEY=
 GITLAB_OAUTH_APP_ID=
@@ -93,7 +93,7 @@ curl -fsS http://back.toolprod:8000/ready
 ```bash
 sudo \
   REPO_URL=git@gitrural:ChangeThis.git \
-  APP_DOMAIN=changethis.toolprod \
+  APP_DOMAIN=changethis.cra.wallonie.be \
   INTERNAL_API_URL=http://back.toolprod:8000 \
   scripts/internal/install-frontend.sh
 ```
@@ -104,8 +104,8 @@ sudo \
 
 ```bash
 systemctl status changethis-web
-curl -fsS https://changethis.toolprod/api/health
-curl -fsS https://changethis.toolprod/api/ready
+curl -fsS https://changethis.cra.wallonie.be/api/health
+curl -fsS https://changethis.cra.wallonie.be/api/ready
 ```
 
 ## Deploiement courant
@@ -113,7 +113,7 @@ curl -fsS https://changethis.toolprod/api/ready
 Depuis le serveur qui contient `/opt/changethis/repo`:
 
 ```bash
-sudo APP_URL=https://changethis.toolprod scripts/internal/deploy.sh
+sudo APP_URL=https://changethis.cra.wallonie.be scripts/internal/deploy.sh
 ```
 
 Le script fait:
@@ -153,7 +153,7 @@ sudo -u postgres pg_dump changethis > /var/backups/changethis-$(date +%F-%H%M).s
 
 ## Smoke tests fonctionnels
 
-- `curl https://changethis.toolprod/api/ready` doit retourner `ok: true`.
+- `curl https://changethis.cra.wallonie.be/api/ready` doit retourner `ok: true`.
 - Charger `/widget.js` depuis un site autorise.
 - Soumettre un feedback depuis une origine presente dans `projects.allowed_origins`.
 - Verifier la ligne en base:
@@ -170,6 +170,6 @@ limit 5;
 ## Limites connues de cette premiere conversion
 
 - `apps/api` fournit le schema interne, l'auth email/mot de passe, les sessions, la config widget, la reception feedback, l'inbox et les endpoints d'amorcage sites/destinations.
-- Les repositories Next.js existants restent a migrer progressivement depuis Supabase vers le client FastAPI serveur.
+- Les repositories Next.js existants restent a migrer progressivement vers le client FastAPI serveur.
 - Les integrations GitHub/GitLab cote FastAPI ont un endpoint reserve; la logique provider complete reste a porter depuis `apps/web/lib`.
 - Les screenshots restent compatibles avec le modele actuel, mais le stockage objet interne n'est pas branche.
