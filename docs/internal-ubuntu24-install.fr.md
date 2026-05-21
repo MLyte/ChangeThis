@@ -75,7 +75,7 @@ sudo REPO_URL=git@gitrural:ChangeThis.git scripts/internal/install-backend.sh
 4. Appliquer le schema:
 
 ```bash
-sudo -u changethis bash -lc 'cd /opt/changethis/repo/apps/api && . .venv/bin/activate && alembic upgrade head'
+sudo -u changethis bash -lc 'set -a && . /etc/changethis/api.env && set +a && cd /opt/changethis/repo/apps/api && . .venv/bin/activate && alembic upgrade head'
 ```
 
 5. Verifier:

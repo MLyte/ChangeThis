@@ -57,4 +57,4 @@ SERVICE
 systemctl daemon-reload
 systemctl enable --now changethis-api
 
-echo "Backend installed. Run Alembic after DB setup: cd ${APP_ROOT}/repo/apps/api && . .venv/bin/activate && alembic upgrade head"
+echo "Backend installed. Run Alembic after DB setup: set -a && . /etc/changethis/api.env && set +a && cd ${APP_ROOT}/repo/apps/api && . .venv/bin/activate && alembic upgrade head"

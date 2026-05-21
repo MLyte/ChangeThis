@@ -25,7 +25,7 @@ if [[ ! -x "${API_DIR}/.venv/bin/python" ]]; then
 fi
 
 sudo -u "${APP_USER}" bash -lc "cd '${REPO_DIR}' && git pull --ff-only"
-sudo -u "${APP_USER}" bash -lc "cd '${API_DIR}' && . .venv/bin/activate && pip install -e . && alembic upgrade head"
+sudo -u "${APP_USER}" bash -lc "set -a && . /etc/changethis/api.env && set +a && cd '${API_DIR}' && . .venv/bin/activate && pip install -e . && alembic upgrade head"
 
 systemctl restart "${API_SERVICE}"
 systemctl is-active --quiet "${API_SERVICE}"

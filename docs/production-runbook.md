@@ -91,13 +91,13 @@ Les secrets ne doivent pas etre commits. Les fichiers d'environnement doivent et
 Appliquer les migrations FastAPI/Alembic sur le backend:
 
 ```bash
-sudo -u changethis bash -lc 'cd /opt/changethis/repo/apps/api && . .venv/bin/activate && alembic upgrade head'
+sudo -u changethis bash -lc 'set -a && . /etc/changethis/api.env && set +a && cd /opt/changethis/repo/apps/api && . .venv/bin/activate && alembic upgrade head'
 ```
 
 Verifier l'etat:
 
 ```bash
-sudo -u changethis bash -lc 'cd /opt/changethis/repo/apps/api && . .venv/bin/activate && alembic current'
+sudo -u changethis bash -lc 'set -a && . /etc/changethis/api.env && set +a && cd /opt/changethis/repo/apps/api && . .venv/bin/activate && alembic current'
 ```
 
 Rollback:

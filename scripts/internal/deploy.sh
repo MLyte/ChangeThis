@@ -13,7 +13,7 @@ if [[ "$(id -u)" -ne 0 ]]; then
 fi
 
 sudo -u "${APP_USER}" bash -lc "cd '${APP_ROOT}/repo' && git pull --ff-only && npm ci && npm run build"
-sudo -u "${APP_USER}" bash -lc "cd '${APP_ROOT}/repo/apps/api' && . .venv/bin/activate && pip install -e . && alembic upgrade head"
+sudo -u "${APP_USER}" bash -lc "set -a && . /etc/changethis/api.env && set +a && cd '${APP_ROOT}/repo/apps/api' && . .venv/bin/activate && pip install -e . && alembic upgrade head"
 
 systemctl restart "${API_SERVICE}"
 systemctl restart "${WEB_SERVICE}"
