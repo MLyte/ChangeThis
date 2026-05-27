@@ -8,8 +8,8 @@ La cible documentee par `main` est l'installation interne:
 
 - URL admin et widget: `https://changethis.cra.wallonie.be`.
 - Frontend: Next.js dans `apps/web`, expose par le domaine applicatif.
-- Backend interne: FastAPI dans `apps/api`.
-- Base: PostgreSQL interne.
+- Backend interne: FastAPI dans `apps/api`, sur le meme serveur applicatif que le front.
+- Base: PostgreSQL interne, seule charge attendue sur `back-tool-prod`.
 - Deploiement: services natifs Ubuntu 24 via `systemd`.
 
 Les anciens guides Railway/Supabase lies a une experimentation SaaS sont conserves uniquement dans `docs/archive/`; ils ne decrivent plus la cible active de cette branche.
@@ -135,7 +135,7 @@ NODE_ENV=production
 NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
 AUTH_MODE=internal
 DATA_STORE=internal
-INTERNAL_API_URL=http://back.toolprod:8000
+INTERNAL_API_URL=http://127.0.0.1:8000
 CHANGETHIS_SECRET_KEY=...
 ```
 
@@ -183,8 +183,8 @@ The active target documented by `main` is the internal installation:
 
 - Admin and widget URL: `https://changethis.cra.wallonie.be`.
 - Frontend: Next.js in `apps/web`.
-- Internal backend: FastAPI in `apps/api`.
-- Database: internal PostgreSQL.
+- Internal backend: FastAPI in `apps/api`, on the same application server as the frontend.
+- Database: internal PostgreSQL, the only expected workload on `back-tool-prod`.
 - Deployment: native Ubuntu 24 `systemd` services.
 
 Older Railway/Supabase SaaS experiment documents are kept only under `docs/archive/`; they are not the active target for this branch.
@@ -238,7 +238,7 @@ NODE_ENV=production
 NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
 AUTH_MODE=internal
 DATA_STORE=internal
-INTERNAL_API_URL=http://back.toolprod:8000
+INTERNAL_API_URL=http://127.0.0.1:8000
 CHANGETHIS_SECRET_KEY=...
 ```
 

@@ -26,6 +26,12 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1)
 
 
+class SignUpRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+    workspace_name: str = Field(min_length=1, max_length=120)
+
+
 class LoginResponse(SessionResponse):
     access_token: str
 

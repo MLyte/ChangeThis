@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { logoutInternalSession } from "../../lib/internal-api";
 
 const authCookieNames = [
   "changethis_access_token",
+  "changethis_internal_session",
   "sb-access-token",
   "supabase-auth-token",
   "supabase-refresh-token"
@@ -15,7 +17,9 @@ export async function POST(request: Request) {
   return logout(request);
 }
 
-function logout(request: Request) {
+async function logout(request: Request) {
+  await logoutInternalSession(request);
+
   const url = new URL(request.url);
   const nextPath = sanitizeNextPath(url.searchParams.get("next"));
   const response = NextResponse.redirect(publicRedirectUrl(request, `/login?next=${encodeURIComponent(nextPath)}`), { status: 303 });

@@ -4,9 +4,9 @@ set -euo pipefail
 APP_USER="${APP_USER:-changethis}"
 APP_ROOT="${APP_ROOT:-/opt/changethis}"
 REPO_URL="${REPO_URL:-git@gitrural:ChangeThis.git}"
-API_HOST="${API_HOST:-0.0.0.0}"
+API_HOST="${API_HOST:-127.0.0.1}"
 API_PORT="${API_PORT:-8000}"
-DATABASE_URL="${DATABASE_URL:-postgresql+asyncpg://changethis:change-me@localhost:5432/changethis}"
+DATABASE_URL="${DATABASE_URL:-postgresql+asyncpg://changethis:change-me@back.toolprod:5432/changethis}"
 ALLOWED_PUBLIC_ORIGINS="${ALLOWED_PUBLIC_ORIGINS:-https://changethis.cra.wallonie.be}"
 
 if [[ "$(id -u)" -ne 0 ]]; then

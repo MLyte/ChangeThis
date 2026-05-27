@@ -4,7 +4,7 @@ set -euo pipefail
 APP_ROOT="${APP_ROOT:-/opt/changethis}"
 APP_USER="${APP_USER:-changethis}"
 API_SERVICE="${API_SERVICE:-changethis-api}"
-API_URL="${API_URL:-http://back.toolprod:8000}"
+API_URL="${API_URL:-http://127.0.0.1:8000}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "Run as root." >&2

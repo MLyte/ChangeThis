@@ -2,7 +2,7 @@
 
 Etat actuel: voir [current-state.fr.md](current-state.fr.md). Installation complete: voir [internal-ubuntu24-install.fr.md](internal-ubuntu24-install.fr.md).
 
-Ce runbook couvre l'exploitation de ChangeThis sur l'installation interne CRA: `https://changethis.cra.wallonie.be`, Next.js + FastAPI + PostgreSQL interne.
+Ce runbook couvre l'exploitation de ChangeThis sur l'installation interne CRA: `https://changethis.cra.wallonie.be`, Next.js + FastAPI sur `front-tool-prod`, PostgreSQL interne seul sur `back-tool-prod`.
 
 ## Go/No-Go
 
@@ -37,7 +37,7 @@ No-go si:
 
 - `AUTH_MODE=local` ou `DATA_STORE=file` sert l'environnement interne.
 - `AUTH_MODE=ovh` ou `DATA_STORE=postgres` est configure.
-- `INTERNAL_API_URL` ne pointe pas vers FastAPI.
+- `INTERNAL_API_URL` ne pointe pas vers FastAPI local (`http://127.0.0.1:8000`) sur `front-tool-prod`.
 - `alembic upgrade head` n'a pas ete applique sur PostgreSQL interne.
 - `/api/ready` retourne `503`.
 - Une exception `npm audit` high/critical n'est pas documentee avec package, CVE, impact et plan de correction.
@@ -51,7 +51,7 @@ NODE_ENV=production
 NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
 AUTH_MODE=internal
 DATA_STORE=internal
-INTERNAL_API_URL=http://back.toolprod:8000
+INTERNAL_API_URL=http://127.0.0.1:8000
 CHANGETHIS_SECRET_KEY=...
 ENABLE_PUBLIC_SIGNUP=false
 ```
@@ -74,7 +74,7 @@ GITLAB_WEBHOOK_SECRET=...
 Fichier attendu: `/etc/changethis/api.env`.
 
 ```env
-DATABASE_URL=postgresql+asyncpg://changethis:<secret>@localhost:5432/changethis
+DATABASE_URL=postgresql+asyncpg://changethis:<secret>@back.toolprod:5432/changethis
 SESSION_SECRET=...
 CHANGETHIS_SECRET_KEY=...
 ALLOWED_PUBLIC_ORIGINS=https://changethis.cra.wallonie.be
@@ -88,7 +88,7 @@ Les secrets ne doivent pas etre commits. Les fichiers d'environnement doivent et
 
 ## Migrations
 
-Appliquer les migrations FastAPI/Alembic sur le backend:
+Appliquer les migrations FastAPI/Alembic depuis `front-tool-prod`, avec `DATABASE_URL` pointant vers PostgreSQL sur `back-tool-prod`:
 
 ```bash
 sudo -u changethis bash -lc 'set -a && . /etc/changethis/api.env && set +a && cd /opt/changethis/repo/apps/api && . .venv/bin/activate && alembic upgrade head'

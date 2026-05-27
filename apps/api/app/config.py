@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     session_secret: str = Field(alias="SESSION_SECRET")
     changethis_secret_key: str | None = Field(default=None, alias="CHANGETHIS_SECRET_KEY")
     allowed_public_origins: str = Field(default="https://changethis.cra.wallonie.be", alias="ALLOWED_PUBLIC_ORIGINS")
+    enable_public_signup: bool = Field(default=True, alias="ENABLE_PUBLIC_SIGNUP")
     session_cookie_name: str = "changethis_internal_session"
     session_ttl_seconds: int = 60 * 60 * 24 * 14
     github_app_id: str | None = Field(default=None, alias="GITHUB_APP_ID")

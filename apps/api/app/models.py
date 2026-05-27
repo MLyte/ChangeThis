@@ -24,7 +24,7 @@ class User(TimestampMixin, Base):
     display_name: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, default="active", nullable=False)
 
-    memberships: Mapped[list["WorkspaceMember"]] = relationship(back_populates="user")
+    memberships: Mapped[list["WorkspaceMember"]] = relationship(back_populates="user", foreign_keys="WorkspaceMember.user_id")
 
 
 class Workspace(TimestampMixin, Base):

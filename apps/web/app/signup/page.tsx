@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, getCurrentSession, isPublicSignupEnabled } from "../../lib/auth";
 import { setSupabaseSessionCookies } from "../../lib/auth-session-cookies";
+import { setInternalSessionCookie, signUpWithInternalPassword } from "../../lib/internal-api";
 import { isSupabaseServiceConfigured, requestSignUpCode, verifySupabaseEmailCode } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
@@ -61,7 +62,9 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const hasError = Boolean(params?.error);
   const isSent = params?.sent === "1";
   const sentEmail = params?.email ?? "";
-  const isLocalMode = getAuthMode() === "local";
+  const authMode = getAuthMode();
+  const isInternalMode = authMode === "internal";
+  const isLocalMode = authMode === "local";
 
   async function signUpAction(formData: FormData) {
     "use server";
@@ -69,6 +72,8 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     const authMode = getAuthMode();
     const currentSession = await getCurrentSession();
     const email = formData.get("email")?.toString().trim() ?? "";
+    const password = formData.get("password")?.toString() ?? "";
+    const workspaceName = formData.get("workspaceName")?.toString().trim() ?? "";
 
     if (currentSession?.workspace) {
       redirect("/projects");
@@ -79,6 +84,17 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     }
 
     if (authMode === "local") {
+      redirect("/settings/connected-sites");
+    }
+
+    if (authMode === "internal") {
+      const signUpResult = await signUpWithInternalPassword({ email, password, workspaceName });
+
+      if (!signUpResult.ok) {
+        redirect(`/signup?error=${encodeURIComponent(signUpResult.error)}`);
+      }
+
+      await setInternalSessionCookie(signUpResult.accessToken);
       redirect("/settings/connected-sites");
     }
 
@@ -155,7 +171,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             </div>
           ) : null}
 
-          {isSent ? (
+          {isSent && !isInternalMode ? (
             <div className="local-mode-callout" role="status">
               <strong><T k="signup.sent.title" /></strong>
               <span><T k="signup.sent.copy" /></span>
@@ -169,7 +185,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             </div>
           ) : null}
 
-          {isSent ? (
+          {isSent && !isInternalMode ? (
             <form action={verifyCodeAction} className="auth-form">
               <input name="email" type="hidden" value={sentEmail} />
               <label>
@@ -190,13 +206,27 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             </form>
           ) : (
             <form action={signUpAction} className="auth-form">
+              {isInternalMode ? (
+                <label>
+                  <T k="signup.organization" />
+                  <input autoComplete="organization" name="workspaceName" required type="text" />
+                </label>
+              ) : null}
               <label>
                 <T k="login.email" />
                 <input autoComplete="email" name="email" required type="email" />
               </label>
-              <p className="microcopy"><T k="signup.redirectHint" /></p>
+              {isInternalMode ? (
+                <label>
+                  <T k="signup.password" />
+                  <input autoComplete="new-password" minLength={8} name="password" required type="password" />
+                </label>
+              ) : null}
+              <p className="microcopy">
+                <T k={isInternalMode ? "signup.internalHint" : "signup.redirectHint"} />
+              </p>
               <button className="button" type="submit">
-                <T k={isLocalMode ? "signup.localSubmit" : "signup.submit"} />
+                <T k={isLocalMode ? "signup.localSubmit" : isInternalMode ? "signup.internalSubmit" : "signup.submit"} />
               </button>
             </form>
           )}

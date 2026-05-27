@@ -10,9 +10,9 @@ La branche `main` documente maintenant une cible unique: l'installation interne 
 
 - Domaine applicatif: `https://changethis.cra.wallonie.be`.
 - Frontend: Next.js `apps/web`, service `changethis-web.service`.
-- Backend: FastAPI `apps/api`, service `changethis-api.service`.
-- Store: PostgreSQL interne via SQLAlchemy/Alembic.
-- Runtime attendu: `AUTH_MODE=internal`, `DATA_STORE=internal`, `INTERNAL_API_URL=http://back.toolprod:8000`.
+- Backend applicatif: FastAPI `apps/api`, service `changethis-api.service`, sur le meme serveur que le front (`front-tool-prod` / `frontend.toolprod`).
+- Store: PostgreSQL interne via SQLAlchemy/Alembic, seul composant attendu sur `back-tool-prod` / `back.toolprod`.
+- Runtime attendu: `AUTH_MODE=internal`, `DATA_STORE=internal`, `INTERNAL_API_URL=http://127.0.0.1:8000`.
 - Deploiement: Ubuntu 24 natif avec scripts `scripts/internal/*` et services `systemd`.
 
 Les documents Railway/Supabase sont archives dans `docs/archive/`; ils correspondent a une experimentation SaaS historique, pas a l'installation interne active.
@@ -31,10 +31,10 @@ Les documents Railway/Supabase sont archives dans `docs/archive/`; ils correspon
 - Widget public: `packages/widget`, servi par `/widget.js` et `/widget.global.js`.
 - Types/protocole partages: `packages/shared`.
 - Backend API: FastAPI dans `apps/api`.
-- Base: PostgreSQL interne, role applicatif limite `changethis`.
+- Base: PostgreSQL interne sur `back-tool-prod` / `back.toolprod`, role applicatif limite `changethis`.
 - Migrations backend: Alembic, schema initial dans `apps/api/alembic/versions/0001_internal_schema.py`.
 - Proxy frontal: vhost `changethis.cra.wallonie.be` vers Next.js.
-- Communication serveur: Next.js appelle FastAPI via `INTERNAL_API_URL`.
+- Communication serveur: Next.js appelle FastAPI localement via `INTERNAL_API_URL=http://127.0.0.1:8000`.
 
 ## Garde-fous
 
@@ -42,7 +42,7 @@ Les documents Railway/Supabase sont archives dans `docs/archive/`; ils correspon
 - `/api/health` repond minimalement et sans cache.
 - `/api/ready` doit verifier la disponibilite FastAPI quand `AUTH_MODE=internal` ou `DATA_STORE=internal`.
 - `alembic upgrade head` doit etre execute sur le backend avant un deploy complet.
-- `systemctl status changethis-web changethis-api` doit etre vert sur les serveurs internes.
+- `systemctl status changethis-web changethis-api` doit etre vert sur `front-tool-prod`.
 - `AUTH_MODE=local` et `DATA_STORE=file` sont reserves au developpement local.
 - `AUTH_MODE=ovh` et `DATA_STORE=postgres` ne sont pas des modes supportes.
 

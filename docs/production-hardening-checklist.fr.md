@@ -13,7 +13,7 @@ On distingue:
 
 - [ ] `AUTH_MODE=internal`
 - [ ] `DATA_STORE=internal`
-- [ ] `INTERNAL_API_URL` pointe vers le service FastAPI attendu.
+- [ ] `INTERNAL_API_URL=http://127.0.0.1:8000` pointe vers FastAPI local sur `front-tool-prod`.
 - [ ] `alembic upgrade head` appliqué sur PostgreSQL interne.
 - [ ] `systemctl status changethis-web changethis-api` vert.
 - [ ] `/api/ready` vert via le domaine frontal.

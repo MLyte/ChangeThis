@@ -7,9 +7,8 @@ Ce runbook decrit la cible interne active `Next.js + FastAPI + PostgreSQL` pour 
 ## Architecture cible
 
 - Domaine applicatif: `https://changethis.cra.wallonie.be`.
-- Frontend: Next.js `apps/web`, service `changethis-web.service`, ecoute locale `127.0.0.1:3000` sur `frontend.toolprod`.
-- Backend: FastAPI `apps/api`, service `changethis-api.service`, ecoute `0.0.0.0:8000` ou IP privee backend sur `back.toolprod`.
-- Donnees: PostgreSQL interne, role applicatif limite `changethis`.
+- Serveur applicatif: `front-tool-prod` / `frontend.toolprod`, avec Next.js `apps/web` (`changethis-web.service`, ecoute locale `127.0.0.1:3000`) et FastAPI `apps/api` (`changethis-api.service`, ecoute locale `127.0.0.1:8000`).
+- Serveur base de donnees: `back-tool-prod` / `back.toolprod`, avec PostgreSQL interne uniquement et role applicatif limite `changethis`.
 - Proxy: vhost frontal `changethis.cra.wallonie.be` vers Next.js. Les routes navigateur restent sous le meme domaine; Next.js peut proxyfier vers FastAPI via `INTERNAL_API_URL`.
 - Secrets: fichiers `/etc/changethis/web.env` et `/etc/changethis/api.env`, lisibles par l'utilisateur applicatif uniquement.
 
@@ -21,13 +20,13 @@ Les PDF infra presents dans `docs/` sont utilises comme sources d'adaptation:
 
 ## Prerequis
 
-- Ubuntu 24.04 sur les serveurs frontend et backend.
+- Ubuntu 24.04 sur le serveur applicatif et le serveur base de donnees.
 - Acces root ou sudo.
 - Resolution DNS interne:
   - `changethis.cra.wallonie.be` vers le frontal.
-  - `back.toolprod` vers le serveur backend ou son IP privee.
+  - `back.toolprod` vers le serveur PostgreSQL ou son IP privee.
 - Cle SSH GitRural installee pour l'utilisateur `changethis` ou agent SSH disponible pendant l'installation.
-- PostgreSQL installe sur le backend, ou installe par `scripts/internal/setup-postgres.sh`.
+- PostgreSQL installe sur `back-tool-prod`, ou installe par `scripts/internal/setup-postgres.sh`.
 - Certificat TLS gere par l'infra frontale. Le script nginx fourni installe un vhost HTTP minimal; adaptez la terminaison HTTPS selon le standard Toolprod.
 
 ## Variables
@@ -39,14 +38,14 @@ NODE_ENV=production
 AUTH_MODE=internal
 DATA_STORE=internal
 NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
-INTERNAL_API_URL=http://back.toolprod:8000
+INTERNAL_API_URL=http://127.0.0.1:8000
 CHANGETHIS_SECRET_KEY=<secret-32-caracteres-minimum>
 ```
 
 Backend `/etc/changethis/api.env`:
 
 ```env
-DATABASE_URL=postgresql+asyncpg://changethis:<secret>@localhost:5432/changethis
+DATABASE_URL=postgresql+asyncpg://changethis:<secret>@back.toolprod:5432/changethis
 SESSION_SECRET=<secret-32-caracteres-minimum>
 CHANGETHIS_SECRET_KEY=<secret-32-caracteres-minimum>
 ALLOWED_PUBLIC_ORIGINS=https://changethis.cra.wallonie.be
@@ -56,34 +55,36 @@ GITLAB_OAUTH_APP_ID=
 GITLAB_OAUTH_APP_SECRET=
 ```
 
-## Installation backend
+## Installation PostgreSQL
 
-1. Creer la base et le role PostgreSQL:
+Sur `back-tool-prod`, creer la base et le role PostgreSQL:
 
 ```bash
 sudo DB_NAME=changethis DB_USER=changethis scripts/internal/setup-postgres.sh
 ```
 
-2. Copier la `DATABASE_URL` affichee dans `/etc/changethis/api.env`.
+Copier la `DATABASE_URL` affichee dans `/etc/changethis/api.env` sur `front-tool-prod`.
 
-3. Installer l'API:
+## Installation API FastAPI
+
+Sur `front-tool-prod`, installer l'API:
 
 ```bash
 sudo REPO_URL=git@gitrural:ChangeThis.git scripts/internal/install-backend.sh
 ```
 
-4. Appliquer le schema:
+Appliquer le schema:
 
 ```bash
 sudo -u changethis bash -lc 'set -a && . /etc/changethis/api.env && set +a && cd /opt/changethis/repo/apps/api && . .venv/bin/activate && alembic upgrade head'
 ```
 
-5. Verifier:
+Verifier:
 
 ```bash
 systemctl status changethis-api
-curl -fsS http://back.toolprod:8000/health
-curl -fsS http://back.toolprod:8000/ready
+curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://127.0.0.1:8000/ready
 ```
 
 ## Installation frontend
@@ -94,7 +95,7 @@ curl -fsS http://back.toolprod:8000/ready
 sudo \
   REPO_URL=git@gitrural:ChangeThis.git \
   APP_DOMAIN=changethis.cra.wallonie.be \
-  INTERNAL_API_URL=http://back.toolprod:8000 \
+  INTERNAL_API_URL=http://127.0.0.1:8000 \
   scripts/internal/install-frontend.sh
 ```
 
@@ -108,13 +109,13 @@ curl -fsS https://changethis.cra.wallonie.be/api/health
 curl -fsS https://changethis.cra.wallonie.be/api/ready
 ```
 
-## Deploiement courant deux serveurs
+## Deploiement courant applicatif + DB
 
-Sur le serveur backend:
+Sur le serveur applicatif `front-tool-prod`, pour l'API FastAPI:
 
 ```bash
 cd /opt/changethis/repo
-sudo API_URL=http://back.toolprod:8000 scripts/internal/deploy-backend.sh
+sudo API_URL=http://127.0.0.1:8000 scripts/internal/deploy-backend.sh
 ```
 
 Le script backend fait:
@@ -125,7 +126,7 @@ Le script backend fait:
 - restart `changethis-api`
 - smoke checks FastAPI `/health` et `/ready`
 
-Sur le serveur frontend:
+Sur le meme serveur applicatif `front-tool-prod`, pour Next.js:
 
 ```bash
 cd /opt/changethis/repo
@@ -140,7 +141,7 @@ Le script frontend fait:
 - restart `changethis-web`
 - smoke checks publics `/api/health` et `/api/ready`
 
-Le script `scripts/internal/deploy.sh` reste disponible pour une installation monserveur, mais il n'est pas adapte a deux machines separees.
+Le script `scripts/internal/deploy.sh` reste disponible pour une installation monserveur applicative; la base PostgreSQL reste portee par `back-tool-prod`.
 
 ## Rollback
 

@@ -6,11 +6,57 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import get_settings
 from ..database import get_db
-from ..models import Session, User
-from ..schemas import LoginRequest, LoginResponse, SessionResponse, UserSummary, WorkspaceSummary
-from ..security import create_session, hash_session_token, session_from_token, verify_password
+from ..models import Session, User, Workspace, WorkspaceMember
+from ..schemas import LoginRequest, LoginResponse, SessionResponse, SignUpRequest, UserSummary, WorkspaceSummary
+from ..security import create_session, hash_password, hash_session_token, session_from_token, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/signup", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
+async def signup(payload: SignUpRequest, response: Response, db: AsyncSession = Depends(get_db)) -> LoginResponse:
+    settings = get_settings()
+
+    if not settings.enable_public_signup:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Public signup is disabled")
+
+    email = payload.email.lower()
+    workspace_name = payload.workspace_name.strip()
+    if not workspace_name:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Workspace name is required")
+
+    existing = await db.execute(select(User.id).where(User.email == email).limit(1))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+
+    user = User(email=email, password_hash=hash_password(payload.password), status="active")
+    db.add(user)
+    await db.flush()
+
+    workspace = Workspace(name=workspace_name, owner_id=user.id, plan="free")
+    db.add(workspace)
+    await db.flush()
+
+    membership = WorkspaceMember(workspace_id=workspace.id, user_id=user.id, role="owner", status="active", joined_at=datetime.now(UTC))
+    db.add(membership)
+
+    token, _session = await create_session(db, user)
+    await db.commit()
+
+    response.set_cookie(
+        settings.session_cookie_name,
+        token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=settings.session_ttl_seconds,
+        path="/",
+    )
+    return LoginResponse(
+        access_token=token,
+        user=UserSummary(id=user.id, email=user.email, display_name=user.display_name),
+        workspace=WorkspaceSummary(id=workspace.id, name=workspace.name, role=membership.role),
+    )
 
 
 @router.post("/login", response_model=LoginResponse)

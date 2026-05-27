@@ -4,6 +4,7 @@ set -euo pipefail
 DB_NAME="${DB_NAME:-changethis}"
 DB_USER="${DB_USER:-changethis}"
 DB_PASSWORD="${DB_PASSWORD:-}"
+DB_HOST="${DB_HOST:-back.toolprod}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "Run as root." >&2
@@ -41,6 +42,10 @@ SQL
 
 cat <<OUT
 PostgreSQL ready.
+Local verification URL on this DB server:
 DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}
-Store this value in /etc/changethis/api.env and do not commit it.
+
+Application URL to store in /etc/changethis/api.env on front-tool-prod:
+DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}
+Do not commit it.
 OUT

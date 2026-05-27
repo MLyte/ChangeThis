@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import type { AuthSession, WorkspaceRole } from "./auth";
 
-const DEFAULT_INTERNAL_API_URL = "http://back.toolprod:8000";
+const DEFAULT_INTERNAL_API_URL = "http://127.0.0.1:8000";
 const INTERNAL_SESSION_COOKIE = "changethis_internal_session";
 
 type InternalLoginResult =
@@ -13,6 +13,16 @@ type InternalLoginResult =
   | {
       ok: false;
       error: "invalid" | "unavailable" | "missing";
+    };
+
+type InternalSignUpResult =
+  | {
+      ok: true;
+      accessToken: string;
+    }
+  | {
+      ok: false;
+      error: "disabled" | "duplicate" | "invalid" | "unavailable" | "missing";
     };
 
 type InternalSessionResponse = {
@@ -85,6 +95,59 @@ export async function signInWithInternalPassword(input: {
   }
 }
 
+export async function signUpWithInternalPassword(input: {
+  email: string;
+  password: string;
+  workspaceName: string;
+}): Promise<InternalSignUpResult> {
+  if (!input.email || !input.password || !input.workspaceName) {
+    return { ok: false, error: "missing" };
+  }
+
+  try {
+    const response = await fetch(`${getInternalApiUrl()}/auth/signup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: input.email,
+        password: input.password,
+        workspace_name: input.workspaceName
+      }),
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        return { ok: false, error: "disabled" };
+      }
+
+      if (response.status === 409) {
+        return { ok: false, error: "duplicate" };
+      }
+
+      if (response.status === 422) {
+        return { ok: false, error: "invalid" };
+      }
+
+      return { ok: false, error: "unavailable" };
+    }
+
+    const body = await response.json() as { access_token?: unknown };
+    if (typeof body.access_token !== "string") {
+      return { ok: false, error: "unavailable" };
+    }
+
+    return {
+      ok: true,
+      accessToken: body.access_token
+    };
+  } catch {
+    return { ok: false, error: "unavailable" };
+  }
+}
+
 export async function setInternalSessionCookie(accessToken: string): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(INTERNAL_SESSION_COOKIE, accessToken, {
@@ -93,6 +156,26 @@ export async function setInternalSessionCookie(accessToken: string): Promise<voi
     sameSite: "lax",
     path: "/"
   });
+}
+
+export async function logoutInternalSession(request?: Request): Promise<void> {
+  const token = await readInternalSessionToken(request);
+  if (!token) {
+    return;
+  }
+
+  try {
+    await fetch(`${getInternalApiUrl()}/auth/logout`, {
+      method: "POST",
+      headers: {
+        Cookie: `${INTERNAL_SESSION_COOKIE}=${encodeURIComponent(token)}`,
+        Accept: "application/json"
+      },
+      cache: "no-store"
+    });
+  } catch {
+    // Logout must still clear the browser cookie when the internal API is unavailable.
+  }
 }
 
 export async function getInternalCurrentSession(request?: Request): Promise<AuthSession | null> {
@@ -132,10 +215,16 @@ async function readInternalSessionToken(request?: Request): Promise<string | und
     return decodeURIComponent(tokenFromRequest);
   }
 
-  const authorization = request?.headers.get("authorization") ?? (await headers()).get("authorization");
+  const authorization = request
+    ? request.headers.get("authorization")
+    : (await headers()).get("authorization");
   const bearerToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (bearerToken) {
     return bearerToken;
+  }
+
+  if (request) {
+    return undefined;
   }
 
   return (await cookies()).get(INTERNAL_SESSION_COOKIE)?.value;

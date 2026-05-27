@@ -81,8 +81,8 @@ Cette contrainte evite de complexifier CORS cote navigateur. Next.js reste la co
 
 ## Deploiement interne
 
-- `frontend.toolprod`: service `changethis-web.service`, Next.js sur `127.0.0.1:3000`.
-- `back.toolprod`: service `changethis-api.service`, FastAPI sur `0.0.0.0:8000` ou IP privee backend.
+- `front-tool-prod` / `frontend.toolprod`: services `changethis-web.service` et `changethis-api.service`, Next.js sur `127.0.0.1:3000` et FastAPI sur `127.0.0.1:8000`.
+- `back-tool-prod` / `back.toolprod`: PostgreSQL interne uniquement.
 - Domaine utilisateur: `https://changethis.cra.wallonie.be`.
 - Vhost frontal: reverse proxy vers Next.js.
 - Secrets: `/etc/changethis/web.env` et `/etc/changethis/api.env`, lisibles uniquement par l'utilisateur applicatif.

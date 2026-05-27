@@ -28,14 +28,14 @@ NODE_ENV=production
 NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
 AUTH_MODE=internal
 DATA_STORE=internal
-INTERNAL_API_URL=http://back.toolprod:8000
+INTERNAL_API_URL=http://127.0.0.1:8000
 CHANGETHIS_SECRET_KEY=...
 ```
 
 Le backend FastAPI utilise son propre fichier d'environnement:
 
 ```env
-DATABASE_URL=postgresql+asyncpg://changethis:<secret>@localhost:5432/changethis
+DATABASE_URL=postgresql+asyncpg://changethis:<secret>@back.toolprod:5432/changethis
 SESSION_SECRET=...
 CHANGETHIS_SECRET_KEY=...
 ALLOWED_PUBLIC_ORIGINS=https://changethis.cra.wallonie.be
