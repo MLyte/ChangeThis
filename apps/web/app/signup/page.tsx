@@ -73,7 +73,6 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     const currentSession = await getCurrentSession();
     const email = formData.get("email")?.toString().trim() ?? "";
     const password = formData.get("password")?.toString() ?? "";
-    const workspaceName = formData.get("workspaceName")?.toString().trim() ?? "";
 
     if (currentSession?.workspace) {
       redirect("/projects");
@@ -88,7 +87,11 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     }
 
     if (authMode === "internal") {
-      const signUpResult = await signUpWithInternalPassword({ email, password, workspaceName });
+      const signUpResult = await signUpWithInternalPassword({
+        email,
+        password,
+        workspaceName: workspaceNameFromEmail(email)
+      });
 
       if (!signUpResult.ok) {
         redirect(`/signup?error=${encodeURIComponent(signUpResult.error)}`);
@@ -206,12 +209,6 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             </form>
           ) : (
             <form action={signUpAction} className="auth-form">
-              {isInternalMode ? (
-                <label>
-                  <T k="signup.organization" />
-                  <input autoComplete="organization" name="workspaceName" required type="text" />
-                </label>
-              ) : null}
               <label>
                 <T k="login.email" />
                 <input autoComplete="email" name="email" required type="email" />
@@ -239,4 +236,9 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       <AppFooter />
     </main>
   );
+}
+
+function workspaceNameFromEmail(email: string): string {
+  const domain = email.split("@")[1]?.trim().toLowerCase();
+  return domain ? `Espace ${domain}` : "Espace ChangeThis";
 }

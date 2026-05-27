@@ -361,6 +361,7 @@ Note 2026-05-27: domaine applicatif interne retenu: `https://changethis.cra.wall
 - [ ] Valider les clients pilotes et le périmètre du dry-run staging.
 
 ## Journal
+- [2026-05-27] Correction UX signup interne: retrait du champ visible `Nom de l'organisation`; le nom de workspace est maintenant infere depuis le domaine de l'e-mail avant l'appel FastAPI.
 - [2026-05-27] Alignement topologie interne CRA: `front-tool-prod` / `frontend.toolprod` porte maintenant Next.js + FastAPI, `back-tool-prod` / `back.toolprod` ne porte que PostgreSQL. Les defaults code/scripts/docs utilisent `INTERNAL_API_URL=http://127.0.0.1:8000`; les exemples `DATABASE_URL` applicatifs pointent vers `back.toolprod:5432`.
 - [2026-05-27] Migration signup auth interne: ajout de `POST /auth/signup` FastAPI (user + workspace + membership owner + session), branche signup Next.js `AUTH_MODE=internal`, cookie `changethis_internal_session` pris en compte par proxy/logout, et correction du mapping SQLAlchemy `User.memberships`. Validation: tests web OK, typecheck web OK, tests API OK via `UV_CACHE_DIR=/tmp/uv-cache uv run --extra test pytest`, build monorepo OK; smoke standalone OK sauf `/api/ready` en 503 attendu sans backend FastAPI local.
 - [2026-05-21] Correctif migrations Alembic backend: les commandes hors systemd chargent maintenant `/etc/changethis/api.env` avant `alembic upgrade head`, pour fournir `DATABASE_URL` et `SESSION_SECRET` a Pydantic Settings. Validation ciblee: `bash -n` OK sur scripts backend/deploy.
