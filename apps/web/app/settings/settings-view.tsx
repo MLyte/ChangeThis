@@ -1,5 +1,5 @@
 import { forbidden, unauthorized } from "next/navigation";
-import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
+import { getAuthMode, isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import { getFeedbackRepository } from "../../lib/feedback-repository";
 import { listProviderIntegrationsAsync } from "../../lib/provider-integrations";
 import { installSnippet, listConfiguredProjects } from "../../lib/project-registry";
@@ -88,16 +88,24 @@ async function loadWorkspaceUsers(
   workspaceId: string,
   currentUser: { userId: string; email: string; role: string }
 ): Promise<WorkspaceMemberSummary[]> {
+  if (getAuthMode() !== "supabase") {
+    return [currentWorkspaceUser(currentUser)];
+  }
+
   const users = await listWorkspaceMembers(workspaceId);
 
   if (users.length > 0) {
     return users;
   }
 
-  return [{
+  return [currentWorkspaceUser(currentUser)];
+}
+
+function currentWorkspaceUser(currentUser: { userId: string; email: string; role: string }): WorkspaceMemberSummary {
+  return {
     userId: currentUser.userId,
     email: currentUser.email,
     role: currentUser.role,
     status: "active"
-  }];
+  };
 }
