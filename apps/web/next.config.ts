@@ -18,6 +18,7 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  output: 'standalone',   // add this
   turbopack: {
     root: fileURLToPath(new URL("../..", import.meta.url))
   },

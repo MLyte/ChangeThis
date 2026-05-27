@@ -56,7 +56,7 @@ WorkingDirectory=${APP_ROOT}/repo/apps/web
 EnvironmentFile=/etc/changethis/web.env
 Environment=HOSTNAME=${WEB_HOST}
 Environment=PORT=${WEB_PORT}
-ExecStart=/usr/bin/npm run start
+ExecStart=/usr/bin/node ${APP_ROOT}/repo/apps/web/.next/standalone/server.js
 Restart=always
 RestartSec=5
 
@@ -65,6 +65,11 @@ WantedBy=multi-user.target
 SERVICE
 
 cat >/etc/nginx/sites-available/changethis <<NGINX
+map \$http_upgrade \$connection_upgrade {
+  default upgrade;
+  ''      close;
+}
+
 server {
   listen 80;
   server_name ${APP_DOMAIN};
@@ -77,7 +82,8 @@ server {
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto \$scheme;
     proxy_set_header Upgrade \$http_upgrade;
-    proxy_set_header Connection "upgrade";
+    proxy_set_header Connection \$connection_upgrade;
+    proxy_buffering off;
   }
 }
 NGINX
