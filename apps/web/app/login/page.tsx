@@ -32,7 +32,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   const hasError = Boolean(params?.error);
-  const isLocalMode = getAuthMode() === "local";
+  const authMode = getAuthMode();
+  const isLocalMode = authMode === "local";
+  const isInternalMode = authMode === "internal";
   const publicSignupEnabled = isPublicSignupEnabled();
 
   async function loginAction(formData: FormData) {
@@ -107,7 +109,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </div>
           ) : null}
 
-          <form action={loginAction} className="auth-form">
+          <form action={isInternalMode ? "/api/auth/login" : loginAction} className="auth-form" method={isInternalMode ? "post" : undefined}>
             <input name="next" type="hidden" value={nextPath} />
             <label>
               <T k="login.email" />
