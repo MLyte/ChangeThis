@@ -14,6 +14,12 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (isPublicAccessPaused()) {
+    // During the app.changethis.dev public pause, avoid sending visitors to an
+    // auth screen that may depend on paused Railway/Supabase services.
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   const hasSession = Boolean(
     request.cookies.get("changethis_access_token")?.value
     ?? request.cookies.get("sb-access-token")?.value
@@ -42,4 +48,9 @@ function isLocalAuthMode(): boolean {
   }
 
   return !process.env.AUTH_MODE && process.env.NODE_ENV !== "production";
+}
+
+function isPublicAccessPaused(): boolean {
+  const pauseFlag = process.env.PUBLIC_ACCESS_PAUSED?.trim().toLowerCase();
+  return pauseFlag !== "false" && pauseFlag !== "0";
 }

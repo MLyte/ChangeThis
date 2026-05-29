@@ -256,6 +256,10 @@ textarea,
   color: var(--success);
 }
 
+.header-pause-pill {
+  flex: 0 0 auto;
+}
+
 .local-signup-cta {
   min-height: 32px;
   padding: 7px 10px;
@@ -2990,6 +2994,26 @@ dd {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.public-pause-layout {
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.55fr);
+}
+
+.public-pause-hero {
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.55fr);
+}
+
+.public-pause-copy h1 {
+  max-width: 760px;
+}
+
+.public-pause-card .microcopy {
+  margin: 0;
+}
+
+.public-pause-card.compact {
+  gap: 12px;
 }
 
 .dashboard {

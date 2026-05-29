@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Accessibility, ClipboardCheck, Code2, FileText, GitBranch, Globe2, Mail, MonitorCheck, Pin, ShieldCheck, SlidersHorizontal, Sparkles, UserPlus, Users, type LucideIcon } from "lucide-react";
-import { getCurrentSession, isPublicSignupEnabled } from "../lib/auth";
+import { getCurrentSession, isPublicAccessPaused, isPublicSignupEnabled } from "../lib/auth";
 import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
@@ -11,6 +11,7 @@ import { T, TRich } from "./i18n";
 import { HomeLoginLink } from "./home-login-link";
 import { MarketingConsolePreview } from "./marketing-console-preview";
 import { ProviderBadge, ProviderIcon } from "./provider-badge";
+import { PublicPauseCard } from "./public-pause";
 
 export const dynamic = "force-dynamic";
 
@@ -80,8 +81,9 @@ type HomePageProps = {
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const publicSignupEnabled = isPublicSignupEnabled();
-  const session = await getCurrentSession();
+  const publicAccessPaused = isPublicAccessPaused();
+  const publicSignupEnabled = !publicAccessPaused && isPublicSignupEnabled();
+  const session = publicAccessPaused ? null : await getCurrentSession();
   const isSignedIn = Boolean(session);
   const params = await searchParams;
   const waitlistStatus = normalizeWaitlistStatus(params?.waitlist);
@@ -106,7 +108,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     <main className="shell app-home">
       <AppHeader
         showAuthLinks
-        suppressSession={!session}
+        suppressAuthActions={publicAccessPaused}
+        suppressSession={!session || publicAccessPaused}
         session={session ? {
           email: session.user.email,
           isLocalMode: session.user.id === "local-dev-user"
@@ -136,7 +139,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
 
         <div className="home-hero-action">
-          {isSignedIn ? (
+          {publicAccessPaused ? (
+            <PublicPauseCard />
+          ) : isSignedIn ? (
             <SignupAccessCard isSignedIn />
           ) : publicSignupEnabled ? (
             <SignupAccessCard />
@@ -245,14 +250,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </article>
             ))}
           </div>
-          {publicSignupEnabled ? (
+          {publicAccessPaused ? (
+            <PublicPauseCard compact />
+          ) : publicSignupEnabled ? (
             <SignupAccessCard compact isSignedIn={isSignedIn} />
           ) : (
             <WaitlistForm action={waitlistAction} compact waitlistStatus={waitlistStatus} />
           )}
         </div>
       </section>
-      <AppFooter suppressSession={!publicSignupEnabled} />
+      <AppFooter suppressSession={!publicSignupEnabled || publicAccessPaused} />
     </main>
   );
 }

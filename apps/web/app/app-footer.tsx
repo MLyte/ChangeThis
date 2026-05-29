@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { FileText, LifeBuoy, LogOut, Rocket, ShieldCheck, ShipWheel, UserRound } from "lucide-react";
-import { getCurrentSession } from "../lib/auth";
+import { getCurrentSession, isPublicAccessPaused } from "../lib/auth";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { T } from "./i18n";
 
@@ -9,10 +9,11 @@ type AppFooterProps = {
 };
 
 export async function AppFooter({ suppressSession = false }: AppFooterProps) {
+  const publicAccessPaused = isPublicAccessPaused();
   const authMode = process.env.AUTH_MODE === "supabase" ? "supabase" : "local";
   const dataStore = process.env.DATA_STORE === "supabase" ? "supabase" : "local";
   const isProductionReadyRuntime = authMode === "supabase" && dataStore === "supabase";
-  const footerSession = suppressSession ? undefined : await loadFooterSession();
+  const footerSession = suppressSession || publicAccessPaused ? undefined : await loadFooterSession();
 
   return (
     <footer className="app-footer">
@@ -22,20 +23,22 @@ export async function AppFooter({ suppressSession = false }: AppFooterProps) {
         <span className="footer-copy"><T k="footer.copy" /></span>
       </div>
       <div className="footer-ops">
-        {footerSession ? (
+        {footerSession || publicAccessPaused ? (
           <div className="runtime-status" aria-label="Environnement">
-            <span className="runtime-pill is-ready">
+            <span className={`runtime-pill ${publicAccessPaused ? "is-local" : "is-ready"}`}>
               <Rocket aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
               <span className="footer-pill-label">
-                <T k="footer.status.openBeta" />
+                <T k={publicAccessPaused ? "footer.status.paused" : "footer.status.openBeta"} />
               </span>
             </span>
-            <span className={`runtime-pill ${isProductionReadyRuntime ? "is-ready" : "is-local"}`}>
-              <ShieldCheck aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
-              <span className="footer-pill-label">
-                <T k={isProductionReadyRuntime ? "footer.runtime.production" : "footer.runtime.local"} />
+            {!publicAccessPaused ? (
+              <span className={`runtime-pill ${isProductionReadyRuntime ? "is-ready" : "is-local"}`}>
+                <ShieldCheck aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
+                <span className="footer-pill-label">
+                  <T k={isProductionReadyRuntime ? "footer.runtime.production" : "footer.runtime.local"} />
+                </span>
               </span>
-            </span>
+            ) : null}
           </div>
         ) : null}
         {footerSession?.isLocalMode ? (
@@ -55,7 +58,7 @@ export async function AppFooter({ suppressSession = false }: AppFooterProps) {
           </div>
         ) : null}
         <nav aria-label="Footer">
-          <a className="footer-support-link" href="mailto:support@changethis.dev">
+          <a className="footer-support-link" href="https://mathieuluyten.be" rel="noreferrer" target="_blank">
             <LifeBuoy aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
             <T k="footer.support" />
           </a>

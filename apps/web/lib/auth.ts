@@ -169,6 +169,16 @@ export function isPublicSignupEnabled(): boolean {
   return signupFlag !== "false" && signupFlag !== "0";
 }
 
+export function isPublicAccessPaused(): boolean {
+  const pauseFlag = process.env.PUBLIC_ACCESS_PAUSED?.trim().toLowerCase();
+
+  // Operational pause switch for app.changethis.dev: it hides public auth and
+  // dashboard entry points without deleting the production auth flow. To reopen,
+  // set PUBLIC_ACCESS_PAUSED=false and then re-enable ENABLE_PUBLIC_SIGNUP if
+  // public signups should be available again after Railway/Supabase are ready.
+  return pauseFlag !== "false" && pauseFlag !== "0";
+}
+
 function toWorkspaceRole(value: string): WorkspaceRole {
   return isWorkspaceRole(value) ? value : "viewer";
 }

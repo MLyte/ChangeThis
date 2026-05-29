@@ -11,6 +11,7 @@ const originalEnv = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NODE_ENV: process.env.NODE_ENV,
+  PUBLIC_ACCESS_PAUSED: process.env.PUBLIC_ACCESS_PAUSED,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   VERCEL_ENV: process.env.VERCEL_ENV
 };
@@ -170,6 +171,25 @@ test("public signup is open by default and can be paused explicitly", async () =
   assert.equal(auth.isPublicSignupEnabled(), true);
 });
 
+test("public access pause is active by default and can be reopened explicitly", async () => {
+  delete process.env.PUBLIC_ACCESS_PAUSED;
+
+  let auth = await importAuthModule();
+  assert.equal(auth.isPublicAccessPaused(), true);
+
+  process.env.PUBLIC_ACCESS_PAUSED = "false";
+  auth = await importAuthModule();
+  assert.equal(auth.isPublicAccessPaused(), false);
+
+  process.env.PUBLIC_ACCESS_PAUSED = "0";
+  auth = await importAuthModule();
+  assert.equal(auth.isPublicAccessPaused(), false);
+
+  process.env.PUBLIC_ACCESS_PAUSED = "true";
+  auth = await importAuthModule();
+  assert.equal(auth.isPublicAccessPaused(), true);
+});
+
 async function importAuthModule(): Promise<AuthModule> {
   importCounter += 1;
   return await import(`${pathToFileURL(`${process.cwd()}/lib/auth.ts`).href}?auth-test-${importCounter}`) as AuthModule;
@@ -190,6 +210,7 @@ function restoreEnv(): void {
   restoreEnvValue("NEXT_PUBLIC_SUPABASE_ANON_KEY", originalEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   restoreEnvValue("NEXT_PUBLIC_SUPABASE_URL", originalEnv.NEXT_PUBLIC_SUPABASE_URL);
   restoreEnvValue("NODE_ENV", originalEnv.NODE_ENV);
+  restoreEnvValue("PUBLIC_ACCESS_PAUSED", originalEnv.PUBLIC_ACCESS_PAUSED);
   restoreEnvValue("SUPABASE_SERVICE_ROLE_KEY", originalEnv.SUPABASE_SERVICE_ROLE_KEY);
   restoreEnvValue("VERCEL_ENV", originalEnv.VERCEL_ENV);
 }

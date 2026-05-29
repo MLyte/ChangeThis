@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Inbox, LogOut, Settings, UserRound, type LucideIcon } from "lucide-react";
+import { Inbox, LogOut, Rocket, Settings, UserRound, type LucideIcon } from "lucide-react";
 import { AppNavLink } from "./app-nav-link";
 import logoChangeThis from "./assets/logoChangeThis.png";
 import { LanguageSwitch, T } from "./i18n";
-import { getCurrentSession, isPublicSignupEnabled } from "../lib/auth";
+import { getCurrentSession, isPublicAccessPaused, isPublicSignupEnabled } from "../lib/auth";
 
 type HeaderNavItem = {
   href: string;
@@ -29,11 +29,12 @@ export async function AppHeader({
   suppressSession = false,
   session
 }: AppHeaderProps) {
+  const publicAccessPaused = isPublicAccessPaused();
   const publicSignupEnabled = isPublicSignupEnabled();
-  const resolvedSession = suppressSession ? undefined : session ?? await loadHeaderSession();
+  const resolvedSession = suppressSession || publicAccessPaused ? undefined : session ?? await loadHeaderSession();
   const showPrimaryNav = resolvedSession && navItems.length > 0;
   const showConsoleShortcut = resolvedSession && !showPrimaryNav;
-  const showPublicAuthActions = !suppressAuthActions && !resolvedSession && (showAuthLinks || navItems.length > 0 || publicSignupEnabled);
+  const showPublicAuthActions = !publicAccessPaused && !suppressAuthActions && !resolvedSession && (showAuthLinks || navItems.length > 0 || publicSignupEnabled);
   const showHeaderSession = resolvedSession && !resolvedSession.isLocalMode;
 
   return (
@@ -87,6 +88,13 @@ export async function AppHeader({
                 <T k="nav.logout" />
               </a>
             </div>
+          ) : null}
+
+          {publicAccessPaused ? (
+            <span className="runtime-pill is-local header-pause-pill">
+              <Rocket aria-hidden="true" className="ui-icon" size={14} strokeWidth={2.2} />
+              <T k="footer.status.paused" />
+            </span>
           ) : null}
 
           <LanguageSwitch />

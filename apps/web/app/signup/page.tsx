@@ -1,11 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getAuthMode, getCurrentSession, isPublicSignupEnabled } from "../../lib/auth";
+import { getAuthMode, getCurrentSession, isPublicAccessPaused, isPublicSignupEnabled } from "../../lib/auth";
 import { setSupabaseSessionCookies } from "../../lib/auth-session-cookies";
 import { isSupabaseServiceConfigured, requestSignUpCode, verifySupabaseEmailCode } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
+import { PublicPausePage } from "../public-pause";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,10 @@ type SignUpPageProps = {
 };
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
+  if (isPublicAccessPaused()) {
+    return <PublicPausePage compact />;
+  }
+
   const currentSession = await getCurrentSession();
 
   if (currentSession?.workspace) {

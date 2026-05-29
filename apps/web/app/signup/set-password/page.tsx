@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getAuthMode, getCurrentSession } from "../../../lib/auth";
+import { getAuthMode, getCurrentSession, isPublicAccessPaused } from "../../../lib/auth";
 import { createWorkspaceForUser, updateSupabasePassword } from "../../../lib/supabase-server";
 import { AppFooter } from "../../app-footer";
 import { AppHeader } from "../../app-header";
 import { T } from "../../i18n";
+import { PublicPausePage } from "../../public-pause";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,10 @@ type SetPasswordPageProps = {
 };
 
 export default async function SetPasswordPage({ searchParams }: SetPasswordPageProps) {
+  if (isPublicAccessPaused()) {
+    return <PublicPausePage compact />;
+  }
+
   const params = await searchParams;
   const hasError = Boolean(params?.error);
   const isLocalMode = getAuthMode() === "local";
