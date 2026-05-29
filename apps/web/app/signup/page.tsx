@@ -208,7 +208,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
               </button>
             </form>
           ) : (
-            <form action={signUpAction} className="auth-form">
+            <form action={isInternalMode ? "/api/auth/signup" : signUpAction} className="auth-form" method={isInternalMode ? "post" : undefined}>
               <label>
                 <T k="login.email" />
                 <input autoComplete="email" name="email" required type="email" />

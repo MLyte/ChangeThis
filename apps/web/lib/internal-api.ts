@@ -1,8 +1,9 @@
 import { cookies, headers } from "next/headers";
+import type { NextResponse } from "next/server";
 import type { AuthSession, WorkspaceRole } from "./auth";
 
 const DEFAULT_INTERNAL_API_URL = "http://127.0.0.1:8000";
-const INTERNAL_SESSION_COOKIE = "changethis_internal_session";
+export const INTERNAL_SESSION_COOKIE = "changethis_internal_session";
 
 type InternalLoginResult =
   | {
@@ -151,6 +152,15 @@ export async function signUpWithInternalPassword(input: {
 export async function setInternalSessionCookie(accessToken: string): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(INTERNAL_SESSION_COOKIE, accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/"
+  });
+}
+
+export function setInternalSessionCookieOnResponse(response: NextResponse, accessToken: string): void {
+  response.cookies.set(INTERNAL_SESSION_COOKIE, accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
