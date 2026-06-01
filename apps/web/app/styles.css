@@ -5865,6 +5865,38 @@ dd {
   gap: 10px;
 }
 
+.site-project-tabs {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.site-project-tabs span {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 10px;
+}
+
+.site-project-tabs span.is-active {
+  background: var(--primary-softer);
+  border-color: var(--primary-soft);
+  color: var(--primary);
+}
+
+.site-project-tabs strong {
+  color: inherit;
+  font-size: 12px;
+}
+
 .site-repo-row {
   display: grid;
   gap: 12px;

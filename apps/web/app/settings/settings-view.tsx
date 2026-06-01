@@ -30,20 +30,35 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
 
   const workspaceId = session.workspace.id;
   const canManageMembers = session.workspace.role === "admin" || session.workspace.role === "owner";
+  const ownProjectAccesses = canManageMembers || section !== "connected-sites"
+    ? []
+    : await listProjectIssueAccesses({ workspaceId, userId: session.user.id });
+  const canViewConnectedSites = canManageMembers || ownProjectAccesses.some((access) => access.status === "active");
 
-  if (section !== "account" && !canManageMembers) {
+  if (section === "git-connections" && !canManageMembers) {
     redirect("/settings/account");
   }
 
-  const shouldLoadSiteSettings = section === "connected-sites" && canManageMembers;
-  const projects = shouldLoadSiteSettings ? await listConfiguredProjects(workspaceId) : [];
+  if (section === "connected-sites" && !canViewConnectedSites) {
+    redirect("/settings/account");
+  }
+
+  const shouldLoadSiteSettings = section === "connected-sites" && canViewConnectedSites;
+  const allowedProjectKeys = new Set(ownProjectAccesses.filter((access) => access.status === "active").map((access) => access.projectKey));
+  const projects = shouldLoadSiteSettings
+    ? (await listConfiguredProjects(workspaceId)).filter((project) => canManageMembers || allowedProjectKeys.has(project.publicKey))
+    : [];
   const feedbacks = shouldLoadSiteSettings ? await getFeedbackRepository().list({ workspaceId }) : [];
   const projectViews = await Promise.all(projects.map(async (project) => {
     const projectFeedbacks = feedbacks.filter((feedback) => feedback.projectKey === project.publicKey);
+    const issueAccesses = canManageMembers
+      ? await listProjectIssueAccesses({ workspaceId, projectKey: project.publicKey })
+      : ownProjectAccesses.filter((access) => access.projectKey === project.publicKey);
+
     return {
       ...project,
       installSnippet: installSnippet(project),
-      issueAccesses: await listProjectIssueAccesses({ workspaceId, projectKey: project.publicKey }),
+      issueAccesses,
       metrics: {
         feedbacksReceived: projectFeedbacks.length,
         issuesCreated: projectFeedbacks.filter((feedback) => feedback.status === "sent_to_provider" || feedback.externalIssue).length,
@@ -68,7 +83,9 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
           integrations={providerIntegrations}
           projects={projectViews}
           canManageMembers={canManageMembers}
+          canViewConnectedSites={canViewConnectedSites}
           currentUserEmail={session.user.email}
+          currentUserId={session.user.id}
           section={section}
         />
       </section>

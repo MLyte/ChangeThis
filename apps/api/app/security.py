@@ -42,6 +42,23 @@ async def session_from_token(db: AsyncSession, token: str | None) -> tuple[User,
     if not token:
         return None
 
+    result = await db.execute(
+        select(User, WorkspaceMember, Workspace)
+        .join(Session, Session.user_id == User.id)
+        .join(WorkspaceMember, WorkspaceMember.user_id == User.id)
+        .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
+        .where(Session.token_hash == hash_session_token(token))
+        .where(Session.revoked_at.is_(None))
+        .where(Session.expires_at > datetime.now(UTC))
+        .where(User.status == "active")
+        .where(WorkspaceMember.status == "active")
+        .order_by(WorkspaceMember.created_at.asc())
+        .limit(1)
+    )
+    row = result.first()
+    if row:
+        return row[0], row[1], row[2]
+
     project_access_result = await db.execute(
         select(User, Workspace, ProjectIssueMember)
         .join(Session, Session.user_id == User.id)
@@ -67,20 +84,4 @@ async def session_from_token(db: AsyncSession, token: str | None) -> tuple[User,
             )
             return user, synthetic_membership, workspace
 
-    result = await db.execute(
-        select(User, WorkspaceMember, Workspace)
-        .join(Session, Session.user_id == User.id)
-        .join(WorkspaceMember, WorkspaceMember.user_id == User.id)
-        .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
-        .where(Session.token_hash == hash_session_token(token))
-        .where(Session.revoked_at.is_(None))
-        .where(Session.expires_at > datetime.now(UTC))
-        .where(User.status == "active")
-        .where(WorkspaceMember.status == "active")
-        .order_by(WorkspaceMember.created_at.asc())
-        .limit(1)
-    )
-    row = result.first()
-    if row:
-        return row[0], row[1], row[2]
     return None

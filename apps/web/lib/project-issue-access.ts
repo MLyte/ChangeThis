@@ -135,6 +135,24 @@ export async function replaceProjectIssueAccesses(input: {
   return nextAccesses;
 }
 
+export async function removeProjectIssueAccess(input: {
+  workspaceId: string;
+  projectKey: string;
+  userId: string;
+}): Promise<void> {
+  if (usesInternalProjectIssueAccess()) {
+    await removeInternalProjectIssueAccess(input);
+    return;
+  }
+
+  await updateStore((store) => {
+    store.accesses = store.accesses.filter((access) => (
+      access.projectKey !== input.projectKey
+      || access.userId !== input.userId
+    ));
+  });
+}
+
 function usesInternalProjectIssueAccess(): boolean {
   return getDataStoreMode() === "internal";
 }
@@ -221,6 +239,47 @@ async function replaceInternalProjectIssueAccesses(input: {
 
   const rows = await response.json() as InternalProjectIssueMemberRow[];
   return rows.flatMap(mapInternalProjectIssueMember);
+}
+
+async function removeInternalProjectIssueAccess(input: {
+  workspaceId: string;
+  projectKey: string;
+  userId: string;
+}): Promise<void> {
+  const cookieHeader = await getInternalSessionCookieHeader();
+  if (!cookieHeader) {
+    throw new Error("Authentication required");
+  }
+
+  const params = new URLSearchParams({
+    workspace_id: input.workspaceId,
+    project_key: input.projectKey,
+    user_id: input.userId
+  });
+
+  const response = await fetch(`${getInternalApiUrl()}/project-issue-members?${params.toString()}`, {
+    method: "DELETE",
+    headers: {
+      Cookie: cookieHeader,
+      Accept: "application/json"
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    let message = "Unable to remove project issue access";
+    try {
+      const body = await response.json() as { detail?: unknown; error?: unknown };
+      message = typeof body.detail === "string"
+        ? body.detail
+        : typeof body.error === "string"
+          ? body.error
+          : message;
+    } catch {
+      // Keep the generic message when the API does not return JSON.
+    }
+    throw new Error(message);
+  }
 }
 
 function mapInternalProjectIssueMember(row: InternalProjectIssueMemberRow): ProjectIssueAccess[] {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../../lib/api-security";
 import { findConfiguredProjectByKey } from "../../../../../../lib/project-registry";
-import { listProjectIssueAccesses, replaceProjectIssueAccesses } from "../../../../../../lib/project-issue-access";
+import { listProjectIssueAccesses, removeProjectIssueAccess, replaceProjectIssueAccesses } from "../../../../../../lib/project-issue-access";
 
 type RouteContext = {
   params: Promise<{
@@ -81,6 +81,37 @@ export async function PATCH(request: Request, context: RouteContext) {
       error: error instanceof Error ? projectIssueAccessErrorMessage(error.message) : "Impossible d'enregistrer les accès."
     }, { status: 422 });
   }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const session = await requireWorkspaceSession(request);
+  if (isAuthFailure(session)) {
+    return authFailureResponse(session);
+  }
+
+  const workspaceId = session.workspace?.id;
+  if (!workspaceId) {
+    return authFailureResponse({ error: "Project access required", status: 403 });
+  }
+
+  const csrfFailure = requirePrivateMutationOrigin(request);
+  if (csrfFailure) {
+    return csrfFailure;
+  }
+
+  const { projectKey } = await context.params;
+  const project = await findConfiguredProjectByKey(projectKey, workspaceId);
+  if (!project) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  const ownAccesses = await listProjectIssueAccesses({ workspaceId, projectKey, userId: session.user.id });
+  if (!ownAccesses.some((access) => access.status === "active")) {
+    return NextResponse.json({ error: "Project access not found" }, { status: 404 });
+  }
+
+  await removeProjectIssueAccess({ workspaceId, projectKey, userId: session.user.id });
+  return NextResponse.json({ ok: true });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

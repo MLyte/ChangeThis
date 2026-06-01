@@ -107,6 +107,30 @@ async def replace_project_issue_members(
     return await list_project_issue_members(payload.workspace_id, payload.project_key, None, changethis_internal_session, db)
 
 
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_project_issue_member(
+    workspace_id: UUID,
+    project_key: str,
+    user_id: UUID,
+    changethis_internal_session: str | None = Cookie(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    user, membership, _workspace = await require_workspace_session(changethis_internal_session, db)
+    if membership.workspace_id != workspace_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Workspace access required")
+
+    if user_id != user.id and membership.role not in ("owner", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient workspace role")
+
+    await db.execute(
+        delete(ProjectIssueMember)
+        .where(ProjectIssueMember.workspace_id == workspace_id)
+        .where(ProjectIssueMember.project_key == project_key)
+        .where(ProjectIssueMember.user_id == user_id)
+    )
+    await db.commit()
+
+
 async def require_workspace_session(token: str | None, db: AsyncSession):
     resolved = await session_from_token(db, token)
     if not resolved:

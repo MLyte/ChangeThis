@@ -31,7 +31,9 @@ type Props = {
   integrations: ProviderIntegrationSummary[];
   section: SettingsSection;
   canManageMembers?: boolean;
+  canViewConnectedSites?: boolean;
   currentUserEmail?: string;
+  currentUserId?: string;
 };
 
 type ProjectView = ChangeThisProject & {
@@ -131,7 +133,9 @@ export function IssueDestinationSetup({
   integrations,
   section,
   canManageMembers = false,
-  currentUserEmail
+  canViewConnectedSites = canManageMembers,
+  currentUserEmail,
+  currentUserId
 }: Props) {
   const { t } = useLanguage();
   const [projectViews, setProjectViews] = useState<ProjectView[]>(projects);
@@ -612,6 +616,31 @@ export function IssueDestinationSetup({
     });
   }
 
+  function leaveSharedProject(projectKey: string) {
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/issue-members`, {
+          method: "DELETE"
+        });
+        const body = await parseJsonResponse<{ ok?: boolean; error?: string }>(response);
+
+        if (!response.ok || !body?.ok) {
+          throw new Error(body?.error ?? "Impossible de retirer cet accès.");
+        }
+
+        const project = projectViews.find((item) => item.publicKey === projectKey);
+        setProjectViews((current) => current.filter((item) => item.publicKey !== projectKey));
+        toast.success("Accès retiré", {
+          description: project ? `Vous n'avez plus accès à ${project.name}.` : "Vous n'avez plus accès à ce projet."
+        });
+      } catch (error) {
+        toast.error("Accès conservé", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
+        });
+      }
+    });
+  }
+
   function deleteSite(projectKey: string) {
     startTransition(async () => {
       try {
@@ -738,22 +767,22 @@ export function IssueDestinationSetup({
 
       <div className="settings-layout">
         <aside className="settings-sidebar" aria-label={t("settings.sidebar.label")}>
+          {canManageMembers ? (
+            <a className={section === "git-connections" ? "is-active" : ""} href="/settings/git-connections">
+              <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+              <T k="settings.sidebar.gitConnections" />
+            </a>
+          ) : null}
+          {canViewConnectedSites ? (
+            <a className={section === "connected-sites" ? "is-active" : ""} href="/settings/connected-sites">
+              <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+              <T k="settings.sidebar.connectedSites" />
+            </a>
+          ) : null}
           <a className={section === "account" ? "is-active" : ""} href="/settings/account">
             <KeyRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
             <T k="settings.sidebar.account" />
           </a>
-          {canManageMembers ? (
-            <>
-              <a className={section === "git-connections" ? "is-active" : ""} href="/settings/git-connections">
-                <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                <T k="settings.sidebar.gitConnections" />
-              </a>
-              <a className={section === "connected-sites" ? "is-active" : ""} href="/settings/connected-sites">
-                <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                <T k="settings.sidebar.connectedSites" />
-              </a>
-            </>
-          ) : null}
         </aside>
 
         <div className="settings-content">
@@ -791,8 +820,10 @@ export function IssueDestinationSetup({
               onOpenSiteModal={openSiteModal}
               onSelectProvider={selectProvider}
               onUpdateWidgetSettings={updateWidgetSettings}
+              onLeaveSharedProject={leaveSharedProject}
               projects={projectViews}
               canManageMembers={canManageMembers}
+              currentUserId={currentUserId}
               siteOriginEditor={siteOriginEditor}
               onSiteOriginEditorChange={(value) => setSiteOriginEditor((current) => current ? { ...current, value } : current)}
               onCancelSiteOriginEdit={() => setSiteOriginEditor(undefined)}
@@ -1886,10 +1917,12 @@ function ConnectedSitesSection({
   onRepositoryUrlChange,
   onSelectProvider,
   onSelectRepository,
+  onLeaveSharedProject,
   onCancelSiteOriginEdit,
   onUpdateWidgetSettings,
   onSiteOriginEditorChange,
   projects,
+  currentUserId,
   siteOriginEditor,
   repositoryLoadMessage,
   repositoryLoadState,
@@ -1928,10 +1961,12 @@ function ConnectedSitesSection({
   onRepositoryUrlChange: (repositoryUrl: string) => void;
   onSelectProvider: (provider: IssueProvider) => void;
   onSelectRepository: (repositoryId: string) => void;
+  onLeaveSharedProject: (projectKey: string) => void;
   onCancelSiteOriginEdit: () => void;
   onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) => void;
   onSiteOriginEditorChange: (value: string) => void;
   projects: ProjectView[];
+  currentUserId?: string;
   siteOriginEditor?: SiteOriginEditor;
   repositoryLoadMessage: string;
   repositoryLoadState: RepositoryLoadState;
@@ -1962,6 +1997,10 @@ function ConnectedSitesSection({
   const hasRepositoryDestination = Boolean(selectedRepositoryId || (canUseRepositoryUrlFallback && repositoryUrl.trim()));
   const connectedIntegrations = Array.from(connectedProviders);
   const hasConnectedProvider = connectedIntegrations.length > 0;
+  const ownProjects = canManageMembers ? projects : [];
+  const sharedProjects = canManageMembers
+    ? projects.filter((project) => project.issueAccesses?.some((access) => access.status === "active" && access.userId === currentUserId))
+    : projects;
   const gitConnectionSummaries = providerOrder.map((provider) => {
     const integration = integrations.find((item) => item.provider === provider);
     const connected = connectedProviders.has(provider);
@@ -1983,20 +2022,27 @@ function ConnectedSitesSection({
           <p className="eyebrow">Pages connectées</p>
           <h2 id="linked-sites-title">Sites connectés</h2>
         </div>
-        <button className="button" onClick={() => onOpenSiteModal()} type="button">
-          <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-          Ajouter un nouveau site
-        </button>
+        {canManageMembers ? (
+          <button className="button" onClick={() => onOpenSiteModal()} type="button">
+            <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            Ajouter un nouveau site
+          </button>
+        ) : null}
       </div>
 
       {projects.length === 0 ? (
         <div className="empty-state connected-sites-empty">
           <div>
-            <p className="eyebrow">Premier site</p>
-            <h2>Aucun site connecté</h2>
-            <p>Créez un site réel pour obtenir une clé publique, limiter les origines autorisées et envoyer les retours vers le bon dépôt Git.</p>
+            <p className="eyebrow">{canManageMembers ? "Premier site" : "Projets partagés"}</p>
+            <h2>{canManageMembers ? "Aucun site connecté" : "Aucun projet partagé"}</h2>
+            <p>
+              {canManageMembers
+                ? "Créez un site réel pour obtenir une clé publique, limiter les origines autorisées et envoyer les retours vers le bon dépôt Git."
+                : "Les projets qu'un autre utilisateur partage avec vous apparaîtront ici."}
+            </p>
           </div>
-          <div className="onboarding-steps" aria-label="Étapes pour connecter un site">
+          {canManageMembers ? (
+            <div className="onboarding-steps" aria-label="Étapes pour connecter un site">
             <div className={`onboarding-step${hasConnectedProvider ? " done" : " current"}`}>
               <span>1</span>
               <div>
@@ -2028,27 +2074,34 @@ function ConnectedSitesSection({
                 <p>Copiez la balise widget générée puis vérifiez sa présence depuis cette page.</p>
               </div>
             </div>
-          </div>
+            </div>
+          ) : null}
           <div className="empty-state-actions">
-            {hasConnectedProvider ? (
+            {canManageMembers && hasConnectedProvider ? (
               <button className="button" onClick={() => onOpenSiteModal()} type="button">
                 <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                 Ajouter un nouveau site
               </button>
-            ) : (
+            ) : canManageMembers ? (
               <Link className="button" href="/settings/git-connections">
                 <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                 Connecter Git
               </Link>
-            )}
+            ) : null}
             <Link className="button secondary-button" href="/projects">
               Voir la file
             </Link>
           </div>
         </div>
       ) : (
+        <>
+        <div className="site-project-tabs" aria-label="Groupes de projets">
+          <span className={canManageMembers ? "is-active" : ""}>Mes projets <strong>{ownProjects.length}</strong></span>
+          <span className={!canManageMembers ? "is-active" : ""}>Projets partagés avec moi <strong>{sharedProjects.length}</strong></span>
+        </div>
         <div className="site-repo-list">
           {projects.map((project) => {
+            const isSharedProject = !canManageMembers || project.issueAccesses?.some((access) => access.status === "active" && access.userId === currentUserId) === true;
             const issueTarget = project.issueTarget;
             const providerConnected = connectedProviders.has(issueTarget.provider);
             const isReady = providerConnected && issueTarget.namespace && issueTarget.project;
@@ -2056,7 +2109,8 @@ function ConnectedSitesSection({
             const snippet = project.installSnippet ?? installSnippet(project);
             const failedIssueCount = project.metrics?.failedIssues ?? 0;
             const isEditingOrigin = siteOriginEditor?.projectKey === project.publicKey;
-            const editingOriginValidation = isEditingOrigin ? validateAllowedOrigin(siteOriginEditor.value) : undefined;
+            const activeSiteOriginEditor = isEditingOrigin ? siteOriginEditor : undefined;
+            const editingOriginValidation = activeSiteOriginEditor ? validateAllowedOrigin(activeSiteOriginEditor.value) : undefined;
             const siteAccessCount = project.issueAccesses?.filter((access) => access.status === "active").length ?? 0;
 
             return (
@@ -2069,9 +2123,9 @@ function ConnectedSitesSection({
                         {isReady ? "Actif" : "Git déconnecté"}
                       </span>
                       <ProviderBadge provider={issueTarget.provider} />
-                      <span className="status-badge muted">{siteAccessCount > 0 ? `${siteAccessCount} accès` : "Accès admin"}</span>
+                      <span className="status-badge muted">{isSharedProject ? "Partagé avec moi" : siteAccessCount > 0 ? `${siteAccessCount} accès` : "Mes projets"}</span>
                     </div>
-                    {isEditingOrigin ? (
+                    {activeSiteOriginEditor && canManageMembers ? (
                       <form className="site-origin-editor" onSubmit={(event) => {
                         event.preventDefault();
                         onSaveSiteOrigin(project.publicKey);
@@ -2083,10 +2137,10 @@ function ConnectedSitesSection({
                             disabled={isPending}
                             onChange={(event) => onSiteOriginEditorChange(event.target.value)}
                             type="url"
-                            value={siteOriginEditor.value}
+                            value={activeSiteOriginEditor.value}
                           />
                         </label>
-                        <p className={`origin-create-status ${editingOriginValidation?.ok ? "success" : siteOriginEditor.value.trim() ? "error" : ""}`} role="status">
+                        <p className={`origin-create-status ${editingOriginValidation?.ok ? "success" : activeSiteOriginEditor.value.trim() ? "error" : ""}`} role="status">
                           {editingOriginValidation?.message ?? "Saisissez l'URL du site à autoriser."}
                         </p>
                         <div className="site-origin-editor-actions">
@@ -2120,20 +2174,27 @@ function ConnectedSitesSection({
                         <T k="destinations.open" />
                       </a>
                     ) : null}
-                    <button className="button secondary-button" disabled={isPending} onClick={() => onEditSiteOrigin(project)} type="button">
-                      <Pencil aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                      Éditer
-                    </button>
                     {canManageMembers ? (
-                      <button className="button secondary-button" disabled={isPending} onClick={() => onOpenSiteAccess(project)} type="button">
-                        <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                        Accès
+                      <>
+                        <button className="button secondary-button" disabled={isPending} onClick={() => onEditSiteOrigin(project)} type="button">
+                          <Pencil aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Éditer
+                        </button>
+                        <button className="button secondary-button" disabled={isPending} onClick={() => onOpenSiteAccess(project)} type="button">
+                          <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Accès
+                        </button>
+                        <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
+                          <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Supprimer
+                        </button>
+                      </>
+                    ) : (
+                      <button className="button danger-button" disabled={isPending} onClick={() => onLeaveSharedProject(project.publicKey)} type="button">
+                        <X aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                        Retirer mon accès
                       </button>
-                    ) : null}
-                    <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
-                      <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                      Supprimer
-                    </button>
+                    )}
                   </div>
                 </div>
                 <div className="site-row-meta">
@@ -2144,6 +2205,8 @@ function ConnectedSitesSection({
                       <span title="Créations d'issues Git en échec"><strong>{failedIssueCount}</strong><small>Échecs Git</small></span>
                     ) : null}
                   </div>
+                  {canManageMembers ? (
+                    <>
                   <div className="widget-settings">
                     <ThemeDropdown
                       disabled={isPending}
@@ -2197,11 +2260,14 @@ function ConnectedSitesSection({
                       <span className="site-script-placeholder">Origine autorisée à corriger avant installation.</span>
                     )}
                   </div>
+                    </>
+                  ) : null}
                 </div>
               </article>
             );
           })}
         </div>
+        </>
       )}
 
       {isSiteModalOpen ? (
