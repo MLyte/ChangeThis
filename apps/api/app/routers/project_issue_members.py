@@ -36,7 +36,6 @@ async def list_project_issue_members(
     query = (
         select(ProjectIssueMember, User.email)
         .join(User, User.id == ProjectIssueMember.user_id)
-        .where(ProjectIssueMember.workspace_id == workspace_id)
         .where(ProjectIssueMember.status == "active")
         .where(User.status == "active")
         .order_by(ProjectIssueMember.created_at.asc())
