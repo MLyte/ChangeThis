@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas";
 import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackReporter, FeedbackType, PinTarget, WidgetReporterFields } from "@changethis/shared";
+import { captureFeedbackScreenshot } from "./capture.js";
 import { inferEndpoint, inferLocale } from "./inference.js";
 
 const capturePage = html2canvas as unknown as typeof import("html2canvas").default;
@@ -1881,13 +1882,13 @@ async function submitFeedback(params: {
   captureArea?: CaptureArea;
   appEnvironment?: FeedbackAppEnvironment;
 }): Promise<{ id?: string; screenshotDataUrl?: string }> {
-  const screenshotDataUrl = params.type === "screenshot" && params.captureArea
-    ? await captureViewport(params.captureArea)
-    : params.type === "pin"
-      ? await captureViewport()
-      : params.type === "comment"
-        ? await capturePageFeedbackPreview()
-        : undefined;
+  const screenshotDataUrl = await captureFeedbackScreenshot({
+    type: params.type,
+    captureArea: params.captureArea,
+    captureViewport,
+    capturePageFeedbackPreview,
+    warn: console.warn
+  });
   const screenshotThumbnailDataUrl = screenshotDataUrl
     ? await createImageThumbnail(screenshotDataUrl)
     : undefined;

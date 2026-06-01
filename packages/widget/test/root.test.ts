@@ -105,6 +105,7 @@ test("initChangeThis escapes configured button labels in the shadow DOM", async 
     createElement() {
       return new FakeElement();
     },
+    addEventListener() {},
     querySelectorAll() {
       return [];
     }
@@ -176,6 +177,7 @@ test("initChangeThis renders subtle button as a bug icon without visible text", 
     createElement() {
       return new FakeElement();
     },
+    addEventListener() {},
     querySelectorAll() {
       return [];
     }
@@ -250,6 +252,7 @@ test("initChangeThis hides pin and capture modes on touch viewports", async () =
     createElement() {
       return new FakeElement();
     },
+    addEventListener() {},
     querySelectorAll() {
       return [];
     }
