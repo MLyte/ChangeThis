@@ -15,20 +15,22 @@ router = APIRouter(prefix="/project-issue-members", tags=["project-issue-members
 
 @router.get("", response_model=list[ProjectIssueMemberResponse])
 async def list_project_issue_members(
-    workspace_id: UUID,
+    workspace_id: UUID | None = None,
     project_key: str | None = None,
     user_id: UUID | None = None,
     changethis_internal_session: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> list[ProjectIssueMemberResponse]:
     user, membership, _workspace = await require_workspace_session(changethis_internal_session, db)
-    if membership.workspace_id != workspace_id:
+    if workspace_id and membership.workspace_id != workspace_id and user_id != user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Workspace access required")
 
     if user_id and user_id != user.id and membership.role not in ("owner", "admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient workspace role")
 
-    if not user_id and membership.role not in ("owner", "admin"):
+    if not workspace_id:
+        user_id = user.id
+    elif not user_id and membership.role not in ("owner", "admin"):
         user_id = user.id
 
     query = (
@@ -39,6 +41,9 @@ async def list_project_issue_members(
         .where(User.status == "active")
         .order_by(ProjectIssueMember.created_at.asc())
     )
+
+    if workspace_id:
+        query = query.where(ProjectIssueMember.workspace_id == workspace_id)
 
     if project_key:
         query = query.where(ProjectIssueMember.project_key == project_key)
@@ -140,6 +145,7 @@ async def require_workspace_session(token: str | None, db: AsyncSession):
 
 def to_response(member: ProjectIssueMember, email: str) -> ProjectIssueMemberResponse:
     return ProjectIssueMemberResponse(
+        workspace_id=member.workspace_id,
         project_key=member.project_key,
         user_id=member.user_id,
         email=email,

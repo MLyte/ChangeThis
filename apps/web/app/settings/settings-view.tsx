@@ -30,9 +30,14 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
 
   const workspaceId = session.workspace.id;
   const canManageMembers = session.workspace.role === "admin" || session.workspace.role === "owner";
-  const ownProjectAccesses = canManageMembers || section !== "connected-sites"
+  const ownProjectAccesses = section !== "connected-sites"
     ? []
-    : await listProjectIssueAccesses({ workspaceId, userId: session.user.id });
+    : await listProjectIssueAccesses({ userId: session.user.id });
+  const sharedProjectAccesses = ownProjectAccesses.filter((access) => (
+    access.status === "active"
+    && access.workspaceId
+    && access.workspaceId !== workspaceId
+  ));
   const canViewConnectedSites = canManageMembers || ownProjectAccesses.some((access) => access.status === "active");
 
   if (section === "git-connections" && !canManageMembers) {
@@ -44,16 +49,28 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
   }
 
   const shouldLoadSiteSettings = section === "connected-sites" && canViewConnectedSites;
-  const allowedProjectKeys = new Set(ownProjectAccesses.filter((access) => access.status === "active").map((access) => access.projectKey));
-  const projects = shouldLoadSiteSettings
-    ? (await listConfiguredProjects(workspaceId)).filter((project) => canManageMembers || allowedProjectKeys.has(project.publicKey))
+  const projectGroups = shouldLoadSiteSettings
+    ? canManageMembers
+      ? [
+          { workspaceId, projects: await listConfiguredProjects(workspaceId) },
+          ...await sharedProjectGroups(sharedProjectAccesses)
+        ]
+      : await sharedProjectGroups(ownProjectAccesses)
     : [];
-  const feedbacks = shouldLoadSiteSettings ? await getFeedbackRepository().list({ workspaceId }) : [];
+  const projects = projectGroups.flatMap((group) => group.projects);
+  const feedbackGroups = shouldLoadSiteSettings
+    ? await Promise.all(projectGroups.map(async (group) => ({
+        workspaceId: group.workspaceId,
+        feedbacks: await getFeedbackRepository().list({ workspaceId: group.workspaceId })
+      })))
+    : [];
   const projectViews = await Promise.all(projects.map(async (project) => {
+    const projectWorkspaceId = project.workspaceId ?? workspaceId;
+    const feedbacks = feedbackGroups.find((group) => group.workspaceId === projectWorkspaceId)?.feedbacks ?? [];
     const projectFeedbacks = feedbacks.filter((feedback) => feedback.projectKey === project.publicKey);
-    const issueAccesses = canManageMembers
-      ? await listProjectIssueAccesses({ workspaceId, projectKey: project.publicKey })
-      : ownProjectAccesses.filter((access) => access.projectKey === project.publicKey);
+    const issueAccesses = canManageMembers && projectWorkspaceId === workspaceId
+      ? await listProjectIssueAccesses({ workspaceId: projectWorkspaceId, projectKey: project.publicKey })
+      : ownProjectAccesses.filter((access) => access.workspaceId === projectWorkspaceId && access.projectKey === project.publicKey);
 
     return {
       ...project,
@@ -92,6 +109,23 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
       <AppFooter />
     </main>
   );
+}
+
+async function sharedProjectGroups(accesses: Awaited<ReturnType<typeof listProjectIssueAccesses>>) {
+  const activeAccesses = accesses.filter((access) => access.status === "active" && access.workspaceId);
+  const workspaceIds = [...new Set(activeAccesses.map((access) => access.workspaceId).filter((id): id is string => Boolean(id)))];
+
+  return Promise.all(workspaceIds.map(async (workspaceId) => {
+    const allowedKeys = new Set(activeAccesses
+      .filter((access) => access.workspaceId === workspaceId)
+      .map((access) => access.projectKey));
+
+    return {
+      workspaceId,
+      accesses: activeAccesses.filter((access) => access.workspaceId === workspaceId),
+      projects: (await listConfiguredProjects(workspaceId)).filter((project) => allowedKeys.has(project.publicKey))
+    };
+  }));
 }
 
 function settingsPath(section: SettingsSection): string {

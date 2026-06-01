@@ -10,6 +10,7 @@ import { getDataStoreMode } from "./runtime";
 export type ProjectIssueAccessRole = "issue_member";
 
 export type ProjectIssueAccess = {
+  workspaceId?: string;
   projectKey: string;
   userId: string;
   email?: string;
@@ -28,6 +29,7 @@ type ProjectIssueAccessStore = {
 };
 
 type InternalProjectIssueMemberRow = {
+  workspace_id?: unknown;
   project_key?: unknown;
   user_id?: unknown;
   email?: unknown;
@@ -89,7 +91,7 @@ export function issueAccessFailure(): AuthFailure {
 }
 
 export async function listProjectIssueAccesses(filters: {
-  workspaceId: string;
+  workspaceId?: string;
   projectKey?: string;
   userId?: string;
 }): Promise<ProjectIssueAccess[]> {
@@ -99,6 +101,7 @@ export async function listProjectIssueAccesses(filters: {
 
   const store = await readStore();
   return store.accesses
+    .filter((access) => !filters.workspaceId || access.workspaceId === filters.workspaceId)
     .filter((access) => !filters.projectKey || access.projectKey === filters.projectKey)
     .filter((access) => !filters.userId || access.userId === filters.userId);
 }
@@ -121,6 +124,7 @@ export async function replaceProjectIssueAccesses(input: {
     store.accesses = [
       ...store.accesses.filter((access) => access.projectKey !== input.projectKey),
       ...userIds.map((userId) => ({
+        workspaceId: input.workspaceId,
         projectKey: input.projectKey,
         userId,
         role: "issue_member" as const,
@@ -158,7 +162,7 @@ function usesInternalProjectIssueAccess(): boolean {
 }
 
 async function listInternalProjectIssueAccesses(filters: {
-  workspaceId: string;
+  workspaceId?: string;
   projectKey?: string;
   userId?: string;
 }): Promise<ProjectIssueAccess[]> {
@@ -167,9 +171,11 @@ async function listInternalProjectIssueAccesses(filters: {
     return [];
   }
 
-  const params = new URLSearchParams({
-    workspace_id: filters.workspaceId
-  });
+  const params = new URLSearchParams();
+
+  if (filters.workspaceId) {
+    params.set("workspace_id", filters.workspaceId);
+  }
 
   if (filters.userId) {
     params.set("user_id", filters.userId);
@@ -293,6 +299,7 @@ function mapInternalProjectIssueMember(row: InternalProjectIssueMemberRow): Proj
   }
 
   return [{
+    workspaceId: typeof row.workspace_id === "string" ? row.workspace_id : undefined,
     projectKey: row.project_key,
     userId: row.user_id,
     email: typeof row.email === "string" ? row.email : undefined,
@@ -338,6 +345,7 @@ function isProjectIssueAccess(value: unknown): value is ProjectIssueAccess {
 
   const access = value as Partial<ProjectIssueAccess>;
   return typeof access.projectKey === "string"
+    && (access.workspaceId === undefined || typeof access.workspaceId === "string")
     && typeof access.userId === "string"
     && access.role === "issue_member"
     && (access.status === "active" || access.status === "disabled");

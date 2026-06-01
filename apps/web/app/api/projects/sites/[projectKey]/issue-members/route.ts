@@ -89,8 +89,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     return authFailureResponse(session);
   }
 
-  const workspaceId = session.workspace?.id;
-  if (!workspaceId) {
+  if (!session.workspace?.id) {
     return authFailureResponse({ error: "Project access required", status: 403 });
   }
 
@@ -100,17 +99,18 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const { projectKey } = await context.params;
-  const project = await findConfiguredProjectByKey(projectKey, workspaceId);
+  const ownAccesses = await listProjectIssueAccesses({ projectKey, userId: session.user.id });
+  const access = ownAccesses.find((item) => item.status === "active" && item.workspaceId);
+  if (!access?.workspaceId) {
+    return NextResponse.json({ error: "Project access not found" }, { status: 404 });
+  }
+
+  const project = await findConfiguredProjectByKey(projectKey, access.workspaceId);
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const ownAccesses = await listProjectIssueAccesses({ workspaceId, projectKey, userId: session.user.id });
-  if (!ownAccesses.some((access) => access.status === "active")) {
-    return NextResponse.json({ error: "Project access not found" }, { status: 404 });
-  }
-
-  await removeProjectIssueAccess({ workspaceId, projectKey, userId: session.user.id });
+  await removeProjectIssueAccess({ workspaceId: access.workspaceId, projectKey, userId: session.user.id });
   return NextResponse.json({ ok: true });
 }
 

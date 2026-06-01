@@ -21,14 +21,15 @@ export default async function SettingsPage() {
   }
 
   const canManageProjects = session.workspace.role === "admin" || session.workspace.role === "owner";
+  const projectAccesses = await listProjectIssueAccesses({ userId: session.user.id });
+  const hasSharedProjects = projectAccesses.some((access) => (
+    access.status === "active"
+    && access.workspaceId
+    && access.workspaceId !== session.workspace?.id
+  ));
 
   if (!canManageProjects) {
-    const ownProjectAccesses = await listProjectIssueAccesses({
-      workspaceId: session.workspace.id,
-      userId: session.user.id
-    });
-
-    redirect(ownProjectAccesses.some((access) => access.status === "active")
+    redirect(projectAccesses.some((access) => access.status === "active")
       ? "/settings/connected-sites"
       : "/settings/account");
   }
@@ -40,5 +41,5 @@ export default async function SettingsPage() {
     && integration.credentialConfigured
   ));
 
-  redirect(hasActiveGitConnection ? "/settings/connected-sites" : "/settings/git-connections");
+  redirect(hasActiveGitConnection || hasSharedProjects ? "/settings/connected-sites" : "/settings/git-connections");
 }

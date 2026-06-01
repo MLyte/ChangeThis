@@ -6,7 +6,7 @@ import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import { workspaceDemoProjectKeyPrefix, workspaceDemoProjectName, type ChangeThisProject } from "../../lib/demo-project";
 import { isDemoFeedback } from "../../lib/demo-feedback-actions";
 import { getFeedbackRepository, type StoredFeedback } from "../../lib/feedback-repository";
-import { filterFeedbacksForIssueAccess, filterProjectsForIssueAccess, getIssueAccessScope } from "../../lib/project-issue-access";
+import { filterFeedbacksForIssueAccess, filterProjectsForIssueAccess, getIssueAccessScope, listProjectIssueAccesses } from "../../lib/project-issue-access";
 import { listConfiguredProjects } from "../../lib/project-registry";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
@@ -98,8 +98,27 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const params = await searchParams;
   const filters = parseDashboardFilters(params);
   const issueAccessScope = await getIssueAccessScope(session);
-  const projects = filterProjectsForIssueAccess(await listConfiguredProjects(workspaceId), issueAccessScope);
-  const feedbacks = filterFeedbacksForIssueAccess(await getFeedbackRepository().list({ workspaceId }), issueAccessScope);
+  const ownProjects = filterProjectsForIssueAccess(await listConfiguredProjects(workspaceId), issueAccessScope);
+  const ownFeedbacks = filterFeedbacksForIssueAccess(await getFeedbackRepository().list({ workspaceId }), issueAccessScope);
+  const sharedAccesses = (await listProjectIssueAccesses({ userId: session.user.id }))
+    .filter((access) => access.status === "active" && access.workspaceId && access.workspaceId !== workspaceId);
+  const sharedWorkspaceIds = [...new Set(sharedAccesses.map((access) => access.workspaceId).filter((id): id is string => Boolean(id)))];
+  const sharedProjectGroups = await Promise.all(sharedWorkspaceIds.map(async (sharedWorkspaceId) => {
+    const allowedKeys = new Set(sharedAccesses
+      .filter((access) => access.workspaceId === sharedWorkspaceId)
+      .map((access) => access.projectKey));
+    const [workspaceProjects, workspaceFeedbacks] = await Promise.all([
+      listConfiguredProjects(sharedWorkspaceId),
+      getFeedbackRepository().list({ workspaceId: sharedWorkspaceId })
+    ]);
+
+    return {
+      projects: workspaceProjects.filter((project) => allowedKeys.has(project.publicKey)),
+      feedbacks: workspaceFeedbacks.filter((feedback) => allowedKeys.has(feedback.projectKey))
+    };
+  }));
+  const projects = dedupeProjects([...ownProjects, ...sharedProjectGroups.flatMap((group) => group.projects)]);
+  const feedbacks = [...ownFeedbacks, ...sharedProjectGroups.flatMap((group) => group.feedbacks)];
   const filteredFeedbacks = feedbacks.filter((feedback) => matchesDashboardFilters(feedback, filters));
   const activeFeedbacks = feedbacks.filter(isActiveFeedback);
   const historyFeedbacks = feedbacks.filter(isHistoryFeedback);
@@ -1211,6 +1230,23 @@ function inferOperatingSystemLabel(userAgent: string): string | undefined {
 
 function formatCompactNumber(value: number): string {
   return Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function dedupeProjects(projects: ChangeThisProject[]): ChangeThisProject[] {
+  const seen = new Set<string>();
+  const deduped: ChangeThisProject[] = [];
+
+  for (const project of projects) {
+    const key = `${project.workspaceId ?? ""}:${project.publicKey}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    deduped.push(project);
+  }
+
+  return deduped;
 }
 
 function formatAppEnvironmentSummary(app?: StoredFeedback["payload"]["metadata"]["app"]): string | undefined {

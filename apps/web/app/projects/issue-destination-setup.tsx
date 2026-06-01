@@ -1997,7 +1997,9 @@ function ConnectedSitesSection({
   const hasRepositoryDestination = Boolean(selectedRepositoryId || (canUseRepositoryUrlFallback && repositoryUrl.trim()));
   const connectedIntegrations = Array.from(connectedProviders);
   const hasConnectedProvider = connectedIntegrations.length > 0;
-  const ownProjects = canManageMembers ? projects : [];
+  const ownProjects = canManageMembers
+    ? projects.filter((project) => !project.issueAccesses?.some((access) => access.status === "active" && access.userId === currentUserId))
+    : [];
   const sharedProjects = canManageMembers
     ? projects.filter((project) => project.issueAccesses?.some((access) => access.status === "active" && access.userId === currentUserId))
     : projects;
@@ -2102,6 +2104,7 @@ function ConnectedSitesSection({
         <div className="site-repo-list">
           {projects.map((project) => {
             const isSharedProject = !canManageMembers || project.issueAccesses?.some((access) => access.status === "active" && access.userId === currentUserId) === true;
+            const canManageProject = canManageMembers && !isSharedProject;
             const issueTarget = project.issueTarget;
             const providerConnected = connectedProviders.has(issueTarget.provider);
             const isReady = providerConnected && issueTarget.namespace && issueTarget.project;
@@ -2125,7 +2128,7 @@ function ConnectedSitesSection({
                       <ProviderBadge provider={issueTarget.provider} />
                       <span className="status-badge muted">{isSharedProject ? "Partagé avec moi" : siteAccessCount > 0 ? `${siteAccessCount} accès` : "Mes projets"}</span>
                     </div>
-                    {activeSiteOriginEditor && canManageMembers ? (
+                    {activeSiteOriginEditor && canManageProject ? (
                       <form className="site-origin-editor" onSubmit={(event) => {
                         event.preventDefault();
                         onSaveSiteOrigin(project.publicKey);
@@ -2174,7 +2177,7 @@ function ConnectedSitesSection({
                         <T k="destinations.open" />
                       </a>
                     ) : null}
-                    {canManageMembers ? (
+                    {canManageProject ? (
                       <>
                         <button className="button secondary-button" disabled={isPending} onClick={() => onEditSiteOrigin(project)} type="button">
                           <Pencil aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
@@ -2205,7 +2208,7 @@ function ConnectedSitesSection({
                       <span title="Créations d'issues Git en échec"><strong>{failedIssueCount}</strong><small>Échecs Git</small></span>
                     ) : null}
                   </div>
-                  {canManageMembers ? (
+                  {canManageProject ? (
                     <>
                   <div className="widget-settings">
                     <ThemeDropdown

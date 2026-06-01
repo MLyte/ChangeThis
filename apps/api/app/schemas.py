@@ -77,6 +77,7 @@ class ProjectResponse(BaseModel):
 
 
 class ProjectIssueMemberResponse(BaseModel):
+    workspace_id: UUID
     project_key: str
     user_id: UUID
     email: EmailStr
