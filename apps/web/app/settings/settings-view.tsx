@@ -1,4 +1,4 @@
-import { forbidden, unauthorized } from "next/navigation";
+import { redirect } from "next/navigation";
 import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import { getFeedbackRepository } from "../../lib/feedback-repository";
 import { listProviderIntegrationsAsync } from "../../lib/provider-integrations";
@@ -18,21 +18,21 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
 
   if (isAuthFailure(session)) {
     if (session.status === 401) {
-      unauthorized();
+      redirect(`/login?next=${encodeURIComponent(settingsPath(section))}`);
     }
 
-    forbidden();
+    redirect("/settings/account");
   }
 
   if (!session.workspace) {
-    forbidden();
+    redirect("/signup/set-password");
   }
 
   const workspaceId = session.workspace.id;
   const canManageMembers = session.workspace.role === "admin" || session.workspace.role === "owner";
 
   if (section !== "account" && !canManageMembers) {
-    forbidden();
+    redirect("/settings/account");
   }
 
   const shouldLoadSiteSettings = section === "connected-sites" && canManageMembers;
@@ -75,4 +75,16 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
       <AppFooter />
     </main>
   );
+}
+
+function settingsPath(section: SettingsSection): string {
+  if (section === "git-connections") {
+    return "/settings/git-connections";
+  }
+
+  if (section === "connected-sites") {
+    return "/settings/connected-sites";
+  }
+
+  return "/settings/account";
 }

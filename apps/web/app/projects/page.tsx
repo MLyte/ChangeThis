@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { forbidden, unauthorized } from "next/navigation";
+import { redirect } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Clock3, Code2, GitBranch, Globe2, Inbox, MessageSquareText, RotateCcw, type LucideIcon } from "lucide-react";
 import type { FeedbackStatus } from "@changethis/shared";
 import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
@@ -84,14 +84,14 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   if (isAuthFailure(session)) {
     if (session.status === 401) {
-      unauthorized();
+      redirect("/login?next=/projects");
     }
 
-    forbidden();
+    redirect("/login?next=/projects");
   }
 
   if (!session.workspace) {
-    forbidden();
+    redirect("/signup/set-password");
   }
 
   const workspaceId = session.workspace.id;
