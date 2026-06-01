@@ -50,7 +50,8 @@ export async function PATCH(
     || !isWidgetButtonPosition(body.widgetButtonPosition)
     || !isWidgetButtonVariant(body.widgetButtonVariant)
     || !isWidgetReporterFields(body.widgetReporterFields)
-    || !isIssueCreationMode(body.issueCreationMode)) {
+    || !isIssueCreationMode(body.issueCreationMode)
+    || (body.allowedOrigin !== undefined && typeof body.allowedOrigin !== "string")) {
     return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant, widgetReporterFields and issueCreationMode are required" }, { status: 422 });
   }
 
@@ -63,7 +64,8 @@ export async function PATCH(
       widgetButtonPosition: body.widgetButtonPosition,
       widgetButtonVariant: body.widgetButtonVariant,
       widgetReporterFields: body.widgetReporterFields,
-      issueCreationMode: body.issueCreationMode
+      issueCreationMode: body.issueCreationMode,
+      allowedOrigin: body.allowedOrigin
     }, session.workspace.id);
 
     return NextResponse.json({

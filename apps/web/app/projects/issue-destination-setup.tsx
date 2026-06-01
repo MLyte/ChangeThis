@@ -4,13 +4,16 @@ import Link from "next/link";
 import { type FocusEvent, type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  Check,
   Copy,
   ExternalLink,
   GitBranch,
   Globe2,
   Info,
+  KeyRound,
   Link2,
   Mail,
+  Pencil,
   Plus,
   ShieldCheck,
   Trash2,
@@ -27,14 +30,13 @@ type Props = {
   projects: ChangeThisProject[];
   integrations: ProviderIntegrationSummary[];
   section: SettingsSection;
-  users?: WorkspaceUserView[];
-  workspaceName?: string;
   canManageMembers?: boolean;
-  currentUserId?: string;
+  currentUserEmail?: string;
 };
 
 type ProjectView = ChangeThisProject & {
   installSnippet?: string;
+  issueAccesses?: SiteIssueAccessView[];
   metrics?: {
     feedbacksReceived: number;
     issuesCreated: number;
@@ -42,13 +44,14 @@ type ProjectView = ChangeThisProject & {
     lastFeedbackAt?: string;
   };
 };
-export type SettingsSection = "git-connections" | "connected-sites" | "users";
-export type WorkspaceUserView = {
+export type SettingsSection = "account" | "git-connections" | "connected-sites";
+
+type SiteIssueAccessView = {
+  projectKey: string;
   userId: string;
-  email: string;
-  role: "viewer" | "member" | "admin" | "owner" | string;
-  status: string;
-  joinedAt?: string;
+  email?: string;
+  role: "issue_member";
+  status: "active" | "disabled";
 };
 
 type RepositoryOption = {
@@ -113,18 +116,25 @@ type DeleteSiteConfirmation = {
   projectKey: string;
 };
 
+type SiteOriginEditor = {
+  projectKey: string;
+  value: string;
+};
+
+type SiteAccessEditor = {
+  projectKey: string;
+  userIds: string[];
+};
+
 export function IssueDestinationSetup({
   projects,
   integrations,
   section,
-  users = [],
-  workspaceName,
   canManageMembers = false,
-  currentUserId
+  currentUserEmail
 }: Props) {
   const { t } = useLanguage();
   const [projectViews, setProjectViews] = useState<ProjectView[]>(projects);
-  const [workspaceUsers, setWorkspaceUsers] = useState<WorkspaceUserView[]>(users);
   const firstConnectedProvider = integrations.find((integration) => integration.status === "connected")?.provider ?? "github";
   const [selectedProvider, setSelectedProvider] = useState<IssueProvider>(firstConnectedProvider);
   const [, setMessage] = useState(t("destinations.message.initial"));
@@ -142,10 +152,14 @@ export function IssueDestinationSetup({
   const [siteIssueCreationMode, setSiteIssueCreationMode] = useState<IssueCreationMode>("manual");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"viewer" | "member" | "admin">("member");
+  const [siteAccessEmail, setSiteAccessEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("");
   const [automaticIssueConfirmation, setAutomaticIssueConfirmation] = useState<AutomaticIssueConfirmation | undefined>();
   const [deleteSiteConfirmation, setDeleteSiteConfirmation] = useState<DeleteSiteConfirmation | undefined>();
+  const [siteOriginEditor, setSiteOriginEditor] = useState<SiteOriginEditor | undefined>();
+  const [siteAccessEditor, setSiteAccessEditor] = useState<SiteAccessEditor | undefined>();
 
   const connectedProviders = useMemo(
     () => new Set(integrations.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
@@ -405,6 +419,199 @@ export function IssueDestinationSetup({
     });
   }
 
+  function startSiteOriginEdit(project: ProjectView) {
+    setSiteOriginEditor({
+      projectKey: project.publicKey,
+      value: project.allowedOrigins[0] ?? ""
+    });
+  }
+
+  function saveSiteOrigin(projectKey: string) {
+    const project = projectViews.find((item) => item.publicKey === projectKey);
+    if (!project || siteOriginEditor?.projectKey !== projectKey) {
+      return;
+    }
+
+    const validation = validateAllowedOrigin(siteOriginEditor.value);
+    if (!validation.ok || !validation.normalizedOrigin) {
+      toast.error("URL non enregistrée", {
+        description: validation.message
+      });
+      return;
+    }
+
+    const previousProject = project;
+    const nextProject = {
+      ...project,
+      allowedOrigins: [validation.normalizedOrigin]
+    };
+
+    setProjectViews((current) => current.map((item) => item.publicKey === projectKey ? nextProject : item));
+
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            allowedOrigin: validation.normalizedOrigin,
+            widgetLocale: project.widgetLocale,
+            widgetButtonPosition: project.widgetButtonPosition,
+            widgetButtonVariant: project.widgetButtonVariant,
+            widgetReporterFields: project.widgetReporterFields,
+            issueCreationMode: project.issueCreationMode
+          })
+        });
+        const body = await parseJsonResponse<{ site?: ProjectView; installSnippet?: string; error?: string; requestId?: string }>(response);
+
+        if (!response.ok || !body?.site) {
+          const requestId = body?.requestId ? ` (${body.requestId})` : "";
+          throw new Error(`${body?.error ?? "Impossible d'enregistrer l'URL du site."}${requestId}`);
+        }
+
+        setProjectViews((current) => current.map((item) => item.publicKey === projectKey
+          ? {
+              ...item,
+              ...body.site,
+              installSnippet: body.installSnippet,
+              metrics: item.metrics
+            }
+          : item));
+        setSiteOriginEditor(undefined);
+        toast.success("URL du site enregistrée", {
+          description: `Origine autorisée: ${body.site.allowedOrigins.join(", ")}`
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
+        setProjectViews((current) => current.map((item) => item.publicKey === projectKey ? previousProject : item));
+        toast.error("URL non enregistrée", {
+          description: errorMessage
+        });
+      }
+    });
+  }
+
+  function openSiteAccess(project: ProjectView) {
+    setSiteAccessEditor({
+      projectKey: project.publicKey,
+      userIds: (project.issueAccesses ?? []).filter((access) => access.status === "active").map((access) => access.userId)
+    });
+    setSiteAccessEmail("");
+  }
+
+  function toggleSiteAccessUser(userId: string) {
+    setSiteAccessEditor((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const selected = new Set(current.userIds);
+      if (selected.has(userId)) {
+        selected.delete(userId);
+      } else {
+        selected.add(userId);
+      }
+
+      return {
+        ...current,
+        userIds: [...selected]
+      };
+    });
+  }
+
+  function saveSiteAccess() {
+    if (!siteAccessEditor) {
+      return;
+    }
+
+    const projectKey = siteAccessEditor.projectKey;
+    const userIds = siteAccessEditor.userIds;
+
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/issue-members`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userIds })
+        });
+        const body = await parseJsonResponse<{ accesses?: SiteIssueAccessView[]; error?: string }>(response);
+
+        if (!response.ok || !body?.accesses) {
+          throw new Error(body?.error ?? "Impossible d'enregistrer les accès.");
+        }
+
+        setProjectViews((current) => current.map((project) => project.publicKey === projectKey
+          ? { ...project, issueAccesses: body.accesses }
+          : project));
+        setSiteAccessEditor(undefined);
+        const project = projectViews.find((item) => item.publicKey === projectKey);
+        toast.success("Accès enregistrés", {
+          description: `Les accès dashboard${project ? ` de ${project.name}` : ""} ont été mis à jour.`
+        });
+      } catch (error) {
+        toast.error("Accès non enregistrés", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
+        });
+      }
+    });
+  }
+
+  function addSiteAccessEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!siteAccessEditor) {
+      return;
+    }
+
+    const email = siteAccessEmail.trim().toLowerCase();
+    if (!email) {
+      toast.error("Accès non ajouté", {
+        description: "Ajoutez l'adresse e-mail d'un compte ChangeThis existant."
+      });
+      return;
+    }
+
+    const projectKey = siteAccessEditor.projectKey;
+    const userIds = siteAccessEditor.userIds;
+
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/issue-members`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userIds, userEmails: [email] })
+        });
+        const body = await parseJsonResponse<{ accesses?: SiteIssueAccessView[]; error?: string }>(response);
+
+        if (!response.ok || !body?.accesses) {
+          throw new Error(body?.error ?? "Impossible d'ajouter cet accès.");
+        }
+
+        setProjectViews((current) => current.map((project) => project.publicKey === projectKey
+          ? { ...project, issueAccesses: body.accesses }
+          : project));
+        setSiteAccessEditor({
+          projectKey,
+          userIds: body.accesses.filter((access) => access.status === "active").map((access) => access.userId)
+        });
+        setSiteAccessEmail("");
+        toast.success("Accès ajouté", {
+          description: `${email} peut consulter et traiter les retours de ce site.`
+        });
+      } catch (error) {
+        toast.error("Accès non ajouté", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
+        });
+      }
+    });
+  }
+
   function deleteSite(projectKey: string) {
     startTransition(async () => {
       try {
@@ -436,80 +643,55 @@ export function IssueDestinationSetup({
     });
   }
 
-  function inviteWorkspaceMember(event: FormEvent<HTMLFormElement>) {
+  function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const email = inviteEmail.trim();
-    if (!email) {
-      toast.error("Invitation impossible", {
-        description: "Ajoutez une adresse email."
+    if (newPassword.length < 8) {
+      toast.error("Mot de passe trop court", {
+        description: "Le nouveau mot de passe doit contenir au moins 8 caractères."
+      });
+      return;
+    }
+
+    if (newPassword !== newPasswordConfirmation) {
+      toast.error("Confirmation incorrecte", {
+        description: "Les deux nouveaux mots de passe doivent être identiques."
       });
       return;
     }
 
     startTransition(async () => {
       try {
-        const response = await fetch("/api/workspace/members", {
+        const response = await fetch("/api/auth/password", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            email,
-            role: inviteRole
+            currentPassword,
+            newPassword
           })
         });
-        const body = (await response.json()) as { member?: WorkspaceUserView; error?: string };
 
-        const invitedMember = body.member;
-        if (!response.ok || !invitedMember) {
-          throw new Error(body.error ?? "Impossible d'inviter ce membre.");
+        if (!response.ok) {
+          const description = response.status === 401
+            ? "Le mot de passe actuel ne correspond pas."
+            : response.status === 409
+              ? "Le changement de mot de passe n'est pas disponible avec ce mode d'authentification."
+              : "Réessayez dans quelques instants.";
+          toast.error("Mot de passe non modifié", { description });
+          return;
         }
 
-        setWorkspaceUsers((current) => [invitedMember, ...current.filter((member) => member.userId !== invitedMember.userId)]);
-        setInviteEmail("");
-        toast.success("Invitation envoyée", {
-          description: `${invitedMember.email} peut maintenant rejoindre le workspace.`
+        setCurrentPassword("");
+        setNewPassword("");
+        setNewPasswordConfirmation("");
+        toast.success("Mot de passe modifié", {
+          description: "Votre prochain accès utilisera ce nouveau mot de passe."
         });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
-        toast.error("Invitation impossible", {
-          description: errorMessage
-        });
-      }
-    });
-  }
-
-  function disableWorkspaceUser(userId: string) {
-    startTransition(async () => {
-      try {
-        const response = await fetch("/api/workspace/members", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            userId,
-            status: "disabled"
-          })
-        });
-        const body = (await response.json()) as { member?: WorkspaceUserView; error?: string };
-        const updatedMember = body.member;
-
-        if (!response.ok || !updatedMember) {
-          throw new Error(body.error ?? "Impossible de désactiver le membre.");
-        }
-
-        setWorkspaceUsers((current) => current.map((member) => member.userId === updatedMember.userId
-          ? updatedMember
-          : member));
-        toast.success("Membre désactivé", {
-          description: `${updatedMember.email} n'a plus accès au workspace.`
-        });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
-        toast.error("Action impossible", {
-          description: errorMessage
+        toast.error("Mot de passe non modifié", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
         });
       }
     });
@@ -556,23 +738,39 @@ export function IssueDestinationSetup({
 
       <div className="settings-layout">
         <aside className="settings-sidebar" aria-label={t("settings.sidebar.label")}>
-          <a className={section === "git-connections" ? "is-active" : ""} href="/settings/git-connections">
-            <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            <T k="settings.sidebar.gitConnections" />
-          </a>
-          <a className={section === "connected-sites" ? "is-active" : ""} href="/settings/connected-sites">
-            <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            <T k="settings.sidebar.connectedSites" />
+          <a className={section === "account" ? "is-active" : ""} href="/settings/account">
+            <KeyRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            <T k="settings.sidebar.account" />
           </a>
           {canManageMembers ? (
-            <a className={section === "users" ? "is-active" : ""} href="/settings/users">
-              <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-              <T k="settings.sidebar.users" />
-            </a>
+            <>
+              <a className={section === "git-connections" ? "is-active" : ""} href="/settings/git-connections">
+                <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                <T k="settings.sidebar.gitConnections" />
+              </a>
+              <a className={section === "connected-sites" ? "is-active" : ""} href="/settings/connected-sites">
+                <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                <T k="settings.sidebar.connectedSites" />
+              </a>
+            </>
           ) : null}
         </aside>
 
         <div className="settings-content">
+          {section === "account" ? (
+            <AccountSection
+              currentPassword={currentPassword}
+              email={currentUserEmail}
+              isPending={isPending}
+              newPassword={newPassword}
+              newPasswordConfirmation={newPasswordConfirmation}
+              onChangeCurrentPassword={setCurrentPassword}
+              onChangeNewPassword={setNewPassword}
+              onChangeNewPasswordConfirmation={setNewPasswordConfirmation}
+              onSubmit={changePassword}
+            />
+          ) : null}
+
           {section === "git-connections" ? (
             <GitConnectionsSection integrations={integrations} />
           ) : null}
@@ -586,11 +784,18 @@ export function IssueDestinationSetup({
               onCloseModal={() => setIsSiteModalOpen(false)}
               onCreateSite={createSite}
               onDeleteSite={requestDeleteSite}
+              onEditSiteOrigin={startSiteOriginEdit}
+              onOpenSiteAccess={openSiteAccess}
+              onSaveSiteOrigin={saveSiteOrigin}
               onCopyInstallSnippet={copyInstallSnippet}
               onOpenSiteModal={openSiteModal}
               onSelectProvider={selectProvider}
               onUpdateWidgetSettings={updateWidgetSettings}
               projects={projectViews}
+              canManageMembers={canManageMembers}
+              siteOriginEditor={siteOriginEditor}
+              onSiteOriginEditorChange={(value) => setSiteOriginEditor((current) => current ? { ...current, value } : current)}
+              onCancelSiteOriginEdit={() => setSiteOriginEditor(undefined)}
               repositoryLoadMessage={repositoryLoadMessage}
               repositoryLoadState={repositoryLoadState}
               repositoryOptions={repositoryOptions}
@@ -616,20 +821,6 @@ export function IssueDestinationSetup({
             />
           ) : null}
 
-          {section === "users" && canManageMembers ? (
-            <UsersSection
-              canManageMembers={canManageMembers}
-              currentUserId={currentUserId}
-              onDisable={disableWorkspaceUser}
-              onInvite={inviteWorkspaceMember}
-              users={workspaceUsers}
-              inviteEmail={inviteEmail}
-              inviteRole={inviteRole}
-              onInviteEmailChange={setInviteEmail}
-              onInviteRoleChange={setInviteRole}
-              workspaceName={workspaceName}
-            />
-          ) : null}
         </div>
       </div>
 
@@ -650,146 +841,215 @@ export function IssueDestinationSetup({
           project={pendingDeleteSiteProject}
         />
       ) : null}
+
+      {siteAccessEditor ? (
+        <SiteAccessModal
+          editor={siteAccessEditor}
+          isPending={isPending}
+          onCancel={() => setSiteAccessEditor(undefined)}
+          onEmailChange={setSiteAccessEmail}
+          onAddEmail={addSiteAccessEmail}
+          onSave={saveSiteAccess}
+          onToggleUser={toggleSiteAccessUser}
+          project={projectViews.find((project) => project.publicKey === siteAccessEditor.projectKey)}
+          email={siteAccessEmail}
+        />
+      ) : null}
     </section>
   );
 }
 
-function UsersSection({
-  users,
-  workspaceName,
-  canManageMembers,
-  currentUserId,
-  inviteEmail,
-  inviteRole,
-  onInvite,
-  onInviteEmailChange,
-  onInviteRoleChange,
-  onDisable
+function AccountSection({
+  currentPassword,
+  email,
+  isPending,
+  newPassword,
+  newPasswordConfirmation,
+  onChangeCurrentPassword,
+  onChangeNewPassword,
+  onChangeNewPasswordConfirmation,
+  onSubmit
 }: {
-  users: WorkspaceUserView[];
-  workspaceName?: string;
-  canManageMembers: boolean;
-  currentUserId?: string;
-  inviteEmail: string;
-  inviteRole: "viewer" | "member" | "admin";
-  onInvite: (event: FormEvent<HTMLFormElement>) => void;
-  onInviteEmailChange: (email: string) => void;
-  onInviteRoleChange: (role: "viewer" | "member" | "admin") => void;
-  onDisable: (userId: string) => void;
+  currentPassword: string;
+  email?: string;
+  isPending: boolean;
+  newPassword: string;
+  newPasswordConfirmation: string;
+  onChangeCurrentPassword: (value: string) => void;
+  onChangeNewPassword: (value: string) => void;
+  onChangeNewPasswordConfirmation: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const activeUsers = users.filter((user) => user.status === "active").length;
-  const adminUsers = users.filter((user) => user.role === "owner" || user.role === "admin").length;
-
   return (
-    <section className="settings-section users-settings" aria-labelledby="users-settings-title">
+    <section className="settings-section account-settings" aria-labelledby="account-settings-title">
       <div className="setup-heading">
         <div>
-          <p className="eyebrow">Application</p>
-          <h3 id="users-settings-title"><T k="settings.users.title" /></h3>
+          <p className="eyebrow">Compte</p>
+          <h3 id="account-settings-title">Sécurité du compte</h3>
           <p className="section-lede">
-            <T k="settings.users.copy" />
+            Gérez le mot de passe utilisé pour accéder au dashboard ChangeThis.
           </p>
         </div>
       </div>
 
-      <div className="users-summary-grid">
-        <div className="summary-tile">
-          <span>{users.length}</span>
-          <small>Utilisateurs</small>
-        </div>
-        <div className="summary-tile">
-          <span>{activeUsers}</span>
-          <small>Actifs</small>
-        </div>
-        <div className="summary-tile">
-          <span>{adminUsers}</span>
-          <small>Admins</small>
-        </div>
-      </div>
-
-      <div className="user-management-panel">
-        <div className="user-management-heading">
+      <div className="account-security-panel">
+        <div className="account-security-heading">
           <div>
-            <strong>{workspaceName ?? "Workspace ChangeThis"}</strong>
-            <span>Les feedbacks publics restent ouverts. Cette liste ne concerne que l&apos;accès au dashboard.</span>
+            <strong>{email ?? "Compte ChangeThis"}</strong>
+            <span>Le changement est immédiat. Gardez votre mot de passe actuel sous la main pour confirmer l&apos;action.</span>
           </div>
-          {canManageMembers ? (
-            <form className="member-invite-form" onSubmit={onInvite}>
-              <div className="member-invite-fields">
-                <input
-                  aria-label="E-mail à inviter"
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(event) => onInviteEmailChange(event.target.value)}
-                  placeholder="email@exemple.com"
-                  required
-                />
-                <div className="member-role-segment" aria-label="Rôle du membre" role="group">
-                  {memberRoleOptions.map((option) => (
-                    <button
-                      aria-pressed={inviteRole === option.value}
-                      className={inviteRole === option.value ? "active" : ""}
-                      key={option.value}
-                      onClick={() => onInviteRoleChange(option.value)}
-                      type="button"
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <button className="button secondary-button" type="submit">
-                <Mail aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                Inviter
-              </button>
-            </form>
-          ) : null}
         </div>
 
-        <div className="users-table" role="table" aria-label="Utilisateurs du workspace">
-          <div className="users-table-row users-table-head" role="row">
-            <span role="columnheader">Utilisateur</span>
-            <span role="columnheader">Rôle</span>
-            <span role="columnheader">Statut</span>
-            <span role="columnheader">Actions</span>
-            <span role="columnheader">Arrivée</span>
+        <form className="password-change-form" onSubmit={onSubmit}>
+          <label>
+            <span>Mot de passe actuel</span>
+            <input
+              autoComplete="current-password"
+              onChange={(event) => onChangeCurrentPassword(event.target.value)}
+              required
+              type="password"
+              value={currentPassword}
+            />
+          </label>
+          <label>
+            <span>Nouveau mot de passe</span>
+            <input
+              autoComplete="new-password"
+              minLength={8}
+              onChange={(event) => onChangeNewPassword(event.target.value)}
+              required
+              type="password"
+              value={newPassword}
+            />
+          </label>
+          <label>
+            <span>Confirmer le nouveau mot de passe</span>
+            <input
+              autoComplete="new-password"
+              minLength={8}
+              onChange={(event) => onChangeNewPasswordConfirmation(event.target.value)}
+              required
+              type="password"
+              value={newPasswordConfirmation}
+            />
+          </label>
+          <div className="password-change-actions">
+            <button className="button primary-button" disabled={isPending} type="submit">
+              <KeyRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+              {isPending ? "Enregistrement..." : "Modifier le mot de passe"}
+            </button>
           </div>
-          {users.map((user) => (
-            <div className="users-table-row" role="row" key={user.userId}>
-              <span role="cell">
-                <span className="user-avatar" aria-hidden="true">{user.email.slice(0, 1).toUpperCase()}</span>
-                <strong>{user.email}</strong>
-              </span>
-              <span role="cell">
-                <ShieldCheck aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
-                {roleLabel(user.role)}
-              </span>
-              <span role="cell">
-                <span className={`status-badge ${user.status === "active" ? "connected" : "inactive"}`}>
-                  {user.status === "active" ? "Actif" : user.status}
-                </span>
-              </span>
-              <span role="cell">
-                {canManageMembers && user.status !== "disabled" && user.userId !== currentUserId ? (
-                  <button className="button secondary-button" onClick={() => onDisable(user.userId)} type="button">
-                    Désactiver
-                  </button>
-                ) : null}
-              </span>
-              <span role="cell">{user.joinedAt ? formatMemberDate(user.joinedAt) : "Session locale"}</span>
-            </div>
-          ))}
-        </div>
+        </form>
       </div>
     </section>
   );
 }
 
-const memberRoleOptions: Array<{ label: string; value: "viewer" | "member" | "admin" }> = [
-  { label: "Membre", value: "member" },
-  { label: "Admin", value: "admin" },
-  { label: "Lecteur", value: "viewer" }
-];
+function SiteAccessModal({
+  email,
+  editor,
+  isPending,
+  onAddEmail,
+  onCancel,
+  onEmailChange,
+  onSave,
+  onToggleUser,
+  project
+}: {
+  email: string;
+  editor: SiteAccessEditor;
+  isPending: boolean;
+  onAddEmail: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+  onEmailChange: (email: string) => void;
+  onSave: () => void;
+  onToggleUser: (userId: string) => void;
+  project?: ProjectView;
+}) {
+  const activeAccesses = (project?.issueAccesses ?? []).filter((access) => access.status === "active");
+  const selectedUserIds = new Set(editor.userIds);
+
+  return (
+    <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="site-access-title">
+      <button className="settings-modal-backdrop" aria-label="Fermer" onClick={onCancel} type="button" />
+      <div className="settings-modal-panel site-access-modal-panel">
+        <div className="settings-modal-header">
+          <div>
+            <p className="eyebrow">Accès par site</p>
+            <h2 id="site-access-title">Accès dashboard</h2>
+          </div>
+          <button className="icon-button" aria-label="Fermer" onClick={onCancel} type="button">
+            <X aria-hidden="true" className="ui-icon" size={18} strokeWidth={2.2} />
+          </button>
+        </div>
+
+        <div className="modal-copy">
+          <strong>{project?.name ?? "Site connecté"}</strong>
+          <span>Ajoutez un compte ChangeThis existant pour lui donner accès uniquement aux retours et actions issue de ce site.</span>
+        </div>
+
+        <form className="site-access-add-form" onSubmit={onAddEmail}>
+          <label>
+            <span>Compte ChangeThis</span>
+            <input
+              aria-label="E-mail du compte ChangeThis"
+              disabled={isPending}
+              onChange={(event) => onEmailChange(event.target.value)}
+              placeholder="email@exemple.com"
+              type="email"
+              value={email}
+            />
+          </label>
+          <button className="button secondary-button" disabled={isPending || !email.trim()} type="submit">
+            <Mail aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            Ajouter
+          </button>
+        </form>
+
+        {activeAccesses.length === 0 ? (
+          <div className="empty-state compact-empty-state">
+            <strong>Aucun accès limité sur ce site</strong>
+            <p>Ajoutez l&apos;e-mail d&apos;un compte ChangeThis existant.</p>
+          </div>
+        ) : (
+          <div className="site-access-list" role="list" aria-label="Accès limités du site">
+            {activeAccesses.map((access) => {
+              const checked = selectedUserIds.has(access.userId);
+              return (
+                <label className="site-access-row" key={access.userId}>
+                  <span className="user-avatar" aria-hidden="true">{(access.email ?? "?").slice(0, 1).toUpperCase()}</span>
+                  <span className="site-access-user">
+                    <strong>{access.email ?? access.userId}</strong>
+                    <small>Accès limité à ce site</small>
+                  </span>
+                  <span className={`status-badge ${checked ? "connected" : "inactive"}`}>
+                    {checked ? "Accès au site" : "Retiré"}
+                  </span>
+                  <input
+                    checked={checked}
+                    disabled={isPending}
+                    onChange={() => onToggleUser(access.userId)}
+                    type="checkbox"
+                  />
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="settings-modal-actions">
+          <button className="button secondary-button" disabled={isPending} onClick={onCancel} type="button">
+            Annuler
+          </button>
+          <button className="button" disabled={isPending} onClick={onSave} type="button">
+            <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            {isPending ? "Enregistrement..." : "Enregistrer les accès"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type ThemeDropdownOption<T extends string> = {
   label: string;
@@ -1523,34 +1783,6 @@ function formatConnectionCheckDate(date: Date): string {
   }).format(date);
 }
 
-function formatMemberDate(value: string): string {
-  return new Intl.DateTimeFormat("fr-BE", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  }).format(new Date(value));
-}
-
-function roleLabel(role: WorkspaceUserView["role"]): string {
-  if (role === "owner") {
-    return "Propriétaire";
-  }
-
-  if (role === "admin") {
-    return "Admin";
-  }
-
-  if (role === "member") {
-    return "Membre";
-  }
-
-  if (role === "viewer") {
-    return "Lecture seule";
-  }
-
-  return role;
-}
-
 function AutomaticIssueConfirmationModal({
   isPending,
   onCancel,
@@ -1638,6 +1870,7 @@ function DeleteSiteConfirmationModal({
 }
 
 function ConnectedSitesSection({
+  canManageMembers,
   connectedProviders,
   integrations,
   isPending,
@@ -1645,13 +1878,19 @@ function ConnectedSitesSection({
   onCloseModal,
   onCreateSite,
   onDeleteSite,
+  onEditSiteOrigin,
+  onOpenSiteAccess,
+  onSaveSiteOrigin,
   onCopyInstallSnippet,
   onOpenSiteModal,
   onRepositoryUrlChange,
   onSelectProvider,
   onSelectRepository,
+  onCancelSiteOriginEdit,
   onUpdateWidgetSettings,
+  onSiteOriginEditorChange,
   projects,
+  siteOriginEditor,
   repositoryLoadMessage,
   repositoryLoadState,
   repositoryOptions,
@@ -1673,6 +1912,7 @@ function ConnectedSitesSection({
   siteWidgetReporterFields,
   setSiteIssueCreationMode
 }: {
+  canManageMembers: boolean;
   connectedProviders: Set<IssueProvider>;
   integrations: ProviderIntegrationSummary[];
   isPending: boolean;
@@ -1680,13 +1920,19 @@ function ConnectedSitesSection({
   onCloseModal: () => void;
   onCreateSite: () => void;
   onDeleteSite: (projectKey: string) => void;
+  onEditSiteOrigin: (project: ProjectView) => void;
+  onOpenSiteAccess: (project: ProjectView) => void;
+  onSaveSiteOrigin: (projectKey: string) => void;
   onCopyInstallSnippet: (project: ProjectView) => void;
   onOpenSiteModal: () => void;
   onRepositoryUrlChange: (repositoryUrl: string) => void;
   onSelectProvider: (provider: IssueProvider) => void;
   onSelectRepository: (repositoryId: string) => void;
+  onCancelSiteOriginEdit: () => void;
   onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) => void;
+  onSiteOriginEditorChange: (value: string) => void;
   projects: ProjectView[];
+  siteOriginEditor?: SiteOriginEditor;
   repositoryLoadMessage: string;
   repositoryLoadState: RepositoryLoadState;
   repositoryOptions: RepositoryOption[];
@@ -1809,6 +2055,9 @@ function ConnectedSitesSection({
             const originValidation = validateAllowedOrigins(project.allowedOrigins);
             const snippet = project.installSnippet ?? installSnippet(project);
             const failedIssueCount = project.metrics?.failedIssues ?? 0;
+            const isEditingOrigin = siteOriginEditor?.projectKey === project.publicKey;
+            const editingOriginValidation = isEditingOrigin ? validateAllowedOrigin(siteOriginEditor.value) : undefined;
+            const siteAccessCount = project.issueAccesses?.filter((access) => access.status === "active").length ?? 0;
 
             return (
               <article className="site-repo-row connected-site-row" key={project.publicKey}>
@@ -1820,8 +2069,40 @@ function ConnectedSitesSection({
                         {isReady ? "Actif" : "Git déconnecté"}
                       </span>
                       <ProviderBadge provider={issueTarget.provider} />
+                      <span className="status-badge muted">{siteAccessCount > 0 ? `${siteAccessCount} accès` : "Accès admin"}</span>
                     </div>
-                    <p>{project.allowedOrigins.join(", ")}</p>
+                    {isEditingOrigin ? (
+                      <form className="site-origin-editor" onSubmit={(event) => {
+                        event.preventDefault();
+                        onSaveSiteOrigin(project.publicKey);
+                      }}>
+                        <label>
+                          <span>URL du site</span>
+                          <input
+                            aria-label={`URL autorisée pour ${project.name}`}
+                            disabled={isPending}
+                            onChange={(event) => onSiteOriginEditorChange(event.target.value)}
+                            type="url"
+                            value={siteOriginEditor.value}
+                          />
+                        </label>
+                        <p className={`origin-create-status ${editingOriginValidation?.ok ? "success" : siteOriginEditor.value.trim() ? "error" : ""}`} role="status">
+                          {editingOriginValidation?.message ?? "Saisissez l'URL du site à autoriser."}
+                        </p>
+                        <div className="site-origin-editor-actions">
+                          <button className="button" disabled={isPending || !editingOriginValidation?.ok} type="submit">
+                            <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                            Enregistrer
+                          </button>
+                          <button className="button secondary-button" disabled={isPending} onClick={onCancelSiteOriginEdit} type="button">
+                            <X aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                            Annuler
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <p>{project.allowedOrigins.join(", ")}</p>
+                    )}
                   </div>
                   <div className="repo-destination">
                     <div>
@@ -1838,6 +2119,16 @@ function ConnectedSitesSection({
                         <ExternalLink aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                         <T k="destinations.open" />
                       </a>
+                    ) : null}
+                    <button className="button secondary-button" disabled={isPending} onClick={() => onEditSiteOrigin(project)} type="button">
+                      <Pencil aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                      Éditer
+                    </button>
+                    {canManageMembers ? (
+                      <button className="button secondary-button" disabled={isPending} onClick={() => onOpenSiteAccess(project)} type="button">
+                        <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                        Accès
+                      </button>
                     ) : null}
                     <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
                       <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
@@ -2256,9 +2547,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function installSnippet(project: Pick<ProjectView, "publicKey" | "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">): string {
+function installSnippet(project: Pick<ProjectView, "publicKey">): string {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  const variant = project.widgetButtonVariant !== "default" ? ` data-button-variant="${project.widgetButtonVariant}"` : "";
-  const reporterFields = project.widgetReporterFields !== "hidden" ? ` data-reporter-fields="${project.widgetReporterFields}"` : "";
-  return `<script src="${origin}/widget.js" data-project="${project.publicKey}" data-locale="${project.widgetLocale}" data-position="${project.widgetButtonPosition}"${variant}${reporterFields}></script>`;
+  return `<script src="${origin}/widget.js" data-project="${project.publicKey}"></script>`;
 }

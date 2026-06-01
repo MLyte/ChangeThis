@@ -161,7 +161,7 @@ test("initChangeThis escapes configured button labels in the shadow DOM", async 
   assert.doesNotMatch(html, /<strong>beta<\/strong>/);
 });
 
-test("initChangeThis renders subtle button as a bug icon without visible text", async () => {
+test("initChangeThis renders subtle button as the brand hand logo without visible text", async () => {
   let appendedRoot: FakeElement | undefined;
   const documentRef = {
     currentScript: null,
@@ -231,7 +231,9 @@ test("initChangeThis renders subtle button as a bug icon without visible text", 
 
   assert.match(html, /data-variant="subtle"/);
   assert.match(buttonHtml, /aria-label="Feedback"/);
-  assert.match(buttonHtml, /<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1\.88 1\.88"/);
+  assert.match(buttonHtml, /<img class="brand-logo-icon" src="data:image\/png;base64,/);
+  assert.match(buttonHtml, /aria-hidden="true"/);
+  assert.doesNotMatch(buttonHtml, /<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1\.88 1\.88"/);
   assert.doesNotMatch(buttonHtml, /<span>Feedback<\/span>/);
   assert.doesNotMatch(buttonHtml, /button-state/);
 });

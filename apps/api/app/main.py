@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .routers import auth, feedback, health, inbox, integrations, issue_targets, sites, widget
+from .routers import auth, feedback, health, inbox, integrations, issue_targets, project_issue_members, sites, widget, workspace_members
 
 settings = get_settings()
 
@@ -17,9 +17,11 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(workspace_members.router)
 app.include_router(widget.router)
 app.include_router(feedback.router)
 app.include_router(inbox.router)
 app.include_router(sites.router)
+app.include_router(project_issue_members.router)
 app.include_router(issue_targets.router)
 app.include_router(integrations.router)

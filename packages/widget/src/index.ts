@@ -76,6 +76,7 @@ const maxThumbnailDimension = 400;
 const screenshotQuality = 0.8;
 const pageFeedbackScreenshotQuality = 0.62;
 const thumbnailQuality = 0.74;
+const changethisHandLogoDataUrl = "data:image/png;base64,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";
 const lucideIcons = {
   bug: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/><path d="M6 17H3"/><path d="M21 17h-3"/></svg>',
   camera: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>',
@@ -100,7 +101,7 @@ const widgetCopy = {
     screenshot: "Capture",
     placeholder: "Décris le retour global sur cette page",
     capturePlaceholder: "Décris ce qu'il faut corriger dans cette capture",
-    metaDefault: "URL, navigateur et viewport seront ajoutés automatiquement.",
+    metaDefault: "",
     shortcutHint: "Ctrl + Entrée pour envoyer l'action en cours",
     shortcutHintAll: "Ctrl + Entrée pour envoyer l'action en cours",
     close: "Fermer",
@@ -153,7 +154,7 @@ const widgetCopy = {
     screenshot: "Screenshot",
     placeholder: "Describe the page-level feedback here",
     capturePlaceholder: "Describe what should change in this capture",
-    metaDefault: "URL, browser and viewport will be added automatically.",
+    metaDefault: "",
     shortcutHint: "Ctrl + Enter to send the current action",
     shortcutHintAll: "Ctrl + Enter to send the current action",
     close: "Close",
@@ -479,6 +480,12 @@ export function initChangeThis(options: WidgetOptions): void {
         .button[data-variant="subtle"] .lucide-icon {
           height: 18px;
           width: 18px;
+        }
+        .button[data-variant="subtle"] .brand-logo-icon {
+          display: block;
+          height: 28px;
+          object-fit: contain;
+          width: 28px;
         }
         .button[data-variant="subtle"]:hover,
         .button[data-variant="subtle"]:focus-visible,
@@ -1196,7 +1203,7 @@ export function initChangeThis(options: WidgetOptions): void {
       ${pinMarkers}
       ${state.notice ? `<div class="notice" data-position="${buttonPosition}" role="status">${escapeHtml(state.notice)}</div>` : ""}
       <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}" aria-label="${escapeHtml(buttonLabel)}" title="${escapeHtml(buttonLabel)}">
-        ${isSubtleButton ? lucideIcons.bug : `<span>${escapeHtml(buttonLabel)}</span>`}
+        ${isSubtleButton ? `<img class="brand-logo-icon" src="${changethisHandLogoDataUrl}" alt="" aria-hidden="true">` : `<span>${escapeHtml(buttonLabel)}</span>`}
         ${buttonStateLabel && !isSubtleButton ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
       </button>
       ${state.open ? `
@@ -1245,13 +1252,12 @@ export function initChangeThis(options: WidgetOptions): void {
           ${state.type === "comment" ? `
             <textarea data-note-message placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.noteMessage)}</textarea>
             <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
-            <p class="meta">${escapeHtml(copy.metaDefault)}</p>
           ` : ""}
           ${isPinTab ? `
             <div class="selection-summary">
               <div class="selection-header">
-                <span>${escapeHtml(copy.pins)} (${state.pins.length})</span>
                 <button class="add-pin" data-action="add-pin">${lucideIcons.plus}${escapeHtml(copy.addPin)}</button>
+                <span>${escapeHtml(copy.pins)} (${state.pins.length})</span>
               </div>
               ${state.pins.length ? `<ul class="pin-list">
                 ${state.pins.map((pin, index) => `
@@ -1272,18 +1278,18 @@ export function initChangeThis(options: WidgetOptions): void {
                     `}
                   </li>
                 `).join("")}
-              </ul>` : `<p class="meta">${escapeHtml(copy.metaDefault)}</p>`}
+              </ul>` : ""}
             </div>
           ` : ""}
           ${isCaptureTab ? `
-            <textarea data-capture-message placeholder="${escapeHtml(copy.capturePlaceholder)}">${escapeHtml(state.captureMessage)}</textarea>
-            <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
             <div class="selection-summary">
               <div class="selection-header">
-                <span>${feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault)}</span>
                 <button class="add-pin" data-action="define-capture">${escapeHtml(copy.defineCapture)}</button>
+                ${state.captureArea ? `<span>${feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault)}</span>` : ""}
               </div>
             </div>
+            <textarea data-capture-message placeholder="${escapeHtml(copy.capturePlaceholder)}">${escapeHtml(state.captureMessage)}</textarea>
+            <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
           ` : ""}
           <div class="actions">
             <button class="cancel" data-action="close">${escapeHtml(copy.close)}</button>

@@ -16,7 +16,8 @@ type SetPasswordPageProps = {
 
 export default async function SetPasswordPage({ searchParams }: SetPasswordPageProps) {
   const params = await searchParams;
-  const hasError = Boolean(params?.error);
+  const errorKey = setPasswordErrorKey(params?.error);
+  const hasError = Boolean(errorKey);
   const isLocalMode = getAuthMode() === "local";
   const session = await getCurrentSession();
 
@@ -33,6 +34,7 @@ export default async function SetPasswordPage({ searchParams }: SetPasswordPageP
 
     const authMode = getAuthMode();
     const password = formData.get("password")?.toString().trim() ?? "";
+    const passwordConfirmation = formData.get("passwordConfirmation")?.toString().trim() ?? "";
 
     if (authMode === "local") {
       redirect("/settings/connected-sites");
@@ -42,6 +44,10 @@ export default async function SetPasswordPage({ searchParams }: SetPasswordPageP
 
     if (!currentSession) {
       redirect("/login?next=/signup/set-password");
+    }
+
+    if (password !== passwordConfirmation) {
+      redirect("/signup/set-password?error=password_mismatch");
     }
 
     const cookieStore = await cookies();
@@ -92,7 +98,7 @@ export default async function SetPasswordPage({ searchParams }: SetPasswordPageP
         <div className="auth-panel">
           {hasError ? (
             <div className="error-callout" role="alert">
-              <strong><T k="signup.setPassword.error" /></strong>
+              <strong><T k={errorKey} /></strong>
             </div>
           ) : null}
 
@@ -100,6 +106,10 @@ export default async function SetPasswordPage({ searchParams }: SetPasswordPageP
             <label>
               <T k="signup.setPassword.password" />
               <input autoComplete="new-password" minLength={8} name="password" required type="password" />
+            </label>
+            <label>
+              <T k="signup.setPassword.passwordConfirm" />
+              <input autoComplete="new-password" minLength={8} name="passwordConfirmation" required type="password" />
             </label>
             <p className="microcopy"><T k="signup.setPassword.copy" /></p>
             <button className="button" type="submit">
@@ -111,4 +121,8 @@ export default async function SetPasswordPage({ searchParams }: SetPasswordPageP
       <AppFooter />
     </main>
   );
+}
+
+function setPasswordErrorKey(error?: string): string {
+  return error === "password_mismatch" ? "signup.setPassword.passwordMismatch" : error ? "signup.setPassword.error" : "";
 }

@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 from app.models import Session, User, Workspace, WorkspaceMember
 from app.routers import auth
-from app.schemas import LoginRequest, SignUpRequest
+from app.schemas import ChangePasswordRequest, LoginRequest, SignUpRequest
 from app.security import hash_session_token
 
 
@@ -174,4 +174,59 @@ async def test_login_then_logout_revokes_session(monkeypatch):
 
     assert session.token_hash == hash_session_token(result.access_token)
     assert session.revoked_at is not None
+    assert db.committed is True
+
+
+@pytest.mark.asyncio
+async def test_change_password_requires_current_password(monkeypatch):
+    monkeypatch.setattr(auth, "verify_password", lambda password, password_hash: password == "old-password")
+    monkeypatch.setattr(auth, "hash_password", lambda password: f"hashed:{password}")
+    db = FakeDb()
+    user = User(id=uuid4(), email="owner@example.com", password_hash="hashed-old", status="active")
+    workspace = Workspace(id=uuid4(), name="CRA", owner_id=user.id, plan="free")
+    membership = WorkspaceMember(id=uuid4(), workspace_id=workspace.id, user_id=user.id, role="owner", status="active")
+    session = Session(
+        id=uuid4(),
+        user_id=user.id,
+        token_hash=hash_session_token("session-token"),
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+    db.objects.extend([user, workspace, membership, session])
+
+    with pytest.raises(HTTPException) as error:
+        await auth.change_password(
+            ChangePasswordRequest(current_password="wrong-password", new_password="new-password"),
+            "session-token",
+            db,
+        )
+
+    assert error.value.status_code == 401
+    assert user.password_hash == "hashed-old"
+    assert db.committed is False
+
+
+@pytest.mark.asyncio
+async def test_change_password_updates_authenticated_user_password(monkeypatch):
+    monkeypatch.setattr(auth, "verify_password", lambda password, password_hash: password == "old-password")
+    monkeypatch.setattr(auth, "hash_password", lambda password: f"hashed:{password}")
+    db = FakeDb()
+    user = User(id=uuid4(), email="owner@example.com", password_hash="hashed-old", status="active")
+    workspace = Workspace(id=uuid4(), name="CRA", owner_id=user.id, plan="free")
+    membership = WorkspaceMember(id=uuid4(), workspace_id=workspace.id, user_id=user.id, role="owner", status="active")
+    session = Session(
+        id=uuid4(),
+        user_id=user.id,
+        token_hash=hash_session_token("session-token"),
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+    db.objects.extend([user, workspace, membership, session])
+
+    result = await auth.change_password(
+        ChangePasswordRequest(current_password="old-password", new_password="new-password"),
+        "session-token",
+        db,
+    )
+
+    assert result == {"ok": True}
+    assert user.password_hash == "hashed:new-password"
     assert db.committed is True

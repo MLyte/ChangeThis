@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../../../lib/auth";
 import { methodNotAllowed, requirePrivateMutationOrigin } from "../../../../../../lib/api-security";
 import { resolveFeedbackForAction } from "../../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
 import { IssueProviderError } from "../../../../../../lib/issue-providers";
 import { syncFeedbackIssueState } from "../../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../../lib/logger";
+import { getIssueAccessScope, hasFeedbackIssueAccess, issueAccessFailure } from "../../../../../../lib/project-issue-access";
 
 type RouteContext = {
   params: Promise<{
@@ -22,7 +23,7 @@ export const DELETE = unsupportedMethod;
 export const OPTIONS = unsupportedMethod;
 
 export async function POST(request: Request, context: RouteContext) {
-  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "member");
+  const session = await requireWorkspaceSession(request);
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);
@@ -46,6 +47,11 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!feedback || !feedback.externalIssue) {
     return NextResponse.json({ error: "Feedback issue not found" }, { status: 404 });
+  }
+
+  const issueAccessScope = await getIssueAccessScope(session);
+  if (!hasFeedbackIssueAccess(issueAccessScope, feedback)) {
+    return authFailureResponse(issueAccessFailure());
   }
 
   try {

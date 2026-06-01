@@ -59,7 +59,8 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   }
 
   const params = await searchParams;
-  const hasError = Boolean(params?.error);
+  const errorKey = signupErrorKey(params?.error);
+  const hasError = Boolean(errorKey);
   const isSent = params?.sent === "1";
   const sentEmail = params?.email ?? "";
   const authMode = getAuthMode();
@@ -73,6 +74,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     const currentSession = await getCurrentSession();
     const email = formData.get("email")?.toString().trim() ?? "";
     const password = formData.get("password")?.toString() ?? "";
+    const passwordConfirmation = formData.get("passwordConfirmation")?.toString() ?? "";
 
     if (currentSession?.workspace) {
       redirect("/projects");
@@ -87,6 +89,10 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     }
 
     if (authMode === "internal") {
+      if (password !== passwordConfirmation) {
+        redirect("/signup?error=password_mismatch");
+      }
+
       const signUpResult = await signUpWithInternalPassword({
         email,
         password,
@@ -170,7 +176,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
         <div className="auth-panel">
           {hasError ? (
             <div className="error-callout" role="alert">
-              <strong><T k="signup.error" /></strong>
+              <strong><T k={errorKey} /></strong>
             </div>
           ) : null}
 
@@ -214,10 +220,16 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                 <input autoComplete="email" name="email" required type="email" />
               </label>
               {isInternalMode ? (
-                <label>
-                  <T k="signup.password" />
-                  <input autoComplete="new-password" minLength={8} name="password" required type="password" />
-                </label>
+                <>
+                  <label>
+                    <T k="signup.password" />
+                    <input autoComplete="new-password" minLength={8} name="password" required type="password" />
+                  </label>
+                  <label>
+                    <T k="signup.passwordConfirm" />
+                    <input autoComplete="new-password" minLength={8} name="passwordConfirmation" required type="password" />
+                  </label>
+                </>
               ) : null}
               <p className="microcopy">
                 <T k={isInternalMode ? "signup.internalHint" : "signup.redirectHint"} />
@@ -241,4 +253,8 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 function workspaceNameFromEmail(email: string): string {
   const domain = email.split("@")[1]?.trim().toLowerCase();
   return domain ? `Espace ${domain}` : "Espace ChangeThis";
+}
+
+function signupErrorKey(error?: string): string {
+  return error === "password_mismatch" ? "signup.passwordMismatch" : error ? "signup.error" : "";
 }

@@ -10,6 +10,26 @@ class WorkspaceSummary(BaseModel):
     role: str
 
 
+class WorkspaceMemberResponse(BaseModel):
+    user_id: UUID
+    email: EmailStr
+    role: str
+    status: str
+    created_at: datetime
+
+
+class WorkspaceMemberAddRequest(BaseModel):
+    workspace_id: UUID
+    email: EmailStr
+    role: str = "member"
+
+
+class WorkspaceMemberStatusUpdateRequest(BaseModel):
+    workspace_id: UUID
+    user_id: UUID
+    status: str
+
+
 class UserSummary(BaseModel):
     id: UUID
     email: EmailStr
@@ -24,6 +44,11 @@ class SessionResponse(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8)
 
 
 class SignUpRequest(BaseModel):
@@ -49,6 +74,23 @@ class ProjectResponse(BaseModel):
     issue_creation_mode: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectIssueMemberResponse(BaseModel):
+    project_key: str
+    user_id: UUID
+    email: EmailStr
+    role: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProjectIssueMembersReplaceRequest(BaseModel):
+    workspace_id: UUID
+    project_key: str = Field(min_length=1)
+    user_ids: list[UUID] = Field(default_factory=list)
+    user_emails: list[EmailStr] = Field(default_factory=list)
 
 
 class ProjectCreateRequest(BaseModel):

@@ -1,9 +1,9 @@
 import { forbidden, unauthorized } from "next/navigation";
-import { getAuthMode, isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
+import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import { getFeedbackRepository } from "../../lib/feedback-repository";
 import { listProviderIntegrationsAsync } from "../../lib/provider-integrations";
+import { listProjectIssueAccesses } from "../../lib/project-issue-access";
 import { installSnippet, listConfiguredProjects } from "../../lib/project-registry";
-import { listWorkspaceMembers, type WorkspaceMemberSummary } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { IssueDestinationSetup, type SettingsSection } from "../projects/issue-destination-setup";
@@ -31,17 +31,19 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
   const workspaceId = session.workspace.id;
   const canManageMembers = session.workspace.role === "admin" || session.workspace.role === "owner";
 
-  if (section === "users" && !canManageMembers) {
+  if (section !== "account" && !canManageMembers) {
     forbidden();
   }
 
-  const projects = await listConfiguredProjects(workspaceId);
-  const feedbacks = await getFeedbackRepository().list({ workspaceId });
-  const projectViews = projects.map((project) => {
+  const shouldLoadSiteSettings = section === "connected-sites" && canManageMembers;
+  const projects = shouldLoadSiteSettings ? await listConfiguredProjects(workspaceId) : [];
+  const feedbacks = shouldLoadSiteSettings ? await getFeedbackRepository().list({ workspaceId }) : [];
+  const projectViews = await Promise.all(projects.map(async (project) => {
     const projectFeedbacks = feedbacks.filter((feedback) => feedback.projectKey === project.publicKey);
     return {
       ...project,
       installSnippet: installSnippet(project),
+      issueAccesses: await listProjectIssueAccesses({ workspaceId, projectKey: project.publicKey }),
       metrics: {
         feedbacksReceived: projectFeedbacks.length,
         issuesCreated: projectFeedbacks.filter((feedback) => feedback.status === "sent_to_provider" || feedback.externalIssue).length,
@@ -49,15 +51,8 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
         lastFeedbackAt: projectFeedbacks[0]?.createdAt
       }
     };
-  });
-  const providerIntegrations = await listProviderIntegrationsAsync(workspaceId);
-  const workspaceUsers = canManageMembers
-    ? await loadWorkspaceUsers(session.workspace.id, {
-        userId: session.user.id,
-        email: session.user.email,
-        role: session.workspace.role
-      })
-    : [];
+  }));
+  const providerIntegrations = canManageMembers ? await listProviderIntegrationsAsync(workspaceId) : [];
 
   return (
     <main className="shell">
@@ -73,39 +68,11 @@ export async function SettingsView({ section }: { section: SettingsSection }) {
           integrations={providerIntegrations}
           projects={projectViews}
           canManageMembers={canManageMembers}
-          currentUserId={session.user.id}
+          currentUserEmail={session.user.email}
           section={section}
-          users={workspaceUsers}
-          workspaceName={session.workspace.name}
         />
       </section>
       <AppFooter />
     </main>
   );
-}
-
-async function loadWorkspaceUsers(
-  workspaceId: string,
-  currentUser: { userId: string; email: string; role: string }
-): Promise<WorkspaceMemberSummary[]> {
-  if (getAuthMode() !== "supabase") {
-    return [currentWorkspaceUser(currentUser)];
-  }
-
-  const users = await listWorkspaceMembers(workspaceId);
-
-  if (users.length > 0) {
-    return users;
-  }
-
-  return [currentWorkspaceUser(currentUser)];
-}
-
-function currentWorkspaceUser(currentUser: { userId: string; email: string; role: string }): WorkspaceMemberSummary {
-  return {
-    userId: currentUser.userId,
-    email: currentUser.email,
-    role: currentUser.role,
-    status: "active"
-  };
 }

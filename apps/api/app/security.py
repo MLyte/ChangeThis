@@ -1,13 +1,14 @@
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import get_settings
-from .models import Session, User, Workspace, WorkspaceMember
+from .models import ProjectIssueMember, Session, User, Workspace, WorkspaceMember
 
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -41,6 +42,31 @@ async def session_from_token(db: AsyncSession, token: str | None) -> tuple[User,
     if not token:
         return None
 
+    project_access_result = await db.execute(
+        select(User, Workspace, ProjectIssueMember)
+        .join(Session, Session.user_id == User.id)
+        .join(ProjectIssueMember, ProjectIssueMember.user_id == User.id)
+        .join(Workspace, Workspace.id == ProjectIssueMember.workspace_id)
+        .where(Session.token_hash == hash_session_token(token))
+        .where(Session.revoked_at.is_(None))
+        .where(Session.expires_at > datetime.now(UTC))
+        .where(User.status == "active")
+        .where(ProjectIssueMember.status == "active")
+        .order_by(ProjectIssueMember.updated_at.desc(), ProjectIssueMember.created_at.desc())
+        .limit(1)
+    )
+    project_access_row = project_access_result.first()
+    if project_access_row:
+        user, workspace, access = project_access_row
+        if hasattr(access, "workspace_id"):
+            synthetic_membership = SimpleNamespace(
+                workspace_id=access.workspace_id,
+                user_id=user.id,
+                role="viewer",
+                status="active",
+            )
+            return user, synthetic_membership, workspace
+
     result = await db.execute(
         select(User, WorkspaceMember, Workspace)
         .join(Session, Session.user_id == User.id)
@@ -55,6 +81,6 @@ async def session_from_token(db: AsyncSession, token: str | None) -> tuple[User,
         .limit(1)
     )
     row = result.first()
-    if not row:
-        return None
-    return row[0], row[1], row[2]
+    if row:
+        return row[0], row[1], row[2]
+    return None

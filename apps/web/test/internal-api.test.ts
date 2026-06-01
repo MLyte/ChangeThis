@@ -72,6 +72,53 @@ test("internal signup maps disabled and duplicate backend responses", async () =
   }), { ok: false, error: "duplicate" });
 });
 
+test("internal password change posts to FastAPI with the session cookie", async () => {
+  process.env.INTERNAL_API_URL = "http://back.example.test:8000";
+
+  let requestBody: unknown;
+  let requestCookie = "";
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(input.toString());
+    assert.equal(url.origin, "http://back.example.test:8000");
+    assert.equal(url.pathname, "/auth/password");
+    requestCookie = String(new Headers(init?.headers).get("cookie"));
+    requestBody = JSON.parse(init?.body?.toString() ?? "{}");
+    return jsonResponse({ ok: true }, 200);
+  };
+
+  const internalApi = await importInternalApiModule();
+  const result = await internalApi.changeInternalPassword({
+    currentPassword: "old-password",
+    newPassword: "new-password"
+  }, new Request("http://app.example.test/settings/account", {
+    headers: {
+      cookie: "changethis_internal_session=session-token"
+    }
+  }));
+
+  assert.equal(requestCookie, "changethis_internal_session=session-token");
+  assert.deepEqual(requestBody, {
+    current_password: "old-password",
+    new_password: "new-password"
+  });
+  assert.deepEqual(result, { ok: true });
+});
+
+test("internal password change maps invalid current password", async () => {
+  process.env.INTERNAL_API_URL = "http://back.example.test:8000";
+  const internalApi = await importInternalApiModule();
+
+  globalThis.fetch = async () => jsonResponse({ detail: "invalid" }, 401);
+  assert.deepEqual(await internalApi.changeInternalPassword({
+    currentPassword: "old-password",
+    newPassword: "new-password"
+  }, new Request("http://app.example.test/settings/account", {
+    headers: {
+      cookie: "changethis_internal_session=session-token"
+    }
+  })), { ok: false, error: "invalid" });
+});
+
 async function importInternalApiModule(): Promise<InternalApiModule> {
   importCounter += 1;
   return await import(`${pathToFileURL(`${process.cwd()}/lib/internal-api.ts`).href}?internal-api-test-${importCounter}`) as InternalApiModule;

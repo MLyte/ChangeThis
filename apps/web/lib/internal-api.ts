@@ -26,6 +26,15 @@ type InternalSignUpResult =
       error: "disabled" | "duplicate" | "invalid" | "unavailable" | "missing";
     };
 
+type InternalChangePasswordResult =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      error: "invalid" | "unavailable" | "missing";
+    };
+
 type InternalSessionResponse = {
   user?: {
     id?: unknown;
@@ -36,6 +45,22 @@ type InternalSessionResponse = {
     name?: unknown;
     role?: unknown;
   } | null;
+};
+
+export type InternalWorkspaceMember = {
+  userId: string;
+  email: string;
+  role: WorkspaceRole;
+  status: "invited" | "active" | "disabled";
+  joinedAt?: string;
+};
+
+type InternalWorkspaceMemberResponse = {
+  user_id?: unknown;
+  email?: unknown;
+  role?: unknown;
+  status?: unknown;
+  created_at?: unknown;
 };
 
 export function getInternalApiUrl(): string {
@@ -169,8 +194,8 @@ export function setInternalSessionCookieOnResponse(response: NextResponse, acces
 }
 
 export async function logoutInternalSession(request?: Request): Promise<void> {
-  const token = await readInternalSessionToken(request);
-  if (!token) {
+  const cookieHeader = await getInternalSessionCookieHeader(request);
+  if (!cookieHeader) {
     return;
   }
 
@@ -178,7 +203,7 @@ export async function logoutInternalSession(request?: Request): Promise<void> {
     await fetch(`${getInternalApiUrl()}/auth/logout`, {
       method: "POST",
       headers: {
-        Cookie: `${INTERNAL_SESSION_COOKIE}=${encodeURIComponent(token)}`,
+        Cookie: cookieHeader,
         Accept: "application/json"
       },
       cache: "no-store"
@@ -188,16 +213,164 @@ export async function logoutInternalSession(request?: Request): Promise<void> {
   }
 }
 
-export async function getInternalCurrentSession(request?: Request): Promise<AuthSession | null> {
+export async function changeInternalPassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}, request?: Request): Promise<InternalChangePasswordResult> {
   const token = await readInternalSessionToken(request);
-  if (!token) {
+  if (!token || !input.currentPassword || input.newPassword.length < 8) {
+    return { ok: false, error: "missing" };
+  }
+
+  try {
+    const response = await fetch(`${getInternalApiUrl()}/auth/password`, {
+      method: "POST",
+      headers: {
+        Cookie: `${INTERNAL_SESSION_COOKIE}=${encodeURIComponent(token)}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify({
+        current_password: input.currentPassword,
+        new_password: input.newPassword
+      }),
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return { ok: false, error: response.status === 401 ? "invalid" : "unavailable" };
+    }
+
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "unavailable" };
+  }
+}
+
+export async function listInternalWorkspaceMembers(workspaceId: string): Promise<InternalWorkspaceMember[]> {
+  const cookieHeader = await getInternalSessionCookieHeader();
+  if (!workspaceId || !cookieHeader) {
+    return [];
+  }
+
+  try {
+    const params = new URLSearchParams({ workspace_id: workspaceId });
+    const response = await fetch(`${getInternalApiUrl()}/workspace/members?${params.toString()}`, {
+      headers: {
+        Cookie: cookieHeader,
+        Accept: "application/json"
+      },
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const body = await response.json() as InternalWorkspaceMemberResponse[];
+    return body.flatMap(normalizeInternalWorkspaceMember);
+  } catch {
+    return [];
+  }
+}
+
+export async function addInternalWorkspaceMember(input: {
+  workspaceId: string;
+  email: string;
+  role: WorkspaceRole;
+}, request?: Request): Promise<{ ok: true; member: InternalWorkspaceMember } | { ok: false; error: "already_active" | "not_found" | "invalid" | "unavailable" | "missing" }> {
+  const cookieHeader = await getInternalSessionCookieHeader(request);
+  if (!cookieHeader || !input.workspaceId || !input.email) {
+    return { ok: false, error: "missing" };
+  }
+
+  try {
+    const response = await fetch(`${getInternalApiUrl()}/workspace/members`, {
+      method: "POST",
+      headers: {
+        Cookie: cookieHeader,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify({
+        workspace_id: input.workspaceId,
+        email: input.email,
+        role: input.role
+      }),
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: response.status === 409
+          ? "already_active"
+          : response.status === 404
+            ? "not_found"
+            : response.status === 422 || response.status === 403
+              ? "invalid"
+              : "unavailable"
+      };
+    }
+
+    const [member] = normalizeInternalWorkspaceMember(await response.json() as InternalWorkspaceMemberResponse);
+    return member ? { ok: true, member } : { ok: false, error: "unavailable" };
+  } catch {
+    return { ok: false, error: "unavailable" };
+  }
+}
+
+export async function disableInternalWorkspaceMember(input: {
+  workspaceId: string;
+  userId: string;
+}, request?: Request): Promise<{ ok: true; member: InternalWorkspaceMember } | { ok: false; error: "invalid" | "not_found" | "unavailable" | "missing" }> {
+  const cookieHeader = await getInternalSessionCookieHeader(request);
+  if (!cookieHeader || !input.workspaceId || !input.userId) {
+    return { ok: false, error: "missing" };
+  }
+
+  try {
+    const response = await fetch(`${getInternalApiUrl()}/workspace/members`, {
+      method: "PATCH",
+      headers: {
+        Cookie: cookieHeader,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify({
+        workspace_id: input.workspaceId,
+        user_id: input.userId,
+        status: "disabled"
+      }),
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return { ok: false, error: response.status === 404 ? "not_found" : response.status === 400 || response.status === 422 || response.status === 403 ? "invalid" : "unavailable" };
+    }
+
+    const [member] = normalizeInternalWorkspaceMember(await response.json() as InternalWorkspaceMemberResponse);
+    return member ? { ok: true, member } : { ok: false, error: "unavailable" };
+  } catch {
+    return { ok: false, error: "unavailable" };
+  }
+}
+
+export async function getInternalSessionCookieHeader(request?: Request): Promise<string | undefined> {
+  const token = await readInternalSessionToken(request);
+  return token ? `${INTERNAL_SESSION_COOKIE}=${encodeURIComponent(token)}` : undefined;
+}
+
+export async function getInternalCurrentSession(request?: Request): Promise<AuthSession | null> {
+  const cookieHeader = await getInternalSessionCookieHeader(request);
+  if (!cookieHeader) {
     return null;
   }
 
   try {
     const response = await fetch(`${getInternalApiUrl()}/auth/session`, {
       headers: {
-        Cookie: `${INTERNAL_SESSION_COOKIE}=${encodeURIComponent(token)}`,
+        Cookie: cookieHeader,
         Accept: "application/json"
       },
       cache: "no-store"
@@ -266,6 +439,27 @@ function normalizeInternalSession(body: InternalSessionResponse): AuthSession | 
     },
     workspace
   };
+}
+
+function normalizeInternalWorkspaceMember(body: InternalWorkspaceMemberResponse): InternalWorkspaceMember[] {
+  if (
+    typeof body.user_id !== "string"
+    || typeof body.email !== "string"
+    || typeof body.role !== "string"
+    || typeof body.status !== "string"
+  ) {
+    return [];
+  }
+
+  const role = toWorkspaceRole(body.role);
+  const status = body.status === "invited" || body.status === "active" || body.status === "disabled" ? body.status : "disabled";
+  return [{
+    userId: body.user_id,
+    email: body.email,
+    role,
+    status,
+    joinedAt: typeof body.created_at === "string" ? body.created_at : undefined
+  }];
 }
 
 function toWorkspaceRole(value: string): WorkspaceRole {

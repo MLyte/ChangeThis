@@ -33,8 +33,8 @@ export async function AppHeader({
   const resolvedSession = suppressSession ? undefined : session ?? await loadHeaderSession();
   const showPrimaryNav = resolvedSession && navItems.length > 0;
   const showConsoleShortcut = resolvedSession && !showPrimaryNav;
-  const showPublicAuthActions = !suppressAuthActions && !resolvedSession && (showAuthLinks || navItems.length > 0 || publicSignupEnabled);
-  const showHeaderSession = resolvedSession && !resolvedSession.isLocalMode;
+  const showPublicAuthActions = !suppressAuthActions && !resolvedSession;
+  const showHeaderSession = !suppressAuthActions && resolvedSession;
 
   return (
     <header className={`topbar app-header${showPrimaryNav ? " app-header-wide" : ""}`}>
@@ -67,11 +67,11 @@ export async function AppHeader({
 
           {showPublicAuthActions ? (
             <div className="public-auth-actions">
-              <Link className="link" href="/login">
+              <Link className="button secondary-button header-auth-button" href="/login">
                 <T k="nav.login" />
               </Link>
               {showAuthLinks || publicSignupEnabled ? (
-                <Link className="button" href="/signup">
+                <Link className="button header-auth-button" href="/signup">
                   <T k="nav.signup" />
                 </Link>
               ) : null}
@@ -82,7 +82,7 @@ export async function AppHeader({
             <div className="session-menu" aria-label="Session">
               <UserRound aria-hidden="true" className="ui-icon muted-icon" size={16} strokeWidth={2.2} />
               <span>{resolvedSession.email}</span>
-              <a className="link session-link" href="/logout">
+              <a className="button secondary-button session-link header-auth-button" href="/logout">
                 <LogOut aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
                 <T k="nav.logout" />
               </a>

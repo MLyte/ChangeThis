@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import get_settings
 from ..database import get_db
 from ..models import Session, User, Workspace, WorkspaceMember
-from ..schemas import LoginRequest, LoginResponse, SessionResponse, SignUpRequest, UserSummary, WorkspaceSummary
+from ..schemas import ChangePasswordRequest, LoginRequest, LoginResponse, SessionResponse, SignUpRequest, UserSummary, WorkspaceSummary
 from ..security import create_session, hash_password, hash_session_token, session_from_token, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -107,6 +107,27 @@ async def current_session(
         user=UserSummary(id=user.id, email=user.email, display_name=user.display_name),
         workspace=WorkspaceSummary(id=workspace.id, name=workspace.name, role=membership.role),
     )
+
+
+@router.post("/password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    changethis_internal_session: str | None = Cookie(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, bool]:
+    resolved = await session_from_token(db, changethis_internal_session)
+
+    if not resolved:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+
+    user, _membership, _workspace = resolved
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid current password")
+
+    user.password_hash = hash_password(payload.new_password)
+    user.updated_at = datetime.now(UTC)
+    await db.commit()
+    return {"ok": True}
 
 
 @router.post("/logout")

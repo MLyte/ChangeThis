@@ -84,6 +84,7 @@ export type ProjectIssueTargetUpdate = {
 
 export type ProjectWidgetSettingsUpdate = {
   projectKey: string;
+  allowedOrigin?: string;
   widgetLocale: WidgetLocale;
   widgetButtonPosition: WidgetButtonPosition;
   widgetButtonVariant: WidgetButtonVariant;
@@ -197,6 +198,14 @@ export async function updateProjectWidgetSettings(
     return updateSupabaseProjectWidgetSettings(update, workspaceId);
   }
 
+  const allowedOrigin = update.allowedOrigin === undefined
+    ? undefined
+    : normalizeAllowedOrigin(update.allowedOrigin);
+
+  if (update.allowedOrigin !== undefined && !allowedOrigin) {
+    throw new ProjectTargetValidationError("Site URL must be a valid HTTP origin", 422);
+  }
+
   let updatedProject: ChangeThisProject | undefined;
   const now = new Date().toISOString();
 
@@ -213,6 +222,7 @@ export async function updateProjectWidgetSettings(
         widgetButtonVariant: update.widgetButtonVariant,
         widgetReporterFields: update.widgetReporterFields,
         issueCreationMode: update.issueCreationMode,
+        allowedOrigins: allowedOrigin ? [allowedOrigin] : site.allowedOrigins,
         updatedAt: now
       };
 
@@ -336,19 +346,11 @@ export function ensureIssueTargetConfigured(project: ChangeThisProject): IssueTa
   return validation.value;
 }
 
-export function installSnippet(project: string | Pick<ChangeThisProject, "publicKey" | "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">): string {
+export function installSnippet(project: string | Pick<ChangeThisProject, "publicKey">): string {
   const projectKey = typeof project === "string" ? project : project.publicKey;
-  const locale = typeof project === "string" ? undefined : project.widgetLocale;
-  const position = typeof project === "string" ? undefined : project.widgetButtonPosition;
-  const variant = typeof project === "string" ? undefined : project.widgetButtonVariant;
-  const reporterFields = typeof project === "string" ? undefined : project.widgetReporterFields;
   const attributes = [
     `src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget.js"`,
-    `data-project="${projectKey}"`,
-    locale ? `data-locale="${locale}"` : undefined,
-    position ? `data-position="${position}"` : undefined,
-    variant && variant !== "default" ? `data-button-variant="${variant}"` : undefined,
-    reporterFields && reporterFields !== "hidden" ? `data-reporter-fields="${reporterFields}"` : undefined
+    `data-project="${projectKey}"`
   ].filter(Boolean).join(" ");
 
   return `<script ${attributes}></script>`;
@@ -590,6 +592,14 @@ async function updateSupabaseProjectWidgetSettings(
   update: ProjectWidgetSettingsUpdate,
   workspaceId?: string
 ): Promise<ChangeThisProject> {
+  const allowedOrigin = update.allowedOrigin === undefined
+    ? undefined
+    : normalizeAllowedOrigin(update.allowedOrigin);
+
+  if (update.allowedOrigin !== undefined && !allowedOrigin) {
+    throw new ProjectTargetValidationError("Site URL must be a valid HTTP origin", 422);
+  }
+
   const project = await findSupabaseConfiguredProjectByKey(update.projectKey, workspaceId);
 
   if (!project || !isUuid(project.id)) {
@@ -611,7 +621,8 @@ async function updateSupabaseProjectWidgetSettings(
     widget_button_position: update.widgetButtonPosition,
     widget_button_variant: update.widgetButtonVariant,
     widget_reporter_fields: update.widgetReporterFields,
-    issue_creation_mode: update.issueCreationMode
+    issue_creation_mode: update.issueCreationMode,
+    ...(allowedOrigin ? { allowed_origins: [allowedOrigin] } : {})
   });
   const updatedProject = mapSupabaseProject(projectRows[0], project.publicKey, toSupabaseIssueTargetRow(project.id, project.issueTarget));
 

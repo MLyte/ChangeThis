@@ -285,6 +285,79 @@ test("updates widget settings without reporter fields when Supabase schema is be
   assert.equal(calls.filter((call) => call.method === "PATCH").length, 2);
 });
 
+test("updates a connected site allowed origin in Supabase", async () => {
+  const workspaceId = "11111111-1111-4111-8111-111111111111";
+  const projectId = "22222222-2222-4222-8222-222222222222";
+  const calls: Array<{ method: string; path: string; body?: unknown }> = [];
+
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(input.toString());
+    const method = init.method ?? "GET";
+    const body = typeof init.body === "string" ? JSON.parse(init.body) : undefined;
+    calls.push({ method, path: url.pathname, body });
+
+    if (url.pathname === "/rest/v1/project_public_keys" && method === "GET") {
+      return jsonResponse([{ project_id: projectId, public_key: "ct_active_key" }]);
+    }
+
+    if (url.pathname === "/rest/v1/projects" && method === "GET") {
+      return jsonResponse([baseSupabaseProjectRow({
+        id: projectId,
+        organization_id: workspaceId,
+        public_key: "ct_active_key"
+      })]);
+    }
+
+    if (url.pathname === "/rest/v1/projects" && method === "PATCH") {
+      assert.deepEqual(body, {
+        widget_locale: "fr",
+        widget_button_position: "bottom-right",
+        widget_button_variant: "default",
+        widget_reporter_fields: "optional",
+        issue_creation_mode: "manual",
+        allowed_origins: ["https://new-client.example"]
+      });
+
+      return jsonResponse([baseSupabaseProjectRow({
+        id: projectId,
+        organization_id: workspaceId,
+        public_key: "ct_active_key",
+        allowed_origins: ["https://new-client.example"],
+        widget_locale: "fr",
+        widget_button_position: "bottom-right",
+        widget_button_variant: "default"
+      })]);
+    }
+
+    if (url.pathname === "/rest/v1/issue_targets" && method === "GET") {
+      return jsonResponse([{
+        project_id: projectId,
+        provider: "github",
+        namespace: "agency",
+        project_name: "client-portal",
+        integration_id: null,
+        external_project_id: null,
+        web_url: "https://github.com/agency/client-portal"
+      }]);
+    }
+
+    throw new Error(`Unexpected Supabase request: ${method} ${url.toString()}`);
+  };
+
+  const project = await updateProjectWidgetSettings({
+    projectKey: "ct_active_key",
+    allowedOrigin: "https://new-client.example/pricing",
+    widgetLocale: "fr",
+    widgetButtonPosition: "bottom-right",
+    widgetButtonVariant: "default",
+    widgetReporterFields: "optional",
+    issueCreationMode: "manual"
+  }, workspaceId);
+
+  assert.deepEqual(project.allowedOrigins, ["https://new-client.example"]);
+  assert.equal(calls.filter((call) => call.method === "PATCH").length, 1);
+});
+
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
     headers: {

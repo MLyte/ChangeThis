@@ -225,6 +225,12 @@ textarea,
   white-space: nowrap;
 }
 
+.header-auth-button {
+  min-height: 36px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
 .runtime-status {
   align-items: center;
   display: flex;
@@ -4731,7 +4737,8 @@ dd {
 }
 
 .summary-tile,
-.user-management-panel {
+.user-management-panel,
+.account-security-panel {
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -4757,13 +4764,15 @@ dd {
   text-transform: uppercase;
 }
 
-.user-management-panel {
+.user-management-panel,
+.account-security-panel {
   display: grid;
   gap: 12px;
   padding: 16px;
 }
 
-.user-management-heading {
+.user-management-heading,
+.account-security-heading {
   align-items: flex-start;
   display: flex;
   gap: 14px;
@@ -4845,14 +4854,156 @@ dd {
 }
 
 .user-management-heading strong,
-.user-management-heading span {
+.user-management-heading span,
+.account-security-heading strong,
+.account-security-heading span {
   display: block;
 }
 
-.user-management-heading span {
+.user-management-heading span,
+.account-security-heading span {
   color: var(--muted);
   font-size: 14px;
   margin-top: 3px;
+}
+
+.password-change-form {
+  display: grid;
+  gap: 12px;
+  max-width: 520px;
+}
+
+.password-change-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.password-change-form label span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.password-change-form input {
+  appearance: none;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 11px;
+}
+
+.password-change-form input:focus {
+  border-color: var(--primary-border);
+  box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.14);
+  outline: 0;
+}
+
+.password-change-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 4px;
+}
+
+.site-access-modal-panel {
+  max-width: 720px;
+}
+
+.site-access-add-form {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.site-access-add-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.site-access-add-form label span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.site-access-add-form input {
+  appearance: none;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 11px;
+}
+
+.site-access-add-form input:focus {
+  border-color: var(--primary-border);
+  box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.14);
+  outline: 0;
+}
+
+.site-access-add-form .button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.site-access-list {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  overflow: hidden;
+}
+
+.site-access-row {
+  align-items: center;
+  background: white;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  min-height: 58px;
+  padding: 10px 12px;
+}
+
+.site-access-row:first-child {
+  border-top: 0;
+}
+
+.site-access-row input {
+  height: 18px;
+  width: 18px;
+}
+
+.site-access-user {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.site-access-user strong {
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-access-user small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.compact-empty-state {
+  align-items: flex-start;
+  border-radius: 8px;
+  min-height: auto;
+  padding: 16px;
 }
 
 .users-table {
@@ -5844,7 +5995,7 @@ dd {
 }
 
 .site-row-meta {
-  align-items: center;
+  align-items: start;
   border-top: 1px solid var(--line);
   display: grid;
   gap: 12px;
@@ -5856,6 +6007,52 @@ dd {
   display: grid;
   gap: 6px;
   min-width: 0;
+}
+
+.site-origin-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.site-origin-editor label {
+  display: grid;
+  gap: 5px;
+}
+
+.site-origin-editor label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.site-origin-editor input {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 38px;
+  min-width: 0;
+  padding: 9px 10px;
+  width: 100%;
+}
+
+.site-origin-editor .origin-create-status {
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.site-origin-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.site-origin-editor-actions .button {
+  min-height: 34px;
 }
 
 .site-title-row {
@@ -5877,6 +6074,7 @@ dd {
   display: grid;
   gap: 7px;
   grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  margin-top: 17px;
 }
 
 .site-metrics span {
@@ -5957,6 +6155,7 @@ dd {
 
 .site-script {
   display: block;
+  margin-top: 17px;
   min-width: 0;
 }
 
@@ -6147,6 +6346,19 @@ dd {
   font-size: clamp(24px, 3vw, 34px);
   line-height: 1.05;
   margin-bottom: 0;
+}
+
+.settings-modal-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.settings-modal-actions .button {
+  margin: 0;
 }
 
 .icon-button {
@@ -6398,6 +6610,7 @@ code {
   }
 
   .repo-form,
+  .site-access-add-form,
   .site-create-widget-options,
   .git-status-summary,
   .waitlist-form,
