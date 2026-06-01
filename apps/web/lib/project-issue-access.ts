@@ -170,18 +170,7 @@ async function listInternalProjectIssueAccesses(filters: {
   });
 
   if (!response.ok) {
-    let message = "Unable to update project issue access";
-    try {
-      const body = await response.json() as { detail?: unknown; error?: unknown };
-      message = typeof body.detail === "string"
-        ? body.detail
-        : typeof body.error === "string"
-          ? body.error
-          : message;
-    } catch {
-      // Keep the generic message when the API does not return JSON.
-    }
-    throw new Error(message);
+    return [];
   }
 
   const rows = await response.json() as InternalProjectIssueMemberRow[];
@@ -216,7 +205,18 @@ async function replaceInternalProjectIssueAccesses(input: {
   });
 
   if (!response.ok) {
-    return [];
+    let message = "Unable to update project issue access";
+    try {
+      const body = await response.json() as { detail?: unknown; error?: unknown };
+      message = typeof body.detail === "string"
+        ? body.detail
+        : typeof body.error === "string"
+          ? body.error
+          : message;
+    } catch {
+      // Keep the generic message when the API does not return JSON.
+    }
+    throw new Error(message);
   }
 
   const rows = await response.json() as InternalProjectIssueMemberRow[];
