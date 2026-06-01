@@ -90,7 +90,7 @@ class ProjectIssueMembersReplaceRequest(BaseModel):
     workspace_id: UUID
     project_key: str = Field(min_length=1)
     user_ids: list[UUID] = Field(default_factory=list)
-    user_emails: list[EmailStr] = Field(default_factory=list)
+    user_emails: list[str] = Field(default_factory=list)
 
 
 class ProjectCreateRequest(BaseModel):

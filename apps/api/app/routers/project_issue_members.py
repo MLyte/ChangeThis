@@ -72,7 +72,7 @@ async def replace_project_issue_members(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     user_ids = list(dict.fromkeys(payload.user_ids))
-    user_emails = list(dict.fromkeys(str(email).lower() for email in payload.user_emails))
+    user_emails = list(dict.fromkeys(email.strip().lower() for email in payload.user_emails if email.strip()))
 
     selected_user_ids = set(user_ids)
     if user_emails:
