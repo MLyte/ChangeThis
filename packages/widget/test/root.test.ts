@@ -231,7 +231,7 @@ test("initChangeThis renders subtle button as the brand hand logo without visibl
 
   assert.match(html, /data-variant="subtle"/);
   assert.match(buttonHtml, /aria-label="Feedback"/);
-  assert.match(buttonHtml, /<img class="brand-logo-icon" src="data:image\/png;base64,/);
+  assert.match(buttonHtml, /<svg class="brand-logo-icon" aria-hidden="true" viewBox="0 0 64 64">/);
   assert.match(buttonHtml, /aria-hidden="true"/);
   assert.doesNotMatch(buttonHtml, /<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1\.88 1\.88"/);
   assert.doesNotMatch(buttonHtml, /<span>Feedback<\/span>/);

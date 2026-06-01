@@ -82,7 +82,7 @@ export async function AppHeader({
             <div className="session-menu" aria-label="Session">
               <UserRound aria-hidden="true" className="ui-icon muted-icon" size={16} strokeWidth={2.2} />
               <span>{resolvedSession.email}</span>
-              <a className="button secondary-button session-link header-auth-button" href="/logout">
+              <a className="button secondary-button header-auth-button" href="/logout">
                 <LogOut aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
                 <T k="nav.logout" />
               </a>
