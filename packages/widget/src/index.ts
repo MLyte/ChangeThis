@@ -2286,6 +2286,7 @@ async function captureViewport(
     maskSensitiveFields(true);
     const canvas = await capturePage(document.body, {
       height: window.innerHeight,
+      onclone: sanitizeUnsupportedCaptureStyles,
       width: window.innerWidth,
       windowHeight: window.innerHeight,
       windowWidth: window.innerWidth,
@@ -2299,6 +2300,57 @@ async function captureViewport(
   } finally {
     maskSensitiveFields(false);
   }
+}
+
+function sanitizeUnsupportedCaptureStyles(clonedDocument: Document): void {
+  const view = clonedDocument.defaultView;
+  const root = clonedDocument.documentElement;
+
+  if (!view || !root) {
+    return;
+  }
+
+  const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement | SVGElement>("*"))];
+
+  for (const element of elements) {
+    const computed = view.getComputedStyle(element);
+    for (let index = 0; index < computed.length; index += 1) {
+      const property = computed.item(index);
+      const value = computed.getPropertyValue(property);
+
+      if (hasUnsupportedColorFunction(value)) {
+        element.style.setProperty(property, captureFallbackValue(property), "important");
+      }
+    }
+  }
+}
+
+function hasUnsupportedColorFunction(value: string): boolean {
+  return /\b(?:oklch|oklab|lch|lab)\(/i.test(value);
+}
+
+function captureFallbackValue(property: string): string {
+  if (property.includes("shadow") || property.includes("gradient") || property === "background-image") {
+    return "none";
+  }
+
+  if (property === "background-color") {
+    return "transparent";
+  }
+
+  if (property === "color") {
+    return "#111827";
+  }
+
+  if (property.endsWith("color") || property === "stroke") {
+    return "rgba(17, 24, 39, 0.28)";
+  }
+
+  if (property === "fill") {
+    return "currentColor";
+  }
+
+  return "initial";
 }
 
 async function createImageThumbnail(dataUrl: string): Promise<string | undefined> {

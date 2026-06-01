@@ -307,6 +307,71 @@ test("creates GitLab issues on the self-hosted project origin stored in the targ
   });
 });
 
+test("uploads GitLab screenshot attachments before creating the issue", async () => {
+  const requests: Request[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init);
+    requests.push(request);
+
+    if (request.url.endsWith("/uploads")) {
+      return Response.json({
+        markdown: "![capture](/uploads/abc/capture.png)"
+      });
+    }
+
+    return Response.json({
+      id: 35,
+      iid: 8,
+      web_url: "https://gitrural.cra.wallonie.be/eau/phytorisk/-/issues/8",
+      state: "opened"
+    });
+  };
+
+  const target: IssueTarget = {
+    provider: "gitlab",
+    namespace: "eau",
+    project: "phytorisk",
+    externalProjectId: "287",
+    integrationId: "local-gitlab",
+    webUrl: "https://gitrural.cra.wallonie.be/eau/phytorisk"
+  };
+  const draft: IssueDraft = {
+    title: "Capture cassée",
+    description: [
+      "Feedback client",
+      "",
+      "## Capture",
+      "",
+      "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant."
+    ].join("\n"),
+    labels: ["source:client-feedback"]
+  };
+  const client = getIssueProviderClient("gitlab", { token: "gitlab-token", integrationId: target.integrationId });
+  const issue = await client.createIssue(target, draft, {
+    attachment: {
+      dataUrl: "data:image/png;base64,SGVsbG8=",
+      filename: "capture.png",
+      mimeType: "image/png"
+    },
+    idempotencyKey: "changethis:test"
+  });
+
+  assert.equal(requests[0]?.url, "https://gitrural.cra.wallonie.be/api/v4/projects/287/uploads");
+  assert.equal(requests[0]?.method, "POST");
+  assert.equal(requests[0]?.headers.get("private-token"), "gitlab-token");
+  assert.equal(requests[0]?.headers.has("content-type"), true);
+  assert.equal(requests[1]?.url, "https://gitrural.cra.wallonie.be/api/v4/projects/287/issues");
+  const issuePayload = await requests[1]?.json() as { description?: string };
+  assert.match(issuePayload.description ?? "", /Capture jointe: !\[capture\]\(\/uploads\/abc\/capture\.png\)/);
+  assert.deepEqual(issue, {
+    provider: "gitlab",
+    id: "35",
+    iid: 8,
+    url: "https://gitrural.cra.wallonie.be/eau/phytorisk/-/issues/8",
+    state: "open"
+  });
+});
+
 test("explains GitHub fine-grained token issue permissions failures", async () => {
   globalThis.fetch = async () => Response.json({
     message: "Resource not accessible by personal access token"

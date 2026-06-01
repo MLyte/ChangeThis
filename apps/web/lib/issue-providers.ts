@@ -28,8 +28,19 @@ export class IssueProviderError extends Error {
 
 export type IssueProviderClient = {
   provider: IssueProvider;
-  createIssue(target: IssueTarget, draft: IssueDraft, options?: { idempotencyKey?: string }): Promise<ExternalIssueRef>;
+  createIssue(target: IssueTarget, draft: IssueDraft, options?: IssueProviderCreateOptions): Promise<ExternalIssueRef>;
   getIssue?(target: IssueTarget, ref: ExternalIssueRef): Promise<ExternalIssueRef>;
+};
+
+export type IssueProviderCreateOptions = {
+  attachment?: IssueProviderAttachment;
+  idempotencyKey?: string;
+};
+
+export type IssueProviderAttachment = {
+  dataUrl: string;
+  filename: string;
+  mimeType: string;
 };
 
 export type IssueProviderClientOptions = {
@@ -213,6 +224,12 @@ function createGitLabClient(resolveToken: TokenResolver): IssueProviderClient {
 
       const projectId = validatedTarget.externalProjectId ?? encodeURIComponent(`${validatedTarget.namespace}/${validatedTarget.project}`);
       const baseUrl = getGitLabApiBaseUrl(validatedTarget.webUrl);
+      const attachmentMarkdown = options?.attachment
+        ? await uploadGitLabIssueAttachment(baseUrl, projectId, token, options.attachment)
+        : undefined;
+      const description = attachmentMarkdown
+        ? issueDescriptionWithAttachment(draft.description, attachmentMarkdown)
+        : draft.description;
       const response = await fetchProvider("gitlab", `${baseUrl}/api/v4/projects/${projectId}/issues`, {
         method: "POST",
         headers: {
@@ -222,7 +239,7 @@ function createGitLabClient(resolveToken: TokenResolver): IssueProviderClient {
         },
         body: JSON.stringify({
           title: draft.title,
-          description: draft.description,
+          description,
           labels: draft.labels.join(",")
         })
       });
@@ -336,6 +353,61 @@ function actionableProviderMessage(provider: IssueProvider, status: number, prov
   }
 
   return undefined;
+}
+
+async function uploadGitLabIssueAttachment(
+  baseUrl: string,
+  projectId: string,
+  token: string,
+  attachment: IssueProviderAttachment
+): Promise<string> {
+  const formData = new FormData();
+  formData.set("file", dataUrlToBlob(attachment.dataUrl, attachment.mimeType), attachment.filename);
+
+  const response = await fetchProvider("gitlab", `${baseUrl}/api/v4/projects/${projectId}/uploads`, {
+    method: "POST",
+    headers: {
+      "PRIVATE-TOKEN": token
+    },
+    body: formData
+  });
+  const body = await parseResponseBody(response);
+
+  if (!response.ok) {
+    throw providerError("gitlab", response.status, body, "attachment upload");
+  }
+
+  if (!isRecord(body) || typeof body.markdown !== "string" || body.markdown.length === 0) {
+    throw new IssueProviderError("gitlab", "validation_failed", "GitLab returned an unexpected upload payload.");
+  }
+
+  return body.markdown;
+}
+
+function issueDescriptionWithAttachment(description: string, markdown: string): string {
+  const captureLine = "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant.";
+  if (description.includes(captureLine)) {
+    return description.replace(captureLine, `Capture jointe: ${markdown}`);
+  }
+
+  return `${description}\n\n## Capture\n\n${markdown}`;
+}
+
+function dataUrlToBlob(dataUrl: string, fallbackMimeType: string): Blob {
+  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(dataUrl);
+
+  if (!match) {
+    throw new IssueProviderError("gitlab", "validation_failed", "Screenshot attachment is not a valid data URL.");
+  }
+
+  const mimeType = match[1] || fallbackMimeType;
+  const isBase64 = match[2] === ";base64";
+  const payload = match[3] ?? "";
+  const bytes = isBase64
+    ? Buffer.from(payload, "base64")
+    : Buffer.from(decodeURIComponent(payload), "utf8");
+
+  return new Blob([bytes], { type: mimeType });
 }
 
 async function parseResponseBody(response: Response): Promise<unknown> {
