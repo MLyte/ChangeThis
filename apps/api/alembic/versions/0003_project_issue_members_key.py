@@ -1,6 +1,6 @@
 """Store project issue members by project key.
 
-Revision ID: 0003_project_issue_members_project_key
+Revision ID: 0003_project_issue_members_key
 Revises: 0002_project_issue_members
 Create Date: 2026-06-01
 """
@@ -9,7 +9,7 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0003_project_issue_members_project_key"
+revision: str = "0003_project_issue_members_key"
 down_revision: str | None = "0002_project_issue_members"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
