@@ -64,6 +64,23 @@ export async function getIssueAccessScope(session: AuthSession): Promise<IssueAc
   };
 }
 
+export async function getIssueAccessWorkspaceIds(session: AuthSession): Promise<string[]> {
+  const workspaceIds = new Set<string>();
+
+  if (session.workspace?.id) {
+    workspaceIds.add(session.workspace.id);
+  }
+
+  const accesses = await listProjectIssueAccesses({ userId: session.user.id });
+  for (const access of accesses) {
+    if (access.status === "active" && access.workspaceId) {
+      workspaceIds.add(access.workspaceId);
+    }
+  }
+
+  return [...workspaceIds];
+}
+
 export function filterProjectsForIssueAccess(projects: ChangeThisProject[], scope: IssueAccessScope): ChangeThisProject[] {
   if (scope.kind === "global") {
     return projects;

@@ -6,7 +6,7 @@ import { getFeedbackRepository } from "../../../../../../lib/feedback-repository
 import { IssueProviderError } from "../../../../../../lib/issue-providers";
 import { syncFeedbackIssueState } from "../../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../../lib/logger";
-import { getIssueAccessScope, hasFeedbackIssueAccess, issueAccessFailure } from "../../../../../../lib/project-issue-access";
+import { getIssueAccessScope, getIssueAccessWorkspaceIds, hasFeedbackIssueAccess, issueAccessFailure } from "../../../../../../lib/project-issue-access";
 
 type RouteContext = {
   params: Promise<{
@@ -42,7 +42,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const requestId = requestIdFrom(request);
   const { id } = await context.params;
-  const actionScope = await resolveFeedbackForAction(getFeedbackRepository(), id, workspaceId);
+  const actionScope = await resolveFeedbackForAction(getFeedbackRepository(), id, await getIssueAccessWorkspaceIds(session));
   const feedback = actionScope?.feedback;
 
   if (!feedback || !feedback.externalIssue) {

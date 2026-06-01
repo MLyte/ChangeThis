@@ -6,7 +6,7 @@ import { resolveFeedbackForAction } from "../../../../../lib/demo-feedback-actio
 import { getFeedbackRepository } from "../../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../lib/logger";
-import { getIssueAccessScope, hasFeedbackIssueAccess } from "../../../../../lib/project-issue-access";
+import { getIssueAccessScope, getIssueAccessWorkspaceIds, hasFeedbackIssueAccess } from "../../../../../lib/project-issue-access";
 
 const actionableStatuses: FeedbackStatus[] = ["raw", "retrying", "failed"];
 const unsupportedMethod = methodNotAllowed(["POST"]);
@@ -64,12 +64,13 @@ export async function POST(request: Request) {
   const repository = getFeedbackRepository();
   const requestId = requestIdFrom(request);
   const issueAccessScope = await getIssueAccessScope(session);
+  const actionWorkspaceIds = await getIssueAccessWorkspaceIds(session);
   let created = 0;
   let failed = 0;
   let skipped = 0;
 
   for (const id of feedbackIds) {
-    const actionScope = await resolveFeedbackForAction(repository, id, workspaceId);
+    const actionScope = await resolveFeedbackForAction(repository, id, actionWorkspaceIds);
 
     if (!actionScope || !actionableStatuses.includes(actionScope.feedback.status) || !hasFeedbackIssueAccess(issueAccessScope, actionScope.feedback)) {
       skipped += 1;

@@ -9,12 +9,16 @@ export type FeedbackActionScope = {
 export async function resolveFeedbackForAction(
   repository: FeedbackRepository,
   id: string,
-  workspaceId: string
+  workspaceId: string | string[]
 ): Promise<FeedbackActionScope | undefined> {
-  const scopedFeedback = await repository.get(id, { workspaceId });
+  const workspaceIds = Array.isArray(workspaceId) ? workspaceId : [workspaceId];
 
-  if (scopedFeedback) {
-    return { feedback: scopedFeedback, workspaceId };
+  for (const candidateWorkspaceId of workspaceIds) {
+    const scopedFeedback = await repository.get(id, { workspaceId: candidateWorkspaceId });
+
+    if (scopedFeedback) {
+      return { feedback: scopedFeedback, workspaceId: candidateWorkspaceId };
+    }
   }
 
   if (isProductionRuntime) {

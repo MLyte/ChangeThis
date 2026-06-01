@@ -6,7 +6,7 @@ import { resolveFeedbackForAction } from "../../../../../../lib/demo-feedback-ac
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../../lib/logger";
-import { getIssueAccessScope, hasFeedbackIssueAccess, issueAccessFailure } from "../../../../../../lib/project-issue-access";
+import { getIssueAccessScope, getIssueAccessWorkspaceIds, hasFeedbackIssueAccess, issueAccessFailure } from "../../../../../../lib/project-issue-access";
 
 const issueDraftTitleMaxLength = 240;
 const issueDraftDescriptionMaxLength = 12000;
@@ -48,7 +48,7 @@ export async function POST(request: Request, context: RouteContext) {
   const draftOverride = await readIssueDraftOverride(request);
   const { id } = await context.params;
   const repository = getFeedbackRepository();
-  const actionScope = await resolveFeedbackForAction(repository, id, workspaceId);
+  const actionScope = await resolveFeedbackForAction(repository, id, await getIssueAccessWorkspaceIds(session));
 
   if (!actionScope) {
     return NextResponse.json({ error: "Feedback not found" }, { status: 404 });

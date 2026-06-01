@@ -4,7 +4,7 @@ import { methodNotAllowed, requirePrivateMutationOrigin } from "../../../../../.
 import { resolveFeedbackForAction } from "../../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
 import { logInfo, requestIdFrom } from "../../../../../../lib/logger";
-import { getIssueAccessScope, hasFeedbackIssueAccess, issueAccessFailure } from "../../../../../../lib/project-issue-access";
+import { getIssueAccessScope, getIssueAccessWorkspaceIds, hasFeedbackIssueAccess, issueAccessFailure } from "../../../../../../lib/project-issue-access";
 
 type RouteContext = {
   params: Promise<{
@@ -43,7 +43,7 @@ export async function POST(request: Request, context: RouteContext) {
   const repository = getFeedbackRepository();
 
   try {
-    const actionScope = await resolveFeedbackForAction(repository, id, workspaceId);
+    const actionScope = await resolveFeedbackForAction(repository, id, await getIssueAccessWorkspaceIds(session));
 
     if (!actionScope) {
       return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
