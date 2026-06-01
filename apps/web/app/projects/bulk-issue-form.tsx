@@ -1,6 +1,6 @@
 "use client";
 
-import { Send } from "lucide-react";
+import { LoaderCircle, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ export function BulkIssueForm({ children, showTableHead = false }: BulkIssueForm
   const [selectedCount, setSelectedCount] = useState(0);
   const [selectableCount, setSelectableCount] = useState(0);
   const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateSelectionState(form: HTMLFormElement) {
     const selectableInputs = form.querySelectorAll<HTMLInputElement>("input[name='feedbackId']:not(:disabled)");
@@ -48,6 +49,7 @@ export function BulkIssueForm({ children, showTableHead = false }: BulkIssueForm
       return;
     }
 
+    setIsSubmitting(true);
     startTransition(async () => {
       try {
         const response = await fetch("/api/projects/feedbacks/bulk-issue", {
@@ -80,6 +82,8 @@ export function BulkIssueForm({ children, showTableHead = false }: BulkIssueForm
         toast.error("Connexion interrompue", {
           description: error instanceof Error ? error.message : "Impossible de créer les issues sélectionnées."
         });
+      } finally {
+        setIsSubmitting(false);
       }
     });
   }
@@ -94,6 +98,7 @@ export function BulkIssueForm({ children, showTableHead = false }: BulkIssueForm
 
   const allSelected = selectableCount > 0 && selectedCount === selectableCount;
   const someSelected = selectedCount > 0 && selectedCount < selectableCount;
+  const isProcessing = isPending || isSubmitting;
   const selectAllLabel = selectableCount > 0
     ? allSelected || someSelected
       ? "Désélectionner tous les feedbacks affichés"
@@ -124,15 +129,19 @@ export function BulkIssueForm({ children, showTableHead = false }: BulkIssueForm
         <div className="bulk-issue-toolbar-actions">
           <button
             className="button secondary-button"
-            disabled={selectableCount === 0}
+            disabled={isProcessing || selectableCount === 0}
             onClick={() => toggleAll(!allSelected)}
             type="button"
           >
             {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
           </button>
-          <button className="button" disabled={isPending || selectedCount === 0} type="submit">
-            <Send aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            {isPending ? "Création..." : "Créer les issues sélectionnées"}
+          <button className="button" disabled={isProcessing || selectedCount === 0} type="submit">
+            {isProcessing ? (
+              <LoaderCircle aria-hidden="true" className="ui-icon loading-spinner" size={16} strokeWidth={2.2} />
+            ) : (
+              <Send aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            )}
+            {isProcessing ? "Création en cours..." : "Créer les issues sélectionnées"}
           </button>
         </div>
       </div>
