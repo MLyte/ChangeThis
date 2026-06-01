@@ -6,7 +6,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..models import Project, ProjectIssueMember, User
+from ..models import ProjectIssueMember, User
 from ..schemas import ProjectIssueMemberResponse, ProjectIssueMembersReplaceRequest
 from ..security import session_from_token
 
@@ -32,8 +32,7 @@ async def list_project_issue_members(
         user_id = user.id
 
     query = (
-        select(ProjectIssueMember, Project.public_key, User.email)
-        .join(Project, Project.id == ProjectIssueMember.project_id)
+        select(ProjectIssueMember, User.email)
         .join(User, User.id == ProjectIssueMember.user_id)
         .where(ProjectIssueMember.workspace_id == workspace_id)
         .where(ProjectIssueMember.status == "active")
@@ -42,13 +41,13 @@ async def list_project_issue_members(
     )
 
     if project_key:
-        query = query.where(Project.public_key == project_key)
+        query = query.where(ProjectIssueMember.project_key == project_key)
 
     if user_id:
         query = query.where(ProjectIssueMember.user_id == user_id)
 
     rows = await db.execute(query)
-    return [to_response(member, public_key, email) for member, public_key, email in rows.all()]
+    return [to_response(member, email) for member, email in rows.all()]
 
 
 @router.put("", response_model=list[ProjectIssueMemberResponse])
@@ -60,16 +59,6 @@ async def replace_project_issue_members(
     _user, membership, _workspace = await require_workspace_session(changethis_internal_session, db)
     if membership.workspace_id != payload.workspace_id or membership.role not in ("owner", "admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient workspace role")
-
-    project_result = await db.execute(
-        select(Project)
-        .where(Project.workspace_id == payload.workspace_id)
-        .where(Project.public_key == payload.project_key)
-        .limit(1)
-    )
-    project = project_result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     user_ids = list(dict.fromkeys(payload.user_ids))
     user_emails = list(dict.fromkeys(email.strip().lower() for email in payload.user_emails if email.strip()))
@@ -99,14 +88,14 @@ async def replace_project_issue_members(
     await db.execute(
         delete(ProjectIssueMember)
         .where(ProjectIssueMember.workspace_id == payload.workspace_id)
-        .where(ProjectIssueMember.project_id == project.id)
+        .where(ProjectIssueMember.project_key == payload.project_key)
     )
 
     now = datetime.now(UTC)
     for user_id in selected_user_ids:
         db.add(ProjectIssueMember(
             workspace_id=payload.workspace_id,
-            project_id=project.id,
+            project_key=payload.project_key,
             user_id=user_id,
             role="issue_member",
             status="active",
@@ -125,9 +114,9 @@ async def require_workspace_session(token: str | None, db: AsyncSession):
     return resolved
 
 
-def to_response(member: ProjectIssueMember, project_key: str, email: str) -> ProjectIssueMemberResponse:
+def to_response(member: ProjectIssueMember, email: str) -> ProjectIssueMemberResponse:
     return ProjectIssueMemberResponse(
-        project_key=project_key,
+        project_key=member.project_key,
         user_id=member.user_id,
         email=email,
         role=member.role,

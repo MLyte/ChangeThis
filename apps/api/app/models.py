@@ -116,14 +116,16 @@ class ProjectIssueMember(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("role in ('issue_member')", name="project_issue_members_role_check"),
         CheckConstraint("status in ('active', 'disabled')", name="project_issue_members_status_check"),
-        UniqueConstraint("project_id", "user_id", name="project_issue_members_project_user_unique"),
+        UniqueConstraint("workspace_id", "project_key", "user_id", name="project_issue_members_workspace_project_key_user_unique"),
         Index("project_issue_members_workspace_user_status_idx", "workspace_id", "user_id", "status"),
         Index("project_issue_members_project_status_idx", "project_id", "status"),
+        Index("project_issue_members_workspace_project_key_status_idx", "workspace_id", "project_key", "status"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
-    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    project_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"))
+    project_key: Mapped[str] = mapped_column(Text, nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role: Mapped[str] = mapped_column(Text, default="issue_member", nullable=False)
     status: Mapped[str] = mapped_column(Text, default="active", nullable=False)
