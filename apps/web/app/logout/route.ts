@@ -3,10 +3,7 @@ import { logoutInternalSession } from "../../lib/internal-api";
 
 const authCookieNames = [
   "changethis_access_token",
-  "changethis_internal_session",
-  "sb-access-token",
-  "supabase-auth-token",
-  "supabase-refresh-token"
+  "changethis_internal_session"
 ];
 
 export async function GET(request: Request) {

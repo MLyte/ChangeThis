@@ -1,5 +1,5 @@
 import html2canvas from "html2canvas";
-import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackReporter, FeedbackType, PinTarget, WidgetReporterFields } from "@changethis/shared";
+import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackReporter, FeedbackType, PinTarget, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import { captureFeedbackScreenshot } from "./capture.js";
 import { inferEndpoint, inferLocale } from "./inference.js";
 
@@ -9,6 +9,8 @@ type WidgetOptions = {
   projectKey: string;
   endpoint?: string;
   buttonLabel?: string;
+  title?: string;
+  modes?: WidgetMode[];
   buttonStateLabel?: string;
   buttonVariant?: "default" | "dev" | "prod" | "review" | "subtle";
   buttonPosition?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
@@ -31,6 +33,8 @@ type WidgetConfigResponse = {
   buttonPosition?: WidgetOptions["buttonPosition"];
   buttonVariant?: WidgetOptions["buttonVariant"];
   reporterFields?: WidgetReporterFields;
+  title?: string;
+  modes?: WidgetMode[];
   endpoint?: string;
 };
 
@@ -69,14 +73,16 @@ const rootId = "changethis-widget-root";
 const sentPinsStorageKeyPrefix = "changethis:sentPins:";
 const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
 const reporterStorageKeyPrefix = "changethis:reporter:";
-const productWebsiteUrl = "https://app.changethis.dev";
+const contactWebsiteUrl = "https://mathieuluyten.be";
 const maxScreenshotDimension = 1600;
 const pageFeedbackScreenshotMaxDimension = 960;
 const maxThumbnailDimension = 400;
 const screenshotQuality = 0.8;
 const pageFeedbackScreenshotQuality = 0.62;
 const thumbnailQuality = 0.74;
-const changethisLogoDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAHtUlEQVRo3tWaYUxU2RXHf/e+OzMPqK6CoBGTtUqNqwlsMbtJrW2NJLWuTbfxWyOSKI26rn7RxtQ0zRKz+2UbmzZpmn5oP1UT17QxTQhWjB/W0Apmi4rapbiLskKXgggMyMyb9969/fDeIFjUmccY6z95eXceM+ee/7nnnHvueYi+vi9inudqz/NwXRff8/A8D601xujgDhhjwDADBoRACIEUAiEkCBAIEAKjNbO+bQwGE9yNwWiN1o+eZWWLUCahXEtZSGlhWTMvhVIWsVjMUsYYbVnKX716NS8Tej/vxWiD0r7/onWJBC/UW/n6JSXguSEB7yUl4IYE9Eu6Aq7nBQT8lzUGHhHQ8xT1P5BAPLwUQYL0AAdweSwZR4UO03ShspAFvAbUKaVeLy4urrRt+xUpZRwwnuel0un06NTUVJ/Wuh1oBf4jpUVUF35EQM97BSSwZ926de9t3bq1snZDLZXLK1m4cCFKKQyGjJNhfHycvr4+2tra9p07d+7y0NDQu1r7XZZlEcWNpz3nSnuHdaW9Yz4E1tfU1Ny7du2ayUJrbTKua9KOYxzHMZ7nGR3+zXVdc+LECZNIJE4CMSFEpEk/vnSJjy9dslQBHPLV2traihUrVtDS0sLVq1fp7+9ncnISrTVCCBKJBKWlpaxetZo33nyDDRs2sGTJktcGBgZKMGYs0qyh4ioa/1kY7OzsTO7fv3+JUorqmho2b95MaWkptm1jDExNPWR4eJienh7OHT8HwOTk5D0gFdWA2YVT89ef29evX//ntm3bvt3U1EQikXiy0Yzh1q1bNDQ0MD4+fg1wBAITITEJAgbSEC2vWZaVHX69trZ2bWNjI4lE4lG1OcclBKxfv57jx4+zcuXKHwG1BoOUEfxABJecLl/zRJg5FhQXF//k0KFDFVVVVUFZ/BQYE5TL27dv5/Dhw2uKiop+DizQOsIKZEv5wP75CZBSZoffr6ur++6OHTty/m2wEoJdu3ZRV1e3DdgWyLRyljGLQJQVCPeOssWLS9/Zv39/YuHChc+0/uMkFi1aRH19faKkpKQesKNuaFIgpgMiV+YhfvjWW9u+sWXLlkgTA2zatIm1a9e+CXwt398+cqHw+JaP9YBly5Yt27d3714VpMpoyXDp0qVUV1cvAdZHJpCPCwkhsG0boH7Hjh0bNm7cGElxAINBKcWqVass4KsAy5cvj0AAcnIgKSXGGNLpdPWaNWve2bdvn1RKBdYX5J/JwkUrLSsDWByPxxkaGsrbEDm7UDZwi4qKjh88eHBVdXU1EJxNb964yZkzZxgbG8ubSCwWQwih4vF4nkVdYHqZi/5CCFZXVQG8u2fPnh80NjYGynseHe3tHDhwINnQ0NDX2tqatwWZjp9ocSSnt7Rn4PPPPrPLy8u/tXPnTlFcXIznebS3t3P06NHJtra2nzmO86dnuYAQAtd1GRkZmX7mOA7GGOPlfTYP9q98gjiTTCZ7Ll68yN27fbS0tHDkyJHJy5cvvwf8FsjkIqS7u5umpibS6TRaawYHBwEepNNpYiqP0ix0HZWHy2rHcU58+OEvFp8+/dE3R0bu3x8cHPwNcFIIoZ+USoUQXLhwgYqKCmpqahgdHaWzs5MrV67g+z4XLlwYB/4OUF6xlIGB/hwXIJhP5eJ6xhjicZtMJt07MZFsvHXrZgUwCTxgDufVWjM8PEx5eTnSkjQ3N1NVVUV1dTX37t2jq+tG/+7duyd839f9/f2/B/4G5K48M46UuW7CmUw6O0wBfXPxzA7u37/PT48d44P336esrIzR0VFOnTplhoeGxF/Pn08+fDh57M6dyfMEwTcCRD6Yq4ib6FPhOA7dn37K2bNnKSkpoaO9o7/nds+vOjo6bKATuEiOMfMkZFOuiloGZCGlYC4RY2NjE0ePHv0kFotNJZPJPwB/AQrWw8nOOW8CgRfMlmGMwVJqOJVK/TiVSt0j6AsVeK1NoQjMYjJNAGME4Aoh3ALOMQ39KAsVXvjzUPhJc0htzDSbKJgu6MDNBpbjOHiepymgz8/BAIxBGhO8SsoH4e6dAN7OZDKvho+729ra3K6uLlpbWxkaGroDjBG0Hb8DvP4c9EdFtb5AeAZTDDQBvwSam5ubf3f16tW3k8lk/9jY2AcLikumJqYe7g2V/3VBCWSDOEpjKzwD+MpSpz3f+wfw0LZtHMf5c29v723gy1gsdjvjewpoBz4CxmJK4noF8qpsGs3tODM3Cc/3TFlZWU9YXcaklDe1Nl8IQUYI8eArJSVePB6/XlK0gMGhfxdOeWZ05qI2V7PIlsbpdNolKAu+B+JGJpMZGHnwAICJiYmCKf44g8iNrcexorKScDVXAK8UQubTIKVESokSUdp6c0DFgpcxAnER+PK5ag/BURJQUsh5igpw925QoBrMJ4UuGuYkEHYH1Yw2YU6o31U/6/PJP558/trOgWxzed5B/KIgswRmtMlzwouy+ONQWQL5utD/C2KxGADiX93d6uHUlHYch3QqTSqdIpVKkclkcDMurpsh47p4rjtd9EkpsaSFtIK7pRRSCqQI+mRBnRK81PB9H619dPjvNZ7v4/sevufj+T7a98LvMt3hsyyLmFLEEwkSiQR2wsa2bewim0TCpigc20VF1n8BHMrGZCQSrYIAAAAASUVORK5CYII=";
+const defaultWidgetModes: WidgetMode[] = ["comment", "pin", "screenshot"];
+const maxWidgetTitleLength = 240;
+const changethisHandLogoDataUrl = "data:image/png;base64,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";
 const lucideIcons = {
   bug: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/><path d="M6 17H3"/><path d="M21 17h-3"/></svg>',
   camera: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>',
@@ -93,8 +99,15 @@ const lucideIcons = {
 };
 const widgetCopy = {
   fr: {
-    button: "Feedback",
-    brandLabel: "Découvrir",
+    button: "Commenter",
+    brandLabel: "Aide",
+    helpTitle: "Comment utiliser ce widget",
+    helpIntro: "Ce widget sert à signaler simplement ce qui doit être amélioré sur cette page.",
+    helpStepComment: "Utilise Retour page pour laisser un commentaire général.",
+    helpStepPin: "Utilise Pin pour pointer précisément un élément à corriger.",
+    helpStepCapture: "Utilise Capture pour encadrer une zone visible de l'écran.",
+    helpCustomTitle: "Consigne du site",
+    contactLabel: "Contact",
     title: "Que faut-il changer ?",
     note: "Retour page",
     pin: "Pin",
@@ -147,7 +160,14 @@ const widgetCopy = {
   },
   en: {
     button: "Feedback",
-    brandLabel: "Discover",
+    brandLabel: "Help",
+    helpTitle: "How to use this widget",
+    helpIntro: "This widget helps you report what should be improved on this page.",
+    helpStepComment: "Use Page review to leave a general comment.",
+    helpStepPin: "Use Pin to point at a specific element to fix.",
+    helpStepCapture: "Use Screenshot to frame a visible area of the screen.",
+    helpCustomTitle: "Site guidance",
+    contactLabel: "Contact",
     title: "What should change?",
     note: "Page review",
     pin: "Pin",
@@ -206,13 +226,21 @@ export function initChangeThis(options: WidgetOptions): void {
   }
 
   const endpoint = options.endpoint ?? inferEndpoint();
-  const copy = widgetCopy[options.locale ?? inferLocale()];
+  const baseCopy = widgetCopy[options.locale ?? inferLocale()];
+  const copy = {
+    ...baseCopy,
+    title: normalizeWidgetTitle(options.title, baseCopy.title) ?? baseCopy.title
+  };
   const buttonLabel = options.buttonLabel ?? copy.button;
   const buttonStateLabel = options.buttonStateLabel;
   const buttonVariant = options.buttonVariant ?? "default";
   const buttonPosition = options.buttonPosition ?? "bottom-right";
   const isSubtleButton = buttonVariant === "subtle";
+  const configuredModes = normalizeWidgetModes(options.modes);
   const advancedModesEnabled = supportsAdvancedFeedbackModes();
+  const enabledModes = configuredModes.filter((mode) => mode === "comment" || advancedModesEnabled);
+  const activeModes: WidgetMode[] = enabledModes.length > 0 ? enabledModes : ["comment"];
+  const firstMode: WidgetMode = activeModes[0] ?? "comment";
   const reporterFields = options.reporterFields ?? "optional";
   const appEnvironment = buildAppEnvironment(options);
   const sentPinsStorageKey = `${sentPinsStorageKeyPrefix}${options.projectKey}`;
@@ -232,7 +260,7 @@ export function initChangeThis(options: WidgetOptions): void {
 
   const state = {
     open: false,
-    type: "comment" as FeedbackType,
+    type: firstMode as FeedbackType,
     viewKey: currentViewKey(),
     pins: currentPins,
     sentFeedbacks: currentSentFeedbacks,
@@ -245,6 +273,7 @@ export function initChangeThis(options: WidgetOptions): void {
     reporterName: storedReporter.name ?? "",
     reporterEmail: storedReporter.email ?? "",
     reporterOpen: reporterFields === "required" && (!storedReporter.name || !storedReporter.email),
+    helpOpen: false,
     managerOpen: false,
     notice: "",
     focusPinIndex: undefined as number | undefined
@@ -257,8 +286,8 @@ export function initChangeThis(options: WidgetOptions): void {
     state.captureArea = undefined;
     state.captureMessage = "";
     state.draftViewKey = undefined;
-    if (state.type === "pin" || state.type === "screenshot") {
-      state.type = "comment";
+    if (!isModeEnabled(state.type, activeModes)) {
+      state.type = firstMode as FeedbackType;
     }
   };
 
@@ -317,8 +346,8 @@ export function initChangeThis(options: WidgetOptions): void {
   };
 
   const requestPin = () => {
-    if (!advancedModesEnabled) {
-      state.type = "comment";
+    if (!isModeEnabled("pin", activeModes) || !advancedModesEnabled) {
+      state.type = firstMode as FeedbackType;
       render();
       return;
     }
@@ -352,8 +381,8 @@ export function initChangeThis(options: WidgetOptions): void {
   };
 
   const requestCaptureArea = () => {
-    if (!advancedModesEnabled) {
-      state.type = "comment";
+    if (!isModeEnabled("screenshot", activeModes) || !advancedModesEnabled) {
+      state.type = firstMode as FeedbackType;
       render();
       return;
     }
@@ -387,6 +416,9 @@ export function initChangeThis(options: WidgetOptions): void {
 
     updateFloatingOffset();
     syncDraftView();
+    if (!isModeEnabled(state.type, activeModes)) {
+      state.type = firstMode as FeedbackType;
+    }
     const pinMarkers = state.pins.map((pin, index) => {
       const position = pinViewportPosition(pin.target);
       return `<div class="pin" data-pin-index="${index}" data-status="${pin.status}" style="left:${position.x}px;top:${position.y}px">${pin.number}</div>`;
@@ -467,6 +499,13 @@ export function initChangeThis(options: WidgetOptions): void {
         .button[data-variant="dev"] { background: #1d4ed8; }
         .button[data-variant="prod"] { background: #0f766e; }
         .button[data-variant="review"] { background: #7c2d12; }
+        .button .brand-logo-icon {
+          display: block;
+          flex: 0 0 auto;
+          height: 1.25em;
+          object-fit: contain;
+          width: 1.25em;
+        }
         .button[data-variant="subtle"] {
           background: rgba(17, 24, 39, 0.72);
           border: 1px solid rgba(255, 255, 255, 0.44);
@@ -482,7 +521,6 @@ export function initChangeThis(options: WidgetOptions): void {
           width: 18px;
         }
         .button[data-variant="subtle"] .brand-logo-icon {
-          display: block;
           height: 28px;
           width: 28px;
         }
@@ -553,7 +591,7 @@ export function initChangeThis(options: WidgetOptions): void {
           gap: 8px;
         }
         .header-icon-button,
-        .brand-discovery-link {
+        .help-trigger {
           align-items: center;
           border: 1px solid #d1d5db;
           border-radius: 6px;
@@ -578,12 +616,137 @@ export function initChangeThis(options: WidgetOptions): void {
           border-color: #c5cae9;
           color: #3f51b5;
         }
-        .brand-discovery-link:hover {
+        .help-trigger:hover,
+        .help-trigger:focus-visible {
           background: #f9fafb;
           border-color: #c5cae9;
           color: #3f51b5;
         }
         .title { font-size: 14px; font-weight: 800; margin: 0; }
+        .title strong { font-weight: 900; }
+        .title em { font-style: italic; }
+        .help-backdrop {
+          background: rgba(17, 24, 39, 0.34);
+          border: 0;
+          inset: 0;
+          padding: 0;
+          position: fixed;
+          z-index: 2147483647;
+        }
+        .help-modal {
+          background: #fff;
+          border: 1px solid #c5cae9;
+          border-radius: 8px;
+          box-shadow: 0 24px 70px rgba(17, 24, 39, 0.25);
+          color: #111827;
+          display: grid;
+          gap: 14px;
+          left: 50%;
+          max-height: min(560px, calc(100dvh - 48px));
+          overflow: auto;
+          padding: 18px;
+          position: fixed;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(360px, calc(100vw - 28px));
+          z-index: 2147483647;
+        }
+        .help-header {
+          align-items: start;
+          display: flex;
+          gap: 12px;
+          justify-content: space-between;
+        }
+        .help-header h2 {
+          color: #111827;
+          font-size: 16px;
+          line-height: 1.25;
+          margin: 0;
+        }
+        .help-header p {
+          color: #4b5563;
+          font-size: 13px;
+          line-height: 1.45;
+          margin: 5px 0 0;
+        }
+        .help-list {
+          display: grid;
+          gap: 8px;
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+        .help-list li {
+          align-items: start;
+          color: #374151;
+          display: grid;
+          font-size: 13px;
+          gap: 8px;
+          grid-template-columns: 22px 1fr;
+          line-height: 1.4;
+        }
+        .help-list svg {
+          color: #3f51b5;
+          height: 16px;
+          margin-top: 1px;
+          width: 16px;
+        }
+        .help-guidance {
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          display: grid;
+          gap: 7px;
+          padding: 12px;
+        }
+        .help-guidance strong {
+          color: #111827;
+          font-size: 12px;
+          font-weight: 900;
+          line-height: 1.2;
+        }
+        .help-markdown {
+          color: #374151;
+          display: grid;
+          gap: 7px;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+        .help-markdown p,
+        .help-markdown ul {
+          margin: 0;
+        }
+        .help-markdown ul {
+          display: grid;
+          gap: 4px;
+          padding-left: 18px;
+        }
+        .help-markdown code {
+          background: #eef2ff;
+          border-radius: 4px;
+          color: #3730a3;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+          font-size: 0.92em;
+          padding: 1px 4px;
+        }
+        .help-contact {
+          align-items: center;
+          border: 1px solid #e5e7eb;
+          border-radius: 999px;
+          color: #4b5563;
+          display: inline-flex;
+          font-size: 12px;
+          font-weight: 900;
+          justify-self: start;
+          min-height: 30px;
+          padding: 6px 11px;
+          text-decoration: none;
+        }
+        .help-contact:hover,
+        .help-contact:focus-visible {
+          border-color: #c5cae9;
+          color: #3f51b5;
+        }
         .modes {
           border-bottom: 1px solid #e5e7eb;
           display: grid;
@@ -1129,7 +1292,7 @@ export function initChangeThis(options: WidgetOptions): void {
             justify-content: flex-end;
           }
           .header-icon-button,
-          .brand-discovery-link {
+          .help-trigger {
             height: 30px;
             min-width: 30px;
             padding-inline: 7px;
@@ -1202,7 +1365,8 @@ export function initChangeThis(options: WidgetOptions): void {
       ${pinMarkers}
       ${state.notice ? `<div class="notice" data-position="${buttonPosition}" role="status">${escapeHtml(state.notice)}</div>` : ""}
       <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}" aria-label="${escapeHtml(buttonLabel)}" title="${escapeHtml(buttonLabel)}">
-        ${isSubtleButton ? `<img class="brand-logo-icon" src="${changethisLogoDataUrl}" alt="" aria-hidden="true">` : `<span>${escapeHtml(buttonLabel)}</span>`}
+        <img class="brand-logo-icon" src="${changethisHandLogoDataUrl}" alt="" aria-hidden="true">
+        ${isSubtleButton ? "" : `<span>${escapeHtml(buttonLabel)}</span>`}
         ${buttonStateLabel && !isSubtleButton ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
       </button>
       ${state.open ? `
@@ -1217,17 +1381,15 @@ export function initChangeThis(options: WidgetOptions): void {
                   <strong>${escapeHtml(copy.reporterToggle)}</strong>
                 </button>
               ` : ""}
-              <a class="brand-discovery-link" href="${productWebsiteUrl}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(copy.brandLabel)}" title="${escapeHtml(copy.brandLabel)}">${lucideIcons.question}</a>
+              <button class="help-trigger" data-action="open-help" aria-label="${escapeHtml(copy.brandLabel)}" title="${escapeHtml(copy.brandLabel)}">${lucideIcons.question}</button>
               ${totalFeedbacks ? `<button class="panel-link" data-action="open-manager">${escapeHtml(copy.manageFeedbacks)}</button>` : ""}
             </div>
           </div>
-          <p class="title">${escapeHtml(copy.title)}</p>
+          <p class="title">${renderInlineMarkdown(copy.title)}</p>
           <div class="modes" data-advanced="${advancedModesEnabled}">
-            <button class="mode" data-mode="comment" data-active="${state.type === "comment"}">${lucideIcons["message-square"]}${escapeHtml(copy.note)}</button>
-            ${advancedModesEnabled ? `
-              <button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>
-              <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>
-            ` : ""}
+            ${activeModes.includes("comment") ? `<button class="mode" data-mode="comment" data-active="${state.type === "comment"}">${lucideIcons["message-square"]}${escapeHtml(copy.note)}</button>` : ""}
+            ${activeModes.includes("pin") ? `<button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>` : ""}
+            ${activeModes.includes("screenshot") ? `<button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>` : ""}
           </div>
           ${reporterFields !== "hidden" ? `
             ${state.reporterOpen ? `
@@ -1294,6 +1456,28 @@ export function initChangeThis(options: WidgetOptions): void {
             <button class="cancel" data-action="close">${escapeHtml(copy.close)}</button>
             <button class="send" data-action="send" aria-label="${escapeHtml(copy.sendAllPending)}" title="${escapeHtml(copy.sendAllPending)}" ${canSend ? "" : "disabled"}>${lucideIcons.send}${escapeHtml(sendLabel)}</button>
           </div>
+        </section>
+      ` : ""}
+      ${state.helpOpen ? `
+        <button class="help-backdrop" data-action="close-help" aria-label="${escapeHtml(copy.close)}"></button>
+        <section class="help-modal" aria-labelledby="changethis-help-title" role="dialog" aria-modal="true">
+          <div class="help-header">
+            <div>
+              <h2 id="changethis-help-title">${escapeHtml(copy.helpTitle)}</h2>
+              <p>${escapeHtml(copy.helpIntro)}</p>
+            </div>
+            <button class="header-icon-button" data-action="close-help" aria-label="${escapeHtml(copy.close)}">${lucideIcons.x}</button>
+          </div>
+          <ul class="help-list">
+            ${activeModes.includes("comment") ? `<li>${lucideIcons["message-square"]}<span>${escapeHtml(copy.helpStepComment)}</span></li>` : ""}
+            ${activeModes.includes("pin") ? `<li>${lucideIcons["map-pin"]}<span>${escapeHtml(copy.helpStepPin)}</span></li>` : ""}
+            ${activeModes.includes("screenshot") ? `<li>${lucideIcons.camera}<span>${escapeHtml(copy.helpStepCapture)}</span></li>` : ""}
+          </ul>
+          <div class="help-guidance">
+            <strong>${escapeHtml(copy.helpCustomTitle)}</strong>
+            <div class="help-markdown">${renderWidgetMarkdown(copy.title)}</div>
+          </div>
+          <a class="help-contact" href="${contactWebsiteUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.contactLabel)}</a>
         </section>
       ` : ""}
       ${state.managerOpen ? `
@@ -1464,7 +1648,21 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLButtonElement>("[data-action='open-manager']")?.addEventListener("click", () => {
       state.managerOpen = true;
+      state.helpOpen = false;
       render();
+    });
+
+    shadow.querySelector<HTMLButtonElement>("[data-action='open-help']")?.addEventListener("click", () => {
+      state.helpOpen = true;
+      state.managerOpen = false;
+      render();
+    });
+
+    shadow.querySelectorAll<HTMLButtonElement>("[data-action='close-help']").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.helpOpen = false;
+        render();
+      });
     });
 
     shadow.querySelectorAll<HTMLButtonElement>("[data-action='close-manager']").forEach((button) => {
@@ -1587,7 +1785,7 @@ export function initChangeThis(options: WidgetOptions): void {
         const index = Number(button.dataset.pinIndex);
         state.pins = state.pins.filter((_, pinIndex) => pinIndex !== index);
         if (state.pins.length === 0 && state.type === "pin") {
-          state.type = "comment";
+          state.type = firstMode as FeedbackType;
           state.draftViewKey = undefined;
           state.nextPinNumber = 1;
         }
@@ -1629,7 +1827,7 @@ export function initChangeThis(options: WidgetOptions): void {
     shadow.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         const nextType = button.dataset.mode as FeedbackType;
-        state.type = advancedModesEnabled || nextType === "comment" ? nextType : "comment";
+        state.type = isModeEnabled(nextType, activeModes) ? nextType : firstMode as FeedbackType;
         state.notice = "";
         render();
       });
@@ -1681,18 +1879,20 @@ export function initChangeThis(options: WidgetOptions): void {
         state.sending = true;
         render();
         try {
+          const target = resolvePinTargetForSubmission(draft.target);
           const submitted = await submitFeedback({
             endpoint,
             projectKey: options.projectKey,
             type: "pin",
             message: draft.message,
-            pins: [draft.target],
+            pins: [target],
             reporter,
             appEnvironment
           });
           const sentAt = new Date().toISOString();
           state.pins[index] = {
             ...draft,
+            target,
             status: "sent",
             feedbackId: submitted.id,
             reporter,
@@ -1792,18 +1992,20 @@ export function initChangeThis(options: WidgetOptions): void {
         }
 
         for (const { pin, index } of pendingPins) {
+          const target = resolvePinTargetForSubmission(pin.target);
           const submitted = await submitFeedback({
             endpoint,
             projectKey: options.projectKey,
             type: "pin",
             message: pin.message,
-            pins: [pin.target],
+            pins: [target],
             reporter,
             appEnvironment
           });
           const sentAt = new Date().toISOString();
           state.pins[index] = {
             ...pin,
+            target,
             status: "sent",
             feedbackId: submitted.id,
             reporter,
@@ -1868,6 +2070,8 @@ export function initChangeThis(options: WidgetOptions): void {
   window.addEventListener("scroll", handleScrollOrResize, { capture: true, passive: true });
   document.addEventListener("scroll", handleScrollOrResize, { capture: true, passive: true });
   window.addEventListener("resize", handleScrollOrResize);
+  window.visualViewport?.addEventListener("resize", handleScrollOrResize);
+  window.visualViewport?.addEventListener("scroll", handleScrollOrResize);
   installNavigationListener(() => {
     if (syncDraftView()) {
       render();
@@ -2460,6 +2664,21 @@ function pinViewportPosition(pin: PinTarget): { x: number; y: number } {
   };
 }
 
+function resolvePinTargetForSubmission(pin: PinTarget): PinTarget {
+  const element = pin.selector ? safeQuerySelector(pin.selector) : null;
+  if (!element || typeof pin.elementOffsetX !== "number" || typeof pin.elementOffsetY !== "number") {
+    return pin;
+  }
+
+  const rect = element.getBoundingClientRect();
+
+  return {
+    ...pin,
+    x: Math.round(rect.left + pin.elementOffsetX + window.scrollX),
+    y: Math.round(rect.top + pin.elementOffsetY + window.scrollY)
+  };
+}
+
 function safeQuerySelector(selector: string): Element | null {
   try {
     return document.querySelector(selector);
@@ -2954,6 +3173,8 @@ function widgetOptionsFromScript(script: HTMLScriptElement | null, projectKey: s
     projectKey,
     endpoint: script?.dataset.endpoint ?? scriptEndpoint(script),
     buttonLabel: script?.dataset.buttonLabel,
+    title: normalizeWidgetTitle(script?.dataset.widgetTitle, undefined),
+    modes: parseWidgetModes(script?.dataset.modes),
     buttonStateLabel: script?.dataset.buttonState,
     buttonVariant: variant === "dev" || variant === "prod" || variant === "review" || variant === "subtle" ? variant : undefined,
     buttonPosition: position === "bottom-right" || position === "bottom-left" || position === "top-right" || position === "top-left" ? position : undefined,
@@ -2999,7 +3220,9 @@ async function resolveWidgetOptions(script: HTMLScriptElement | null, fallback: 
     locale: config.locale ?? fallback.locale,
     buttonPosition: config.buttonPosition ?? fallback.buttonPosition,
     buttonVariant: config.buttonVariant ?? fallback.buttonVariant,
-    reporterFields: config.reporterFields ?? fallback.reporterFields
+    reporterFields: config.reporterFields ?? fallback.reporterFields,
+    title: normalizeWidgetTitle(config.title, fallback.title),
+    modes: normalizeWidgetModes(Array.isArray(config.modes) ? config.modes : fallback.modes)
   };
 }
 
@@ -3023,4 +3246,72 @@ function isWidgetConfigResponse(value: unknown): value is WidgetConfigResponse {
   }
 
   return true;
+}
+
+function normalizeWidgetTitle(value: string | undefined, fallback: string | undefined): string | undefined {
+  const title = value?.trim();
+  if (!title) {
+    return fallback;
+  }
+
+  return title.slice(0, maxWidgetTitleLength);
+}
+
+function renderWidgetMarkdown(value: string): string {
+  const lines = value.split(/\r?\n/);
+  const blocks: string[] = [];
+  let listItems: string[] = [];
+
+  const flushList = () => {
+    if (listItems.length === 0) {
+      return;
+    }
+
+    blocks.push(`<ul>${listItems.join("")}</ul>`);
+    listItems = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList();
+      continue;
+    }
+
+    if (trimmed.startsWith("- ")) {
+      listItems.push(`<li>${renderInlineMarkdown(trimmed.slice(2))}</li>`);
+      continue;
+    }
+
+    flushList();
+    blocks.push(`<p>${renderInlineMarkdown(trimmed)}</p>`);
+  }
+
+  flushList();
+  return blocks.join("") || `<p>${renderInlineMarkdown(value)}</p>`;
+}
+
+function renderInlineMarkdown(value: string): string {
+  return escapeHtml(value)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+}
+
+function normalizeWidgetModes(value: WidgetMode[] | undefined): WidgetMode[] {
+  const modes = value?.filter((mode): mode is WidgetMode => mode === "comment" || mode === "pin" || mode === "screenshot") ?? defaultWidgetModes;
+  const uniqueModes = defaultWidgetModes.filter((mode) => modes.includes(mode));
+  return uniqueModes.length > 0 ? uniqueModes : defaultWidgetModes;
+}
+
+function parseWidgetModes(value: string | undefined): WidgetMode[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return normalizeWidgetModes(value.split(",").map((mode) => mode.trim()) as WidgetMode[]);
+}
+
+function isModeEnabled(mode: FeedbackType, modes: readonly WidgetMode[]): boolean {
+  return modes.includes(mode as WidgetMode);
 }

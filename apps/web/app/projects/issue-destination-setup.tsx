@@ -12,15 +12,17 @@ import {
   Info,
   KeyRound,
   Link2,
+  Loader2,
   Mail,
   Pencil,
   Plus,
+  Search,
   ShieldCheck,
   Trash2,
   UserRound,
   X,
 } from "lucide-react";
-import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetReporterFields } from "@changethis/shared";
+import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
@@ -104,6 +106,14 @@ const issueCreationModeOptions: Array<{ label: string; value: IssueCreationMode 
   { label: "Automatique", value: "automatic" }
 ];
 
+const defaultWidgetTitle = "Que faut-il changer ?";
+const maxWidgetTitleLength = 240;
+const widgetModeOptions: Array<{ label: string; value: WidgetMode }> = [
+  { label: "Retour page", value: "comment" },
+  { label: "Pin", value: "pin" },
+  { label: "Capture", value: "screenshot" }
+];
+
 type OriginValidation = {
   ok: boolean;
   message: string;
@@ -153,6 +163,8 @@ export function IssueDestinationSetup({
   const [siteWidgetButtonVariant, setSiteWidgetButtonVariant] = useState<WidgetButtonVariant>("default");
   const [siteWidgetButtonPosition, setSiteWidgetButtonPosition] = useState<WidgetButtonPosition>("bottom-right");
   const [siteWidgetReporterFields, setSiteWidgetReporterFields] = useState<WidgetReporterFields>("optional");
+  const [siteWidgetTitle, setSiteWidgetTitle] = useState(defaultWidgetTitle);
+  const [siteWidgetModes, setSiteWidgetModes] = useState<WidgetMode[]>(["comment", "pin", "screenshot"]);
   const [siteIssueCreationMode, setSiteIssueCreationMode] = useState<IssueCreationMode>("manual");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
@@ -309,6 +321,8 @@ export function IssueDestinationSetup({
             widgetButtonPosition: siteWidgetButtonPosition,
             widgetButtonVariant: siteWidgetButtonVariant,
             widgetReporterFields: siteWidgetReporterFields,
+            widgetTitle: siteWidgetTitle,
+            widgetModes: siteWidgetModes,
             issueCreationMode: siteIssueCreationMode
           })
         });
@@ -340,6 +354,8 @@ export function IssueDestinationSetup({
         setSiteWidgetButtonVariant("default");
         setSiteWidgetButtonPosition("bottom-right");
         setSiteWidgetReporterFields("optional");
+        setSiteWidgetTitle(defaultWidgetTitle);
+        setSiteWidgetModes(["comment", "pin", "screenshot"]);
         setSiteIssueCreationMode("manual");
         setIsSiteModalOpen(false);
         toast.success("Site connecté", {
@@ -355,7 +371,7 @@ export function IssueDestinationSetup({
     });
   }
 
-  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) {
+  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) {
     const project = projectViews.find((item) => item.publicKey === projectKey);
     if (!project) {
       return;
@@ -369,12 +385,14 @@ export function IssueDestinationSetup({
     applyWidgetSettings(project, update);
   }
 
-  function applyWidgetSettings(project: ProjectView, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) {
+  function applyWidgetSettings(project: ProjectView, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) {
     const nextSettings = {
       widgetLocale: update.widgetLocale ?? project.widgetLocale,
       widgetButtonPosition: update.widgetButtonPosition ?? project.widgetButtonPosition,
       widgetButtonVariant: update.widgetButtonVariant ?? project.widgetButtonVariant,
       widgetReporterFields: update.widgetReporterFields ?? project.widgetReporterFields,
+      widgetTitle: normalizeWidgetTitle(update.widgetTitle ?? project.widgetTitle),
+      widgetModes: normalizeWidgetModes(update.widgetModes ?? project.widgetModes),
       issueCreationMode: update.issueCreationMode ?? project.issueCreationMode
     };
 
@@ -465,6 +483,8 @@ export function IssueDestinationSetup({
             widgetButtonPosition: project.widgetButtonPosition,
             widgetButtonVariant: project.widgetButtonVariant,
             widgetReporterFields: project.widgetReporterFields,
+            widgetTitle: project.widgetTitle,
+            widgetModes: project.widgetModes,
             issueCreationMode: project.issueCreationMode
           })
         });
@@ -836,7 +856,9 @@ export function IssueDestinationSetup({
               setSiteWidgetButtonPosition={setSiteWidgetButtonPosition}
               setSiteWidgetButtonVariant={setSiteWidgetButtonVariant}
               setSiteWidgetLocale={setSiteWidgetLocale}
+              setSiteWidgetModes={setSiteWidgetModes}
               setSiteWidgetReporterFields={setSiteWidgetReporterFields}
+              setSiteWidgetTitle={setSiteWidgetTitle}
               onRepositoryUrlChange={updateRepositoryUrl}
               onSelectRepository={selectRepository}
               setSiteName={setSiteName}
@@ -846,8 +868,10 @@ export function IssueDestinationSetup({
               siteWidgetButtonPosition={siteWidgetButtonPosition}
               siteWidgetButtonVariant={siteWidgetButtonVariant}
               siteIssueCreationMode={siteIssueCreationMode}
+              siteWidgetModes={siteWidgetModes}
               siteWidgetLocale={siteWidgetLocale}
               siteWidgetReporterFields={siteWidgetReporterFields}
+              siteWidgetTitle={siteWidgetTitle}
               setSiteIssueCreationMode={setSiteIssueCreationMode}
             />
           ) : null}
@@ -966,7 +990,7 @@ function AccountSection({
           </label>
           <div className="password-change-actions">
             <button className="button primary-button" disabled={isPending} type="submit">
-              <KeyRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+              {isPending ? <LoadingSpinner /> : <KeyRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
               {isPending ? "Enregistrement..." : "Modifier le mot de passe"}
             </button>
           </div>
@@ -1073,7 +1097,7 @@ function SiteAccessModal({
             Annuler
           </button>
           <button className="button" disabled={isPending} onClick={onSave} type="button">
-            <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            {isPending ? <LoadingSpinner /> : <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
             {isPending ? "Enregistrement..." : "Enregistrer les accès"}
           </button>
         </div>
@@ -1149,6 +1173,10 @@ function ThemeDropdown<T extends string>({
       ) : null}
     </div>
   );
+}
+
+function LoadingSpinner({ size = 16 }: { size?: number }) {
+  return <Loader2 aria-hidden="true" className="ui-icon loading-spinner" size={size} strokeWidth={2.2} />;
 }
 
 function GitConnectionsSection({ integrations }: { integrations: ProviderIntegrationSummary[] }) {
@@ -1618,7 +1646,10 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               <p>{connectionAccountLabel(integration)}</p>
               <div className={`connection-health ${connectionState.state}`} role="status">
                 <div>
-                  <strong>{connectionHealthTitle(connectionState.state)}</strong>
+                  <strong>
+                    {connectionState.state === "checking" ? <LoadingSpinner size={14} /> : null}
+                    {connectionHealthTitle(connectionState.state)}
+                  </strong>
                   {connectionState.message ? <span>{connectionState.message}</span> : null}
                 </div>
                 {typeof connectionState.repositoryCount === "number" ? (
@@ -1663,7 +1694,7 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
                       value={tokenInputs[integration.provider] ?? ""}
                     />
                     <button className="button" disabled={isSavingToken} type="submit">
-                      <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                      {isSavingToken ? <LoadingSpinner /> : <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
                       {isSavingToken ? "Enregistrement..." : "Enregistrer"}
                     </button>
                   </div>
@@ -1678,12 +1709,12 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               <div className="integration-actions">
                 {credentialConfigured ? (
                   <button className="button danger-button" disabled={connectionState.state === "checking"} onClick={() => void disconnectConnection(integration)} type="button">
-                    <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    {connectionState.state === "checking" ? <LoadingSpinner /> : <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
                     Déconnecter
                   </button>
                 ) : isLocallyDisabled && integration.environmentCredentialConfigured ? (
                   <button className="button" disabled={connectionState.state === "checking"} onClick={() => void enableConnection(integration)} type="button">
-                    <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    {connectionState.state === "checking" ? <LoadingSpinner /> : <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
                     Réactiver
                   </button>
                 ) : null}
@@ -1848,6 +1879,7 @@ function AutomaticIssueConfirmationModal({
             Annuler
           </button>
           <button className="button" disabled={isPending} onClick={onConfirm} type="button">
+            {isPending ? <LoadingSpinner /> : null}
             {isPending ? "Activation..." : "Activer"}
           </button>
         </div>
@@ -1892,6 +1924,7 @@ function DeleteSiteConfirmationModal({
             Annuler
           </button>
           <button className="button danger-button" disabled={isPending} onClick={onConfirm} type="button">
+            {isPending ? <LoadingSpinner /> : null}
             {isPending ? "Suppression..." : "Supprimer"}
           </button>
         </div>
@@ -1933,7 +1966,9 @@ function ConnectedSitesSection({
   setSiteWidgetButtonPosition,
   setSiteWidgetButtonVariant,
   setSiteWidgetLocale,
+  setSiteWidgetModes,
   setSiteWidgetReporterFields,
+  setSiteWidgetTitle,
   setSiteName,
   setSiteOrigin,
   siteName,
@@ -1941,8 +1976,10 @@ function ConnectedSitesSection({
   siteWidgetButtonPosition,
   siteWidgetButtonVariant,
   siteIssueCreationMode,
+  siteWidgetModes,
   siteWidgetLocale,
   siteWidgetReporterFields,
+  siteWidgetTitle,
   setSiteIssueCreationMode
 }: {
   canManageMembers: boolean;
@@ -1963,7 +2000,7 @@ function ConnectedSitesSection({
   onSelectRepository: (repositoryId: string) => void;
   onLeaveSharedProject: (projectKey: string) => void;
   onCancelSiteOriginEdit: () => void;
-  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) => void;
+  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) => void;
   onSiteOriginEditorChange: (value: string) => void;
   projects: ProjectView[];
   currentUserId?: string;
@@ -1977,7 +2014,9 @@ function ConnectedSitesSection({
   setSiteWidgetButtonPosition: (position: WidgetButtonPosition) => void;
   setSiteWidgetButtonVariant: (variant: WidgetButtonVariant) => void;
   setSiteWidgetLocale: (locale: WidgetLocale) => void;
+  setSiteWidgetModes: (modes: WidgetMode[]) => void;
   setSiteWidgetReporterFields: (fields: WidgetReporterFields) => void;
+  setSiteWidgetTitle: (title: string) => void;
   setSiteName: (name: string) => void;
   setSiteOrigin: (origin: string) => void;
   siteName: string;
@@ -1985,8 +2024,10 @@ function ConnectedSitesSection({
   siteWidgetButtonPosition: WidgetButtonPosition;
   siteWidgetButtonVariant: WidgetButtonVariant;
   siteIssueCreationMode: IssueCreationMode;
+  siteWidgetModes: WidgetMode[];
   siteWidgetLocale: WidgetLocale;
   siteWidgetReporterFields: WidgetReporterFields;
+  siteWidgetTitle: string;
   setSiteIssueCreationMode: (mode: IssueCreationMode) => void;
 }) {
   const isSelectedProviderConnected = connectedProviders.has(selectedProvider);
@@ -2016,6 +2057,17 @@ function ConnectedSitesSection({
     };
   });
   const siteOriginValidation = validateAllowedOrigin(siteOrigin);
+  const [repositorySearch, setRepositorySearch] = useState("");
+  const normalizedRepositorySearch = repositorySearch.trim().toLowerCase();
+  const filteredRepositoryOptions = useMemo(
+    () => normalizedRepositorySearch
+      ? repositoryOptions.filter((repository) => repositorySearchText(repository).includes(normalizedRepositorySearch))
+      : repositoryOptions,
+    [normalizedRepositorySearch, repositoryOptions]
+  );
+  const repositorySearchResultText = repositoryLoadState === "ready"
+    ? `${filteredRepositoryOptions.length} dépôt${filteredRepositoryOptions.length > 1 ? "s" : ""} sur ${repositoryOptions.length}`
+    : "";
 
   return (
     <section className="settings-section linked-sites" aria-labelledby="linked-sites-title">
@@ -2211,6 +2263,27 @@ function ConnectedSitesSection({
                   {canManageProject ? (
                     <>
                   <div className="widget-settings">
+                    <label className="widget-title-field">
+                      <span>Titre widget</span>
+                      <textarea
+                        defaultValue={project.widgetTitle}
+                        disabled={isPending}
+                        maxLength={maxWidgetTitleLength}
+                        onBlur={(event) => {
+                          const title = normalizeWidgetTitle(event.currentTarget.value);
+                          event.currentTarget.value = title;
+                          if (title !== project.widgetTitle) {
+                            onUpdateWidgetSettings(project.publicKey, { widgetTitle: title });
+                          }
+                        }}
+                      />
+                      <small>{maxWidgetTitleLength} caractères max</small>
+                    </label>
+                    <WidgetModeCheckboxes
+                      disabled={isPending}
+                      modes={project.widgetModes}
+                      onChange={(modes) => onUpdateWidgetSettings(project.publicKey, { widgetModes: modes })}
+                    />
                     <ThemeDropdown
                       disabled={isPending}
                       label="Langue widget"
@@ -2275,14 +2348,30 @@ function ConnectedSitesSection({
 
       {isSiteModalOpen ? (
         <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="site-modal-title">
-          <button className="settings-modal-backdrop" aria-label="Fermer" onClick={onCloseModal} type="button" />
+          <button
+            className="settings-modal-backdrop"
+            aria-label="Fermer"
+            onClick={() => {
+              setRepositorySearch("");
+              onCloseModal();
+            }}
+            type="button"
+          />
           <div className="settings-modal-panel">
             <div className="settings-modal-header">
               <div>
                 <p className="eyebrow">Pages connectées</p>
                 <h2 id="site-modal-title">Ajouter un nouveau site</h2>
               </div>
-              <button className="icon-button" aria-label="Fermer" onClick={onCloseModal} type="button">
+              <button
+                className="icon-button"
+                aria-label="Fermer"
+                onClick={() => {
+                  setRepositorySearch("");
+                  onCloseModal();
+                }}
+                type="button"
+              >
                 <X aria-hidden="true" className="ui-icon" size={18} strokeWidth={2.2} />
               </button>
             </div>
@@ -2318,23 +2407,48 @@ function ConnectedSitesSection({
               <form className="repo-form site-create-form" onSubmit={(event) => event.preventDefault()}>
                 <label>
                   Service Git
-                  <select name="provider" value={selectedProvider} onChange={(event) => onSelectProvider(event.target.value as IssueProvider)}>
+                  <select
+                    name="provider"
+                    value={selectedProvider}
+                    onChange={(event) => {
+                      setRepositorySearch("");
+                      onSelectProvider(event.target.value as IssueProvider);
+                    }}
+                  >
                     <option disabled={!connectedProviders.has("github")} value="github">GitHub</option>
                     <option disabled={!connectedProviders.has("gitlab")} value="gitlab">GitLab</option>
                   </select>
                 </label>
                 <label className="repo-select-field">
                   Dépôt connecté
+                  <span className="repository-search-field">
+                    <Search aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+                    <input
+                      aria-label="Rechercher un dépôt connecté"
+                      disabled={isRepositorySelectDisabled}
+                      name="repositorySearch"
+                      onChange={(event) => setRepositorySearch(event.target.value)}
+                      placeholder="Rechercher par nom, groupe ou URL"
+                      type="search"
+                      value={repositorySearch}
+                    />
+                    {repositorySearchResultText ? <small>{repositorySearchResultText}</small> : null}
+                  </span>
                   <select
-                    disabled={isRepositorySelectDisabled}
+                    disabled={isRepositorySelectDisabled || filteredRepositoryOptions.length === 0}
                     name="repositorySelect"
                     value={selectedRepositoryId}
                     onChange={(event) => {
                       onSelectRepository(event.target.value);
+                      setRepositorySearch("");
                     }}
                   >
-                    <option value="">{repositorySelectPlaceholder(repositoryLoadState, isSelectedProviderConnected)}</option>
-                    {repositoryOptions.map((repository) => (
+                    <option value="">
+                      {normalizedRepositorySearch && filteredRepositoryOptions.length === 0
+                        ? "Aucun dépôt ne correspond à cette recherche"
+                        : repositorySelectPlaceholder(repositoryLoadState, isSelectedProviderConnected)}
+                    </option>
+                    {filteredRepositoryOptions.map((repository) => (
                       <option key={repository.id} value={repository.id}>
                         {repository.label}
                       </option>
@@ -2378,6 +2492,19 @@ function ConnectedSitesSection({
                 </label>
                 <fieldset className="site-create-widget-options">
                   <legend>Options de placement du feedback</legend>
+                  <label className="widget-title-field">
+                    <span>Titre widget</span>
+                    <textarea
+                      maxLength={maxWidgetTitleLength}
+                      onChange={(event) => setSiteWidgetTitle(event.target.value)}
+                      value={siteWidgetTitle}
+                    />
+                    <small>{maxWidgetTitleLength} caractères max</small>
+                  </label>
+                  <WidgetModeCheckboxes
+                    modes={siteWidgetModes}
+                    onChange={setSiteWidgetModes}
+                  />
                   <ThemeDropdown label="Langue" onChange={setSiteWidgetLocale} options={widgetLocaleOptions} value={siteWidgetLocale} />
                   <ThemeDropdown label="Visibilité" onChange={setSiteWidgetButtonVariant} options={widgetVariantOptions} value={siteWidgetButtonVariant} />
                   <ThemeDropdown label="Position bouton" onChange={setSiteWidgetButtonPosition} options={widgetPositionOptions} value={siteWidgetButtonPosition} />
@@ -2386,7 +2513,7 @@ function ConnectedSitesSection({
                 </fieldset>
                 <div className="site-create-actions">
                   <button className="button" disabled={isPending || !siteOriginValidation.ok || !hasRepositoryDestination || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
-                    <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    {isPending ? <LoadingSpinner /> : <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
                     {isPending ? "Création..." : "Créer le site"}
                   </button>
                 </div>
@@ -2396,6 +2523,43 @@ function ConnectedSitesSection({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function WidgetModeCheckboxes({
+  disabled = false,
+  modes,
+  onChange
+}: {
+  disabled?: boolean;
+  modes: WidgetMode[];
+  onChange: (modes: WidgetMode[]) => void;
+}) {
+  const normalizedModes = normalizeWidgetModes(modes);
+
+  function toggleMode(mode: WidgetMode, checked: boolean) {
+    const nextModes = checked
+      ? normalizeWidgetModes([...normalizedModes, mode])
+      : normalizedModes.filter((item) => item !== mode);
+
+    onChange(nextModes.length > 0 ? normalizeWidgetModes(nextModes) : normalizedModes);
+  }
+
+  return (
+    <fieldset className="widget-mode-checkboxes">
+      <legend>Types de retour</legend>
+      {widgetModeOptions.map((option) => (
+        <label key={option.value}>
+          <input
+            checked={normalizedModes.includes(option.value)}
+            disabled={disabled || (normalizedModes.length === 1 && normalizedModes.includes(option.value))}
+            onChange={(event) => toggleMode(option.value, event.target.checked)}
+            type="checkbox"
+          />
+          <span>{option.label}</span>
+        </label>
+      ))}
+    </fieldset>
   );
 }
 
@@ -2544,7 +2708,9 @@ function parseRepositoryOptions(value: unknown, provider: IssueProvider): Reposi
         ? value.repos
         : [];
 
-  return repositories.flatMap((repository) => parseRepositoryOption(repository, provider));
+  return repositories
+    .flatMap((repository) => parseRepositoryOption(repository, provider))
+    .sort(compareRepositoryOptions);
 }
 
 function parseRepositoryOption(value: unknown, provider: IssueProvider): RepositoryOption[] {
@@ -2569,6 +2735,31 @@ function parseRepositoryOption(value: unknown, provider: IssueProvider): Reposit
     webUrl,
     externalProjectId: stringValue(value.externalProjectId) ?? stringValue(value.external_project_id)
   }];
+}
+
+function compareRepositoryOptions(first: RepositoryOption, second: RepositoryOption): number {
+  return first.label.localeCompare(second.label, "fr", { sensitivity: "base" })
+    || first.webUrl.localeCompare(second.webUrl, "fr", { sensitivity: "base" });
+}
+
+function repositorySearchText(repository: RepositoryOption): string {
+  return [
+    repository.label,
+    repository.namespace,
+    repository.project,
+    repository.webUrl
+  ].join(" ").toLowerCase();
+}
+
+function normalizeWidgetTitle(value: string | undefined): string {
+  const title = value?.trim();
+  return title ? title.slice(0, maxWidgetTitleLength) : defaultWidgetTitle;
+}
+
+function normalizeWidgetModes(value: WidgetMode[] | undefined): WidgetMode[] {
+  const modes = value?.filter((mode): mode is WidgetMode => mode === "comment" || mode === "pin" || mode === "screenshot") ?? ["comment", "pin", "screenshot"];
+  const uniqueModes = widgetModeOptions.map((option) => option.value).filter((mode) => modes.includes(mode));
+  return uniqueModes.length > 0 ? uniqueModes : ["comment", "pin", "screenshot"];
 }
 
 function repositoryErrorMessage(value: unknown): string | undefined {

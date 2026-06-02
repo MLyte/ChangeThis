@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { T } from "../i18n";
 
 export function RetryDueButton({ count }: { count: number }) {
@@ -44,7 +45,12 @@ export function RetryDueButton({ count }: { count: number }) {
 
   return (
     <button className="button retry-batch-button" disabled={isPending} onClick={retryDueFeedbacks} type="button">
-      {isPending ? <T k="actions.processing" /> : <><T k="projects.inbox.retryDue" /> ({count})</>}
+      {isPending ? (
+        <>
+          <Loader2 aria-hidden="true" className="ui-icon loading-spinner" size={16} strokeWidth={2.2} />
+          <T k="actions.processing" />
+        </>
+      ) : <><T k="projects.inbox.retryDue" /> ({count})</>}
     </button>
   );
 }

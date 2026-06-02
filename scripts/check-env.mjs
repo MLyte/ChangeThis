@@ -1,11 +1,6 @@
 #!/usr/bin/env node
 
 const requiredBase = ["AUTH_MODE", "DATA_STORE", "NEXT_PUBLIC_APP_URL"];
-const requiredForSupabase = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY",
-];
 const requiredForInternal = [
   "INTERNAL_API_URL",
 ];
@@ -49,14 +44,14 @@ for (const key of requiredBase) {
 if (isProduction && raw.AUTH_MODE === "local") {
   blockers.push("AUTH_MODE is not allowed to be local in production");
 }
-if (isProduction && !["supabase", "internal"].includes(raw.AUTH_MODE)) {
-  blockers.push("AUTH_MODE must be supabase or internal in production");
+if (isProduction && raw.AUTH_MODE !== "internal") {
+  blockers.push("AUTH_MODE must be internal in production");
 }
 if (isProduction && raw.DATA_STORE === "file") {
   blockers.push("DATA_STORE is not allowed to be file in production");
 }
-if (isProduction && !["supabase", "internal"].includes(raw.DATA_STORE)) {
-  blockers.push("DATA_STORE must be supabase or internal in production");
+if (isProduction && raw.DATA_STORE !== "internal") {
+  blockers.push("DATA_STORE must be internal in production");
 }
 if (isProduction) {
   if (raw.NEXT_PUBLIC_APP_URL && !raw.NEXT_PUBLIC_APP_URL.startsWith("https://")) {
@@ -71,14 +66,6 @@ if (isProduction) {
   for (const key of fallbackProjectKeys) {
     if (raw[key] && projectKeyFallbackValues.has(raw[key])) {
       blockers.push(`${key} uses a local fallback value in production (${raw[key]})`);
-    }
-  }
-}
-
-if (raw.AUTH_MODE === "supabase" || raw.DATA_STORE === "supabase") {
-  for (const key of requiredForSupabase) {
-    if (!raw[key]) {
-      missing.push(key);
     }
   }
 }
@@ -107,10 +94,6 @@ if (isProduction && raw.CHANGETHIS_SECRET_KEY) {
 if (raw.NEXT_PUBLIC_APP_URL && !/^https?:\/\//.test(raw.NEXT_PUBLIC_APP_URL)) {
   blockers.push("NEXT_PUBLIC_APP_URL must start with http:// or https://");
 }
-if (raw.NEXT_PUBLIC_SUPABASE_URL && !/^https:\/\/.+\.supabase\.co$/.test(raw.NEXT_PUBLIC_SUPABASE_URL)) {
-  blockers.push("NEXT_PUBLIC_SUPABASE_URL should look like https://<project-ref>.supabase.co");
-}
-
 if (raw.GITHUB_PROVIDER_INTEGRATION_ID && !raw.GITHUB_WEBHOOK_SECRET) {
   missing.push("GITHUB_WEBHOOK_SECRET");
 }

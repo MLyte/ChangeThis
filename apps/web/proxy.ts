@@ -17,8 +17,6 @@ export function proxy(request: NextRequest) {
   const hasSession = Boolean(
     request.cookies.get("changethis_access_token")?.value
     ?? request.cookies.get("changethis_internal_session")?.value
-    ?? request.cookies.get("sb-access-token")?.value
-    ?? request.cookies.get("supabase-auth-token")?.value
   );
 
   if (hasSession) {

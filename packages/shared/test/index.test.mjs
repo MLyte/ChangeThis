@@ -221,7 +221,7 @@ test("buildIssueDraft does not imply screenshots are attached to Git issues", ()
 
   assert.match(draft.description, /Capture disponible dans ChangeThis/);
   assert.match(draft.description, /n'est pas jointe a l'issue Git/);
-  assert.doesNotMatch(draft.description, /Supabase Storage/);
+  assert.doesNotMatch(draft.description, /external object storage/);
 });
 
 test("buildIssueDraft includes developer diagnostics metadata", () => {

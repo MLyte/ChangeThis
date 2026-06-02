@@ -79,6 +79,8 @@ class Project(TimestampMixin, Base):
         CheckConstraint("widget_button_position in ('bottom-right', 'bottom-left', 'top-right', 'top-left')", name="projects_widget_button_position_check"),
         CheckConstraint("widget_button_variant in ('default', 'subtle')", name="projects_widget_button_variant_check"),
         CheckConstraint("widget_reporter_fields in ('hidden', 'optional', 'required')", name="projects_widget_reporter_fields_check"),
+        CheckConstraint("char_length(widget_title) between 1 and 240", name="projects_widget_title_length_check"),
+        CheckConstraint("widget_modes <@ ARRAY['comment','pin','screenshot']::text[] and cardinality(widget_modes) > 0", name="projects_widget_modes_check"),
         CheckConstraint("issue_creation_mode in ('manual', 'automatic')", name="projects_issue_creation_mode_check"),
     )
 
@@ -91,6 +93,8 @@ class Project(TimestampMixin, Base):
     widget_button_position: Mapped[str] = mapped_column(Text, default="bottom-right", nullable=False)
     widget_button_variant: Mapped[str] = mapped_column(Text, default="default", nullable=False)
     widget_reporter_fields: Mapped[str] = mapped_column(Text, default="optional", nullable=False)
+    widget_title: Mapped[str] = mapped_column(Text, default="Que faut-il changer ?", nullable=False)
+    widget_modes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=lambda: ["comment", "pin", "screenshot"], nullable=False)
     issue_creation_mode: Mapped[str] = mapped_column(Text, default="manual", nullable=False)
 
     workspace: Mapped[Workspace] = relationship(back_populates="projects")

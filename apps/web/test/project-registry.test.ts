@@ -47,6 +47,8 @@ test("creates a connected GitHub site with the selected repository and integrati
   assert.equal(site.issueTarget.integrationId, "integration_github_mlyte");
   assert.equal(site.issueTarget.webUrl, "https://github.com/agency/product-site");
   assert.equal(site.issueCreationMode, "manual");
+  assert.equal(site.widgetTitle, "Que faut-il changer ?");
+  assert.deepEqual(site.widgetModes, ["comment", "pin", "screenshot"]);
 
   const configured = await listConfiguredProjects();
   assert.equal(configured.some((project) => project.publicKey === site.publicKey), true);
@@ -62,13 +64,17 @@ test("generates a stable install snippet that loads stored widget config", async
     widgetLocale: "fr",
     widgetButtonPosition: "top-left",
     widgetButtonVariant: "subtle",
-    widgetReporterFields: "required"
+    widgetReporterFields: "required",
+    widgetTitle: "Une question courte",
+    widgetModes: ["comment", "screenshot"]
   });
 
   const snippet = installSnippet(site);
 
+  assert.equal(site.widgetTitle, "Une question courte");
+  assert.deepEqual(site.widgetModes, ["comment", "screenshot"]);
   assert.equal(snippet, `<script src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget.js" data-project="${site.publicKey}"></script>`);
-  assert.doesNotMatch(snippet, /data-locale|data-position|data-button-variant|data-reporter-fields/);
+  assert.doesNotMatch(snippet, /data-locale|data-position|data-button-variant|data-reporter-fields|data-widget-title|data-modes/);
 });
 
 test("creates a connected GitLab site and preserves the provider project id", async () => {
@@ -142,6 +148,8 @@ test("updates and deletes a connected site", async () => {
     widgetButtonPosition: updated.widgetButtonPosition,
     widgetButtonVariant: updated.widgetButtonVariant,
     widgetReporterFields: updated.widgetReporterFields,
+    widgetTitle: updated.widgetTitle,
+    widgetModes: updated.widgetModes,
     issueCreationMode: updated.issueCreationMode
   });
 

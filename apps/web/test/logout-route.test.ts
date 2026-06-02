@@ -38,8 +38,6 @@ test("logout POST clears auth cookies and navigates with a GET redirect", async 
   const setCookie = response.headers.get("set-cookie") ?? "";
   assert.match(setCookie, /changethis_access_token=;/);
   assert.match(setCookie, /changethis_internal_session=;/);
-  assert.match(setCookie, /supabase-auth-token=;/);
-  assert.match(setCookie, /supabase-refresh-token=;/);
   assert.match(setCookie, /Max-Age=0/);
 });
 

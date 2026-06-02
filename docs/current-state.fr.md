@@ -15,7 +15,7 @@ La branche `main` documente maintenant une cible unique: l'installation interne 
 - Runtime attendu: `AUTH_MODE=internal`, `DATA_STORE=internal`, `INTERNAL_API_URL=http://127.0.0.1:8000`.
 - Deploiement: Ubuntu 24 natif avec scripts `scripts/internal/*` et services `systemd`.
 
-Les documents Railway/Supabase sont archives dans `docs/archive/`; ils correspondent a une experimentation SaaS historique, pas a l'installation interne active.
+Les anciens documents d'experimentation SaaS ne correspondent pas a l'installation interne active.
 
 ## Produit
 

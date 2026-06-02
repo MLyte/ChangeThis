@@ -9,6 +9,7 @@ import {
   type WidgetButtonPosition,
   type WidgetButtonVariant,
   type WidgetLocale,
+  type WidgetMode,
   type WidgetReporterFields
 } from "@changethis/shared";
 import {
@@ -18,8 +19,6 @@ import {
   workspaceDemoProjectName,
   type ChangeThisProject
 } from "./demo-project";
-import { getDataStoreMode } from "./runtime";
-import { isSupabaseServiceConfigured, supabaseServiceRest } from "./supabase-server";
 
 type StoredConnectedSite = Site & {
   issueTarget: IssueTarget;
@@ -27,36 +26,6 @@ type StoredConnectedSite = Site & {
 
 type SiteRegistryStore = {
   sites: StoredConnectedSite[];
-};
-
-type SupabaseProjectRow = {
-  id: string;
-  organization_id: string;
-  name: string;
-  public_key: string;
-  allowed_origins: string[];
-  widget_locale: unknown;
-  widget_button_position: unknown;
-  widget_button_variant: unknown;
-  widget_reporter_fields?: unknown;
-  issue_creation_mode?: unknown;
-  created_at: string;
-  updated_at: string;
-};
-
-type SupabaseProjectPublicKeyRow = {
-  project_id: string;
-  public_key: string;
-};
-
-type SupabaseIssueTargetRow = {
-  project_id: string;
-  integration_id?: string | null;
-  provider: IssueProvider;
-  namespace: string;
-  project_name: string;
-  external_project_id?: string | null;
-  web_url?: string | null;
 };
 
 export type CreateConnectedSiteInput = {
@@ -71,6 +40,8 @@ export type CreateConnectedSiteInput = {
   widgetButtonPosition?: WidgetButtonPosition;
   widgetButtonVariant?: WidgetButtonVariant;
   widgetReporterFields?: WidgetReporterFields;
+  widgetTitle?: string;
+  widgetModes?: WidgetMode[];
   issueCreationMode?: IssueCreationMode;
 };
 
@@ -89,8 +60,14 @@ export type ProjectWidgetSettingsUpdate = {
   widgetButtonPosition: WidgetButtonPosition;
   widgetButtonVariant: WidgetButtonVariant;
   widgetReporterFields: WidgetReporterFields;
+  widgetTitle: string;
+  widgetModes: WidgetMode[];
   issueCreationMode: IssueCreationMode;
 };
+
+export const defaultWidgetTitle = "Que faut-il changer ?";
+export const maxWidgetTitleLength = 240;
+export const defaultWidgetModes: WidgetMode[] = ["comment", "pin", "screenshot"];
 
 const defaultStore: SiteRegistryStore = {
   sites: []
@@ -102,10 +79,6 @@ const localDataFile = path.join(localDataDir, "connected-sites.json");
 let lock: Promise<unknown> = Promise.resolve();
 
 export async function listConfiguredProjects(workspaceId?: string): Promise<ChangeThisProject[]> {
-  if (usesSupabaseProjectRegistry()) {
-    return listSupabaseConfiguredProjects(workspaceId);
-  }
-
   const store = await readStore();
   return store.sites
     .filter((site) => !workspaceId || site.workspaceId === workspaceId)
@@ -117,10 +90,6 @@ export async function findConfiguredProjectByKey(
   projectKey: string,
   workspaceId?: string
 ): Promise<ChangeThisProject | undefined> {
-  if (usesSupabaseProjectRegistry()) {
-    return findSupabaseConfiguredProjectByKey(projectKey, workspaceId);
-  }
-
   const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === projectKey);
   if (project) {
     return project;
@@ -132,10 +101,6 @@ export async function findConfiguredProjectByKey(
 export async function ensureWorkspaceDemoProject(workspaceId: string, origin?: string | null): Promise<ChangeThisProject> {
   const normalizedOrigin = normalizeAllowedOrigin(origin ?? "") ?? demoProject.allowedOrigins[0];
   const allowedOrigins = [...new Set([normalizedOrigin, ...demoProject.allowedOrigins].filter((value): value is string => Boolean(value)))];
-
-  if (usesSupabaseProjectRegistry()) {
-    return ensureSupabaseWorkspaceDemoProject(workspaceId, allowedOrigins);
-  }
 
   return {
     ...demoProject,
@@ -161,10 +126,6 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
     throw new ProjectTargetValidationError("Site URL must be a valid HTTP origin", 422);
   }
 
-  if (usesSupabaseProjectRegistry()) {
-    return createSupabaseConnectedSite(input, issueTarget, allowedOrigin);
-  }
-
   const workspaceId = input.workspaceId ?? localWorkspace.id;
   const now = new Date().toISOString();
   const site: StoredConnectedSite = {
@@ -177,6 +138,8 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
     widgetButtonPosition: input.widgetButtonPosition ?? "bottom-right",
     widgetButtonVariant: input.widgetButtonVariant ?? "default",
     widgetReporterFields: input.widgetReporterFields ?? "optional",
+    widgetTitle: normalizeWidgetTitle(input.widgetTitle),
+    widgetModes: normalizeWidgetModes(input.widgetModes),
     issueCreationMode: input.issueCreationMode ?? "manual",
     issueTarget,
     createdAt: now,
@@ -194,10 +157,6 @@ export async function updateProjectWidgetSettings(
   update: ProjectWidgetSettingsUpdate,
   workspaceId?: string
 ): Promise<ChangeThisProject> {
-  if (usesSupabaseProjectRegistry()) {
-    return updateSupabaseProjectWidgetSettings(update, workspaceId);
-  }
-
   const allowedOrigin = update.allowedOrigin === undefined
     ? undefined
     : normalizeAllowedOrigin(update.allowedOrigin);
@@ -221,6 +180,8 @@ export async function updateProjectWidgetSettings(
         widgetButtonPosition: update.widgetButtonPosition,
         widgetButtonVariant: update.widgetButtonVariant,
         widgetReporterFields: update.widgetReporterFields,
+        widgetTitle: normalizeWidgetTitle(update.widgetTitle),
+        widgetModes: normalizeWidgetModes(update.widgetModes),
         issueCreationMode: update.issueCreationMode,
         allowedOrigins: allowedOrigin ? [allowedOrigin] : site.allowedOrigins,
         updatedAt: now
@@ -239,10 +200,6 @@ export async function updateProjectWidgetSettings(
 }
 
 export async function deleteConnectedSite(projectKey: string, workspaceId?: string): Promise<boolean> {
-  if (usesSupabaseProjectRegistry()) {
-    return deleteSupabaseConnectedSite(projectKey, workspaceId);
-  }
-
   let deleted = false;
 
   await updateStore((store) => {
@@ -261,10 +218,6 @@ export async function deleteConnectedSite(projectKey: string, workspaceId?: stri
 }
 
 export async function clearConnectedSites(workspaceId: string): Promise<number> {
-  if (usesSupabaseProjectRegistry()) {
-    return clearSupabaseConnectedSites(workspaceId);
-  }
-
   let deleted = 0;
 
   await updateStore((store) => {
@@ -284,10 +237,6 @@ export async function clearConnectedSites(workspaceId: string): Promise<number> 
 }
 
 export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate, workspaceId?: string): Promise<ChangeThisProject> {
-  if (usesSupabaseProjectRegistry()) {
-    return saveSupabaseProjectIssueTarget(update, workspaceId);
-  }
-
   const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === update.projectKey);
 
   if (!project) {
@@ -328,10 +277,6 @@ export async function isKnownOrigin(origin: string | null): Promise<boolean> {
     return false;
   }
 
-  if (usesSupabaseProjectRegistry()) {
-    return isKnownSupabaseOrigin(origin);
-  }
-
   const store = await readStore();
   return demoProject.allowedOrigins.includes(origin) || store.sites.some((site) => site.allowedOrigins.includes(origin));
 }
@@ -366,590 +311,13 @@ export class ProjectTargetValidationError extends Error {
   }
 }
 
-function usesSupabaseProjectRegistry(): boolean {
-  return getDataStoreMode() === "supabase";
-}
-
-function ensureSupabaseProjectRegistryConfigured(): void {
-  if (!isSupabaseServiceConfigured()) {
-    throw new Error("DATA_STORE=supabase requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
-  }
-}
-
-async function listSupabaseConfiguredProjects(workspaceId?: string): Promise<ChangeThisProject[]> {
-  ensureSupabaseProjectRegistryConfigured();
-
-  if (workspaceId && !isUuid(workspaceId)) {
-    return [];
-  }
-
-  const params = new URLSearchParams({
-    select: supabaseProjectSelect(true),
-    order: "created_at.desc"
-  });
-
-  if (workspaceId) {
-    params.set("organization_id", `eq.${workspaceId}`);
-  }
-
-  const projectRows = await fetchSupabaseProjectRows(params);
-  return hydrateSupabaseProjects(projectRows);
-}
-
-async function findSupabaseConfiguredProjectByKey(
-  projectKey: string,
-  workspaceId?: string
-): Promise<ChangeThisProject | undefined> {
-  ensureSupabaseProjectRegistryConfigured();
-
-  if (!projectKey || (workspaceId && !isUuid(workspaceId))) {
-    return undefined;
-  }
-
-  const keyParams = new URLSearchParams({
-    public_key: `eq.${projectKey}`,
-    status: "eq.active",
-    select: "project_id,public_key",
-    limit: "1"
-  });
-  const keyRows = await supabaseServiceRest<SupabaseProjectPublicKeyRow[]>(`/rest/v1/project_public_keys?${keyParams.toString()}`);
-  const activeKey = keyRows[0];
-
-  if (!activeKey) {
-    return undefined;
-  }
-
-  const projectParams = new URLSearchParams({
-    id: `eq.${activeKey.project_id}`,
-    select: supabaseProjectSelect(true),
-    limit: "1"
-  });
-
-  if (workspaceId) {
-    projectParams.set("organization_id", `eq.${workspaceId}`);
-  }
-
-  const projectRows = await fetchSupabaseProjectRows(projectParams);
-  return (await hydrateSupabaseProjects(projectRows, [activeKey]))[0];
-}
-
-async function createSupabaseConnectedSite(
-  input: CreateConnectedSiteInput,
-  issueTarget: IssueTarget,
-  allowedOrigin: string
-): Promise<ChangeThisProject> {
-  ensureSupabaseProjectRegistryConfigured();
-
-  if (!input.workspaceId || !isUuid(input.workspaceId)) {
-    throw new ProjectTargetValidationError("Workspace is required for Supabase project registry", 422);
-  }
-
-  const publicKey = `ct_${crypto.randomUUID().replaceAll("-", "")}`;
-  const projectPayload = {
-    organization_id: input.workspaceId,
-    name: normalizeSiteName(input.name) ?? issueTarget.project,
-    public_key: publicKey,
-    allowed_origins: [allowedOrigin],
-    widget_locale: input.widgetLocale ?? "fr",
-    widget_button_position: input.widgetButtonPosition ?? "bottom-right",
-    widget_button_variant: input.widgetButtonVariant ?? "default",
-    widget_reporter_fields: input.widgetReporterFields ?? "optional",
-    issue_creation_mode: input.issueCreationMode ?? "manual"
-  };
-  const projectRows = await insertSupabaseProject(projectPayload);
-  const projectRow = projectRows[0];
-
-  if (!projectRow) {
-    throw new Error("Supabase did not return the created project");
-  }
-
-  await supabaseServiceRest("/rest/v1/project_public_keys", {
-    method: "POST",
-    headers: {
-      Prefer: "return=minimal"
-    },
-    body: JSON.stringify({
-      project_id: projectRow.id,
-      public_key: publicKey,
-      status: "active",
-      activated_at: projectRow.created_at
-    })
-  });
-
-  const issueTargetRows = await supabaseServiceRest<SupabaseIssueTargetRow[]>("/rest/v1/issue_targets", {
-    method: "POST",
-    headers: {
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify({
-      project_id: projectRow.id,
-      ...toSupabaseIssueTargetPayload(issueTarget)
-    })
-  });
-  const project = mapSupabaseProject(projectRow, publicKey, issueTargetRows[0]);
-
-  if (!project) {
-    throw new Error("Supabase returned an invalid project registry row");
-  }
-
-  return project;
-}
-
-async function ensureSupabaseWorkspaceDemoProject(
-  workspaceId: string,
-  allowedOrigins: string[]
-): Promise<ChangeThisProject> {
-  ensureSupabaseProjectRegistryConfigured();
-
-  if (!isUuid(workspaceId)) {
-    throw new ProjectTargetValidationError("Workspace is required for Supabase project registry", 422);
-  }
-
-  const publicKey = workspaceDemoProjectKey(workspaceId);
-  const existing = await findSupabaseConfiguredProjectByKey(publicKey, workspaceId);
-
-  if (existing) {
-    const nextAllowedOrigins = [...new Set([...existing.allowedOrigins, ...allowedOrigins])];
-    if (nextAllowedOrigins.length === existing.allowedOrigins.length) {
-      return existing;
-    }
-
-    const params = new URLSearchParams({
-      id: `eq.${existing.id}`,
-      organization_id: `eq.${workspaceId}`,
-      select: supabaseProjectSelect(),
-      limit: "1"
-    });
-    const projectRows = await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`, {
-      method: "PATCH",
-      headers: {
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify({
-        allowed_origins: nextAllowedOrigins
-      })
-    });
-    const updatedProject = mapSupabaseProject(projectRows[0], publicKey, toSupabaseIssueTargetRow(existing.id, existing.issueTarget));
-
-    if (!updatedProject) {
-      throw new Error("Supabase returned an invalid demo project row");
-    }
-
-    return updatedProject;
-  }
-
-  const now = new Date().toISOString();
-  const projectRows = await insertSupabaseProject({
-    organization_id: workspaceId,
-    name: workspaceDemoProjectName,
-    public_key: publicKey,
-    allowed_origins: allowedOrigins,
-    widget_locale: demoProject.widgetLocale,
-    widget_button_position: demoProject.widgetButtonPosition,
-    widget_button_variant: demoProject.widgetButtonVariant,
-    widget_reporter_fields: demoProject.widgetReporterFields,
-    issue_creation_mode: demoProject.issueCreationMode
-  });
-  const projectRow = projectRows[0];
-
-  if (!projectRow) {
-    throw new Error("Supabase did not return the created demo project");
-  }
-
-  await supabaseServiceRest("/rest/v1/project_public_keys", {
-    method: "POST",
-    headers: {
-      Prefer: "return=minimal"
-    },
-    body: JSON.stringify({
-      project_id: projectRow.id,
-      public_key: publicKey,
-      status: "active",
-      activated_at: projectRow.created_at ?? now
-    })
-  });
-
-  const issueTargetRows = await supabaseServiceRest<SupabaseIssueTargetRow[]>("/rest/v1/issue_targets", {
-    method: "POST",
-    headers: {
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify({
-      project_id: projectRow.id,
-      ...toSupabaseIssueTargetPayload(demoProject.issueTarget)
-    })
-  });
-  const project = mapSupabaseProject(projectRow, publicKey, issueTargetRows[0]);
-
-  if (!project) {
-    throw new Error("Supabase returned an invalid demo project registry row");
-  }
-
-  return project;
-}
-
-async function updateSupabaseProjectWidgetSettings(
-  update: ProjectWidgetSettingsUpdate,
-  workspaceId?: string
-): Promise<ChangeThisProject> {
-  const allowedOrigin = update.allowedOrigin === undefined
-    ? undefined
-    : normalizeAllowedOrigin(update.allowedOrigin);
-
-  if (update.allowedOrigin !== undefined && !allowedOrigin) {
-    throw new ProjectTargetValidationError("Site URL must be a valid HTTP origin", 422);
-  }
-
-  const project = await findSupabaseConfiguredProjectByKey(update.projectKey, workspaceId);
-
-  if (!project || !isUuid(project.id)) {
-    throw new ProjectTargetValidationError("Unknown project", 404);
-  }
-
-  const params = new URLSearchParams({
-    id: `eq.${project.id}`,
-    select: supabaseProjectSelect(),
-    limit: "1"
-  });
-
-  if (workspaceId) {
-    params.set("organization_id", `eq.${workspaceId}`);
-  }
-
-  const projectRows = await patchSupabaseProject(params, {
-    widget_locale: update.widgetLocale,
-    widget_button_position: update.widgetButtonPosition,
-    widget_button_variant: update.widgetButtonVariant,
-    widget_reporter_fields: update.widgetReporterFields,
-    issue_creation_mode: update.issueCreationMode,
-    ...(allowedOrigin ? { allowed_origins: [allowedOrigin] } : {})
-  });
-  const updatedProject = mapSupabaseProject(projectRows[0], project.publicKey, toSupabaseIssueTargetRow(project.id, project.issueTarget));
-
-  if (!updatedProject) {
-    throw new ProjectTargetValidationError("Unknown project", 404);
-  }
-
-  return updatedProject;
-}
-
-async function deleteSupabaseConnectedSite(projectKey: string, workspaceId?: string): Promise<boolean> {
-  const project = await findSupabaseConfiguredProjectByKey(projectKey, workspaceId);
-
-  if (!project || !isUuid(project.id)) {
-    return false;
-  }
-
-  const params = new URLSearchParams({
-    id: `eq.${project.id}`
-  });
-
-  if (workspaceId) {
-    params.set("organization_id", `eq.${workspaceId}`);
-  }
-
-  await supabaseServiceRest(`/rest/v1/projects?${params.toString()}`, {
-    method: "DELETE",
-    headers: {
-      Prefer: "return=minimal"
-    }
-  });
-
-  return true;
-}
-
-async function clearSupabaseConnectedSites(workspaceId: string): Promise<number> {
-  if (!isUuid(workspaceId)) {
-    return 0;
-  }
-
-  const projects = await listSupabaseConfiguredProjects(workspaceId);
-
-  if (projects.length === 0) {
-    return 0;
-  }
-
-  const params = new URLSearchParams({
-    organization_id: `eq.${workspaceId}`
-  });
-  await supabaseServiceRest(`/rest/v1/projects?${params.toString()}`, {
-    method: "DELETE",
-    headers: {
-      Prefer: "return=minimal"
-    }
-  });
-
-  return projects.length;
-}
-
-async function saveSupabaseProjectIssueTarget(update: ProjectIssueTargetUpdate, workspaceId?: string): Promise<ChangeThisProject> {
-  const project = await findSupabaseConfiguredProjectByKey(update.projectKey, workspaceId);
-
-  if (!project || !isUuid(project.id)) {
-    throw new ProjectTargetValidationError("Unknown project", 404);
-  }
-
-  const issueTarget = parseRepositoryUrl(update.repositoryUrl, update.provider, {
-    externalProjectId: update.externalProjectId,
-    integrationId: update.integrationId
-  });
-
-  if (!issueTarget) {
-    throw new ProjectTargetValidationError("Repository URL must match the selected provider", 422);
-  }
-
-  const params = new URLSearchParams({
-    on_conflict: "project_id"
-  });
-  const issueTargetRows = await supabaseServiceRest<SupabaseIssueTargetRow[]>(`/rest/v1/issue_targets?${params.toString()}`, {
-    method: "POST",
-    headers: {
-      Prefer: "resolution=merge-duplicates,return=representation"
-    },
-    body: JSON.stringify({
-      project_id: project.id,
-      ...toSupabaseIssueTargetPayload(issueTarget)
-    })
-  });
-  const updatedIssueTarget = mapSupabaseIssueTarget(issueTargetRows[0]) ?? issueTarget;
-
-  return {
-    ...project,
-    issueTarget: updatedIssueTarget
-  };
-}
-
 function normalizeStoredSite(site: StoredConnectedSite): ChangeThisProject {
   return {
     ...site,
+    widgetTitle: parseWidgetTitle(site.widgetTitle),
+    widgetModes: parseWidgetModes(site.widgetModes),
     issueCreationMode: parseIssueCreationMode(site.issueCreationMode)
   };
-}
-
-async function insertSupabaseProject(payload: Record<string, unknown>): Promise<SupabaseProjectRow[]> {
-  try {
-    return await supabaseServiceRest<SupabaseProjectRow[]>("/rest/v1/projects", {
-      method: "POST",
-      headers: {
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch (error) {
-    if (!("widget_reporter_fields" in payload) && !("issue_creation_mode" in payload)) {
-      throw error;
-    }
-
-    const fallbackPayload = { ...payload };
-    delete fallbackPayload.widget_reporter_fields;
-    delete fallbackPayload.issue_creation_mode;
-
-    return supabaseServiceRest<SupabaseProjectRow[]>("/rest/v1/projects", {
-      method: "POST",
-      headers: {
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(fallbackPayload)
-    });
-  }
-}
-
-async function patchSupabaseProject(params: URLSearchParams, payload: Record<string, unknown>): Promise<SupabaseProjectRow[]> {
-  try {
-    return await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`, {
-      method: "PATCH",
-      headers: {
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch (error) {
-    if (!("widget_reporter_fields" in payload) && !("issue_creation_mode" in payload)) {
-      throw error;
-    }
-
-    const fallbackPayload = { ...payload };
-    delete fallbackPayload.widget_reporter_fields;
-    delete fallbackPayload.issue_creation_mode;
-    const fallbackParams = new URLSearchParams(params);
-    fallbackParams.set("select", supabaseProjectSelect(false, false));
-
-    return supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${fallbackParams.toString()}`, {
-      method: "PATCH",
-      headers: {
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(fallbackPayload)
-    });
-  }
-}
-
-async function isKnownSupabaseOrigin(origin: string): Promise<boolean> {
-  const normalizedOrigin = normalizeAllowedOrigin(origin);
-
-  if (normalizedOrigin !== origin) {
-    return false;
-  }
-
-  const projects = await listSupabaseConfiguredProjects();
-  return projects.some((project) => project.allowedOrigins.includes(origin));
-}
-
-async function hydrateSupabaseProjects(
-  projectRows: SupabaseProjectRow[],
-  activeKeyRows?: SupabaseProjectPublicKeyRow[]
-): Promise<ChangeThisProject[]> {
-  const projectIds = projectRows.map((project) => project.id).filter(isUuid);
-
-  if (projectIds.length === 0) {
-    return [];
-  }
-
-  const [keyRows, issueTargetRows] = await Promise.all([
-    activeKeyRows ?? listSupabaseActiveProjectKeys(projectIds),
-    listSupabaseIssueTargets(projectIds)
-  ]);
-  const keysByProjectId = new Map(keyRows.map((key) => [key.project_id, key.public_key]));
-  const issueTargetsByProjectId = new Map(issueTargetRows.map((target) => [target.project_id, target]));
-
-  return projectRows.flatMap((projectRow) => {
-    const publicKey = keysByProjectId.get(projectRow.id);
-
-    if (!publicKey) {
-      return [];
-    }
-
-    const project = mapSupabaseProject(projectRow, publicKey, issueTargetsByProjectId.get(projectRow.id));
-    return project ? [project] : [];
-  });
-}
-
-async function listSupabaseActiveProjectKeys(projectIds: string[]): Promise<SupabaseProjectPublicKeyRow[]> {
-  const params = new URLSearchParams({
-    project_id: inFilter(projectIds),
-    status: "eq.active",
-    select: "project_id,public_key"
-  });
-
-  return supabaseServiceRest<SupabaseProjectPublicKeyRow[]>(`/rest/v1/project_public_keys?${params.toString()}`);
-}
-
-async function listSupabaseIssueTargets(projectIds: string[]): Promise<SupabaseIssueTargetRow[]> {
-  const params = new URLSearchParams({
-    project_id: inFilter(projectIds),
-    select: "project_id,integration_id,provider,namespace,project_name,external_project_id,web_url",
-    order: "created_at.desc"
-  });
-
-  return supabaseServiceRest<SupabaseIssueTargetRow[]>(`/rest/v1/issue_targets?${params.toString()}`);
-}
-
-function mapSupabaseProject(
-  projectRow: SupabaseProjectRow | undefined,
-  publicKey: string | undefined,
-  issueTargetRow: SupabaseIssueTargetRow | undefined
-): ChangeThisProject | undefined {
-  if (!projectRow || !publicKey || !Array.isArray(projectRow.allowed_origins)) {
-    return undefined;
-  }
-
-  const issueTarget = mapSupabaseIssueTarget(issueTargetRow);
-
-  if (!issueTarget) {
-    return undefined;
-  }
-
-  return {
-    id: projectRow.id,
-    workspaceId: projectRow.organization_id,
-    publicKey,
-    name: projectRow.name,
-    allowedOrigins: projectRow.allowed_origins.filter((origin) => typeof origin === "string" && normalizeAllowedOrigin(origin) === origin),
-    widgetLocale: parseWidgetLocale(projectRow.widget_locale),
-    widgetButtonPosition: parseWidgetButtonPosition(projectRow.widget_button_position),
-    widgetButtonVariant: parseWidgetButtonVariant(projectRow.widget_button_variant),
-    widgetReporterFields: parseWidgetReporterFields(projectRow.widget_reporter_fields),
-    issueCreationMode: parseIssueCreationMode(projectRow.issue_creation_mode),
-    issueTarget,
-    createdAt: projectRow.created_at,
-    updatedAt: projectRow.updated_at
-  };
-}
-
-function mapSupabaseIssueTarget(row: SupabaseIssueTargetRow | undefined): IssueTarget | undefined {
-  if (!row) {
-    return undefined;
-  }
-
-  return validIssueTarget({
-    provider: row.provider,
-    namespace: row.namespace,
-    project: row.project_name,
-    externalProjectId: row.external_project_id ?? undefined,
-    integrationId: row.integration_id ?? undefined,
-    webUrl: row.web_url ?? undefined
-  });
-}
-
-function toSupabaseIssueTargetPayload(issueTarget: IssueTarget): Record<string, string | null> {
-  return {
-    provider: issueTarget.provider,
-    namespace: issueTarget.namespace,
-    project_name: issueTarget.project,
-    external_project_id: issueTarget.externalProjectId ?? null,
-    integration_id: issueTarget.integrationId && isUuid(issueTarget.integrationId) ? issueTarget.integrationId : null,
-    web_url: issueTarget.webUrl ?? null
-  };
-}
-
-function toSupabaseIssueTargetRow(projectId: string, issueTarget: IssueTarget): SupabaseIssueTargetRow {
-  return {
-    project_id: projectId,
-    provider: issueTarget.provider,
-    namespace: issueTarget.namespace,
-    project_name: issueTarget.project,
-    external_project_id: issueTarget.externalProjectId,
-    integration_id: issueTarget.integrationId,
-    web_url: issueTarget.webUrl
-  };
-}
-
-async function fetchSupabaseProjectRows(params: URLSearchParams): Promise<SupabaseProjectRow[]> {
-  try {
-    return await supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${params.toString()}`);
-  } catch (error) {
-    const select = params.get("select") ?? "";
-    if (!select.includes("widget_reporter_fields") && !select.includes("issue_creation_mode")) {
-      throw error;
-    }
-
-    const fallbackParams = new URLSearchParams(params);
-    fallbackParams.set("select", supabaseProjectSelect(false, false));
-    return supabaseServiceRest<SupabaseProjectRow[]>(`/rest/v1/projects?${fallbackParams.toString()}`);
-  }
-}
-
-function supabaseProjectSelect(includeReporterFields = true, includeIssueCreationMode = true): string {
-  const fields = [
-    "id",
-    "organization_id",
-    "name",
-    "public_key",
-    "allowed_origins",
-    "widget_locale",
-    "widget_button_position",
-    "widget_button_variant",
-    includeReporterFields ? "widget_reporter_fields" : undefined,
-    includeIssueCreationMode ? "issue_creation_mode" : undefined,
-    "created_at",
-    "updated_at"
-  ].filter(Boolean);
-
-  return fields.join(",");
-}
-
-function inFilter(values: string[]): string {
-  return `in.(${values.join(",")})`;
 }
 
 function parseRepositoryUrl(
@@ -1053,8 +421,31 @@ function parseWidgetReporterFields(value: unknown): WidgetReporterFields {
   return value === "hidden" || value === "required" ? value : "optional";
 }
 
+function parseWidgetTitle(value: unknown): string {
+  return normalizeWidgetTitle(typeof value === "string" ? value : undefined);
+}
+
+function normalizeWidgetTitle(value: string | undefined): string {
+  const title = value?.trim();
+  return title ? title.slice(0, maxWidgetTitleLength) : defaultWidgetTitle;
+}
+
+function parseWidgetModes(value: unknown): WidgetMode[] {
+  return normalizeWidgetModes(Array.isArray(value) ? value : undefined);
+}
+
+function normalizeWidgetModes(value: unknown[] | undefined): WidgetMode[] {
+  const modes = value?.filter((mode): mode is WidgetMode => mode === "comment" || mode === "pin" || mode === "screenshot") ?? defaultWidgetModes;
+  const uniqueModes = defaultWidgetModes.filter((mode) => modes.includes(mode));
+  return uniqueModes.length > 0 ? uniqueModes : defaultWidgetModes;
+}
+
 function parseIssueCreationMode(value: unknown): IssueCreationMode {
   return value === "automatic" ? "automatic" : "manual";
+}
+
+function hasOptionalWidgetPayloadColumns(payload: Record<string, unknown>): boolean {
+  return ["widget_reporter_fields", "issue_creation_mode", "widget_title", "widget_modes"].some((column) => column in payload);
 }
 
 function normalizeSiteName(value: string | undefined): string | undefined {
@@ -1134,6 +525,8 @@ function sanitizeStore(value: unknown): SiteRegistryStore {
         widgetButtonPosition: parseWidgetButtonPosition(site.widgetButtonPosition),
         widgetButtonVariant: parseWidgetButtonVariant(site.widgetButtonVariant),
         widgetReporterFields: parseWidgetReporterFields(site.widgetReporterFields),
+        widgetTitle: parseWidgetTitle(site.widgetTitle),
+        widgetModes: parseWidgetModes(site.widgetModes),
         issueCreationMode: parseIssueCreationMode(site.issueCreationMode),
         issueTarget: issueTarget.value,
         createdAt: site.createdAt,

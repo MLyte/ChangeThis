@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Accessibility, ClipboardCheck, Code2, FileText, GitBranch, Globe2, Mail, MonitorCheck, Pin, ShieldCheck, SlidersHorizontal, Sparkles, UserPlus, Users, type LucideIcon } from "lucide-react";
 import { getCurrentSession, isPublicSignupEnabled } from "../lib/auth";
-import { joinPublicLaunchWaitlist } from "../lib/supabase-server";
 import { AppFooter } from "./app-footer";
 import { AppHeader } from "./app-header";
 import logoChangeThis from "./assets/logoChangeThis.png";
@@ -90,16 +89,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     "use server";
 
     const email = formData.get("email")?.toString().trim() ?? "";
-    const result = await joinPublicLaunchWaitlist({
-      email,
-      source: "homepage"
-    });
-
-    if (!result.ok) {
-      redirect(`/?waitlist=${encodeURIComponent(result.error)}`);
+    if (!email || !email.includes("@")) {
+      redirect("/?waitlist=invalid_email");
     }
 
-    redirect(`/?waitlist=${encodeURIComponent(result.status)}`);
+    redirect("/?waitlist=paused");
   }
 
   return (

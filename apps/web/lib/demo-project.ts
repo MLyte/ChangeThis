@@ -46,6 +46,8 @@ export const demoProject: ChangeThisProject = {
   widgetButtonPosition: "bottom-right",
   widgetButtonVariant: "default",
   widgetReporterFields: "optional",
+  widgetTitle: "Que faut-il changer ?",
+  widgetModes: ["comment", "pin", "screenshot"],
   issueCreationMode: "manual",
   issueTarget: {
     provider: "github",

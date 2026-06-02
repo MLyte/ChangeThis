@@ -84,6 +84,8 @@ def upgrade() -> None:
           widget_button_position text not null default 'bottom-right',
           widget_button_variant text not null default 'default',
           widget_reporter_fields text not null default 'optional',
+          widget_title text not null default 'Que faut-il changer ?',
+          widget_modes text[] not null default array['comment','pin','screenshot']::text[],
           issue_creation_mode text not null default 'manual',
           created_at timestamptz not null default now(),
           updated_at timestamptz not null default now(),
@@ -91,6 +93,8 @@ def upgrade() -> None:
           constraint projects_widget_button_position_check check (widget_button_position in ('bottom-right', 'bottom-left', 'top-right', 'top-left')),
           constraint projects_widget_button_variant_check check (widget_button_variant in ('default', 'subtle')),
           constraint projects_widget_reporter_fields_check check (widget_reporter_fields in ('hidden', 'optional', 'required')),
+          constraint projects_widget_title_length_check check (char_length(widget_title) between 1 and 240),
+          constraint projects_widget_modes_check check (widget_modes <@ array['comment','pin','screenshot']::text[] and cardinality(widget_modes) > 0),
           constraint projects_issue_creation_mode_check check (issue_creation_mode in ('manual', 'automatic'))
         );
 

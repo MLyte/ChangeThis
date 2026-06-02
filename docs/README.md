@@ -10,7 +10,7 @@ La documentation active de `main` decrit l'installation interne CRA:
 - base: PostgreSQL interne;
 - deploiement: Ubuntu 24 natif avec `systemd`.
 
-Les anciens documents Railway/Supabase sont conserves dans `docs/archive/` pour historique, mais ils ne doivent plus guider l'installation ou la production de cette branche.
+Les anciens documents d'experimentation SaaS ne doivent plus guider l'installation ou la production de cette branche.
 
 ## Source de verite
 
@@ -41,12 +41,4 @@ Les anciens documents Railway/Supabase sont conserves dans `docs/archive/` pour 
 
 ## Archive historique
 
-Ces documents decrivent l'ancienne experimentation SaaS ou des pistes non retenues. Ils restent consultables pour comprendre l'historique, pas pour installer ChangeThis en interne.
-
-- [ADR Supabase Auth foundations](archive/adr-supabase-auth-foundations.md)
-- [Roadmap beta SaaS](archive/beta-release-roadmap.fr.md)
-- [Deploy Railway + Supabase + OVH](archive/deploy-railway-ovh-changethis-dev.md)
-- [Guide debutant Railway/Supabase/OVH](archive/guide-debutant-prod-railway-supabase-ovh.fr.md)
-- [Smoke beta controlee](archive/smoke-beta-controlee.fr.md)
-- [Template e-mail Supabase Auth](archive/supabase-auth-email-template.fr.md)
-- [OVH zero-to-prod guide](archive/ovh-zero-to-prod-guide.md)
+Les anciens guides d'experimentation SaaS ont ete retires de cette branche pour eviter de guider les prochains changements vers une architecture non active.

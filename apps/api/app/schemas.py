@@ -71,6 +71,8 @@ class ProjectResponse(BaseModel):
     widget_button_position: str
     widget_button_variant: str
     widget_reporter_fields: str
+    widget_title: str
+    widget_modes: list[str]
     issue_creation_mode: str
 
     model_config = ConfigDict(from_attributes=True)
@@ -99,6 +101,8 @@ class ProjectCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     public_key: str = Field(min_length=12, max_length=160)
     allowed_origins: list[str] = Field(default_factory=list)
+    widget_title: str = Field(default="Que faut-il changer ?", min_length=1, max_length=240)
+    widget_modes: list[str] = Field(default_factory=lambda: ["comment", "pin", "screenshot"], min_length=1)
 
 
 class WidgetConfigResponse(BaseModel):
@@ -109,6 +113,7 @@ class WidgetConfigResponse(BaseModel):
     button_position: str
     button_variant: str
     reporter_fields: str
+    title: str
     endpoint: str = "/api/public/feedback"
 
 

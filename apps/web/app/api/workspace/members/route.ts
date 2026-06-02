@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { authFailureResponse, getAuthMode, isAuthFailure, type WorkspaceRole, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, type WorkspaceRole, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { addInternalWorkspaceMember, disableInternalWorkspaceMember } from "../../../../lib/internal-api";
-import { getWorkspaceMember, inviteWorkspaceMember, updateWorkspaceMemberStatus } from "../../../../lib/supabase-server";
 
 export async function POST(request: Request) {
   const session = requireWorkspaceRole(await requireWorkspaceSession(request), ["admin", "owner"]);
@@ -47,46 +46,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Insufficient workspace role" }, { status: 403 });
   }
 
-  if (getAuthMode() === "internal") {
-    const result = await addInternalWorkspaceMember({
-      workspaceId: workspace.id,
-      email: body.email.trim(),
-      role
-    }, request);
-
-    if (!result.ok) {
-      return NextResponse.json({
-        error: result.error === "already_active"
-          ? "Member is already active in this workspace"
-          : result.error === "not_found"
-            ? "No matching user found for this email"
-            : "Unable to add this member"
-      }, { status: result.error === "already_active" ? 409 : result.error === "not_found" ? 404 : 422 });
-    }
-
-    return NextResponse.json({ member: result.member }, { status: 201 });
-  }
-
-  const inviteResult = await inviteWorkspaceMember({
-    organizationId: workspace.id,
+  const result = await addInternalWorkspaceMember({
+    workspaceId: workspace.id,
     email: body.email.trim(),
-    role,
-    invitedBy: session.user.id
-  });
+    role
+  }, request);
 
-  if (!inviteResult.ok) {
+  if (!result.ok) {
     return NextResponse.json({
-      error: inviteResult.reason === "already_active"
+      error: result.error === "already_active"
         ? "Member is already active in this workspace"
-        : inviteResult.reason === "invitee_not_found"
+        : result.error === "not_found"
           ? "No matching user found for this email"
-          : `Invalid invitation data: ${inviteResult.reason}`
-    }, { status: inviteResult.reason === "already_active" ? 409 : 422 });
+          : "Unable to add this member"
+    }, { status: result.error === "already_active" ? 409 : result.error === "not_found" ? 404 : 422 });
   }
 
-  return NextResponse.json({
-    member: inviteResult.member
-  }, { status: 201 });
+  return NextResponse.json({ member: result.member }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
@@ -131,40 +107,16 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Only status disabled is supported" }, { status: 422 });
   }
 
-  if (getAuthMode() === "internal") {
-    const result = await disableInternalWorkspaceMember({
-      workspaceId: workspace.id,
-      userId: body.userId
-    }, request);
+  const result = await disableInternalWorkspaceMember({
+    workspaceId: workspace.id,
+    userId: body.userId
+  }, request);
 
-    if (!result.ok) {
-      return NextResponse.json({ error: "Unable to update member status" }, { status: result.error === "not_found" ? 404 : 422 });
-    }
-
-    return NextResponse.json({ member: result.member });
+  if (!result.ok) {
+    return NextResponse.json({ error: "Unable to update member status" }, { status: result.error === "not_found" ? 404 : 422 });
   }
 
-  const member = await getWorkspaceMember(workspace.id, body.userId);
-
-  if (!member) {
-    return NextResponse.json({ error: "Workspace member not found" }, { status: 404 });
-  }
-
-  if (!canManageWorkspaceMemberRole(workspace.role, member.role)) {
-    return NextResponse.json({ error: "Insufficient workspace role" }, { status: 403 });
-  }
-
-  const updated = await updateWorkspaceMemberStatus({
-    organizationId: workspace.id,
-    userId: body.userId,
-    status: body.status
-  });
-
-  if (!updated) {
-    return NextResponse.json({ error: "Unable to update member status" }, { status: 409 });
-  }
-
-  return NextResponse.json({ member: updated });
+  return NextResponse.json({ member: result.member });
 }
 
 function normalizeWorkspaceRole(value: string): WorkspaceRole | undefined {
@@ -178,18 +130,6 @@ function canAssignWorkspaceRole(actorRole: WorkspaceRole, targetRole: string): b
 
   if (actorRole === "admin") {
     return targetRole !== "owner";
-  }
-
-  return false;
-}
-
-function canManageWorkspaceMemberRole(actorRole: WorkspaceRole, memberRole: string): boolean {
-  if (actorRole === "owner") {
-    return true;
-  }
-
-  if (actorRole === "admin") {
-    return memberRole !== "owner";
   }
 
   return false;

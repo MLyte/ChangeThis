@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { IssueCreationMode } from "@changethis/shared";
+import type { IssueCreationMode, WidgetMode } from "@changethis/shared";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { logError, requestIdFrom } from "../../../../../lib/logger";
@@ -50,9 +50,11 @@ export async function PATCH(
     || !isWidgetButtonPosition(body.widgetButtonPosition)
     || !isWidgetButtonVariant(body.widgetButtonVariant)
     || !isWidgetReporterFields(body.widgetReporterFields)
+    || !isWidgetTitle(body.widgetTitle)
+    || !isWidgetModes(body.widgetModes)
     || !isIssueCreationMode(body.issueCreationMode)
     || (body.allowedOrigin !== undefined && typeof body.allowedOrigin !== "string")) {
-    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant, widgetReporterFields and issueCreationMode are required" }, { status: 422 });
+    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant, widgetReporterFields, widgetTitle, widgetModes and issueCreationMode are required" }, { status: 422 });
   }
 
   const { projectKey } = await context.params;
@@ -64,6 +66,8 @@ export async function PATCH(
       widgetButtonPosition: body.widgetButtonPosition,
       widgetButtonVariant: body.widgetButtonVariant,
       widgetReporterFields: body.widgetReporterFields,
+      widgetTitle: body.widgetTitle,
+      widgetModes: body.widgetModes,
       issueCreationMode: body.issueCreationMode,
       allowedOrigin: body.allowedOrigin
     }, session.workspace.id);
@@ -139,6 +143,16 @@ function isWidgetButtonVariant(value: unknown): value is "default" | "subtle" {
 
 function isWidgetReporterFields(value: unknown): value is "hidden" | "optional" | "required" {
   return value === "hidden" || value === "optional" || value === "required";
+}
+
+function isWidgetTitle(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value.trim().length <= 240;
+}
+
+function isWidgetModes(value: unknown): value is WidgetMode[] {
+  return Array.isArray(value)
+    && value.length > 0
+    && value.every((mode) => mode === "comment" || mode === "pin" || mode === "screenshot");
 }
 
 function isIssueCreationMode(value: unknown): value is IssueCreationMode {

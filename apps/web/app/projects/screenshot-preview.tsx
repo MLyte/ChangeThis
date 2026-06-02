@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Eye, X } from "lucide-react";
+import type { CSSProperties } from "react";
 import { useId, useState } from "react";
 import type { FeedbackMetadata, FeedbackStatus, FeedbackType, IssueProvider, PinTarget } from "@changethis/shared";
 import type { StoredAsset } from "../../lib/feedback-repository";
@@ -42,6 +43,10 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
   const isMobileCapture = metadata.viewport.width < 700 && metadata.viewport.height > metadata.viewport.width;
   const pinPositions = (pins?.length ? pins : pin ? [pin] : []).map((item) => pinImagePosition(item, metadata));
   const modalImageSize = displayImageSize(metadata.viewport, feedback.type);
+  const captureSurfaceStyle = {
+    "--capture-aspect-ratio": `${Math.max(1, metadata.viewport.width)} / ${Math.max(1, metadata.viewport.height)}`,
+    "--capture-display-width": `${modalImageSize.width}px`
+  } as CSSProperties;
 
   if (!previewUrl || !fullImageUrl) {
     return null;
@@ -55,7 +60,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
         onClick={() => setIsOpen(true)}
         type="button"
       >
-        <span className="screenshot-image-wrap">
+        <span className="screenshot-image-wrap" style={captureSurfaceStyle}>
           <Image
             alt=""
             height={72}
@@ -98,7 +103,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
               </button>
             </div>
             <div className="screenshot-modal-body">
-              <div className="screenshot-modal-image-wrap">
+              <div className="screenshot-modal-image-wrap" style={captureSurfaceStyle}>
                 <Image
                   alt=""
                   className="screenshot-modal-image"

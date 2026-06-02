@@ -22,11 +22,14 @@ async def list_sites(workspace_id: UUID | None = None, db: AsyncSession = Depend
 
 @router.post("", response_model=ProjectResponse)
 async def create_site(payload: ProjectCreateRequest, db: AsyncSession = Depends(get_db)) -> Project:
+    widget_modes = [mode for mode in ["comment", "pin", "screenshot"] if mode in payload.widget_modes]
     project = Project(
         workspace_id=payload.workspace_id,
         name=payload.name,
         public_key=payload.public_key,
         allowed_origins=payload.allowed_origins,
+        widget_title=payload.widget_title.strip()[:240],
+        widget_modes=widget_modes or ["comment", "pin", "screenshot"],
     )
     db.add(project)
     await db.commit()

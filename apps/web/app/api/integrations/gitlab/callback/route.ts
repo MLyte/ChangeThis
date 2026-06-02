@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveProviderCredentialSecretAsync } from "../../../../../lib/credential-store";
 import { decodeProviderConnectState, normalizeProviderReturnTo, recordProviderConnection } from "../../../../../lib/provider-integrations";
-import { insertProviderCredentialMetadata } from "../../../../../lib/supabase-server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -27,7 +26,7 @@ export async function GET(request: Request) {
       baseUrl: process.env.GITLAB_BASE_URL ?? "https://gitlab.com"
     });
 
-    const storageReference = await saveProviderCredentialSecretAsync({
+    await saveProviderCredentialSecretAsync({
       workspaceId: state.workspaceId,
       provider: "gitlab",
       integrationId: state.integrationId,
@@ -35,15 +34,6 @@ export async function GET(request: Request) {
       value: token.accessToken,
       expiresAt: token.expiresAt,
       scopes: token.scope ? token.scope.split(" ") : ["api", "read_user"]
-    });
-
-    await insertProviderCredentialMetadata({
-      integrationId: state.integrationId,
-      credentialKind: "oauth_token",
-      storageReference,
-      displayName: "GitLab OAuth token",
-      scopes: token.scope ? token.scope.split(" ") : ["api", "read_user"],
-      expiresAt: token.expiresAt
     });
 
     if (token.refreshToken) {

@@ -23,7 +23,8 @@ async def widget_config(project: str = Query(min_length=1), origin: str | None =
     return WidgetConfigResponse(
         project_key=configured_project.public_key,
         name=configured_project.name,
-        modes=["comment", "pin", "screenshot"],
+        modes=configured_project.widget_modes,
+        title=configured_project.widget_title,
         locale=configured_project.widget_locale,
         button_position=configured_project.widget_button_position,
         button_variant=configured_project.widget_button_variant,

@@ -8,6 +8,7 @@ export type WidgetLocale = "fr" | "en";
 export type WidgetButtonPosition = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 export type WidgetButtonVariant = "default" | "subtle";
 export type WidgetReporterFields = "hidden" | "optional" | "required";
+export type WidgetMode = "comment" | "pin" | "screenshot";
 export type IssueCreationMode = "manual" | "automatic";
 
 export type Workspace = {
@@ -38,6 +39,8 @@ export type Site = {
   widgetButtonPosition: WidgetButtonPosition;
   widgetButtonVariant: WidgetButtonVariant;
   widgetReporterFields: WidgetReporterFields;
+  widgetTitle: string;
+  widgetModes: WidgetMode[];
   issueCreationMode: IssueCreationMode;
   createdAt: string;
   updatedAt: string;

@@ -34,7 +34,7 @@ class FakeShadowRoot {
   private elements = new Map<string, FakeElement>();
 
   querySelector(selector: string): FakeElement | null {
-    if (selector === "[data-action='toggle']") {
+    if (selector === "[data-action='toggle']" || selector === "[data-action='open-help']") {
       return this.elementFor(selector);
     }
 
@@ -156,12 +156,81 @@ test("initChangeThis escapes configured button labels in the shadow DOM", async 
   const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
 
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt; Feedback &amp; &quot;QA&quot;/);
+  assert.match(html, /<img class="brand-logo-icon" src="data:image\/png;base64,/);
   assert.match(html, /&lt;strong&gt;beta&lt;\/strong&gt; &amp; &quot;dev&quot;/);
   assert.doesNotMatch(html, /<img src=x onerror=alert\(1\)>/);
   assert.doesNotMatch(html, /<strong>beta<\/strong>/);
 });
 
-test("initChangeThis renders subtle button as the ChangeThis logo without visible text", async () => {
+test("initChangeThis defaults the French button label to Commenter", async () => {
+  let appendedRoot: FakeElement | undefined;
+  const documentRef = {
+    currentScript: null,
+    documentElement: {
+      appendChild(element: FakeElement) {
+        appendedRoot = element;
+      },
+      lang: "fr"
+    },
+    getElementById() {
+      return null;
+    },
+    createElement() {
+      return new FakeElement();
+    },
+    addEventListener() {},
+    querySelectorAll() {
+      return [];
+    }
+  };
+
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: documentRef
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      addEventListener() {},
+      history: {
+        pushState() {},
+        replaceState() {}
+      },
+      innerHeight: 768,
+      localStorage: {
+        getItem() {
+          return null;
+        },
+        setItem() {}
+      },
+      location: {
+        hash: "",
+        href: "https://client.example.test/page",
+        origin: "https://client.example.test",
+        pathname: "/page",
+        search: ""
+      },
+      queueMicrotask(callback: () => void) {
+        callback();
+      },
+      scrollX: 0,
+      scrollY: 0
+    }
+  });
+
+  const { initChangeThis } = await import("../src/index.ts");
+
+  initChangeThis({ projectKey: "pk_commenter", locale: "fr" });
+
+  const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
+  const buttonHtml = html.match(/<button class="button"[\s\S]*?<\/button>/)?.[0] ?? "";
+
+  assert.match(buttonHtml, /aria-label="Commenter"/);
+  assert.match(buttonHtml, /<img class="brand-logo-icon" src="data:image\/png;base64,/);
+  assert.match(buttonHtml, /<span>Commenter<\/span>/);
+});
+
+test("initChangeThis renders subtle button as the brand hand logo without visible text", async () => {
   let appendedRoot: FakeElement | undefined;
   const documentRef = {
     currentScript: null,
@@ -236,6 +305,86 @@ test("initChangeThis renders subtle button as the ChangeThis logo without visibl
   assert.doesNotMatch(buttonHtml, /<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1\.88 1\.88"/);
   assert.doesNotMatch(buttonHtml, /<span>Feedback<\/span>/);
   assert.doesNotMatch(buttonHtml, /button-state/);
+});
+
+test("initChangeThis renders configured title and enabled modes", async () => {
+  let appendedRoot: FakeElement | undefined;
+  const documentRef = {
+    currentScript: null,
+    documentElement: {
+      appendChild(element: FakeElement) {
+        appendedRoot = element;
+      },
+      lang: "fr"
+    },
+    getElementById() {
+      return null;
+    },
+    createElement() {
+      return new FakeElement();
+    },
+    addEventListener() {},
+    querySelectorAll() {
+      return [];
+    }
+  };
+
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: documentRef
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      addEventListener() {},
+      history: {
+        pushState() {},
+        replaceState() {}
+      },
+      innerHeight: 768,
+      localStorage: {
+        getItem() {
+          return null;
+        },
+        setItem() {}
+      },
+      location: {
+        hash: "",
+        href: "https://client.example.test/page",
+        origin: "https://client.example.test",
+        pathname: "/page",
+        search: ""
+      },
+      queueMicrotask(callback: () => void) {
+        callback();
+      },
+      scrollX: 0,
+      scrollY: 0
+    }
+  });
+
+  const { initChangeThis } = await import("../src/index.ts");
+
+  initChangeThis({
+    projectKey: "pk_modes",
+    title: "**Retour UX prioritaire**\n- Décris le problème\n- Ajoute le contexte utile",
+    modes: ["comment"]
+  });
+  appendedRoot?.shadowRoot?.querySelector("[data-action='toggle']")?.click();
+  appendedRoot?.shadowRoot?.querySelector("[data-action='open-help']")?.click();
+
+  const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
+
+  assert.match(html, /<button class="help-trigger" data-action="open-help"/);
+  assert.doesNotMatch(html, /app\.changethis\.dev/);
+  assert.match(html, /role="dialog" aria-modal="true"/);
+  assert.match(html, /Comment utiliser ce widget/);
+  assert.match(html, /<strong>Retour UX prioritaire<\/strong>/);
+  assert.match(html, /<li>Décris le problème<\/li>/);
+  assert.match(html, /href="https:\/\/mathieuluyten\.be"/);
+  assert.match(html, /data-mode="comment"/);
+  assert.doesNotMatch(html, /data-mode="pin"/);
+  assert.doesNotMatch(html, /data-mode="screenshot"/);
 });
 
 test("initChangeThis hides pin and capture modes on touch viewports", async () => {

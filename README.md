@@ -2,6 +2,18 @@
 
 [English](#english-version)
 
+## Note de release en attente - 2 juin 2026
+
+Changements realises localement et en attente de livraison:
+
+- Le bouton du widget est renomme `Commenter` en francais, avec affichage du logo en version standard.
+- Le widget permet de personnaliser le texte de demande de feedback, dans une limite de caracteres, et de choisir les modes actives: retour page, pin et capture.
+- Le bouton d'aide `?` du widget ouvre une modal d'instructions avec le texte editable et un lien discret de contact.
+- Les chargements de connexion Git affichent un spinner coherent avec le reste de l'interface.
+- Le select `Depot connecte` est prepare pour une recherche plus rapide et un classement alphabetique des depots.
+- Les libelles dashboard sont ajustes: `Issues` devient `Feedbacks` en anglais et `Commentaires` en francais.
+- La cible technique active est recentree sur l'installation interne CRA: Next.js, FastAPI et PostgreSQL interne.
+
 ChangeThis est un outil interne CRA pour collecter, trier et transformer des retours visuels en issues GitHub ou GitLab. Un visiteur d'un site en conception, developpement ou recette peut laisser un commentaire, poser un repere sur la page ou envoyer une capture. L'equipe retrouve ensuite le feedback dans l'admin ChangeThis, le qualifie et decide de creer une issue dans le depot cible.
 
 La cible documentee par `main` est l'installation interne:
@@ -12,7 +24,7 @@ La cible documentee par `main` est l'installation interne:
 - Base: PostgreSQL interne, seule charge attendue sur `back-tool-prod`.
 - Deploiement: services natifs Ubuntu 24 via `systemd`.
 
-Les anciens guides Railway/Supabase lies a une experimentation SaaS sont conserves uniquement dans `docs/archive/`; ils ne decrivent plus la cible active de cette branche.
+Les anciens guides lies a une experimentation SaaS ne decrivent plus la cible active de cette branche.
 
 ## Architecture globale
 
@@ -187,7 +199,7 @@ The active target documented by `main` is the internal installation:
 - Database: internal PostgreSQL, the only expected workload on `back-tool-prod`.
 - Deployment: native Ubuntu 24 `systemd` services.
 
-Older Railway/Supabase SaaS experiment documents are kept only under `docs/archive/`; they are not the active target for this branch.
+Older SaaS experiment documents are no longer part of the active target for this branch.
 
 ### Global Architecture
 
