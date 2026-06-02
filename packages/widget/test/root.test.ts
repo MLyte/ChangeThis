@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { inflateSync } from "node:zlib";
 
 type FakeListener = (event?: unknown) => void;
 
@@ -58,48 +57,6 @@ class FakeShadowRoot {
   }
 }
 
-function assertValidPngDataUrl(dataUrl: string) {
-  const prefix = "data:image/png;base64,";
-  assert.equal(dataUrl.startsWith(prefix), true);
-
-  const png = Buffer.from(dataUrl.slice(prefix.length), "base64");
-  assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
-
-  let offset = 8;
-  const idatChunks: Buffer[] = [];
-  let sawIhdr = false;
-  let sawIend = false;
-
-  while (offset < png.length) {
-    const length = png.readUInt32BE(offset);
-    const type = png.toString("ascii", offset + 4, offset + 8);
-    const dataStart = offset + 8;
-    const dataEnd = dataStart + length;
-    assert.ok(dataEnd + 4 <= png.length, `PNG chunk ${type} is truncated`);
-
-    if (type === "IHDR") {
-      sawIhdr = true;
-      assert.equal(png.readUInt32BE(dataStart), 64);
-      assert.equal(png.readUInt32BE(dataStart + 4), 64);
-    }
-
-    if (type === "IDAT") {
-      idatChunks.push(png.subarray(dataStart, dataEnd));
-    }
-
-    offset = dataEnd + 4;
-
-    if (type === "IEND") {
-      sawIend = true;
-      break;
-    }
-  }
-
-  assert.equal(sawIhdr, true);
-  assert.equal(sawIend, true);
-  assert.ok(idatChunks.length > 0);
-  assert.doesNotThrow(() => inflateSync(Buffer.concat(idatChunks)));
-}
 
 test("initChangeThis does not create another root when one already exists", async () => {
   let createElementCalls = 0;
@@ -200,7 +157,8 @@ test("initChangeThis escapes configured button labels in the shadow DOM", async 
   const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
 
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt; Feedback &amp; &quot;QA&quot;/);
-  assert.match(html, /<img class="brand-logo-icon" src="data:image\/png;base64,/);
+  assert.match(html, /<svg class="brand-logo-icon" aria-hidden="true" viewBox="14 1 17 23" role="img">/);
+  assert.doesNotMatch(html, /src="data:image\/png;base64,/);
   assert.match(html, /&lt;strong&gt;beta&lt;\/strong&gt; &amp; &quot;dev&quot;/);
   assert.doesNotMatch(html, /<img src=x onerror=alert\(1\)>/);
   assert.doesNotMatch(html, /<strong>beta<\/strong>/);
@@ -270,8 +228,8 @@ test("initChangeThis defaults the French button label to Commenter", async () =>
   const buttonHtml = html.match(/<button class="button"[\s\S]*?<\/button>/)?.[0] ?? "";
 
   assert.match(buttonHtml, /aria-label="Commenter"/);
-  const logoSrc = buttonHtml.match(/<img class="brand-logo-icon" src="([^"]+)"/)?.[1] ?? "";
-  assertValidPngDataUrl(logoSrc);
+  assert.match(buttonHtml, /<svg class="brand-logo-icon" aria-hidden="true" viewBox="14 1 17 23" role="img">/);
+  assert.doesNotMatch(buttonHtml, /src="data:image\/png;base64,/);
   assert.match(buttonHtml, /<span>Commenter<\/span>/);
 });
 
@@ -345,7 +303,8 @@ test("initChangeThis renders subtle button as the brand hand logo without visibl
 
   assert.match(html, /data-variant="subtle"/);
   assert.match(buttonHtml, /aria-label="Feedback"/);
-  assert.match(buttonHtml, /<img class="brand-logo-icon" src="data:image\/png;base64,/);
+  assert.match(buttonHtml, /<svg class="brand-logo-icon" aria-hidden="true" viewBox="14 1 17 23" role="img">/);
+  assert.doesNotMatch(buttonHtml, /src="data:image\/png;base64,/);
   assert.match(buttonHtml, /aria-hidden="true"/);
   assert.doesNotMatch(buttonHtml, /<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1\.88 1\.88"/);
   assert.doesNotMatch(buttonHtml, /<span>Feedback<\/span>/);
