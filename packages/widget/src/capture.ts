@@ -1,9 +1,14 @@
-import type { CaptureArea, FeedbackType } from "@changethis/shared";
+import type { CaptureArea, FeedbackType, PinTarget } from "@changethis/shared";
+
+type CaptureViewportOptions = {
+  pinTargets?: PinTarget[];
+};
 
 type CaptureFeedbackScreenshotParams = {
   type: FeedbackType;
   captureArea?: CaptureArea;
-  captureViewport: (area?: CaptureArea) => Promise<string | undefined>;
+  pinTargets?: PinTarget[];
+  captureViewport: (area?: CaptureArea, options?: CaptureViewportOptions) => Promise<string | undefined>;
   capturePageFeedbackPreview: () => Promise<string | undefined>;
   warn?: (message: string, error: unknown) => void;
 };
@@ -15,7 +20,7 @@ export async function captureFeedbackScreenshot(params: CaptureFeedbackScreensho
     }
 
     if (params.type === "pin") {
-      return await params.captureViewport();
+      return await params.captureViewport(undefined, { pinTargets: params.pinTargets });
     }
 
     if (params.type === "comment") {

@@ -2129,6 +2129,7 @@ async function submitFeedback(params: {
   const screenshotDataUrl = await captureFeedbackScreenshot({
     type: params.type,
     captureArea: params.captureArea,
+    pinTargets: params.pins,
     captureViewport,
     capturePageFeedbackPreview,
     warn: console.warn
@@ -2519,8 +2520,10 @@ async function capturePageFeedbackPreview(): Promise<string | undefined> {
 
 async function captureViewport(
   area?: CaptureArea,
-  options: { maxDimension?: number; quality?: number } = {}
+  options: { maxDimension?: number; quality?: number; pinTargets?: PinTarget[] } = {}
 ): Promise<string | undefined> {
+  const pinCaptureOverlay = options.pinTargets?.length ? renderTemporaryPinCaptureOverlay(options.pinTargets) : undefined;
+
   try {
     maskSensitiveFields(true);
     const canvas = await capturePage(document.body, {
@@ -2537,8 +2540,49 @@ async function captureViewport(
     const resized = resizeCanvasToMax(output, options.maxDimension ?? maxScreenshotDimension);
     return encodeCanvas(resized, options.quality ?? screenshotQuality);
   } finally {
+    pinCaptureOverlay?.remove();
     maskSensitiveFields(false);
   }
+}
+
+function renderTemporaryPinCaptureOverlay(pinTargets: PinTarget[]): HTMLElement {
+  const overlay = document.createElement("div");
+  overlay.dataset.changethisCaptureOverlay = "pins";
+  overlay.style.cssText = [
+    "position:fixed",
+    "inset:0",
+    "z-index:2147483646",
+    "pointer-events:none",
+    "font-family:Inter,ui-sans-serif,system-ui,sans-serif"
+  ].join(";");
+
+  pinTargets.forEach((pin, index) => {
+    const position = pinViewportPosition(pin);
+    const marker = document.createElement("div");
+    marker.textContent = String(index + 1);
+    marker.style.cssText = [
+      "position:absolute",
+      `left:${Math.round(position.x)}px`,
+      `top:${Math.round(position.y)}px`,
+      "width:28px",
+      "height:28px",
+      "transform:translate(-50%,-50%)",
+      "border-radius:999px",
+      "background:#e11d48",
+      "border:3px solid #fff",
+      "box-shadow:0 8px 18px rgba(15,23,42,.35)",
+      "color:#fff",
+      "display:grid",
+      "place-items:center",
+      "font-size:13px",
+      "font-weight:900",
+      "line-height:1"
+    ].join(";");
+    overlay.appendChild(marker);
+  });
+
+  document.body.appendChild(overlay);
+  return overlay;
 }
 
 function sanitizeUnsupportedCaptureStyles(clonedDocument: Document): void {
