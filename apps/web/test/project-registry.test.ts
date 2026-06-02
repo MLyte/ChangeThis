@@ -73,7 +73,7 @@ test("generates a stable install snippet that loads stored widget config", async
 
   assert.equal(site.widgetTitle, "Une question courte");
   assert.deepEqual(site.widgetModes, ["comment", "screenshot"]);
-  assert.equal(snippet, `<script src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget.js" data-project="${site.publicKey}"></script>`);
+  assert.equal(snippet, `<script src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget-loader.js" data-project="${site.publicKey}"></script>`);
   assert.doesNotMatch(snippet, /data-locale|data-position|data-button-variant|data-reporter-fields|data-widget-title|data-modes/);
 });
 

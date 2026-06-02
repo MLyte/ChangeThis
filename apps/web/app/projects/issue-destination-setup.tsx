@@ -2874,5 +2874,5 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function installSnippet(project: Pick<ProjectView, "publicKey">): string {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  return `<script src="${origin}/widget.js" data-project="${project.publicKey}"></script>`;
+  return `<script src="${origin}/widget-loader.js" data-project="${project.publicKey}"></script>`;
 }

@@ -293,12 +293,9 @@ export function ensureIssueTargetConfigured(project: ChangeThisProject): IssueTa
 
 export function installSnippet(project: string | Pick<ChangeThisProject, "publicKey">): string {
   const projectKey = typeof project === "string" ? project : project.publicKey;
-  const attributes = [
-    `src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget.js"`,
-    `data-project="${projectKey}"`
-  ].filter(Boolean).join(" ");
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  return `<script ${attributes}></script>`;
+  return `<script src="${appUrl}/widget-loader.js" data-project="${projectKey}"></script>`;
 }
 
 export class ProjectTargetValidationError extends Error {
