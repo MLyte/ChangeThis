@@ -128,6 +128,8 @@ const widgetCopy = {
     addPin: "Ajouter une pin",
     selectPin: "Touchez la zone à commenter",
     pins: "Pins",
+    showPins: "Afficher toutes les pins",
+    hidePins: "Masquer toutes les pins",
     pinPlaceholder: "Décris cette correction",
     removePin: "Supprimer la pin",
     sentPin: "Envoyée",
@@ -188,6 +190,8 @@ const widgetCopy = {
     addPin: "Add pin",
     selectPin: "Tap the area to comment on",
     pins: "Pins",
+    showPins: "Show all pins",
+    hidePins: "Hide all pins",
     pinPlaceholder: "Describe this correction",
     removePin: "Remove pin",
     sentPin: "Sent",
@@ -276,7 +280,8 @@ export function initChangeThis(options: WidgetOptions): void {
     helpOpen: false,
     managerOpen: false,
     notice: "",
-    focusPinIndex: undefined as number | undefined
+    focusPinIndex: undefined as number | undefined,
+    pinsVisible: true
   };
 
   const clearViewBoundDraft = () => {
@@ -419,10 +424,10 @@ export function initChangeThis(options: WidgetOptions): void {
     if (!isModeEnabled(state.type, activeModes)) {
       state.type = firstMode as FeedbackType;
     }
-    const pinMarkers = state.pins.map((pin, index) => {
+    const pinMarkers = state.pinsVisible ? state.pins.map((pin, index) => {
       const position = pinViewportPosition(pin.target);
       return `<div class="pin" data-pin-index="${index}" data-status="${pin.status}" style="left:${position.x}px;top:${position.y}px">${pin.number}</div>`;
-    }).join("");
+    }).join("") : "";
     const isPinTab = state.type === "pin";
     const isCaptureTab = state.type === "screenshot";
     const hasPins = isPinTab && state.pins.length > 0;
@@ -996,6 +1001,25 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 5px 8px;
           white-space: normal;
         }
+        .pin-visibility-toggle {
+          border: 0;
+          background: transparent;
+          color: #4f46e5;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 850;
+          padding: 4px 0;
+          text-align: right;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+        }
+        .pin-header-actions {
+          align-items: center;
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+        }
         .manager-button {
           align-items: center;
           border-radius: 6px;
@@ -1417,7 +1441,12 @@ export function initChangeThis(options: WidgetOptions): void {
             <div class="selection-summary">
               <div class="selection-header">
                 <button class="add-pin" data-action="add-pin">${lucideIcons.plus}${escapeHtml(copy.addPin)}</button>
-                <span>${escapeHtml(copy.pins)} (${state.pins.length})</span>
+                <div class="pin-header-actions">
+                  <span>${escapeHtml(copy.pins)} (${state.pins.length})</span>
+                  ${state.pins.length
+                    ? `<button class="pin-visibility-toggle" data-action="toggle-pins" aria-pressed="${!state.pinsVisible}" type="button">${escapeHtml(state.pinsVisible ? copy.hidePins : copy.showPins)}</button>`
+                    : ""}
+                </div>
               </div>
               ${state.pins.length ? `<ul class="pin-list">
                 ${state.pins.map((pin, index) => `
@@ -1776,7 +1805,14 @@ export function initChangeThis(options: WidgetOptions): void {
       render();
     });
 
-    shadow.querySelector<HTMLButtonElement>("[data-action='add-pin']")?.addEventListener("click", requestPin);
+    shadow.querySelector<HTMLButtonElement>("[data-action='add-pin']")?.addEventListener("click", () => {
+      state.pinsVisible = true;
+      requestPin();
+    });
+    shadow.querySelector<HTMLButtonElement>("[data-action='toggle-pins']")?.addEventListener("click", () => {
+      state.pinsVisible = !state.pinsVisible;
+      render();
+    });
     shadow.querySelector<HTMLButtonElement>("[data-action='define-capture']")?.addEventListener("click", requestCaptureArea);
 
     shadow.querySelectorAll<HTMLButtonElement>("[data-action='remove-pin']").forEach((button) => {

@@ -34,7 +34,7 @@ class FakeShadowRoot {
   private elements = new Map<string, FakeElement>();
 
   querySelector(selector: string): FakeElement | null {
-    if (selector === "[data-action='toggle']" || selector === "[data-action='open-help']") {
+    if (selector.startsWith("[data-action=")) {
       return this.elementFor(selector);
     }
 
@@ -309,6 +309,94 @@ test("initChangeThis renders subtle button as the brand hand logo without visibl
   assert.doesNotMatch(buttonHtml, /<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1\.88 1\.88"/);
   assert.doesNotMatch(buttonHtml, /<span>Feedback<\/span>/);
   assert.doesNotMatch(buttonHtml, /button-state/);
+});
+
+test("initChangeThis renders a pin visibility toggle on the pin tab", async () => {
+  let appendedRoot: FakeElement | undefined;
+  const viewUrl = "https://client.example.test/page";
+  const sentPins = [{
+    viewKey: viewUrl,
+    number: 1,
+    feedbackId: "feedback_pin_1",
+    target: { x: 120, y: 80 },
+    message: "Fix this area",
+    sentAt: "2026-06-02T12:00:00.000Z"
+  }];
+  const documentRef = {
+    currentScript: null,
+    documentElement: {
+      appendChild(element: FakeElement) {
+        appendedRoot = element;
+      },
+      lang: "en"
+    },
+    getElementById() {
+      return null;
+    },
+    createElement() {
+      return new FakeElement();
+    },
+    addEventListener() {},
+    querySelectorAll() {
+      return [];
+    }
+  };
+
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: documentRef
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      addEventListener() {},
+      history: {
+        pushState() {},
+        replaceState() {}
+      },
+      innerHeight: 768,
+      innerWidth: 1024,
+      localStorage: {
+        getItem(key: string) {
+          return key === "changethis:sentPins:pk_pin_toggle" ? JSON.stringify(sentPins) : null;
+        },
+        setItem() {}
+      },
+      location: {
+        hash: "",
+        href: viewUrl,
+        origin: "https://client.example.test",
+        pathname: "/page",
+        search: ""
+      },
+      matchMedia() {
+        return { matches: false };
+      },
+      queueMicrotask(callback: () => void) {
+        callback();
+      },
+      scrollX: 0,
+      scrollY: 0
+    }
+  });
+
+  const { initChangeThis } = await import("../src/index.ts");
+
+  initChangeThis({ projectKey: "pk_pin_toggle", locale: "en", modes: ["pin"] });
+  appendedRoot?.shadowRoot?.querySelector("[data-action='toggle']")?.click();
+
+  const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
+
+  assert.match(html, /Pins \(1\)/);
+  assert.match(html, /data-action="toggle-pins"/);
+  assert.match(html, /Hide all pins/);
+  assert.match(html, /<div class="pin" data-pin-index="0" data-status="sent"/);
+
+  appendedRoot?.shadowRoot?.querySelector("[data-action='toggle-pins']")?.click();
+  const hiddenHtml = appendedRoot?.shadowRoot?.innerHTML ?? "";
+
+  assert.match(hiddenHtml, /Show all pins/);
+  assert.doesNotMatch(hiddenHtml, /<div class="pin" data-pin-index="0" data-status="sent"/);
 });
 
 test("initChangeThis renders configured title and enabled modes", async () => {
