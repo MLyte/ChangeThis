@@ -6401,9 +6401,12 @@ dd {
   align-content: start;
   align-self: start;
   background: white;
+  border: 1px solid var(--line);
+  border-radius: 7px;
   display: grid;
   gap: 8px;
   height: auto;
+  justify-items: start;
   padding: 9px;
 }
 
@@ -6412,7 +6415,10 @@ dd {
   background: transparent;
   border: 0;
   border-radius: 0;
-  display: grid;
+  color: var(--ink);
+  display: inline-grid;
+  font-size: 13px;
+  font-weight: 850;
   gap: 8px;
   grid-template-columns: auto minmax(0, 1fr);
   justify-content: start;
@@ -6421,8 +6427,13 @@ dd {
 }
 
 .connected-site-row .widget-mode-checkboxes input {
+  accent-color: var(--accent);
+  appearance: auto;
   flex: 0 0 auto;
+  height: 16px;
   margin: 0;
+  transform: none;
+  width: 16px;
 }
 
 .connected-site-row .widget-mode-checkboxes span {
