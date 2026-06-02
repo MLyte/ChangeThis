@@ -1111,6 +1111,10 @@ type ThemeDropdownOption<T extends string> = {
   value: T;
 };
 
+function optionLabel<T extends string>(options: Array<ThemeDropdownOption<T>>, value: T) {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
 function ThemeDropdown<T extends string>({
   disabled = false,
   label,
@@ -2167,6 +2171,10 @@ function ConnectedSitesSection({
             const activeSiteOriginEditor = isEditingOrigin ? siteOriginEditor : undefined;
             const editingOriginValidation = activeSiteOriginEditor ? validateAllowedOrigin(activeSiteOriginEditor.value) : undefined;
             const siteAccessCount = project.issueAccesses?.filter((access) => access.status === "active").length ?? 0;
+            const widgetModeSummary = normalizeWidgetModes(project.widgetModes)
+              .map((mode) => optionLabel(widgetModeOptions, mode))
+              .join(", ");
+            const issueCreationSummary = optionLabel(issueCreationModeOptions, project.issueCreationMode);
 
             return (
               <article className="site-repo-row connected-site-row" key={project.publicKey}>
@@ -2180,38 +2188,7 @@ function ConnectedSitesSection({
                       <ProviderBadge provider={issueTarget.provider} />
                       <span className="status-badge muted">{isSharedProject ? "Partagé avec moi" : siteAccessCount > 0 ? `${siteAccessCount} accès` : "Mes projets"}</span>
                     </div>
-                    {activeSiteOriginEditor && canManageProject ? (
-                      <form className="site-origin-editor" onSubmit={(event) => {
-                        event.preventDefault();
-                        onSaveSiteOrigin(project.publicKey);
-                      }}>
-                        <label>
-                          <span>URL du site</span>
-                          <input
-                            aria-label={`URL autorisée pour ${project.name}`}
-                            disabled={isPending}
-                            onChange={(event) => onSiteOriginEditorChange(event.target.value)}
-                            type="url"
-                            value={activeSiteOriginEditor.value}
-                          />
-                        </label>
-                        <p className={`origin-create-status ${editingOriginValidation?.ok ? "success" : activeSiteOriginEditor.value.trim() ? "error" : ""}`} role="status">
-                          {editingOriginValidation?.message ?? "Saisissez l'URL du site à autoriser."}
-                        </p>
-                        <div className="site-origin-editor-actions">
-                          <button className="button" disabled={isPending || !editingOriginValidation?.ok} type="submit">
-                            <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                            Enregistrer
-                          </button>
-                          <button className="button secondary-button" disabled={isPending} onClick={onCancelSiteOriginEdit} type="button">
-                            <X aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                            Annuler
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <p>{project.allowedOrigins.join(", ")}</p>
-                    )}
+                    <p>{project.allowedOrigins.join(", ")}</p>
                   </div>
                   <div className="repo-destination">
                     <div>
@@ -2231,17 +2208,15 @@ function ConnectedSitesSection({
                     ) : null}
                     {canManageProject ? (
                       <>
-                        <button className="button secondary-button" disabled={isPending} onClick={() => onEditSiteOrigin(project)} type="button">
-                          <Pencil aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                          Éditer
-                        </button>
+                        {!isEditingOrigin ? (
+                          <button className="button secondary-button" disabled={isPending} onClick={() => onEditSiteOrigin(project)} type="button">
+                            <Pencil aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                            Éditer
+                          </button>
+                        ) : null}
                         <button className="button secondary-button" disabled={isPending} onClick={() => onOpenSiteAccess(project)} type="button">
                           <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                           Accès
-                        </button>
-                        <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
-                          <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                          Supprimer
                         </button>
                       </>
                     ) : (
@@ -2260,83 +2235,173 @@ function ConnectedSitesSection({
                       <span title="Créations d'issues Git en échec"><strong>{failedIssueCount}</strong><small>Échecs Git</small></span>
                     ) : null}
                   </div>
-                  {canManageProject ? (
-                    <>
-                  <div className="widget-settings">
-                    <label className="widget-title-field">
-                      <span>Titre widget</span>
-                      <textarea
-                        defaultValue={project.widgetTitle}
-                        disabled={isPending}
-                        maxLength={maxWidgetTitleLength}
-                        onBlur={(event) => {
-                          const title = normalizeWidgetTitle(event.currentTarget.value);
-                          event.currentTarget.value = title;
-                          if (title !== project.widgetTitle) {
-                            onUpdateWidgetSettings(project.publicKey, { widgetTitle: title });
-                          }
-                        }}
-                      />
-                      <small>{maxWidgetTitleLength} caractères max</small>
-                    </label>
-                    <WidgetModeCheckboxes
-                      disabled={isPending}
-                      modes={project.widgetModes}
-                      onChange={(modes) => onUpdateWidgetSettings(project.publicKey, { widgetModes: modes })}
-                    />
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Langue widget"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetLocale: value })}
-                      options={widgetLocaleOptions}
-                      value={project.widgetLocale}
-                    />
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Visibilité"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonVariant: value })}
-                      options={widgetVariantOptions}
-                      value={project.widgetButtonVariant}
-                    />
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Position bouton"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonPosition: value })}
-                      options={widgetPositionOptions}
-                      value={project.widgetButtonPosition}
-                    />
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Identité visiteur"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetReporterFields: value })}
-                      options={widgetReporterFieldOptions}
-                      value={project.widgetReporterFields}
-                    />
-                  </div>
-                  <div className="issue-automation-settings">
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Création d'issues"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { issueCreationMode: value })}
-                      options={issueCreationModeOptions}
-                      value={project.issueCreationMode}
-                    />
-                    <p>
-                      {project.issueCreationMode === "automatic"
-                        ? "Les nouveaux feedbacks créent directement une issue Git."
-                        : "Les feedbacks restent à valider avant Git."}
-                    </p>
-                  </div>
-                  <div className="site-script">
-                    {originValidation.ok ? (
-                      <button aria-label="Copier le script widget" className="site-script-copy-card" onClick={() => onCopyInstallSnippet(project)} type="button">
-                        <code>{snippet}</code>
-                      </button>
-                    ) : (
-                      <span className="site-script-placeholder">Origine autorisée à corriger avant installation.</span>
-                    )}
-                  </div>
-                    </>
+                  {canManageProject && activeSiteOriginEditor ? (
+                    <form className="site-edit-panel" onSubmit={(event) => {
+                      event.preventDefault();
+                      onSaveSiteOrigin(project.publicKey);
+                    }}>
+                      <section className="site-config-panel site-url-config-panel" aria-label={`URL autorisée pour ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Site</span>
+                        </div>
+                        <div className="site-origin-editor">
+                          <label>
+                            <span>URL du site</span>
+                            <input
+                              aria-label={`URL autorisée pour ${project.name}`}
+                              disabled={isPending}
+                              onChange={(event) => onSiteOriginEditorChange(event.target.value)}
+                              type="url"
+                              value={activeSiteOriginEditor.value}
+                            />
+                          </label>
+                          <p className={`origin-create-status ${editingOriginValidation?.ok ? "success" : activeSiteOriginEditor.value.trim() ? "error" : ""}`} role="status">
+                            {editingOriginValidation?.message ?? "Saisissez l'URL du site à autoriser."}
+                          </p>
+                        </div>
+                      </section>
+                      <section className="site-config-panel widget-config-panel" aria-label={`Configuration widget pour ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Widget</span>
+                        </div>
+                        <div className="widget-settings">
+                          <label className="widget-title-field">
+                            <span>Titre widget</span>
+                            <textarea
+                              defaultValue={project.widgetTitle}
+                              disabled={isPending}
+                              maxLength={maxWidgetTitleLength}
+                              onBlur={(event) => {
+                                const title = normalizeWidgetTitle(event.currentTarget.value);
+                                event.currentTarget.value = title;
+                                if (title !== project.widgetTitle) {
+                                  onUpdateWidgetSettings(project.publicKey, { widgetTitle: title });
+                                }
+                              }}
+                            />
+                            <small>{maxWidgetTitleLength} caractères max</small>
+                          </label>
+                          <WidgetModeCheckboxes
+                            disabled={isPending}
+                            modes={project.widgetModes}
+                            onChange={(modes) => onUpdateWidgetSettings(project.publicKey, { widgetModes: modes })}
+                          />
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Langue"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetLocale: value })}
+                            options={widgetLocaleOptions}
+                            value={project.widgetLocale}
+                          />
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Visibilité"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonVariant: value })}
+                            options={widgetVariantOptions}
+                            value={project.widgetButtonVariant}
+                          />
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Position"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonPosition: value })}
+                            options={widgetPositionOptions}
+                            value={project.widgetButtonPosition}
+                          />
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Identité"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetReporterFields: value })}
+                            options={widgetReporterFieldOptions}
+                            value={project.widgetReporterFields}
+                          />
+                        </div>
+                      </section>
+                      <section className="site-config-panel issue-config-panel" aria-label={`Création d'issues pour ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Issues</span>
+                        </div>
+                        <div className="issue-automation-settings">
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Création"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { issueCreationMode: value })}
+                            options={issueCreationModeOptions}
+                            value={project.issueCreationMode}
+                          />
+                          <p>
+                            {project.issueCreationMode === "automatic"
+                              ? "Les nouveaux feedbacks créent directement une issue Git."
+                              : "Les feedbacks restent à valider avant Git."}
+                          </p>
+                        </div>
+                      </section>
+                      <div className="site-origin-editor-actions site-edit-actions">
+                        <button className="button" disabled={isPending || !editingOriginValidation?.ok} type="submit">
+                          <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Enregistrer
+                        </button>
+                        <button className="button secondary-button" disabled={isPending} onClick={onCancelSiteOriginEdit} type="button">
+                          <X aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Annuler
+                        </button>
+                        <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
+                          <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Supprimer
+                        </button>
+                      </div>
+                    </form>
+                  ) : canManageProject ? (
+                    <div className="site-read-panel">
+                      <section className="site-config-summary" aria-label={`Résumé de configuration pour ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Configuration</span>
+                        </div>
+                        <dl>
+                          <div>
+                            <dt>Titre widget</dt>
+                            <dd>{project.widgetTitle}</dd>
+                          </div>
+                          <div>
+                            <dt>Types de retour</dt>
+                            <dd>{widgetModeSummary}</dd>
+                          </div>
+                          <div>
+                            <dt>Langue</dt>
+                            <dd>{optionLabel(widgetLocaleOptions, project.widgetLocale)}</dd>
+                          </div>
+                          <div>
+                            <dt>Visibilité</dt>
+                            <dd>{optionLabel(widgetVariantOptions, project.widgetButtonVariant)}</dd>
+                          </div>
+                          <div>
+                            <dt>Position</dt>
+                            <dd>{optionLabel(widgetPositionOptions, project.widgetButtonPosition)}</dd>
+                          </div>
+                          <div>
+                            <dt>Identité</dt>
+                            <dd>{optionLabel(widgetReporterFieldOptions, project.widgetReporterFields)}</dd>
+                          </div>
+                          <div>
+                            <dt>Issues</dt>
+                            <dd>{issueCreationSummary}</dd>
+                          </div>
+                        </dl>
+                      </section>
+                      <section className="site-config-panel script-config-panel" aria-label={`Script widget pour ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Installation</span>
+                        </div>
+                        <div className="site-script">
+                          {originValidation.ok ? (
+                            <button aria-label="Copier le script widget" className="site-script-copy-card" onClick={() => onCopyInstallSnippet(project)} type="button">
+                              <code>{snippet}</code>
+                            </button>
+                          ) : (
+                            <span className="site-script-placeholder">Origine autorisée à corriger avant installation.</span>
+                          )}
+                        </div>
+                      </section>
+                    </div>
                   ) : null}
                 </div>
               </article>

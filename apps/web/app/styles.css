@@ -6128,7 +6128,7 @@ dd {
 }
 
 .site-row-main {
-  align-items: center;
+  align-items: start;
   display: grid;
   gap: 16px;
   grid-template-columns: minmax(180px, 1fr) minmax(260px, 1.25fr) auto;
@@ -6138,9 +6138,9 @@ dd {
   align-items: start;
   border-top: 1px solid var(--line);
   display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(220px, 0.48fr) minmax(430px, 1fr) minmax(220px, 0.46fr) minmax(250px, 0.52fr);
-  padding-top: 12px;
+  gap: 14px;
+  grid-template-columns: minmax(180px, 0.26fr) minmax(0, 1fr);
+  padding-top: 14px;
 }
 
 .site-identity {
@@ -6191,6 +6191,20 @@ dd {
   gap: 7px;
 }
 
+.site-edit-actions {
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  padding-top: 2px;
+}
+
+.site-edit-actions .danger-button {
+  margin-left: auto;
+}
+
+.site-edit-actions .danger-button:first-child {
+  margin-left: 0;
+}
+
 .site-origin-editor-actions .button {
   min-height: 34px;
 }
@@ -6212,9 +6226,8 @@ dd {
 .site-metrics {
   align-items: stretch;
   display: grid;
-  gap: 7px;
-  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-  margin-top: 17px;
+  gap: 8px;
+  grid-template-columns: 1fr;
 }
 
 .site-metrics span {
@@ -6223,9 +6236,9 @@ dd {
   border-radius: 7px;
   color: var(--muted);
   display: grid;
-  gap: 2px;
-  min-height: 48px;
-  padding: 7px 8px;
+  gap: 3px;
+  min-height: 50px;
+  padding: 8px 9px;
 }
 
 .site-metrics strong {
@@ -6243,11 +6256,109 @@ dd {
   text-transform: uppercase;
 }
 
-.widget-settings {
+.site-configuration-grid {
+  align-items: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(360px, 1fr) minmax(190px, 0.34fr) minmax(220px, 0.42fr);
+  min-width: 0;
+}
+
+.site-read-panel,
+.site-edit-panel {
+  align-items: start;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.site-read-panel {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.38fr);
+}
+
+.site-edit-panel {
+  grid-template-columns: minmax(260px, 0.5fr) minmax(360px, 1fr) minmax(200px, 0.36fr);
+}
+
+.site-config-panel {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.site-config-panel-heading {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.site-config-panel-heading span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.site-config-summary {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.site-config-summary dl {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  margin: 0;
   min-width: 0;
+}
+
+.site-config-summary div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.site-config-summary dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.site-config-summary dd {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.25;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-settings {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(118px, 1fr));
+  min-width: 0;
+}
+
+.connected-site-row .widget-title-field,
+.connected-site-row .widget-mode-checkboxes {
+  grid-column: span 2;
 }
 
 .widget-settings label,
@@ -6280,6 +6391,49 @@ dd {
   padding: 8px 28px 8px 10px;
 }
 
+.connected-site-row .widget-title-field textarea {
+  line-height: 1.35;
+  min-height: 108px;
+  resize: vertical;
+}
+
+.connected-site-row .widget-mode-checkboxes {
+  align-content: start;
+  align-self: start;
+  background: white;
+  display: grid;
+  gap: 8px;
+  height: auto;
+  padding: 9px;
+}
+
+.connected-site-row .widget-mode-checkboxes label {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: start;
+  min-height: 24px;
+  padding: 0;
+}
+
+.connected-site-row .widget-mode-checkboxes input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.connected-site-row .widget-mode-checkboxes span {
+  min-width: 0;
+}
+
+.connected-site-row .theme-dropdown-trigger {
+  min-height: 36px;
+  padding: 8px 10px;
+}
+
 .issue-automation-settings {
   display: grid;
   gap: 6px;
@@ -6296,7 +6450,6 @@ dd {
 
 .site-script {
   display: block;
-  margin-top: 17px;
   min-width: 0;
 }
 
@@ -6329,7 +6482,7 @@ dd {
 }
 
 .site-script-copy-card code {
-  background: var(--soft);
+  background: white;
   border: 0;
   border-radius: 7px;
   color: var(--ink);
@@ -6337,7 +6490,7 @@ dd {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 10px;
   line-height: 1.25;
-  max-height: 54px;
+  max-height: 94px;
   overflow: hidden;
   padding: 8px;
   text-overflow: clip;
@@ -6410,10 +6563,12 @@ dd {
 
 .site-row-actions {
   align-items: stretch;
+  align-self: start;
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
   justify-content: flex-end;
+  padding-top: 8px;
 }
 
 .site-row-actions .button {
@@ -6810,6 +6965,9 @@ code {
   .repo-form,
   .site-access-add-form,
   .site-create-widget-options,
+  .site-configuration-grid,
+  .site-read-panel,
+  .site-edit-panel,
   .git-status-summary,
   .waitlist-form,
   .site-repo-row,
@@ -6880,6 +7038,14 @@ code {
 
   .repository-loader-action {
     justify-self: start;
+  }
+
+  .site-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .site-config-summary dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .screenshot-modal-sidebar {
@@ -7238,8 +7404,13 @@ code {
     flex-direction: column;
   }
 
-  .widget-settings {
-    grid-template-columns: 1fr;
+  .connected-site-row .widget-title-field,
+  .connected-site-row .widget-mode-checkboxes {
+    grid-column: auto;
+  }
+
+  .connected-site-row .widget-settings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .waitlist-controls {
@@ -7323,7 +7494,9 @@ code {
   }
 
   .site-script,
-  .site-metrics {
+  .site-metrics,
+  .site-config-summary dl,
+  .widget-settings {
     grid-template-columns: 1fr;
   }
 
