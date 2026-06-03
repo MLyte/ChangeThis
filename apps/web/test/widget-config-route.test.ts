@@ -19,17 +19,21 @@ test("/api/widget/config returns only widget-safe project fields", async () => {
   assert.equal(body.projectKey, "demo_project_key");
   assert.equal(body.endpoint, "/api/public/feedback");
   assert.equal(body.reporterFields, "optional");
+  assert.equal(body.displayMode, "standard");
+  assert.equal(body.visible, true);
   assert.equal(body.title, "Que faut-il changer ?");
   assert.deepEqual(body.modes, ["comment", "pin", "screenshot"]);
   assert.deepEqual(Object.keys(body).sort(), [
     "buttonPosition",
     "buttonVariant",
+    "displayMode",
     "endpoint",
     "locale",
     "modes",
     "name",
     "projectKey",
     "reporterFields",
-    "title"
+    "title",
+    "visible"
   ]);
 });

@@ -22,7 +22,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetMode, WidgetReporterFields } from "@changethis/shared";
+import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetDisplayMode, WidgetLocale, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
@@ -90,9 +90,11 @@ const widgetPositionOptions: Array<{ label: string; value: WidgetButtonPosition 
   { label: "Haut gauche", value: "top-left" }
 ];
 
-const widgetVariantOptions: Array<{ label: string; value: WidgetButtonVariant }> = [
-  { label: "Standard", value: "default" },
-  { label: "Discret production", value: "subtle" }
+const widgetDisplayModeOptions: Array<{ label: string; value: WidgetDisplayMode }> = [
+  { label: "Standard", value: "standard" },
+  { label: "Discret", value: "subtle" },
+  { label: "Invisible", value: "hidden" },
+  { label: "Non présent", value: "disabled" }
 ];
 
 const widgetReporterFieldOptions: Array<{ label: string; value: WidgetReporterFields }> = [
@@ -161,6 +163,7 @@ export function IssueDestinationSetup({
   const [siteOrigin, setSiteOrigin] = useState("");
   const [siteWidgetLocale, setSiteWidgetLocale] = useState<WidgetLocale>("fr");
   const [siteWidgetButtonVariant, setSiteWidgetButtonVariant] = useState<WidgetButtonVariant>("default");
+  const [siteWidgetDisplayMode, setSiteWidgetDisplayMode] = useState<WidgetDisplayMode>("standard");
   const [siteWidgetButtonPosition, setSiteWidgetButtonPosition] = useState<WidgetButtonPosition>("bottom-right");
   const [siteWidgetReporterFields, setSiteWidgetReporterFields] = useState<WidgetReporterFields>("optional");
   const [siteWidgetTitle, setSiteWidgetTitle] = useState(defaultWidgetTitle);
@@ -320,6 +323,7 @@ export function IssueDestinationSetup({
             widgetLocale: siteWidgetLocale,
             widgetButtonPosition: siteWidgetButtonPosition,
             widgetButtonVariant: siteWidgetButtonVariant,
+            widgetDisplayMode: siteWidgetDisplayMode,
             widgetReporterFields: siteWidgetReporterFields,
             widgetTitle: siteWidgetTitle,
             widgetModes: siteWidgetModes,
@@ -352,6 +356,7 @@ export function IssueDestinationSetup({
         setSiteOrigin("");
         setSiteWidgetLocale("fr");
         setSiteWidgetButtonVariant("default");
+        setSiteWidgetDisplayMode("standard");
         setSiteWidgetButtonPosition("bottom-right");
         setSiteWidgetReporterFields("optional");
         setSiteWidgetTitle(defaultWidgetTitle);
@@ -371,7 +376,7 @@ export function IssueDestinationSetup({
     });
   }
 
-  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) {
+  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetDisplayMode" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) {
     const project = projectViews.find((item) => item.publicKey === projectKey);
     if (!project) {
       return;
@@ -385,11 +390,13 @@ export function IssueDestinationSetup({
     applyWidgetSettings(project, update);
   }
 
-  function applyWidgetSettings(project: ProjectView, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) {
+  function applyWidgetSettings(project: ProjectView, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetDisplayMode" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) {
+    const nextDisplayMode = update.widgetDisplayMode ?? project.widgetDisplayMode;
     const nextSettings = {
       widgetLocale: update.widgetLocale ?? project.widgetLocale,
       widgetButtonPosition: update.widgetButtonPosition ?? project.widgetButtonPosition,
-      widgetButtonVariant: update.widgetButtonVariant ?? project.widgetButtonVariant,
+      widgetButtonVariant: update.widgetButtonVariant ?? widgetButtonVariantFromDisplayMode(nextDisplayMode),
+      widgetDisplayMode: nextDisplayMode,
       widgetReporterFields: update.widgetReporterFields ?? project.widgetReporterFields,
       widgetTitle: normalizeWidgetTitle(update.widgetTitle ?? project.widgetTitle),
       widgetModes: normalizeWidgetModes(update.widgetModes ?? project.widgetModes),
@@ -482,6 +489,7 @@ export function IssueDestinationSetup({
             widgetLocale: project.widgetLocale,
             widgetButtonPosition: project.widgetButtonPosition,
             widgetButtonVariant: project.widgetButtonVariant,
+            widgetDisplayMode: project.widgetDisplayMode,
             widgetReporterFields: project.widgetReporterFields,
             widgetTitle: project.widgetTitle,
             widgetModes: project.widgetModes,
@@ -854,7 +862,10 @@ export function IssueDestinationSetup({
               selectedProvider={selectedProvider}
               selectedRepositoryId={selectedRepositoryId}
               setSiteWidgetButtonPosition={setSiteWidgetButtonPosition}
-              setSiteWidgetButtonVariant={setSiteWidgetButtonVariant}
+              setSiteWidgetDisplayMode={(mode) => {
+                setSiteWidgetDisplayMode(mode);
+                setSiteWidgetButtonVariant(widgetButtonVariantFromDisplayMode(mode));
+              }}
               setSiteWidgetLocale={setSiteWidgetLocale}
               setSiteWidgetModes={setSiteWidgetModes}
               setSiteWidgetReporterFields={setSiteWidgetReporterFields}
@@ -866,7 +877,7 @@ export function IssueDestinationSetup({
               siteName={siteName}
               siteOrigin={siteOrigin}
               siteWidgetButtonPosition={siteWidgetButtonPosition}
-              siteWidgetButtonVariant={siteWidgetButtonVariant}
+              siteWidgetDisplayMode={siteWidgetDisplayMode}
               siteIssueCreationMode={siteIssueCreationMode}
               siteWidgetModes={siteWidgetModes}
               siteWidgetLocale={siteWidgetLocale}
@@ -1113,6 +1124,26 @@ type ThemeDropdownOption<T extends string> = {
 
 function optionLabel<T extends string>(options: Array<ThemeDropdownOption<T>>, value: T) {
   return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function widgetButtonVariantFromDisplayMode(mode: WidgetDisplayMode): WidgetButtonVariant {
+  return mode === "subtle" ? "subtle" : "default";
+}
+
+function widgetDisplayModeDescription(mode: WidgetDisplayMode): string {
+  if (mode === "subtle") {
+    return "Bouton compact, adapté aux sites en production.";
+  }
+
+  if (mode === "hidden") {
+    return "Aucun bouton visible; le widget s'ouvre avec Alt+Shift+F.";
+  }
+
+  if (mode === "disabled") {
+    return "Le script reste installé, mais le widget ne s'affiche pas sur ce site.";
+  }
+
+  return "Bouton complet visible sur le site.";
 }
 
 function ThemeDropdown<T extends string>({
@@ -1968,7 +1999,7 @@ function ConnectedSitesSection({
   selectedProvider,
   selectedRepositoryId,
   setSiteWidgetButtonPosition,
-  setSiteWidgetButtonVariant,
+  setSiteWidgetDisplayMode,
   setSiteWidgetLocale,
   setSiteWidgetModes,
   setSiteWidgetReporterFields,
@@ -1978,7 +2009,7 @@ function ConnectedSitesSection({
   siteName,
   siteOrigin,
   siteWidgetButtonPosition,
-  siteWidgetButtonVariant,
+  siteWidgetDisplayMode,
   siteIssueCreationMode,
   siteWidgetModes,
   siteWidgetLocale,
@@ -2004,7 +2035,7 @@ function ConnectedSitesSection({
   onSelectRepository: (repositoryId: string) => void;
   onLeaveSharedProject: (projectKey: string) => void;
   onCancelSiteOriginEdit: () => void;
-  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) => void;
+  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetDisplayMode" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) => void;
   onSiteOriginEditorChange: (value: string) => void;
   projects: ProjectView[];
   currentUserId?: string;
@@ -2016,7 +2047,7 @@ function ConnectedSitesSection({
   selectedProvider: IssueProvider;
   selectedRepositoryId: string;
   setSiteWidgetButtonPosition: (position: WidgetButtonPosition) => void;
-  setSiteWidgetButtonVariant: (variant: WidgetButtonVariant) => void;
+  setSiteWidgetDisplayMode: (mode: WidgetDisplayMode) => void;
   setSiteWidgetLocale: (locale: WidgetLocale) => void;
   setSiteWidgetModes: (modes: WidgetMode[]) => void;
   setSiteWidgetReporterFields: (fields: WidgetReporterFields) => void;
@@ -2026,7 +2057,7 @@ function ConnectedSitesSection({
   siteName: string;
   siteOrigin: string;
   siteWidgetButtonPosition: WidgetButtonPosition;
-  siteWidgetButtonVariant: WidgetButtonVariant;
+  siteWidgetDisplayMode: WidgetDisplayMode;
   siteIssueCreationMode: IssueCreationMode;
   siteWidgetModes: WidgetMode[];
   siteWidgetLocale: WidgetLocale;
@@ -2295,11 +2326,15 @@ function ConnectedSitesSection({
                           />
                           <ThemeDropdown
                             disabled={isPending}
-                            label="Visibilité"
-                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonVariant: value })}
-                            options={widgetVariantOptions}
-                            value={project.widgetButtonVariant}
+                            label="Affichage"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, {
+                              widgetButtonVariant: widgetButtonVariantFromDisplayMode(value),
+                              widgetDisplayMode: value
+                            })}
+                            options={widgetDisplayModeOptions}
+                            value={project.widgetDisplayMode}
                           />
+                          <p className="widget-setting-help">{widgetDisplayModeDescription(project.widgetDisplayMode)}</p>
                           <ThemeDropdown
                             disabled={isPending}
                             label="Position"
@@ -2370,8 +2405,8 @@ function ConnectedSitesSection({
                             <dd>{optionLabel(widgetLocaleOptions, project.widgetLocale)}</dd>
                           </div>
                           <div>
-                            <dt>Visibilité</dt>
-                            <dd>{optionLabel(widgetVariantOptions, project.widgetButtonVariant)}</dd>
+                            <dt>Affichage</dt>
+                            <dd>{optionLabel(widgetDisplayModeOptions, project.widgetDisplayMode)}</dd>
                           </div>
                           <div>
                             <dt>Position</dt>
@@ -2571,7 +2606,8 @@ function ConnectedSitesSection({
                     onChange={setSiteWidgetModes}
                   />
                   <ThemeDropdown label="Langue" onChange={setSiteWidgetLocale} options={widgetLocaleOptions} value={siteWidgetLocale} />
-                  <ThemeDropdown label="Visibilité" onChange={setSiteWidgetButtonVariant} options={widgetVariantOptions} value={siteWidgetButtonVariant} />
+                  <ThemeDropdown label="Affichage" onChange={setSiteWidgetDisplayMode} options={widgetDisplayModeOptions} value={siteWidgetDisplayMode} />
+                  <p className="widget-setting-help">{widgetDisplayModeDescription(siteWidgetDisplayMode)}</p>
                   <ThemeDropdown label="Position bouton" onChange={setSiteWidgetButtonPosition} options={widgetPositionOptions} value={siteWidgetButtonPosition} />
                   <ThemeDropdown label="Identité visiteur" onChange={setSiteWidgetReporterFields} options={widgetReporterFieldOptions} value={siteWidgetReporterFields} />
                   <ThemeDropdown label="Création issues" onChange={setSiteIssueCreationMode} options={issueCreationModeOptions} value={siteIssueCreationMode} />

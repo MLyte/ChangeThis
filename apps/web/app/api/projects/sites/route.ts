@@ -1,4 +1,4 @@
-import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetMode, WidgetReporterFields } from "@changethis/shared";
+import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetDisplayMode, WidgetLocale, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
@@ -116,6 +116,7 @@ export async function POST(request: Request) {
       widgetLocale: parseWidgetLocale(body.widgetLocale),
       widgetButtonPosition: parseWidgetButtonPosition(body.widgetButtonPosition),
       widgetButtonVariant: parseWidgetButtonVariant(body.widgetButtonVariant),
+      widgetDisplayMode: parseWidgetDisplayMode(body.widgetDisplayMode),
       widgetReporterFields: parseWidgetReporterFields(body.widgetReporterFields),
       widgetTitle: parseWidgetTitle(body.widgetTitle),
       widgetModes: parseWidgetModes(body.widgetModes),
@@ -173,6 +174,10 @@ function parseWidgetButtonPosition(value: unknown): WidgetButtonPosition | undef
 
 function parseWidgetButtonVariant(value: unknown): WidgetButtonVariant | undefined {
   return value === "default" || value === "subtle" ? value : undefined;
+}
+
+function parseWidgetDisplayMode(value: unknown): WidgetDisplayMode | undefined {
+  return value === "standard" || value === "subtle" || value === "hidden" || value === "disabled" ? value : undefined;
 }
 
 function parseWidgetReporterFields(value: unknown): WidgetReporterFields | undefined {

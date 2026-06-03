@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { IssueCreationMode, WidgetMode } from "@changethis/shared";
+import type { IssueCreationMode, WidgetDisplayMode, WidgetMode } from "@changethis/shared";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { logError, requestIdFrom } from "../../../../../lib/logger";
@@ -49,12 +49,13 @@ export async function PATCH(
     || !isWidgetLocale(body.widgetLocale)
     || !isWidgetButtonPosition(body.widgetButtonPosition)
     || !isWidgetButtonVariant(body.widgetButtonVariant)
+    || !isWidgetDisplayMode(body.widgetDisplayMode)
     || !isWidgetReporterFields(body.widgetReporterFields)
     || !isWidgetTitle(body.widgetTitle)
     || !isWidgetModes(body.widgetModes)
     || !isIssueCreationMode(body.issueCreationMode)
     || (body.allowedOrigin !== undefined && typeof body.allowedOrigin !== "string")) {
-    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant, widgetReporterFields, widgetTitle, widgetModes and issueCreationMode are required" }, { status: 422 });
+    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant, widgetDisplayMode, widgetReporterFields, widgetTitle, widgetModes and issueCreationMode are required" }, { status: 422 });
   }
 
   const { projectKey } = await context.params;
@@ -65,6 +66,7 @@ export async function PATCH(
       widgetLocale: body.widgetLocale,
       widgetButtonPosition: body.widgetButtonPosition,
       widgetButtonVariant: body.widgetButtonVariant,
+      widgetDisplayMode: body.widgetDisplayMode,
       widgetReporterFields: body.widgetReporterFields,
       widgetTitle: body.widgetTitle,
       widgetModes: body.widgetModes,
@@ -139,6 +141,10 @@ function isWidgetButtonPosition(value: unknown): value is "bottom-right" | "bott
 
 function isWidgetButtonVariant(value: unknown): value is "default" | "subtle" {
   return value === "default" || value === "subtle";
+}
+
+function isWidgetDisplayMode(value: unknown): value is WidgetDisplayMode {
+  return value === "standard" || value === "subtle" || value === "hidden" || value === "disabled";
 }
 
 function isWidgetReporterFields(value: unknown): value is "hidden" | "optional" | "required" {

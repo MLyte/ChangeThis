@@ -15,11 +15,12 @@ export function widgetLoaderScript(): string {
   }
 
   const widgetUrl = new URL("widget.js", currentScript.src);
-  widgetUrl.searchParams.set("v", String(Date.now()));
 
   const script = document.createElement("script");
   script.src = widgetUrl.toString();
-  script.dataset.project = projectKey;
+  for (const [key, value] of Object.entries(currentScript.dataset)) {
+    script.dataset[key] = value;
+  }
   script.async = true;
 
   (document.body || document.head || document.documentElement).appendChild(script);

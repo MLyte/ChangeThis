@@ -28,5 +28,7 @@ async def widget_config(project: str = Query(min_length=1), origin: str | None =
         locale=configured_project.widget_locale,
         button_position=configured_project.widget_button_position,
         button_variant=configured_project.widget_button_variant,
+        display_mode=configured_project.widget_display_mode,
         reporter_fields=configured_project.widget_reporter_fields,
+        visible=configured_project.widget_display_mode != "disabled",
     )

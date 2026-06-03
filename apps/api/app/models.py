@@ -78,6 +78,7 @@ class Project(TimestampMixin, Base):
         CheckConstraint("widget_locale in ('fr', 'en')", name="projects_widget_locale_check"),
         CheckConstraint("widget_button_position in ('bottom-right', 'bottom-left', 'top-right', 'top-left')", name="projects_widget_button_position_check"),
         CheckConstraint("widget_button_variant in ('default', 'subtle')", name="projects_widget_button_variant_check"),
+        CheckConstraint("widget_display_mode in ('standard', 'subtle', 'hidden', 'disabled')", name="projects_widget_display_mode_check"),
         CheckConstraint("widget_reporter_fields in ('hidden', 'optional', 'required')", name="projects_widget_reporter_fields_check"),
         CheckConstraint("char_length(widget_title) between 1 and 240", name="projects_widget_title_length_check"),
         CheckConstraint("widget_modes <@ ARRAY['comment','pin','screenshot']::text[] and cardinality(widget_modes) > 0", name="projects_widget_modes_check"),
@@ -92,6 +93,7 @@ class Project(TimestampMixin, Base):
     widget_locale: Mapped[str] = mapped_column(Text, default="fr", nullable=False)
     widget_button_position: Mapped[str] = mapped_column(Text, default="bottom-right", nullable=False)
     widget_button_variant: Mapped[str] = mapped_column(Text, default="default", nullable=False)
+    widget_display_mode: Mapped[str] = mapped_column(Text, default="standard", nullable=False)
     widget_reporter_fields: Mapped[str] = mapped_column(Text, default="optional", nullable=False)
     widget_title: Mapped[str] = mapped_column(Text, default="Que faut-il changer ?", nullable=False)
     widget_modes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=lambda: ["comment", "pin", "screenshot"], nullable=False)

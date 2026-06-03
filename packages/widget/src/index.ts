@@ -13,6 +13,7 @@ type WidgetOptions = {
   modes?: WidgetMode[];
   buttonStateLabel?: string;
   buttonVariant?: "default" | "dev" | "prod" | "review" | "subtle";
+  displayMode?: "standard" | "subtle" | "hidden" | "disabled";
   buttonPosition?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
   reporterFields?: WidgetReporterFields;
   locale?: "fr" | "en";
@@ -31,11 +32,17 @@ type WidgetOptions = {
 type WidgetConfigResponse = {
   locale?: "fr" | "en";
   buttonPosition?: WidgetOptions["buttonPosition"];
+  button_position?: WidgetOptions["buttonPosition"];
   buttonVariant?: WidgetOptions["buttonVariant"];
+  button_variant?: WidgetOptions["buttonVariant"];
   reporterFields?: WidgetReporterFields;
+  reporter_fields?: WidgetReporterFields;
   title?: string;
   modes?: WidgetMode[];
   endpoint?: string;
+  displayMode?: WidgetOptions["displayMode"];
+  display_mode?: WidgetOptions["displayMode"];
+  visible?: boolean;
 };
 
 type DraftPin = {
@@ -82,6 +89,7 @@ const pageFeedbackScreenshotQuality = 0.62;
 const thumbnailQuality = 0.74;
 const defaultWidgetModes: WidgetMode[] = ["comment", "pin", "screenshot"];
 const maxWidgetTitleLength = 240;
+const widgetConfigStartupTimeoutMs = 700;
 const changethisHandLogoSvg = '<svg class="brand-logo-icon" aria-hidden="true" viewBox="14 1 17 23" role="img"><g transform="rotate(180 22.5 12)"><path d="M19 1h2v1h1v4h2v1h3v1h2v1h1v1h1v7h-1v3h-1v3H19v-3h-1v-2h-1v-2h-1v-2h-1v-1h-1v-3h3v1h1V2h1"/><path fill="#fff" d="M21 2v9h1V7h2v4h1V8h2v4h1V9h1v1h1v7h-1v3h-1v2h-8v-2h-1v-2h-1v-2h-1v-2h-1v-1h-1v-2h2v1h1v1h1V2"/></g></svg>';
 const lucideIcons = {
   bug: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/><path d="M6 17H3"/><path d="M21 17h-3"/></svg>',
@@ -125,6 +133,7 @@ const widgetCopy = {
     sendPendingCount: "Envoyer {count} retours en attente",
     selectArea: "Trace la zone à capturer",
     defineCapture: "Définir la zone",
+    captureVisibleViewport: "Capturer l’écran visible",
     addPin: "Ajouter une pin",
     selectPin: "Touchez la zone à commenter",
     pins: "Pins",
@@ -187,6 +196,7 @@ const widgetCopy = {
     sendPendingCount: "Send {count} pending feedbacks",
     selectArea: "Drag the area to capture",
     defineCapture: "Define area",
+    captureVisibleViewport: "Capture visible screen",
     addPin: "Add pin",
     selectPin: "Tap the area to comment on",
     pins: "Pins",
@@ -225,7 +235,7 @@ const widgetCopy = {
 };
 
 export function initChangeThis(options: WidgetOptions): void {
-  if (!options.projectKey || options.visible === false || document.getElementById(rootId)) {
+  if (!options.projectKey || options.visible === false || options.displayMode === "disabled" || document.getElementById(rootId)) {
     return;
   }
 
@@ -237,11 +247,13 @@ export function initChangeThis(options: WidgetOptions): void {
   };
   const buttonLabel = options.buttonLabel ?? copy.button;
   const buttonStateLabel = options.buttonStateLabel;
-  const buttonVariant = options.buttonVariant ?? "default";
+  const displayMode = options.displayMode ?? displayModeFromButtonVariant(options.buttonVariant);
+  const buttonVariant = displayMode === "subtle" ? "subtle" : options.buttonVariant ?? "default";
   const buttonPosition = options.buttonPosition ?? "bottom-right";
   const isSubtleButton = buttonVariant === "subtle";
+  const isHiddenDisplayMode = displayMode === "hidden";
   const configuredModes = normalizeWidgetModes(options.modes);
-  const advancedModesEnabled = supportsAdvancedFeedbackModes();
+  const advancedModesEnabled = true;
   const enabledModes = configuredModes.filter((mode) => mode === "comment" || advancedModesEnabled);
   const activeModes: WidgetMode[] = enabledModes.length > 0 ? enabledModes : ["comment"];
   const firstMode: WidgetMode = activeModes[0] ?? "comment";
@@ -396,6 +408,14 @@ export function initChangeThis(options: WidgetOptions): void {
     const viewKey = currentViewKey();
     state.type = "screenshot";
     state.draftViewKey = viewKey;
+
+    if (prefersViewportCapture()) {
+      state.captureArea = currentViewportCaptureArea();
+      state.open = true;
+      render();
+      return;
+    }
+
     state.open = false;
     render();
     startCaptureSelection(copy.selectArea, copy.close, (area) => {
@@ -431,6 +451,7 @@ export function initChangeThis(options: WidgetOptions): void {
     const isPinTab = state.type === "pin";
     const isCaptureTab = state.type === "screenshot";
     const hasPins = isPinTab && state.pins.length > 0;
+    const captureActionLabel = prefersViewportCapture() ? copy.captureVisibleViewport : copy.defineCapture;
     const sentPins = state.pins.filter((pin) => pin.status === "sent");
     const draftPins = state.pins
       .map((pin, index) => ({ pin, index }))
@@ -1387,11 +1408,11 @@ export function initChangeThis(options: WidgetOptions): void {
       </style>
       ${pinMarkers}
       ${state.notice ? `<div class="notice" data-position="${buttonPosition}" role="status">${escapeHtml(state.notice)}</div>` : ""}
-      <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}" aria-label="${escapeHtml(buttonLabel)}" title="${escapeHtml(buttonLabel)}">
+      ${isHiddenDisplayMode ? "" : `<button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}" aria-label="${escapeHtml(buttonLabel)}" title="${escapeHtml(buttonLabel)}">
         ${changethisHandLogoSvg}
         ${isSubtleButton ? "" : `<span>${escapeHtml(buttonLabel)}</span>`}
         ${buttonStateLabel && !isSubtleButton ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
-      </button>
+      </button>`}
       ${state.open ? `
         <section class="panel" data-position="${buttonPosition}" aria-label="Envoyer un feedback">
           <div class="panel-header">
@@ -1473,7 +1494,7 @@ export function initChangeThis(options: WidgetOptions): void {
           ${isCaptureTab ? `
             <div class="selection-summary">
               <div class="selection-header">
-                <button class="add-pin" data-action="define-capture">${escapeHtml(copy.defineCapture)}</button>
+                <button class="add-pin" data-action="define-capture">${escapeHtml(captureActionLabel)}</button>
                 ${state.captureArea ? `<span>${feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault)}</span>` : ""}
               </div>
             </div>
@@ -2107,6 +2128,16 @@ export function initChangeThis(options: WidgetOptions): void {
   window.addEventListener("resize", handleScrollOrResize);
   window.visualViewport?.addEventListener("resize", handleScrollOrResize);
   window.visualViewport?.addEventListener("scroll", handleScrollOrResize);
+  document.addEventListener("keydown", (event) => {
+    if (!isHiddenDisplayMode || !isWidgetShortcut(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    state.open = !state.open;
+    state.notice = "";
+    render();
+  }, true);
   installNavigationListener(() => {
     if (syncDraftView()) {
       render();
@@ -3224,22 +3255,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function supportsAdvancedFeedbackModes(): boolean {
-  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches === true;
-  const smallViewport = window.matchMedia?.("(max-width: 640px)").matches === true || window.innerWidth <= 640;
-  return !coarsePointer && !smallViewport;
-}
-
 const currentScript = document.currentScript as HTMLScriptElement | null;
 const projectKey = currentScript?.dataset.project;
 
 if (projectKey) {
   const scriptOptions = widgetOptionsFromScript(currentScript, projectKey);
 
-  void resolveWidgetOptions(currentScript, scriptOptions)
-    .then(initChangeThis)
+  startWidgetWithConfig(currentScript, scriptOptions);
+}
+
+function startWidgetWithConfig(script: HTMLScriptElement | null, fallback: WidgetOptions): void {
+  let initializedWithFallback = false;
+  const configPromise = resolveWidgetOptions(script, fallback);
+  const fallbackTimer = window.setTimeout(() => {
+    initializedWithFallback = true;
+    initChangeThis(fallback);
+  }, widgetConfigStartupTimeoutMs);
+
+  void configPromise
+    .then((resolvedOptions) => {
+      window.clearTimeout(fallbackTimer);
+      if (initializedWithFallback) {
+        removeWidgetRoot();
+      }
+      initChangeThis(resolvedOptions);
+    })
     .catch(() => {
-      initChangeThis(scriptOptions);
+      window.clearTimeout(fallbackTimer);
+      if (!initializedWithFallback) {
+        initChangeThis(fallback);
+      }
     });
 }
 
@@ -3256,6 +3301,7 @@ function widgetOptionsFromScript(script: HTMLScriptElement | null, projectKey: s
     modes: parseWidgetModes(script?.dataset.modes),
     buttonStateLabel: script?.dataset.buttonState,
     buttonVariant: variant === "dev" || variant === "prod" || variant === "review" || variant === "subtle" ? variant : undefined,
+    displayMode: parseWidgetDisplayMode(script?.dataset.displayMode),
     buttonPosition: position === "bottom-right" || position === "bottom-left" || position === "top-right" || position === "top-left" ? position : undefined,
     reporterFields: reporterFields === "hidden" || reporterFields === "optional" || reporterFields === "required" ? reporterFields : undefined,
     locale: script?.dataset.locale === "fr" || script?.dataset.locale === "en" ? script.dataset.locale : undefined,
@@ -3297,11 +3343,13 @@ async function resolveWidgetOptions(script: HTMLScriptElement | null, fallback: 
     ...fallback,
     endpoint: config.endpoint ? new URL(config.endpoint, configUrl).toString() : fallback.endpoint,
     locale: config.locale ?? fallback.locale,
-    buttonPosition: config.buttonPosition ?? fallback.buttonPosition,
-    buttonVariant: config.buttonVariant ?? fallback.buttonVariant,
-    reporterFields: config.reporterFields ?? fallback.reporterFields,
+    buttonPosition: config.buttonPosition ?? config.button_position ?? fallback.buttonPosition,
+    buttonVariant: config.buttonVariant ?? config.button_variant ?? fallback.buttonVariant,
+    displayMode: config.displayMode ?? config.display_mode ?? fallback.displayMode,
+    reporterFields: config.reporterFields ?? config.reporter_fields ?? fallback.reporterFields,
     title: normalizeWidgetTitle(config.title, fallback.title),
-    modes: normalizeWidgetModes(Array.isArray(config.modes) ? config.modes : fallback.modes)
+    modes: normalizeWidgetModes(Array.isArray(config.modes) ? config.modes : fallback.modes),
+    visible: typeof config.visible === "boolean" ? config.visible : fallback.visible
   };
 }
 
@@ -3325,6 +3373,41 @@ function isWidgetConfigResponse(value: unknown): value is WidgetConfigResponse {
   }
 
   return true;
+}
+
+function parseWidgetDisplayMode(value: string | undefined): WidgetOptions["displayMode"] {
+  if (value === "standard" || value === "subtle" || value === "hidden" || value === "disabled") {
+    return value;
+  }
+
+  return undefined;
+}
+
+function displayModeFromButtonVariant(value: WidgetOptions["buttonVariant"]): WidgetOptions["displayMode"] {
+  return value === "subtle" ? "subtle" : "standard";
+}
+
+function removeWidgetRoot(): void {
+  document.getElementById(rootId)?.remove();
+}
+
+function isWidgetShortcut(event: KeyboardEvent): boolean {
+  return event.altKey && event.shiftKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "f";
+}
+
+function prefersViewportCapture(): boolean {
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches === true;
+  const smallViewport = window.matchMedia?.("(max-width: 640px)").matches === true || window.innerWidth <= 640;
+  return coarsePointer || smallViewport;
+}
+
+function currentViewportCaptureArea(): CaptureArea {
+  return {
+    x: 0,
+    y: 0,
+    width: Math.max(1, Math.round(window.innerWidth)),
+    height: Math.max(1, Math.round(window.innerHeight))
+  };
 }
 
 function normalizeWidgetTitle(value: string | undefined, fallback: string | undefined): string | undefined {

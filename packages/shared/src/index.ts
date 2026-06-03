@@ -7,6 +7,7 @@ export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_rec
 export type WidgetLocale = "fr" | "en";
 export type WidgetButtonPosition = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 export type WidgetButtonVariant = "default" | "subtle";
+export type WidgetDisplayMode = "standard" | "subtle" | "hidden" | "disabled";
 export type WidgetReporterFields = "hidden" | "optional" | "required";
 export type WidgetMode = "comment" | "pin" | "screenshot";
 export type IssueCreationMode = "manual" | "automatic";
@@ -38,6 +39,7 @@ export type Site = {
   widgetLocale: WidgetLocale;
   widgetButtonPosition: WidgetButtonPosition;
   widgetButtonVariant: WidgetButtonVariant;
+  widgetDisplayMode: WidgetDisplayMode;
   widgetReporterFields: WidgetReporterFields;
   widgetTitle: string;
   widgetModes: WidgetMode[];

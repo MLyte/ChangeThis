@@ -42,7 +42,7 @@ test("detectWidgetScript rejects matching widget script with the wrong public ke
   assert.equal(result.status, "project_key_mismatch");
 });
 
-test("detectWidgetScript accepts the cache-busting widget loader", () => {
+test("detectWidgetScript accepts the stable widget loader", () => {
   const result = routeModule.detectWidgetScript(
     '<script src="https://app.changethis.dev/widget-loader.js" data-project="ct_expected"></script>',
     "ct_expected"

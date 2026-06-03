@@ -49,7 +49,7 @@ test("missingWidgetBundleFallback can be silenced by integrators", () => {
   assert.match(missingWidgetBundleFallback(), /dataset\?\.fallback === "silent"/);
 });
 
-test("widget loader serves JavaScript that cache-busts the widget bundle", async () => {
+test("widget loader serves JavaScript that preserves script data attributes without cache-busting", async () => {
   for (const response of [widgetLoaderResponse(), await getWidgetLoader()]) {
     const body = await response.text();
 
@@ -57,10 +57,10 @@ test("widget loader serves JavaScript that cache-busts the widget bundle", async
     assert.equal(response.headers.get("Content-Type"), "application/javascript; charset=utf-8");
     assert.equal(response.headers.get("Cache-Control"), "no-store");
     assert.match(body, /widget\.js/);
-    assert.match(body, /Date\.now/);
-    assert.match(body, /dataset\.project/);
+    assert.doesNotMatch(body, /Date\.now/);
+    assert.match(body, /Object\.entries\(currentScript\.dataset\)/);
     assert.doesNotThrow(() => new Function(body));
   }
 
-  assert.match(widgetLoaderScript(), /searchParams\.set\("v"/);
+  assert.doesNotMatch(widgetLoaderScript(), /searchParams\.set\("v"/);
 });

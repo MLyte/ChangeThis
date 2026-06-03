@@ -47,6 +47,7 @@ test("creates a connected GitHub site with the selected repository and integrati
   assert.equal(site.issueTarget.integrationId, "integration_github_mlyte");
   assert.equal(site.issueTarget.webUrl, "https://github.com/agency/product-site");
   assert.equal(site.issueCreationMode, "manual");
+  assert.equal(site.widgetDisplayMode, "standard");
   assert.equal(site.widgetTitle, "Que faut-il changer ?");
   assert.deepEqual(site.widgetModes, ["comment", "pin", "screenshot"]);
 
@@ -64,6 +65,7 @@ test("generates a stable install snippet that loads stored widget config", async
     widgetLocale: "fr",
     widgetButtonPosition: "top-left",
     widgetButtonVariant: "subtle",
+    widgetDisplayMode: "hidden",
     widgetReporterFields: "required",
     widgetTitle: "Une question courte",
     widgetModes: ["comment", "screenshot"]
@@ -72,6 +74,7 @@ test("generates a stable install snippet that loads stored widget config", async
   const snippet = installSnippet(site);
 
   assert.equal(site.widgetTitle, "Une question courte");
+  assert.equal(site.widgetDisplayMode, "hidden");
   assert.deepEqual(site.widgetModes, ["comment", "screenshot"]);
   assert.equal(snippet, `<script src="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/widget-loader.js" data-project="${site.publicKey}"></script>`);
   assert.doesNotMatch(snippet, /data-locale|data-position|data-button-variant|data-reporter-fields|data-widget-title|data-modes/);
@@ -147,6 +150,7 @@ test("updates and deletes a connected site", async () => {
     widgetLocale: updated.widgetLocale,
     widgetButtonPosition: updated.widgetButtonPosition,
     widgetButtonVariant: updated.widgetButtonVariant,
+    widgetDisplayMode: "disabled",
     widgetReporterFields: updated.widgetReporterFields,
     widgetTitle: updated.widgetTitle,
     widgetModes: updated.widgetModes,
@@ -154,6 +158,7 @@ test("updates and deletes a connected site", async () => {
   });
 
   assert.deepEqual(originUpdated.allowedOrigins, ["https://docs.example"]);
+  assert.equal(originUpdated.widgetDisplayMode, "disabled");
 
   assert.equal(await deleteConnectedSite(site.publicKey), true);
   assert.equal((await listConfiguredProjects()).some((project) => project.publicKey === site.publicKey), false);

@@ -2,6 +2,17 @@
 
 [English](#english-version)
 
+## Memo deploiement serveur
+
+Depuis `/opt/changethis/repo` sur `front-tool-prod`:
+
+```bash
+sudo API_URL=http://127.0.0.1:8000 scripts/internal/deploy-backend.sh
+sudo APP_URL=https://changethis.cra.wallonie.be scripts/internal/deploy-frontend.sh
+```
+
+Ces scripts font le `git pull --ff-only`, les installations/builds utiles, puis redemarrent `changethis-api` et `changethis-web`.
+
 ## Note de release en attente - 2 juin 2026
 
 Changements realises localement et en attente de livraison:

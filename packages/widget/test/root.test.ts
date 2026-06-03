@@ -27,6 +27,10 @@ class FakeElement {
   click() {
     this.listeners.get("click")?.();
   }
+
+  remove() {
+    // Test double: removal side effects are asserted through append/create counts.
+  }
 }
 
 class FakeShadowRoot {
@@ -311,6 +315,135 @@ test("initChangeThis renders subtle button as the brand hand logo without visibl
   assert.doesNotMatch(buttonHtml, /button-state/);
 });
 
+test("initChangeThis supports hidden display mode with keyboard shortcut", async () => {
+  let appendedRoot: FakeElement | undefined;
+  let keydownListener: ((event: {
+    altKey: boolean;
+    shiftKey: boolean;
+    ctrlKey: boolean;
+    metaKey: boolean;
+    key: string;
+    preventDefault: () => void;
+  }) => void) | undefined;
+  let prevented = false;
+  const documentRef = {
+    currentScript: null,
+    documentElement: {
+      appendChild(element: FakeElement) {
+        appendedRoot = element;
+      },
+      lang: "en"
+    },
+    getElementById() {
+      return null;
+    },
+    createElement() {
+      return new FakeElement();
+    },
+    addEventListener(type: string, listener: typeof keydownListener) {
+      if (type === "keydown") {
+        keydownListener = listener;
+      }
+    },
+    querySelectorAll() {
+      return [];
+    }
+  };
+
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: documentRef
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      addEventListener() {},
+      history: {
+        pushState() {},
+        replaceState() {}
+      },
+      innerHeight: 768,
+      innerWidth: 1024,
+      localStorage: {
+        getItem() {
+          return null;
+        },
+        setItem() {}
+      },
+      location: {
+        hash: "",
+        href: "https://client.example.test/page",
+        origin: "https://client.example.test",
+        pathname: "/page",
+        search: ""
+      },
+      matchMedia() {
+        return { matches: false };
+      },
+      queueMicrotask(callback: () => void) {
+        callback();
+      },
+      scrollX: 0,
+      scrollY: 0
+    }
+  });
+
+  const { initChangeThis } = await import("../src/index.ts");
+
+  initChangeThis({ projectKey: "pk_hidden", displayMode: "hidden" });
+
+  const closedHtml = appendedRoot?.shadowRoot?.innerHTML ?? "";
+  assert.doesNotMatch(closedHtml, /data-action="toggle"/);
+  assert.doesNotMatch(closedHtml, /class="panel"/);
+
+  keydownListener?.({
+    altKey: true,
+    shiftKey: true,
+    ctrlKey: false,
+    metaKey: false,
+    key: "f",
+    preventDefault() {
+      prevented = true;
+    }
+  });
+
+  const openedHtml = appendedRoot?.shadowRoot?.innerHTML ?? "";
+  assert.equal(prevented, true);
+  assert.doesNotMatch(openedHtml, /data-action="toggle"/);
+  assert.match(openedHtml, /class="panel"/);
+});
+
+test("initChangeThis skips disabled display mode", async () => {
+  let createElementCalls = 0;
+  const documentRef = {
+    currentScript: null,
+    documentElement: {
+      appendChild() {
+        assert.fail("disabled widget should not append a root");
+      },
+      lang: "en"
+    },
+    getElementById() {
+      return null;
+    },
+    createElement() {
+      createElementCalls += 1;
+      return new FakeElement();
+    }
+  };
+
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: documentRef
+  });
+
+  const { initChangeThis } = await import("../src/index.ts");
+
+  initChangeThis({ projectKey: "pk_disabled", displayMode: "disabled" });
+
+  assert.equal(createElementCalls, 0);
+});
+
 test("initChangeThis renders a pin visibility toggle on the pin tab", async () => {
   let appendedRoot: FakeElement | undefined;
   const viewUrl = "https://client.example.test/page";
@@ -479,7 +612,7 @@ test("initChangeThis renders configured title and enabled modes", async () => {
   assert.doesNotMatch(html, /data-mode="screenshot"/);
 });
 
-test("initChangeThis hides pin and capture modes on touch viewports", async () => {
+test("initChangeThis keeps pin and capture modes on touch viewports", async () => {
   let appendedRoot: FakeElement | undefined;
   const documentRef = {
     currentScript: null,
@@ -546,8 +679,86 @@ test("initChangeThis hides pin and capture modes on touch viewports", async () =
 
   const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
 
-  assert.match(html, /data-advanced="false"/);
+  assert.match(html, /data-advanced="true"/);
   assert.match(html, /data-mode="comment"/);
-  assert.doesNotMatch(html, /data-mode="pin"/);
-  assert.doesNotMatch(html, /data-mode="screenshot"/);
+  assert.match(html, /data-mode="pin"/);
+  assert.match(html, /data-mode="screenshot"/);
+});
+
+test("initChangeThis captures the visible viewport instead of selecting an area on touch viewports", async () => {
+  let appendCount = 0;
+  let appendedRoot: FakeElement | undefined;
+  const documentRef = {
+    currentScript: null,
+    documentElement: {
+      appendChild(element: FakeElement) {
+        appendCount += 1;
+        appendedRoot = appendedRoot ?? element;
+      },
+      lang: "en"
+    },
+    getElementById() {
+      return null;
+    },
+    createElement() {
+      return new FakeElement();
+    },
+    addEventListener() {},
+    querySelectorAll() {
+      return [];
+    }
+  };
+
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: documentRef
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      addEventListener() {},
+      history: {
+        pushState() {},
+        replaceState() {}
+      },
+      innerHeight: 720,
+      innerWidth: 390,
+      localStorage: {
+        getItem() {
+          return null;
+        },
+        setItem() {}
+      },
+      location: {
+        hash: "",
+        href: "https://client.example.test/page",
+        origin: "https://client.example.test",
+        pathname: "/page",
+        search: ""
+      },
+      matchMedia(query: string) {
+        return { matches: query.includes("pointer: coarse") || query.includes("max-width") };
+      },
+      queueMicrotask(callback: () => void) {
+        callback();
+      },
+      scrollX: 0,
+      scrollY: 0
+    }
+  });
+
+  const { initChangeThis } = await import("../src/index.ts");
+
+  initChangeThis({ projectKey: "pk_mobile_capture", locale: "en", modes: ["screenshot"] });
+  appendedRoot?.shadowRoot?.querySelector("[data-action='toggle']")?.click();
+
+  const openHtml = appendedRoot?.shadowRoot?.innerHTML ?? "";
+  assert.match(openHtml, /Capture visible screen/);
+
+  appendedRoot?.shadowRoot?.querySelector("[data-action='define-capture']")?.click();
+  const captureHtml = appendedRoot?.shadowRoot?.innerHTML ?? "";
+
+  assert.equal(appendCount, 1);
+  assert.match(captureHtml, /Capture: 390x720/);
+  assert.match(captureHtml, /Capture visible screen/);
 });

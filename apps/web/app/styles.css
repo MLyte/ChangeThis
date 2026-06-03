@@ -6368,6 +6368,13 @@ dd {
   min-width: 0;
 }
 
+.widget-setting-help {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: -2px 0 0;
+}
+
 .widget-settings > label > span,
 .widget-settings .theme-dropdown-label,
 .widget-settings .widget-mode-checkboxes legend {

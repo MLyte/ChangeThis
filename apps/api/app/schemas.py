@@ -70,6 +70,7 @@ class ProjectResponse(BaseModel):
     widget_locale: str
     widget_button_position: str
     widget_button_variant: str
+    widget_display_mode: str
     widget_reporter_fields: str
     widget_title: str
     widget_modes: list[str]
@@ -112,7 +113,9 @@ class WidgetConfigResponse(BaseModel):
     locale: str
     button_position: str
     button_variant: str
+    display_mode: str
     reporter_fields: str
+    visible: bool = True
     title: str
     endpoint: str = "/api/public/feedback"
 

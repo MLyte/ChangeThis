@@ -8,6 +8,7 @@ import {
   type Site,
   type WidgetButtonPosition,
   type WidgetButtonVariant,
+  type WidgetDisplayMode,
   type WidgetLocale,
   type WidgetMode,
   type WidgetReporterFields
@@ -39,6 +40,7 @@ export type CreateConnectedSiteInput = {
   widgetLocale?: WidgetLocale;
   widgetButtonPosition?: WidgetButtonPosition;
   widgetButtonVariant?: WidgetButtonVariant;
+  widgetDisplayMode?: WidgetDisplayMode;
   widgetReporterFields?: WidgetReporterFields;
   widgetTitle?: string;
   widgetModes?: WidgetMode[];
@@ -59,6 +61,7 @@ export type ProjectWidgetSettingsUpdate = {
   widgetLocale: WidgetLocale;
   widgetButtonPosition: WidgetButtonPosition;
   widgetButtonVariant: WidgetButtonVariant;
+  widgetDisplayMode: WidgetDisplayMode;
   widgetReporterFields: WidgetReporterFields;
   widgetTitle: string;
   widgetModes: WidgetMode[];
@@ -137,6 +140,7 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
     widgetLocale: input.widgetLocale ?? "fr",
     widgetButtonPosition: input.widgetButtonPosition ?? "bottom-right",
     widgetButtonVariant: input.widgetButtonVariant ?? "default",
+    widgetDisplayMode: input.widgetDisplayMode ?? widgetDisplayModeFromVariant(input.widgetButtonVariant),
     widgetReporterFields: input.widgetReporterFields ?? "optional",
     widgetTitle: normalizeWidgetTitle(input.widgetTitle),
     widgetModes: normalizeWidgetModes(input.widgetModes),
@@ -179,6 +183,7 @@ export async function updateProjectWidgetSettings(
         widgetLocale: update.widgetLocale,
         widgetButtonPosition: update.widgetButtonPosition,
         widgetButtonVariant: update.widgetButtonVariant,
+        widgetDisplayMode: update.widgetDisplayMode,
         widgetReporterFields: update.widgetReporterFields,
         widgetTitle: normalizeWidgetTitle(update.widgetTitle),
         widgetModes: normalizeWidgetModes(update.widgetModes),
@@ -313,6 +318,7 @@ function normalizeStoredSite(site: StoredConnectedSite): ChangeThisProject {
     ...site,
     widgetTitle: parseWidgetTitle(site.widgetTitle),
     widgetModes: parseWidgetModes(site.widgetModes),
+    widgetDisplayMode: parseWidgetDisplayMode(site.widgetDisplayMode ?? site.widgetButtonVariant),
     issueCreationMode: parseIssueCreationMode(site.issueCreationMode)
   };
 }
@@ -412,6 +418,14 @@ function parseWidgetButtonPosition(value: unknown): WidgetButtonPosition {
 
 function parseWidgetButtonVariant(value: unknown): WidgetButtonVariant {
   return value === "subtle" ? "subtle" : "default";
+}
+
+function parseWidgetDisplayMode(value: unknown): WidgetDisplayMode {
+  return value === "subtle" || value === "hidden" || value === "disabled" ? value : "standard";
+}
+
+function widgetDisplayModeFromVariant(value: unknown): WidgetDisplayMode {
+  return parseWidgetButtonVariant(value) === "subtle" ? "subtle" : "standard";
 }
 
 function parseWidgetReporterFields(value: unknown): WidgetReporterFields {
@@ -521,6 +535,7 @@ function sanitizeStore(value: unknown): SiteRegistryStore {
         widgetLocale: parseWidgetLocale(site.widgetLocale),
         widgetButtonPosition: parseWidgetButtonPosition(site.widgetButtonPosition),
         widgetButtonVariant: parseWidgetButtonVariant(site.widgetButtonVariant),
+        widgetDisplayMode: parseWidgetDisplayMode(site.widgetDisplayMode ?? site.widgetButtonVariant),
         widgetReporterFields: parseWidgetReporterFields(site.widgetReporterFields),
         widgetTitle: parseWidgetTitle(site.widgetTitle),
         widgetModes: parseWidgetModes(site.widgetModes),
