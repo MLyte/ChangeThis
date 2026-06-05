@@ -86,6 +86,7 @@ const contactWebsiteUrl = "https://mathieuluyten.be";
 const maxScreenshotDimension = 1600;
 const pageFeedbackScreenshotMaxDimension = 960;
 const maxThumbnailDimension = 400;
+const maxClientScreenshotDataUrlLength = 2_400_000;
 const maxManualCaptureUploadBytes = 2_000_000;
 const manualCaptureUploadTypes = ["image/png", "image/jpeg", "image/webp"];
 const screenshotQuality = 0.8;
@@ -2344,7 +2345,7 @@ async function submitFeedback(params: {
   appEnvironment?: FeedbackAppEnvironment;
 }): Promise<{ id?: string; screenshotDataUrl?: string }> {
   lastCaptureDiagnostics = undefined;
-  const screenshotDataUrl = params.uploadedScreenshotDataUrl ?? await captureFeedbackScreenshot({
+  let screenshotDataUrl = params.uploadedScreenshotDataUrl ?? await captureFeedbackScreenshot({
     type: params.type,
     captureArea: params.captureArea,
     pinTargets: params.pins,
@@ -2352,6 +2353,11 @@ async function submitFeedback(params: {
     capturePageFeedbackPreview,
     warn: console.warn
   });
+  if (screenshotDataUrl && screenshotDataUrl.length > maxClientScreenshotDataUrlLength) {
+    console.warn("[ChangeThis] Feedback screenshot skipped because it is too large for the public API");
+    screenshotDataUrl = undefined;
+    lastCaptureDiagnostics = mergeCaptureDiagnostics(lastCaptureDiagnostics, { preparationTimedOut: true });
+  }
   const capture = takeLastCaptureMetadata();
   const screenshotThumbnailDataUrl = screenshotDataUrl
     ? await createImageThumbnail(screenshotDataUrl)
@@ -2411,7 +2417,7 @@ async function submitFeedback(params: {
   });
 
   if (!response.ok) {
-    throw new Error(`Feedback API returned ${response.status}`);
+    throw new Error(`Feedback API returned ${response.status}${await feedbackApiErrorDetail(response)}`);
   }
 
   const body = await response.json().catch(() => undefined) as unknown;
@@ -2743,6 +2749,12 @@ async function captureViewport(
   area?: CaptureArea,
   options: { maxDimension?: number; quality?: number; pinTargets?: PinTarget[] } = {}
 ): Promise<string | undefined> {
+  if (shouldSkipAutomaticClientCaptureForPage()) {
+    lastCaptureDiagnostics = mergeCaptureDiagnostics(lastCaptureDiagnostics, { preparationTimedOut: true });
+    console.warn("[ChangeThis] Client screenshot skipped on a heavy map page to keep the host page responsive");
+    return undefined;
+  }
+
   const pinCaptureOverlay = options.pinTargets?.length ? renderTemporaryPinCaptureOverlay(options.pinTargets) : undefined;
   const preparationDiagnostics = await prepareDocumentForCapture();
 
@@ -3091,6 +3103,21 @@ function encodeCanvas(canvas: HTMLCanvasElement, quality: number): string {
   return webp.startsWith("data:image/webp;base64,")
     ? webp
     : canvas.toDataURL("image/jpeg", quality);
+}
+
+export function shouldSkipAutomaticClientCaptureForPage(documentRef: Document = document): boolean {
+  return Boolean(documentRef.querySelector(".leaflet-container,.ol-viewport,.mapboxgl-map,.maplibregl-map"));
+}
+
+async function feedbackApiErrorDetail(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    const detail = JSON.parse(text || "{}") as { error?: unknown };
+    const message = typeof detail.error === "string" ? detail.error : text;
+    return message.trim() ? `: ${message.trim().slice(0, 240)}` : "";
+  } catch {
+    return "";
+  }
 }
 
 function cropCanvas(source: HTMLCanvasElement, area: CaptureArea): HTMLCanvasElement {

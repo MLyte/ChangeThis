@@ -61,6 +61,31 @@ class FakeShadowRoot {
   }
 }
 
+test("shouldSkipAutomaticClientCaptureForPage skips map pages in any browser", async () => {
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      currentScript: null
+    }
+  });
+
+  const { shouldSkipAutomaticClientCaptureForPage } = await import("../src/index.ts");
+  const mapDocument = {
+    querySelector(selector: string) {
+      assert.match(selector, /leaflet-container/);
+      return { className: "leaflet-container" };
+    }
+  } as unknown as Document;
+  const plainDocument = {
+    querySelector() {
+      return null;
+    }
+  } as unknown as Document;
+
+  assert.equal(shouldSkipAutomaticClientCaptureForPage(mapDocument), true);
+  assert.equal(shouldSkipAutomaticClientCaptureForPage(plainDocument), false);
+});
+
 
 test("initChangeThis does not create another root when one already exists", async () => {
   let createElementCalls = 0;
