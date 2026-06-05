@@ -85,8 +85,9 @@ const reporterStorageKeyPrefix = "changethis:reporter:";
 const contactWebsiteUrl = "https://mathieuluyten.be";
 const maxScreenshotDimension = 1600;
 const pageFeedbackScreenshotMaxDimension = 960;
+const maxManualCaptureDimension = 1200;
 const maxThumbnailDimension = 400;
-const maxClientScreenshotDataUrlLength = 2_400_000;
+const maxClientScreenshotDataUrlLength = 1_700_000;
 const maxManualCaptureUploadBytes = 2_000_000;
 const manualCaptureUploadTypes = ["image/png", "image/jpeg", "image/webp"];
 const screenshotQuality = 0.8;
@@ -3031,6 +3032,10 @@ function takeLastCaptureMetadata(): FeedbackCaptureMetadata | undefined {
 }
 
 async function createImageThumbnail(dataUrl: string): Promise<string | undefined> {
+  return resizeImageDataUrl(dataUrl, maxThumbnailDimension, thumbnailQuality);
+}
+
+async function resizeImageDataUrl(dataUrl: string, maxDimension: number, quality: number): Promise<string | undefined> {
   const image = new Image();
   image.decoding = "async";
 
@@ -3045,7 +3050,7 @@ async function createImageThumbnail(dataUrl: string): Promise<string | undefined
   }
 
   const canvas = document.createElement("canvas");
-  const ratio = Math.min(1, maxThumbnailDimension / Math.max(image.naturalWidth, image.naturalHeight, 1));
+  const ratio = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight, 1));
   canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
   canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
   const context = canvas.getContext("2d");
@@ -3065,14 +3070,22 @@ function readCaptureUpload(file: Blob): Promise<string> {
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const result = typeof reader.result === "string" ? reader.result : "";
-      if (isSafeImageDataUrl(result)) {
-        resolve(result);
+      if (!isSafeImageDataUrl(result)) {
+        reject(new Error("Invalid capture upload data URL"));
         return;
       }
 
-      reject(new Error("Invalid capture upload data URL"));
+      const normalized = result.length > maxClientScreenshotDataUrlLength
+        ? await resizeImageDataUrl(result, maxManualCaptureDimension, screenshotQuality)
+        : result;
+      if (normalized && normalized.length <= maxClientScreenshotDataUrlLength) {
+        resolve(normalized);
+        return;
+      }
+
+      reject(new Error("Capture upload is too large"));
     };
     reader.onerror = () => reject(new Error("Unable to read capture upload"));
     reader.readAsDataURL(file);

@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
   if (contentLength && Number(contentLength) > maxBodyBytes) {
     logWarn("feedback_rejected_payload_too_large", { request_id: requestId, origin, content_length: contentLength });
-    return NextResponse.json({ error: "Payload is too large" }, { status: 413, headers });
+    return NextResponse.json({ error: "Payload is too large" }, { status: 413, headers: { ...headers, ...corsHeaders(origin) } });
   }
 
   let rawPayload: unknown;
