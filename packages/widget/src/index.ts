@@ -87,6 +87,7 @@ const maxScreenshotDimension = 1600;
 const pageFeedbackScreenshotMaxDimension = 960;
 const maxThumbnailDimension = 400;
 const maxManualCaptureUploadBytes = 2_000_000;
+const manualCaptureUploadTypes = ["image/png", "image/jpeg", "image/webp"];
 const screenshotQuality = 0.8;
 const pageFeedbackScreenshotQuality = 0.62;
 const thumbnailQuality = 0.74;
@@ -100,6 +101,7 @@ const lucideIcons = {
   bug: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/><path d="M6 17H3"/><path d="M21 17h-3"/></svg>',
   camera: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>',
   check: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
+  "clipboard-paste": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 14h10"/><path d="m17 10 4 4-4 4"/><path d="M16 4h2a2 2 0 0 1 2 2v1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><rect width="8" height="4" x="8" y="2" rx="1"/></svg>',
   mail: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>',
   "map-pin": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
   "message-square": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
@@ -143,6 +145,7 @@ const widgetCopy = {
     defineCapture: "Définir la zone",
     captureVisibleViewport: "Capturer l’écran visible",
     uploadCapture: "Joindre une image",
+    pasteCapture: "Depuis le presse-papier",
     removeUploadCapture: "Retirer l'image",
     uploadCaptureInvalid: "Image invalide ou trop lourde.",
     addPin: "Ajouter une pin",
@@ -210,6 +213,7 @@ const widgetCopy = {
     defineCapture: "Define area",
     captureVisibleViewport: "Capture visible screen",
     uploadCapture: "Attach image",
+    pasteCapture: "From clipboard",
     removeUploadCapture: "Remove image",
     uploadCaptureInvalid: "Invalid or oversized image.",
     addPin: "Add pin",
@@ -472,6 +476,7 @@ export function initChangeThis(options: WidgetOptions): void {
     const isCaptureTab = state.type === "screenshot";
     const hasPins = isPinTab && state.pins.length > 0;
     const captureActionLabel = prefersViewportCapture() ? copy.captureVisibleViewport : copy.defineCapture;
+    const canPasteCapture = typeof (navigator.clipboard as { read?: unknown } | undefined)?.read === "function";
     const sentPins = state.pins.filter((pin) => pin.status === "sent");
     const draftPins = state.pins
       .map((pin, index) => ({ pin, index }))
@@ -970,12 +975,16 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 0;
         }
         .selection-header {
+          display: grid;
+          gap: 8px;
+          margin-bottom: 6px;
+        }
+        .pin-meta-row {
           align-items: center;
           display: flex;
-          flex-wrap: wrap;
           gap: 8px;
           justify-content: space-between;
-          margin-bottom: 6px;
+          min-width: 0;
         }
         .selection-header span {
           color: #374151;
@@ -990,6 +999,9 @@ export function initChangeThis(options: WidgetOptions): void {
           display: grid;
           gap: 8px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .capture-main {
+          grid-column: 1 / -1;
         }
         .capture-actions .add-pin {
           width: 100%;
@@ -1096,21 +1108,14 @@ export function initChangeThis(options: WidgetOptions): void {
         .pin-visibility-toggle {
           border: 0;
           background: transparent;
-          color: #4f46e5;
+          color: #6b7280;
           cursor: pointer;
-          font-size: 12px;
-          font-weight: 850;
+          font-size: 11px;
+          font-weight: 750;
           padding: 4px 0;
           text-align: right;
           text-decoration: underline;
           text-underline-offset: 3px;
-        }
-        .pin-header-actions {
-          align-items: center;
-          display: inline-flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: flex-end;
         }
         .manager-button {
           align-items: center;
@@ -1525,7 +1530,7 @@ export function initChangeThis(options: WidgetOptions): void {
             <div class="selection-summary">
               <div class="selection-header">
                 <button class="add-pin" data-action="add-pin">${lucideIcons.plus}${escapeHtml(copy.addPin)}</button>
-                <div class="pin-header-actions">
+                <div class="pin-meta-row">
                   <span>${escapeHtml(copy.pins)} (${state.pins.length})</span>
                   ${state.pins.length
                     ? `<button class="pin-visibility-toggle" data-action="toggle-pins" aria-pressed="${!state.pinsVisible}" type="button">${escapeHtml(state.pinsVisible ? copy.hidePins : copy.showPins)}</button>`
@@ -1557,12 +1562,13 @@ export function initChangeThis(options: WidgetOptions): void {
           ${isCaptureTab ? `
             <div class="selection-summary capture-summary">
               <div class="capture-actions">
-                <button class="add-pin" data-action="define-capture">${lucideIcons.scan}${escapeHtml(captureActionLabel)}</button>
+                <button class="add-pin capture-main" data-action="define-capture">${lucideIcons.scan}${escapeHtml(captureActionLabel)}</button>
                 <label class="add-pin">
                   ${lucideIcons.upload}
                   ${escapeHtml(copy.uploadCapture)}
                   <input accept="image/png,image/jpeg,image/webp" data-capture-upload style="display:none" type="file">
                 </label>
+                ${canPasteCapture ? `<button class="add-pin" data-action="paste-capture">${lucideIcons["clipboard-paste"]}${escapeHtml(copy.pasteCapture)}</button>` : ""}
               </div>
               ${state.captureArea ? `<p class="shortcut-hint">${escapeHtml(feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault))}</p>` : ""}
               ${state.captureUploadName ? `
@@ -1966,6 +1972,23 @@ export function initChangeThis(options: WidgetOptions): void {
       render();
     });
     shadow.querySelector<HTMLButtonElement>("[data-action='define-capture']")?.addEventListener("click", requestCaptureArea);
+    shadow.querySelector<HTMLButtonElement>("[data-action='paste-capture']")?.addEventListener("click", async () => {
+      try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const type = item.types.find((candidate) => manualCaptureUploadTypes.includes(candidate));
+          if (type) {
+            state.captureUploadDataUrl = await readCaptureUpload(await item.getType(type));
+            state.captureUploadName = "clipboard-image";
+            render();
+            return;
+          }
+        }
+      } catch {
+      }
+      window.alert(copy.uploadCaptureInvalid);
+      render();
+    });
     shadow.querySelector<HTMLInputElement>("[data-capture-upload]")?.addEventListener("change", async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (!file) {
@@ -3018,8 +3041,8 @@ async function createImageThumbnail(dataUrl: string): Promise<string | undefined
   return encodeCanvas(canvas, thumbnailQuality);
 }
 
-function readCaptureUpload(file: File): Promise<string> {
-  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > maxManualCaptureUploadBytes) {
+function readCaptureUpload(file: Blob): Promise<string> {
+  if (!manualCaptureUploadTypes.includes(file.type) || file.size > maxManualCaptureUploadBytes) {
     return Promise.reject(new Error("Invalid capture upload"));
   }
 
