@@ -764,6 +764,79 @@ test("initChangeThis shows clipboard paste for screenshot uploads when supported
   assert.match(html, /Depuis le presse-papier/);
 });
 
+test("initChangeThis disables clipboard paste when clipboard image reads are unavailable", async () => {
+  let appendedRoot: FakeElement | undefined;
+  const documentRef = {
+    currentScript: null,
+    documentElement: {
+      appendChild(element: FakeElement) {
+        appendedRoot = element;
+      },
+      lang: "fr"
+    },
+    getElementById() {
+      return null;
+    },
+    createElement() {
+      return new FakeElement();
+    },
+    addEventListener() {},
+    querySelectorAll() {
+      return [];
+    }
+  };
+
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: documentRef
+  });
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: {
+      clipboard: {}
+    }
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      addEventListener() {},
+      history: {
+        pushState() {},
+        replaceState() {}
+      },
+      innerHeight: 768,
+      localStorage: {
+        getItem() {
+          return null;
+        },
+        setItem() {}
+      },
+      location: {
+        hash: "",
+        href: "https://client.example.test/page",
+        origin: "https://client.example.test",
+        pathname: "/page",
+        search: ""
+      },
+      queueMicrotask(callback: () => void) {
+        callback();
+      },
+      scrollX: 0,
+      scrollY: 0
+    }
+  });
+
+  const { initChangeThis } = await import("../src/index.ts");
+
+  initChangeThis({ projectKey: "pk_clipboard_disabled", locale: "fr", modes: ["screenshot"] });
+  appendedRoot?.shadowRoot?.querySelector("[data-action='toggle']")?.click();
+
+  const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
+
+  assert.match(html, /data-action="paste-capture" disabled/);
+  assert.match(html, /Depuis le presse-papier/);
+});
+
 test("initChangeThis captures the visible viewport instead of selecting an area on touch viewports", async () => {
   let appendCount = 0;
   let appendedRoot: FakeElement | undefined;

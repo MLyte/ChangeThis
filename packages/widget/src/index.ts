@@ -1105,6 +1105,11 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 5px 8px;
           white-space: normal;
         }
+        .add-pin:disabled {
+          color: #9ca3af;
+          cursor: not-allowed;
+          opacity: .72;
+        }
         .pin-visibility-toggle {
           border: 0;
           background: transparent;
@@ -1568,7 +1573,7 @@ export function initChangeThis(options: WidgetOptions): void {
                   ${escapeHtml(copy.uploadCapture)}
                   <input accept="image/png,image/jpeg,image/webp" data-capture-upload style="display:none" type="file">
                 </label>
-                ${canPasteCapture ? `<button class="add-pin" data-action="paste-capture">${lucideIcons["clipboard-paste"]}${escapeHtml(copy.pasteCapture)}</button>` : ""}
+                <button class="add-pin" data-action="paste-capture" ${canPasteCapture ? "" : "disabled"}>${lucideIcons["clipboard-paste"]}${escapeHtml(copy.pasteCapture)}</button>
               </div>
               ${state.captureArea ? `<p class="shortcut-hint">${escapeHtml(feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault))}</p>` : ""}
               ${state.captureUploadName ? `
