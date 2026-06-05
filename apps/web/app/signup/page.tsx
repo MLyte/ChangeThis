@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getAuthMode, getCurrentSession, isPublicSignupEnabled } from "../../lib/auth";
-import { setInternalSessionCookie, signUpWithInternalPassword } from "../../lib/internal-api";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
@@ -61,14 +60,11 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const isInternalMode = authMode === "internal";
   const isLocalMode = authMode === "local";
 
-  async function signUpAction(formData: FormData) {
+  async function signUpAction() {
     "use server";
 
     const authMode = getAuthMode();
     const currentSession = await getCurrentSession();
-    const email = formData.get("email")?.toString().trim() ?? "";
-    const password = formData.get("password")?.toString() ?? "";
-    const passwordConfirmation = formData.get("passwordConfirmation")?.toString() ?? "";
 
     if (currentSession?.workspace) {
       redirect("/projects");
@@ -82,22 +78,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       redirect("/settings/connected-sites");
     }
 
-    if (password !== passwordConfirmation) {
-      redirect("/signup?error=password_mismatch");
-    }
-
-    const signUpResult = await signUpWithInternalPassword({
-      email,
-      password,
-      workspaceName: workspaceNameFromEmail(email)
-    });
-
-    if (!signUpResult.ok) {
-      redirect(`/signup?error=${encodeURIComponent(signUpResult.error)}`);
-    }
-
-    await setInternalSessionCookie(signUpResult.accessToken);
-    redirect("/settings/connected-sites");
+    redirect("/signup?error=unavailable");
   }
 
   return (
@@ -130,7 +111,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             </div>
           ) : null}
 
-          <form action={signUpAction} className="auth-form">
+          <form action={isInternalMode ? "/api/auth/signup" : signUpAction} className="auth-form" method={isInternalMode ? "post" : undefined}>
             <label>
               <T k="login.email" />
               <input autoComplete="email" name="email" required type="email" />
@@ -163,11 +144,6 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       <AppFooter />
     </main>
   );
-}
-
-function workspaceNameFromEmail(email: string): string {
-  const domain = email.split("@")[1]?.trim().toLowerCase();
-  return domain ? `Espace ${domain}` : "Espace ChangeThis";
 }
 
 function signupErrorKey(error?: string): string {

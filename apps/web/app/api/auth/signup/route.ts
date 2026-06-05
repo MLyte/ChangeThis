@@ -16,6 +16,12 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const email = formData.get("email")?.toString().trim() ?? "";
   const password = formData.get("password")?.toString() ?? "";
+  const passwordConfirmation = formData.get("passwordConfirmation")?.toString() ?? "";
+
+  if (passwordConfirmation && password !== passwordConfirmation) {
+    return redirectTo(request, "/signup?error=password_mismatch");
+  }
+
   const signUpResult = await signUpWithInternalPassword({
     email,
     password,

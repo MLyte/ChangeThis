@@ -75,6 +75,28 @@ test("internal signup route redirects back to signup when FastAPI rejects the ac
   assert.equal(response.headers.get("set-cookie"), null);
 });
 
+test("internal signup route rejects mismatched password confirmation before FastAPI", async () => {
+  process.env.AUTH_MODE = "internal";
+
+  globalThis.fetch = async () => {
+    throw new Error("FastAPI should not be called");
+  };
+
+  const formData = new FormData();
+  formData.set("email", "owner@example.com");
+  formData.set("password", "correct-password");
+  formData.set("passwordConfirmation", "other-password");
+
+  const response = await signupRoute.POST(new Request("https://app.changethis.dev/api/auth/signup", {
+    body: formData,
+    method: "POST"
+  }));
+
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get("location"), "https://app.changethis.dev/signup?error=password_mismatch");
+  assert.equal(response.headers.get("set-cookie"), null);
+});
+
 function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     headers: {
