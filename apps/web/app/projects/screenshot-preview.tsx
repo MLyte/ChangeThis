@@ -35,11 +35,13 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
   const titleId = useId();
   const sizeKo = Math.round(asset.bytes / 1024);
   const assetStatus = asset.status ?? "active";
+  const assetKind = formatAssetKind(asset.kind);
   const previewUrl = asset.thumbnailDataUrl ?? asset.dataUrl;
   const fullImageUrl = asset.dataUrl ?? asset.thumbnailDataUrl;
   const viewport = `${metadata.viewport.width} x ${metadata.viewport.height}`;
   const deviceContext = formatDeviceContext(metadata);
   const browserContext = formatBrowserContext(metadata.userAgent);
+  const captureRiskSummary = formatCaptureRiskSummary(metadata);
   const isMobileCapture = metadata.viewport.width < 700 && metadata.viewport.height > metadata.viewport.width;
   const pinPositions = (pins?.length ? pins : pin ? [pin] : []).map((item) => pinImagePosition(item, metadata));
   const modalImageSize = displayImageSize(metadata.viewport, feedback.type);
@@ -127,6 +129,12 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
                   <p className="feedback-message">{feedback.message || <T k="projects.feedback.noMessage" />}</p>
                 </section>
                 <dl className="feedback-detail-list">
+                  {metadata.capture?.risk ? (
+                    <div className="capture-risk-detail">
+                      <dt>Capture</dt>
+                      <dd>{captureRiskSummary}</dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt>Site</dt>
                     <dd>{feedback.projectName}</dd>
@@ -171,7 +179,7 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
                   </div>
                   <div>
                     <dt>Fichier</dt>
-                    <dd>{asset.mimeType} - {sizeKo} Ko - {assetStatus}</dd>
+                    <dd>{assetKind} - {asset.mimeType} - {sizeKo} Ko - {assetStatus}</dd>
                   </div>
                 </dl>
               </aside>
@@ -181,6 +189,18 @@ export function ScreenshotPreview({ asset, feedback, metadata, pin, pins }: Prop
       ) : null}
     </>
   );
+}
+
+function formatAssetKind(kind: StoredAsset["kind"]): string {
+  if (kind === "user_upload") {
+    return "Capture manuelle";
+  }
+
+  if (kind === "browser_capture") {
+    return "Capture navigateur";
+  }
+
+  return "Capture automatique";
 }
 
 function pinImagePosition(pin: PinTarget, metadata: FeedbackMetadata): { left: string; top: string } {
@@ -205,6 +225,26 @@ function displayImageSize(viewport: FeedbackMetadata["viewport"], type: Feedback
   const height = Math.max(1, Math.round(viewport.height * scale));
 
   return { width, height };
+}
+
+function formatCaptureRiskSummary(metadata: FeedbackMetadata): string {
+  const capture = metadata.capture;
+  if (!capture?.risk) {
+    return "Capture automatique";
+  }
+
+  const reasons = [
+    capture.cssFallbackCount ? `${capture.cssFallbackCount} style${capture.cssFallbackCount > 1 ? "s" : ""} simplifié${capture.cssFallbackCount > 1 ? "s" : ""}` : undefined,
+    capture.removedBackgroundImageCount ? `${capture.removedBackgroundImageCount} fond${capture.removedBackgroundImageCount > 1 ? "s" : ""} retiré${capture.removedBackgroundImageCount > 1 ? "s" : ""}` : undefined,
+    capture.unloadedVisibleImageCount ? `${capture.unloadedVisibleImageCount} image${capture.unloadedVisibleImageCount > 1 ? "s" : ""} non chargée${capture.unloadedVisibleImageCount > 1 ? "s" : ""}` : undefined,
+    capture.crossOriginIframeCount ? `${capture.crossOriginIframeCount} iframe${capture.crossOriginIframeCount > 1 ? "s" : ""}` : undefined,
+    capture.fontReadyTimedOut ? "polices non confirmées" : undefined,
+    capture.preparationTimedOut ? "préparation interrompue" : undefined
+  ].filter((reason): reason is string => Boolean(reason));
+
+  return reasons.length
+    ? `Capture automatique potentiellement incomplète: ${reasons.join(", ")}.`
+    : "Capture automatique potentiellement incomplète.";
 }
 
 function formatDeviceContext(metadata: FeedbackMetadata): string {

@@ -6,6 +6,7 @@ import type {
   ExternalIssueRef,
   FeedbackPayload,
   FeedbackReporter,
+  FeedbackScreenshotSource,
   FeedbackStatus,
   IssueDraft,
   IssueProvider,
@@ -22,6 +23,7 @@ export type StoredFeedback = {
   issueDraft: IssueDraft;
   status: FeedbackStatus;
   screenshotAsset?: StoredAsset;
+  browserCaptureAsset?: StoredAsset;
   externalIssue?: ExternalIssueRef;
   lastError?: string;
   retryCount: number;
@@ -33,6 +35,7 @@ export type StoredFeedback = {
 export type StoredAsset = {
   id: string;
   feedbackId: string;
+  kind?: FeedbackScreenshotSource;
   mimeType: string;
   bytes: number;
   dataUrl?: string;
@@ -101,6 +104,7 @@ export type FeedbackRepository = {
   markKept(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   markResolved(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   markIgnored(id: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
+  recordBrowserCapture(id: string, dataUrl: string, filters?: { workspaceId?: string }): Promise<StoredFeedback>;
   dueForRetry(filters?: Date | { workspaceId?: string; now?: Date }): Promise<StoredFeedback[]>;
   events(feedbackId: string, filters?: { workspaceId?: string }): Promise<FeedbackEvent[]>;
   clearWorkspace(workspaceId: string): Promise<{ feedbacks: number; events: number }>;
@@ -137,7 +141,7 @@ export class FileFeedbackRepository implements FeedbackRepository {
       const now = new Date().toISOString();
       const id = crypto.randomUUID();
       const screenshotAsset = input.screenshotDataUrl
-        ? createScreenshotAsset(id, input.screenshotDataUrl, input.payload.screenshotThumbnailDataUrl, now)
+        ? createScreenshotAsset(id, input.screenshotDataUrl, input.payload.screenshotThumbnailDataUrl, now, input.payload.screenshotSource ?? "client_capture")
         : undefined;
       const feedback: StoredFeedback = {
         id,
@@ -308,6 +312,17 @@ export class FileFeedbackRepository implements FeedbackRepository {
     });
   }
 
+  async recordBrowserCapture(id: string, dataUrl: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.update((store) => {
+      const feedback = findFeedback(store, id, filters.workspaceId);
+      const now = new Date().toISOString();
+      feedback.browserCaptureAsset = createScreenshotAsset(id, dataUrl, undefined, now, "browser_capture");
+      feedback.updatedAt = now;
+      store.events.unshift(createEvent(id, feedback.status, feedback.status, "browser_capture_created", undefined, undefined, now));
+      return feedback;
+    });
+  }
+
   async dueForRetry(filters: Date | { workspaceId?: string; now?: Date } = {}): Promise<StoredFeedback[]> {
     const store = await this.read();
     const normalizedFilters = filters instanceof Date ? { now: filters } : filters;
@@ -421,10 +436,11 @@ function canCleanupFeedbackStatus(status: FeedbackStatus): boolean {
   return status === "ignored" || status === "resolved";
 }
 
-function createScreenshotAsset(feedbackId: string, dataUrl: string, thumbnailDataUrl: string | undefined, now: string): StoredAsset {
+function createScreenshotAsset(feedbackId: string, dataUrl: string, thumbnailDataUrl: string | undefined, now: string, kind: FeedbackScreenshotSource): StoredAsset {
   return {
     id: crypto.randomUUID(),
     feedbackId,
+    kind,
     mimeType: parseDataUrlMimeType(dataUrl),
     bytes: estimateDataUrlBytes(dataUrl),
     dataUrl,

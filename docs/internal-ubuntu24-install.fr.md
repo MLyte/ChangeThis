@@ -40,7 +40,11 @@ DATA_STORE=internal
 NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
 INTERNAL_API_URL=http://127.0.0.1:8000
 CHANGETHIS_SECRET_KEY=<secret-32-caracteres-minimum>
+ENABLE_BROWSER_CAPTURE=false
+BROWSER_CAPTURE_TIMEOUT_MS=12000
 ```
+
+`ENABLE_BROWSER_CAPTURE=true` active l'enrichissement asynchrone des captures via Playwright cote frontend. Avant activation, installer le navigateur Chromium Playwright sur le serveur web avec `npx playwright install chromium`.
 
 Backend `/etc/changethis/api.env`:
 

@@ -692,6 +692,7 @@ function ProjectRouteRow({
 
 function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const demoFeedback = isDemoFeedback(feedback);
+  const captureAsset = preferredCaptureAsset(feedback);
   const draftLabels = feedback.issueDraft.labels.join(" / ");
   const viewport = `${feedback.payload.metadata.viewport.width} x ${feedback.payload.metadata.viewport.height}`;
   const deviceContext = formatDeviceContext(feedback.payload.metadata);
@@ -790,10 +791,10 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
         </span>
       </div>
       <div className="feedback-capture-cell">
-        {feedback.screenshotAsset ? (
+        {captureAsset ? (
           <div className="feedback-capture-preview">
             <ScreenshotPreview
-              asset={feedback.screenshotAsset}
+              asset={captureAsset}
               feedback={{
                 createdAt: feedback.createdAt,
                 issueTarget: feedback.issueTarget,
@@ -807,6 +808,9 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
               pin={feedback.payload.pin}
               pins={feedback.payload.pins}
             />
+            {feedback.payload.metadata.capture?.risk ? (
+              <span className="capture-risk-badge">À vérifier</span>
+            ) : null}
           </div>
         ) : (
           <span className="feedback-capture-empty">—</span>
@@ -1042,6 +1046,14 @@ function isFeedbackStatus(value?: string): value is FeedbackStatus {
     || value === "kept"
     || value === "resolved"
     || value === "ignored";
+}
+
+function preferredCaptureAsset(feedback: StoredFeedback): StoredFeedback["screenshotAsset"] {
+  if (feedback.screenshotAsset?.kind === "user_upload") {
+    return feedback.screenshotAsset;
+  }
+
+  return feedback.browserCaptureAsset ?? feedback.screenshotAsset;
 }
 
 function formatFeedbackMessage(feedback: StoredFeedback): { message: string; reporter?: string } {

@@ -69,6 +69,38 @@ test("validateFeedbackPayload accepts developer diagnostics metadata", () => {
   });
 });
 
+test("validateFeedbackPayload accepts capture risk metadata", () => {
+  const result = validateFeedbackPayload(validPayload({
+    metadata: {
+      ...validPayload().metadata,
+      capture: {
+        source: "client",
+        risk: true,
+        cssColorConversionCount: 12,
+        cssFallbackCount: 2,
+        removedBackgroundImageCount: 1,
+        unloadedVisibleImageCount: 1,
+        crossOriginIframeCount: 1,
+        fontReadyTimedOut: false,
+        preparationTimedOut: true
+      }
+    }
+  }));
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value.metadata.capture, {
+    source: "client",
+    risk: true,
+    cssColorConversionCount: 12,
+    cssFallbackCount: 2,
+    removedBackgroundImageCount: 1,
+    unloadedVisibleImageCount: 1,
+    crossOriginIframeCount: 1,
+    fontReadyTimedOut: false,
+    preparationTimedOut: true
+  });
+});
+
 test("validateFeedbackPayload accepts reporter contact details", () => {
   const result = validateFeedbackPayload(validPayload({
     reporter: {
@@ -130,10 +162,12 @@ test("validateFeedbackPayload rejects oversized screenshots", () => {
 test("validateFeedbackPayload accepts safe screenshot MIME types", () => {
   for (const mimeType of ["image/png", "image/jpeg", "image/webp"]) {
     const result = validateFeedbackPayload(validPayload({
-      screenshotDataUrl: `data:${mimeType};base64,AAAA`
+      screenshotDataUrl: `data:${mimeType};base64,AAAA`,
+      screenshotSource: "user_upload"
     }));
 
     assert.equal(result.ok, true);
+    assert.equal(result.value.screenshotSource, "user_upload");
   }
 });
 

@@ -1,5 +1,5 @@
 import html2canvas from "html2canvas";
-import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackReporter, FeedbackType, PinTarget, WidgetMode, WidgetReporterFields } from "@changethis/shared";
+import type { CaptureArea, FeedbackAppEnvironment, FeedbackCaptureMetadata, FeedbackPayload, FeedbackReporter, FeedbackType, PinTarget, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import { captureFeedbackScreenshot } from "./capture.js";
 import { inferEndpoint, inferLocale } from "./inference.js";
 
@@ -76,6 +76,8 @@ type StoredSentFeedback = {
   screenshotDataUrl?: string;
 };
 
+type CaptureDiagnostics = Omit<FeedbackCaptureMetadata, "risk" | "source">;
+
 const rootId = "changethis-widget-root";
 const sentPinsStorageKeyPrefix = "changethis:sentPins:";
 const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
@@ -84,25 +86,31 @@ const contactWebsiteUrl = "https://mathieuluyten.be";
 const maxScreenshotDimension = 1600;
 const pageFeedbackScreenshotMaxDimension = 960;
 const maxThumbnailDimension = 400;
+const maxManualCaptureUploadBytes = 2_000_000;
 const screenshotQuality = 0.8;
 const pageFeedbackScreenshotQuality = 0.62;
 const thumbnailQuality = 0.74;
+const capturePreparationTimeoutMs = 1200;
 const defaultWidgetModes: WidgetMode[] = ["comment", "pin", "screenshot"];
 const maxWidgetTitleLength = 240;
 const widgetConfigStartupTimeoutMs = 700;
+let lastCaptureDiagnostics: CaptureDiagnostics | undefined;
 const changethisHandLogoSvg = '<svg class="brand-logo-icon" aria-hidden="true" viewBox="14 1 17 23" role="img"><g transform="rotate(180 22.5 12)"><path d="M19 1h2v1h1v4h2v1h3v1h2v1h1v1h1v7h-1v3h-1v3H19v-3h-1v-2h-1v-2h-1v-2h-1v-1h-1v-3h3v1h1V2h1"/><path fill="#fff" d="M21 2v9h1V7h2v4h1V8h2v4h1V9h1v1h1v7h-1v3h-1v2h-8v-2h-1v-2h-1v-2h-1v-2h-1v-1h-1v-2h2v1h1v1h1V2"/></g></svg>';
 const lucideIcons = {
   bug: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/><path d="M6 17H3"/><path d="M21 17h-3"/></svg>',
   camera: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>',
+  check: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
   mail: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>',
   "map-pin": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
   "message-square": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   pencil: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   plus: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
   question: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>',
+  scan: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg>',
   send: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
   trash: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
   undo: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 1 1 0 11H11"/></svg>',
+  upload: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>',
   x: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
 };
 const widgetCopy = {
@@ -111,13 +119,13 @@ const widgetCopy = {
     brandLabel: "Aide",
     helpTitle: "Comment utiliser ce widget",
     helpIntro: "Ce widget sert à signaler simplement ce qui doit être amélioré sur cette page.",
-    helpStepComment: "Utilise Retour page pour laisser un commentaire général.",
+    helpStepComment: "Utilise Commentaire pour laisser un retour général.",
     helpStepPin: "Utilise Pin pour pointer précisément un élément à corriger.",
     helpStepCapture: "Utilise Capture pour encadrer une zone visible de l'écran.",
     helpCustomTitle: "Consigne du site",
     contactLabel: "Contact",
     title: "Que faut-il changer ?",
-    note: "Retour page",
+    note: "Commentaire",
     pin: "Pin",
     screenshot: "Capture",
     placeholder: "Décris le retour global sur cette page",
@@ -134,6 +142,9 @@ const widgetCopy = {
     selectArea: "Trace la zone à capturer",
     defineCapture: "Définir la zone",
     captureVisibleViewport: "Capturer l’écran visible",
+    uploadCapture: "Joindre une image",
+    removeUploadCapture: "Retirer l'image",
+    uploadCaptureInvalid: "Image invalide ou trop lourde.",
     addPin: "Ajouter une pin",
     selectPin: "Touchez la zone à commenter",
     pins: "Pins",
@@ -161,13 +172,14 @@ const widgetCopy = {
     canceled: "Feedback annulé.",
     sent: "Feedback envoyé. Merci.",
     alertError: "Impossible d'envoyer le feedback. Réessaie dans un instant.",
-    reporterTitle: "Vos coordonnées",
+    reporterTitle: "Mes infos",
     reporterOptional: "Optionnel, mais utile pour vous recontacter.",
     reporterRequired: "Requis pour envoyer ce feedback.",
-    reporterToggle: "Contact",
+    reporterToggle: "Mes infos",
     reporterName: "Nom",
     reporterEmail: "E-mail",
-    reporterEmailInvalid: "E-mail invalide."
+    reporterEmailInvalid: "E-mail invalide.",
+    reporterSave: "Sauvegarder"
   },
   en: {
     button: "Feedback",
@@ -197,6 +209,9 @@ const widgetCopy = {
     selectArea: "Drag the area to capture",
     defineCapture: "Define area",
     captureVisibleViewport: "Capture visible screen",
+    uploadCapture: "Attach image",
+    removeUploadCapture: "Remove image",
+    uploadCaptureInvalid: "Invalid or oversized image.",
     addPin: "Add pin",
     selectPin: "Tap the area to comment on",
     pins: "Pins",
@@ -230,7 +245,8 @@ const widgetCopy = {
     reporterToggle: "Contact",
     reporterName: "Name",
     reporterEmail: "Email",
-    reporterEmailInvalid: "Invalid email."
+    reporterEmailInvalid: "Invalid email.",
+    reporterSave: "Save"
   }
 };
 
@@ -286,6 +302,8 @@ export function initChangeThis(options: WidgetOptions): void {
     sending: false,
     noteMessage: "",
     captureMessage: "",
+    captureUploadDataUrl: undefined as string | undefined,
+    captureUploadName: undefined as string | undefined,
     reporterName: storedReporter.name ?? "",
     reporterEmail: storedReporter.email ?? "",
     reporterOpen: reporterFields === "required" && (!storedReporter.name || !storedReporter.email),
@@ -302,6 +320,8 @@ export function initChangeThis(options: WidgetOptions): void {
     state.nextPinNumber = nextAvailablePinNumber(state.pins);
     state.captureArea = undefined;
     state.captureMessage = "";
+    state.captureUploadDataUrl = undefined;
+    state.captureUploadName = undefined;
     state.draftViewKey = undefined;
     if (!isModeEnabled(state.type, activeModes)) {
       state.type = firstMode as FeedbackType;
@@ -463,10 +483,10 @@ export function initChangeThis(options: WidgetOptions): void {
       status: "draft" as const
     }] : [];
     const sentNotes = state.sentFeedbacks.filter((feedback) => feedback.type === "comment");
-    const draftCaptures = state.captureMessage.trim() || state.captureArea ? [{
+    const draftCaptures = state.captureMessage.trim() || state.captureArea || state.captureUploadDataUrl ? [{
       id: "capture-draft",
       title: copy.screenshot,
-      message: state.captureMessage || feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault),
+      message: state.captureMessage || state.captureUploadName || feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault),
       status: "draft" as const
     }] : [];
     const sentCaptures = state.sentFeedbacks.filter((feedback) => feedback.type === "screenshot");
@@ -475,7 +495,7 @@ export function initChangeThis(options: WidgetOptions): void {
     const totalFeedbacks = totalDraftFeedbacks + totalSentFeedbacks;
     const getReadyDraftFeedbackCount = () => (state.noteMessage.trim() ? 1 : 0)
       + state.pins.filter((pin) => pin.status === "draft" && pin.message.trim()).length
-      + (state.captureArea && state.captureMessage.trim() ? 1 : 0);
+      + ((state.captureArea || state.captureUploadDataUrl) && state.captureMessage.trim() ? 1 : 0);
     const readyDraftFeedbackCount = getReadyDraftFeedbackCount();
     const reporter = currentReporter(state.reporterName, state.reporterEmail);
     const reporterEmailInvalid = Boolean(state.reporterEmail.trim()) && !isValidEmail(state.reporterEmail.trim());
@@ -516,15 +536,30 @@ export function initChangeThis(options: WidgetOptions): void {
           font-size: 14px;
           font-weight: 700;
           padding: 12px 16px;
-          box-shadow: 0 12px 30px rgba(17, 24, 39, 0.22);
+          box-shadow: 0 12px 30px #11182738;
         }
         .button[data-position="bottom-right"] { right: 20px; bottom: calc(20px + var(--ct-footer-offset, 0px)); }
         .button[data-position="bottom-left"] { left: 20px; bottom: calc(20px + var(--ct-footer-offset, 0px)); }
         .button[data-position="top-right"] { right: 20px; top: 20px; }
         .button[data-position="top-left"] { left: 20px; top: 20px; }
+        .button[data-variant="default"][aria-expanded="false"] {
+          animation: changethis-standard-button-pulse 3.8s ease-out infinite;
+        }
         .button[data-variant="dev"] { background: #1d4ed8; }
         .button[data-variant="prod"] { background: #0f766e; }
         .button[data-variant="review"] { background: #7c2d12; }
+        @keyframes changethis-standard-button-pulse {
+          0%, 70%, 100% {
+            box-shadow:
+              0 12px 30px #11182738,
+              0 0 0 0 #3f51b538;
+          }
+          24% {
+            box-shadow:
+              0 12px 30px #11182738,
+              0 0 0 12px #3f51b500;
+          }
+        }
         .button .brand-logo-icon {
           display: block;
           flex: 0 0 auto;
@@ -602,12 +637,24 @@ export function initChangeThis(options: WidgetOptions): void {
           gap: 6px;
           min-width: 0;
         }
+        .panel-brand .brand-logo-icon {
+          color: #111827;
+          display: block;
+          flex: 0 0 auto;
+          height: 18px;
+          width: 18px;
+        }
         .panel-brand strong {
-          color: #3f51b5;
           font-size: 12px;
           font-weight: 900;
           letter-spacing: 0;
           line-height: 1;
+        }
+        .panel-brand .brand-change {
+          color: #111827;
+        }
+        .panel-brand .brand-this {
+          color: #3f51b5;
         }
         .panel-header-actions {
           align-items: center;
@@ -616,7 +663,8 @@ export function initChangeThis(options: WidgetOptions): void {
           gap: 8px;
         }
         .header-icon-button,
-        .help-trigger {
+        .help-trigger,
+        .panel-link {
           align-items: center;
           border: 1px solid #d1d5db;
           border-radius: 6px;
@@ -636,13 +684,16 @@ export function initChangeThis(options: WidgetOptions): void {
           font-size: 12px;
           font-weight: 900;
         }
-        .header-icon-button[data-active="true"] {
-          background: #e8eaf6;
-          border-color: #c5cae9;
-          color: #3f51b5;
+        .panel-link {
+          font-size: 12px;
+          font-weight: 900;
         }
         .help-trigger:hover,
-        .help-trigger:focus-visible {
+        .help-trigger:focus-visible,
+        .header-icon-button:hover,
+        .header-icon-button:focus-visible,
+        .panel-link:hover,
+        .panel-link:focus-visible {
           background: #f9fafb;
           border-color: #c5cae9;
           color: #3f51b5;
@@ -848,15 +899,8 @@ export function initChangeThis(options: WidgetOptions): void {
           gap: 8px;
           padding: 8px;
         }
-        .reporter-trigger {
-          align-items: center;
-          border: 1px solid #c5cae9;
-          border-radius: 6px;
-          background: #e8eaf6;
-          color: #3f51b5;
-        }
         .reporter-trigger strong {
-          color: #111827;
+          color: inherit;
           font-size: 12px;
           font-weight: 900;
         }
@@ -918,6 +962,13 @@ export function initChangeThis(options: WidgetOptions): void {
           margin-top: 8px;
           padding: 8px 10px;
         }
+        .capture-summary {
+          border: 0;
+          display: grid;
+          gap: 4px;
+          margin-top: 0;
+          padding: 0;
+        }
         .selection-header {
           align-items: center;
           display: flex;
@@ -930,6 +981,26 @@ export function initChangeThis(options: WidgetOptions): void {
           color: #374151;
           font-size: 12px;
           font-weight: 700;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .capture-actions {
+          display: grid;
+          gap: 8px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .capture-actions .add-pin {
+          width: 100%;
+        }
+        .capture-upload-row {
+          align-items: center;
+          display: grid;
+          gap: 6px;
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .capture-upload-row .shortcut-hint {
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1059,6 +1130,11 @@ export function initChangeThis(options: WidgetOptions): void {
           background: #fff;
           color: #374151;
         }
+        .manager-button.primary {
+          border: 1px solid #3f51b5;
+          background: #3f51b5;
+          color: #fff;
+        }
         .manager-button.danger {
           border: 1px solid #fecaca;
           background: #fff1f2;
@@ -1068,20 +1144,12 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 0;
           width: 32px;
         }
+        .reporter-actions {
+          justify-content: flex-end;
+        }
         .manager-button:disabled {
           cursor: wait;
           opacity: .65;
-        }
-        .panel-link {
-          border: 0;
-          background: transparent;
-          color: #4b5563;
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 800;
-          padding: 0;
-          text-decoration: underline;
-          text-underline-offset: 3px;
         }
         .manager-backdrop {
           position: fixed;
@@ -1106,6 +1174,14 @@ export function initChangeThis(options: WidgetOptions): void {
           overflow: auto;
           padding: 18px;
           transform: translate(-50%, -50%);
+        }
+        .reporter-modal {
+          width: min(440px, calc(100vw - 32px));
+        }
+        .reporter-modal .reporter-fields {
+          background: transparent;
+          border: 0;
+          padding: 0;
         }
         .manager-header {
           align-items: start;
@@ -1405,6 +1481,11 @@ export function initChangeThis(options: WidgetOptions): void {
             justify-content: flex-start;
           }
         }
+        @media (prefers-reduced-motion: reduce) {
+          .button[data-variant="default"][aria-expanded="false"] {
+            animation: none;
+          }
+        }
       </style>
       ${pinMarkers}
       ${state.notice ? `<div class="notice" data-position="${buttonPosition}" role="status">${escapeHtml(state.notice)}</div>` : ""}
@@ -1417,7 +1498,8 @@ export function initChangeThis(options: WidgetOptions): void {
         <section class="panel" data-position="${buttonPosition}" aria-label="Envoyer un feedback">
           <div class="panel-header">
             <div class="panel-brand" aria-label="ChangeThis">
-              <strong>ChangeThis</strong>
+              ${changethisHandLogoSvg}
+              <strong><span class="brand-change">Change</span><span class="brand-this">This</span></strong>
             </div>
             <div class="panel-header-actions">
               ${reporterFields !== "hidden" ? `
@@ -1425,8 +1507,8 @@ export function initChangeThis(options: WidgetOptions): void {
                   <strong>${escapeHtml(copy.reporterToggle)}</strong>
                 </button>
               ` : ""}
-              <button class="help-trigger" data-action="open-help" aria-label="${escapeHtml(copy.brandLabel)}" title="${escapeHtml(copy.brandLabel)}">${lucideIcons.question}</button>
               ${totalFeedbacks ? `<button class="panel-link" data-action="open-manager">${escapeHtml(copy.manageFeedbacks)}</button>` : ""}
+              <button class="help-trigger" data-action="open-help" aria-label="${escapeHtml(copy.brandLabel)}" title="${escapeHtml(copy.brandLabel)}">${lucideIcons.question}</button>
             </div>
           </div>
           <p class="title">${renderInlineMarkdown(copy.title)}</p>
@@ -1435,25 +1517,6 @@ export function initChangeThis(options: WidgetOptions): void {
             ${activeModes.includes("pin") ? `<button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>` : ""}
             ${activeModes.includes("screenshot") ? `<button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>` : ""}
           </div>
-          ${reporterFields !== "hidden" ? `
-            ${state.reporterOpen ? `
-              <div class="reporter-fields">
-                <div class="reporter-body">
-                  <div class="reporter-grid">
-                    <label class="reporter-field">
-                      <span>${escapeHtml(copy.reporterName)}</span>
-                      <input data-reporter-name autocomplete="name" value="${escapeHtml(state.reporterName)}" ${reporterFields === "required" ? "required" : ""}>
-                    </label>
-                    <label class="reporter-field">
-                      <span>${escapeHtml(copy.reporterEmail)}</span>
-                      <input data-reporter-email autocomplete="email" inputmode="email" type="email" value="${escapeHtml(state.reporterEmail)}" ${reporterFields === "required" ? "required" : ""}>
-                    </label>
-                  </div>
-                  ${reporterEmailInvalid ? `<span class="field-error">${escapeHtml(copy.reporterEmailInvalid)}</span>` : ""}
-                </div>
-              </div>
-            ` : ""}
-          ` : ""}
           ${state.type === "comment" ? `
             <textarea data-note-message placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.noteMessage)}</textarea>
             <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
@@ -1492,11 +1555,22 @@ export function initChangeThis(options: WidgetOptions): void {
             </div>
           ` : ""}
           ${isCaptureTab ? `
-            <div class="selection-summary">
-              <div class="selection-header">
-                <button class="add-pin" data-action="define-capture">${escapeHtml(captureActionLabel)}</button>
-                ${state.captureArea ? `<span>${feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault)}</span>` : ""}
+            <div class="selection-summary capture-summary">
+              <div class="capture-actions">
+                <button class="add-pin" data-action="define-capture">${lucideIcons.scan}${escapeHtml(captureActionLabel)}</button>
+                <label class="add-pin">
+                  ${lucideIcons.upload}
+                  ${escapeHtml(copy.uploadCapture)}
+                  <input accept="image/png,image/jpeg,image/webp" data-capture-upload style="display:none" type="file">
+                </label>
               </div>
+              ${state.captureArea ? `<p class="shortcut-hint">${escapeHtml(feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault))}</p>` : ""}
+              ${state.captureUploadName ? `
+                <div class="capture-upload-row">
+                  <p class="shortcut-hint">${escapeHtml(state.captureUploadName)}</p>
+                  ${state.captureUploadDataUrl ? `<button class="clear-selection" data-action="remove-capture-upload" aria-label="${escapeHtml(copy.removeUploadCapture)}" title="${escapeHtml(copy.removeUploadCapture)}">${lucideIcons.trash}</button>` : ""}
+                </div>
+              ` : ""}
             </div>
             <textarea data-capture-message placeholder="${escapeHtml(copy.capturePlaceholder)}">${escapeHtml(state.captureMessage)}</textarea>
             <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
@@ -1527,6 +1601,38 @@ export function initChangeThis(options: WidgetOptions): void {
             <div class="help-markdown">${renderWidgetMarkdown(copy.title)}</div>
           </div>
           <a class="help-contact" href="${contactWebsiteUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.contactLabel)}</a>
+        </section>
+      ` : ""}
+      ${state.open && reporterFields !== "hidden" && state.reporterOpen ? `
+        <button class="manager-backdrop" data-action="close-reporter" aria-label="${escapeHtml(copy.close)}"></button>
+        <section class="manager-modal reporter-modal" aria-labelledby="changethis-reporter-title" role="dialog" aria-modal="true">
+          <div class="manager-header">
+            <div>
+              <h2 id="changethis-reporter-title">${escapeHtml(copy.reporterTitle)}</h2>
+              <p>${escapeHtml(reporterFields === "required" ? copy.reporterRequired : copy.reporterOptional)}</p>
+            </div>
+            <div class="manager-actions">
+              <button class="manager-button secondary icon-only" data-action="close-reporter" aria-label="${escapeHtml(copy.close)}" title="${escapeHtml(copy.close)}">${lucideIcons.x}</button>
+            </div>
+          </div>
+          <div class="reporter-fields">
+            <div class="reporter-body">
+              <div class="reporter-grid">
+                <label class="reporter-field">
+                  <span>${escapeHtml(copy.reporterName)}</span>
+                  <input data-reporter-name autocomplete="name" value="${escapeHtml(state.reporterName)}" ${reporterFields === "required" ? "required" : ""}>
+                </label>
+                <label class="reporter-field">
+                  <span>${escapeHtml(copy.reporterEmail)}</span>
+                  <input data-reporter-email autocomplete="email" inputmode="email" type="email" value="${escapeHtml(state.reporterEmail)}" ${reporterFields === "required" ? "required" : ""}>
+                </label>
+              </div>
+              ${reporterEmailInvalid ? `<span class="field-error">${escapeHtml(copy.reporterEmailInvalid)}</span>` : ""}
+            </div>
+          </div>
+          <div class="manager-actions reporter-actions">
+            <button class="manager-button primary" data-action="save-reporter" ${reporterEmailInvalid ? "disabled" : ""}>${lucideIcons.check}${escapeHtml(copy.reporterSave)}</button>
+          </div>
         </section>
       ` : ""}
       ${state.managerOpen ? `
@@ -1687,23 +1793,29 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLButtonElement>("[data-action='toggle']")?.addEventListener("click", () => {
       state.open = !state.open;
+      if (!state.open) {
+        state.reporterOpen = false;
+      }
       render();
     });
 
     shadow.querySelector<HTMLButtonElement>("[data-action='close']")?.addEventListener("click", () => {
       state.open = false;
+      state.reporterOpen = false;
       render();
     });
 
     shadow.querySelector<HTMLButtonElement>("[data-action='open-manager']")?.addEventListener("click", () => {
       state.managerOpen = true;
       state.helpOpen = false;
+      state.reporterOpen = false;
       render();
     });
 
     shadow.querySelector<HTMLButtonElement>("[data-action='open-help']")?.addEventListener("click", () => {
       state.helpOpen = true;
       state.managerOpen = false;
+      state.reporterOpen = false;
       render();
     });
 
@@ -1719,6 +1831,23 @@ export function initChangeThis(options: WidgetOptions): void {
         state.managerOpen = false;
         render();
       });
+    });
+
+    shadow.querySelectorAll<HTMLButtonElement>("[data-action='close-reporter']").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.reporterOpen = false;
+        render();
+      });
+    });
+
+    shadow.querySelector<HTMLButtonElement>("[data-action='save-reporter']")?.addEventListener("click", () => {
+      if (state.reporterEmail.trim() && !isValidEmail(state.reporterEmail.trim())) {
+        return;
+      }
+
+      persistReporter(reporterStorageKey, currentReporter(state.reporterName, state.reporterEmail));
+      state.reporterOpen = false;
+      render();
     });
 
     shadow.querySelector<HTMLButtonElement>("[data-action='update-sent-reporters']")?.addEventListener("click", async () => {
@@ -1823,6 +1952,8 @@ export function initChangeThis(options: WidgetOptions): void {
     shadow.querySelector<HTMLButtonElement>("[data-action='delete-capture-feedback']")?.addEventListener("click", () => {
       state.captureMessage = "";
       state.captureArea = undefined;
+      state.captureUploadDataUrl = undefined;
+      state.captureUploadName = undefined;
       render();
     });
 
@@ -1835,6 +1966,27 @@ export function initChangeThis(options: WidgetOptions): void {
       render();
     });
     shadow.querySelector<HTMLButtonElement>("[data-action='define-capture']")?.addEventListener("click", requestCaptureArea);
+    shadow.querySelector<HTMLInputElement>("[data-capture-upload]")?.addEventListener("change", async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) {
+        return;
+      }
+
+      try {
+        state.captureUploadDataUrl = await readCaptureUpload(file);
+        state.captureUploadName = file.name;
+      } catch {
+        window.alert(copy.uploadCaptureInvalid);
+        state.captureUploadDataUrl = undefined;
+        state.captureUploadName = undefined;
+      }
+      render();
+    });
+    shadow.querySelector<HTMLButtonElement>("[data-action='remove-capture-upload']")?.addEventListener("click", () => {
+      state.captureUploadDataUrl = undefined;
+      state.captureUploadName = undefined;
+      render();
+    });
 
     shadow.querySelectorAll<HTMLButtonElement>("[data-action='remove-pin']").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1891,6 +2043,10 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLButtonElement>("[data-action='toggle-reporter']")?.addEventListener("click", () => {
       state.reporterOpen = !state.reporterOpen;
+      if (state.reporterOpen) {
+        state.helpOpen = false;
+        state.managerOpen = false;
+      }
       render();
     });
 
@@ -1914,13 +2070,11 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLInputElement>("[data-reporter-name]")?.addEventListener("input", (event) => {
       state.reporterName = (event.target as HTMLInputElement).value;
-      persistReporter(reporterStorageKey, currentReporter(state.reporterName, state.reporterEmail));
       refreshDraftSendControls();
     });
 
     shadow.querySelector<HTMLInputElement>("[data-reporter-email]")?.addEventListener("input", (event) => {
       state.reporterEmail = (event.target as HTMLInputElement).value;
-      persistReporter(reporterStorageKey, currentReporter(state.reporterName, state.reporterEmail));
       refreshDraftSendControls();
     });
 
@@ -2008,8 +2162,8 @@ export function initChangeThis(options: WidgetOptions): void {
       const pendingPins = state.pins
         .map((pin, index) => ({ pin, index }))
         .filter((entry) => entry.pin.status === "draft" && entry.pin.message.trim());
-      const pendingCapture = state.captureArea && state.captureMessage.trim()
-        ? { message: state.captureMessage, captureArea: state.captureArea }
+      const pendingCapture = (state.captureArea || state.captureUploadDataUrl) && state.captureMessage.trim()
+        ? { message: state.captureMessage, captureArea: state.captureArea, uploadedScreenshotDataUrl: state.captureUploadDataUrl }
         : undefined;
       const reporter = currentReporter(state.reporterName, state.reporterEmail);
 
@@ -2077,6 +2231,7 @@ export function initChangeThis(options: WidgetOptions): void {
             type: "screenshot",
             message: pendingCapture.message,
             captureArea: pendingCapture.captureArea,
+            uploadedScreenshotDataUrl: pendingCapture.uploadedScreenshotDataUrl,
             reporter,
             appEnvironment
           });
@@ -2098,6 +2253,8 @@ export function initChangeThis(options: WidgetOptions): void {
 
           state.captureMessage = "";
           state.captureArea = undefined;
+          state.captureUploadDataUrl = undefined;
+          state.captureUploadName = undefined;
           state.draftViewKey = undefined;
         }
 
@@ -2155,9 +2312,11 @@ async function submitFeedback(params: {
   reporter?: FeedbackReporter;
   pins?: PinTarget[];
   captureArea?: CaptureArea;
+  uploadedScreenshotDataUrl?: string;
   appEnvironment?: FeedbackAppEnvironment;
 }): Promise<{ id?: string; screenshotDataUrl?: string }> {
-  const screenshotDataUrl = await captureFeedbackScreenshot({
+  lastCaptureDiagnostics = undefined;
+  const screenshotDataUrl = params.uploadedScreenshotDataUrl ?? await captureFeedbackScreenshot({
     type: params.type,
     captureArea: params.captureArea,
     pinTargets: params.pins,
@@ -2165,6 +2324,7 @@ async function submitFeedback(params: {
     capturePageFeedbackPreview,
     warn: console.warn
   });
+  const capture = takeLastCaptureMetadata();
   const screenshotThumbnailDataUrl = screenshotDataUrl
     ? await createImageThumbnail(screenshotDataUrl)
     : undefined;
@@ -2179,6 +2339,7 @@ async function submitFeedback(params: {
     captureArea: params.captureArea,
     screenshotDataUrl,
     screenshotThumbnailDataUrl,
+    screenshotSource: params.uploadedScreenshotDataUrl ? "user_upload" : screenshotDataUrl ? "client_capture" : undefined,
     metadata: {
       url: window.location.href,
       origin: httpOrigin(window.location.origin),
@@ -2208,6 +2369,7 @@ async function submitFeedback(params: {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       online: navigator.onLine,
       app: params.appEnvironment,
+      capture,
       createdAt: new Date().toISOString()
     }
   };
@@ -2554,12 +2716,16 @@ async function captureViewport(
   options: { maxDimension?: number; quality?: number; pinTargets?: PinTarget[] } = {}
 ): Promise<string | undefined> {
   const pinCaptureOverlay = options.pinTargets?.length ? renderTemporaryPinCaptureOverlay(options.pinTargets) : undefined;
+  const preparationDiagnostics = await prepareDocumentForCapture();
 
   try {
     maskSensitiveFields(true);
     const canvas = await capturePage(document.body, {
       height: window.innerHeight,
-      onclone: sanitizeUnsupportedCaptureStyles,
+      onclone: (clonedDocument) => {
+        const styleDiagnostics = sanitizeUnsupportedCaptureStyles(clonedDocument);
+        lastCaptureDiagnostics = mergeCaptureDiagnostics(preparationDiagnostics, styleDiagnostics);
+      },
       width: window.innerWidth,
       windowHeight: window.innerHeight,
       windowWidth: window.innerWidth,
@@ -2616,12 +2782,17 @@ function renderTemporaryPinCaptureOverlay(pinTargets: PinTarget[]): HTMLElement 
   return overlay;
 }
 
-function sanitizeUnsupportedCaptureStyles(clonedDocument: Document): void {
+function sanitizeUnsupportedCaptureStyles(clonedDocument: Document): CaptureDiagnostics {
   const view = clonedDocument.defaultView;
   const root = clonedDocument.documentElement;
+  const diagnostics: CaptureDiagnostics = {
+    cssColorConversionCount: 0,
+    cssFallbackCount: 0,
+    removedBackgroundImageCount: 0
+  };
 
   if (!view || !root) {
-    return;
+    return diagnostics;
   }
 
   const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement | SVGElement>("*"))];
@@ -2633,14 +2804,65 @@ function sanitizeUnsupportedCaptureStyles(clonedDocument: Document): void {
       const value = computed.getPropertyValue(property);
 
       if (hasUnsupportedColorFunction(value)) {
-        element.style.setProperty(property, captureFallbackValue(property), "important");
+        const convertedValue = convertUnsupportedColorFunctions(clonedDocument, value);
+        if (convertedValue && convertedValue !== value) {
+          element.style.setProperty(property, convertedValue, "important");
+          diagnostics.cssColorConversionCount = (diagnostics.cssColorConversionCount ?? 0) + 1;
+          continue;
+        }
+
+        const fallback = captureFallbackValue(property);
+        element.style.setProperty(property, fallback, "important");
+        diagnostics.cssFallbackCount = (diagnostics.cssFallbackCount ?? 0) + 1;
+        if (property === "background-image" && fallback === "none") {
+          diagnostics.removedBackgroundImageCount = (diagnostics.removedBackgroundImageCount ?? 0) + 1;
+        }
       }
     }
   }
+
+  return diagnostics;
 }
 
 function hasUnsupportedColorFunction(value: string): boolean {
   return /\b(?:oklch|oklab|lch|lab)\(/i.test(value);
+}
+
+function convertUnsupportedColorFunctions(document: Document, value: string): string | undefined {
+  const colorFunctionPattern = /\b(?:oklch|oklab|lch|lab)\([^)]*\)/gi;
+  let converted = value;
+
+  for (const match of value.match(colorFunctionPattern) ?? []) {
+    const resolved = resolveCssColor(document, match);
+    if (!resolved) {
+      return undefined;
+    }
+
+    converted = converted.replace(match, resolved);
+  }
+
+  return converted;
+}
+
+function resolveCssColor(document: Document, color: string): string | undefined {
+  const view = document.defaultView;
+  if (!view || !document.body) {
+    return undefined;
+  }
+
+  const probe = document.createElement("span");
+  probe.style.color = color;
+  if (!probe.style.color) {
+    return undefined;
+  }
+
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  document.body.appendChild(probe);
+  const resolved = view.getComputedStyle(probe).color;
+  probe.remove();
+  return resolved && resolved !== color ? resolved : undefined;
 }
 
 function captureFallbackValue(property: string): string {
@@ -2665,6 +2887,107 @@ function captureFallbackValue(property: string): string {
   }
 
   return "initial";
+}
+
+async function prepareDocumentForCapture(): Promise<CaptureDiagnostics> {
+  const diagnostics: CaptureDiagnostics = {
+    crossOriginIframeCount: document.querySelectorAll("iframe[src]").length,
+    fontReadyTimedOut: await waitForFontsReady(),
+    unloadedVisibleImageCount: countUnloadedVisibleImages()
+  };
+  await nextAnimationFrame();
+  await nextAnimationFrame();
+  return diagnostics;
+}
+
+async function waitForFontsReady(): Promise<boolean> {
+  const fonts = document.fonts;
+  if (!fonts?.ready) {
+    return false;
+  }
+
+  return await withTimeout(fonts.ready.then(() => undefined), capturePreparationTimeoutMs);
+}
+
+function countUnloadedVisibleImages(): number {
+  const images = Array.from(document.images).filter((image) => isVisibleImage(image));
+  return images.filter((image) => !image.complete || image.naturalWidth === 0 || image.naturalHeight === 0).length;
+}
+
+function isVisibleImage(image: HTMLImageElement): boolean {
+  const rect = image.getBoundingClientRect();
+  return rect.width > 0
+    && rect.height > 0
+    && rect.bottom >= 0
+    && rect.right >= 0
+    && rect.top <= window.innerHeight
+    && rect.left <= window.innerWidth;
+}
+
+async function withTimeout(promise: Promise<unknown>, timeoutMs: number): Promise<boolean> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = await Promise.race([
+    promise.then(() => false, () => false),
+    new Promise<boolean>((resolve) => {
+      timeout = setTimeout(() => resolve(true), timeoutMs);
+    })
+  ]);
+
+  if (timeout) {
+    clearTimeout(timeout);
+  }
+
+  return timedOut;
+}
+
+function nextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
+function mergeCaptureDiagnostics(...items: Array<CaptureDiagnostics | undefined>): CaptureDiagnostics {
+  const merged: CaptureDiagnostics = {};
+
+  for (const item of items) {
+    if (!item) {
+      continue;
+    }
+
+    merged.cssColorConversionCount = (merged.cssColorConversionCount ?? 0) + (item.cssColorConversionCount ?? 0);
+    merged.cssFallbackCount = (merged.cssFallbackCount ?? 0) + (item.cssFallbackCount ?? 0);
+    merged.removedBackgroundImageCount = (merged.removedBackgroundImageCount ?? 0) + (item.removedBackgroundImageCount ?? 0);
+    merged.unloadedVisibleImageCount = (merged.unloadedVisibleImageCount ?? 0) + (item.unloadedVisibleImageCount ?? 0);
+    merged.crossOriginIframeCount = (merged.crossOriginIframeCount ?? 0) + (item.crossOriginIframeCount ?? 0);
+    merged.fontReadyTimedOut = Boolean(merged.fontReadyTimedOut || item.fontReadyTimedOut);
+    merged.preparationTimedOut = Boolean(merged.preparationTimedOut || item.preparationTimedOut);
+  }
+
+  return merged;
+}
+
+function takeLastCaptureMetadata(): FeedbackCaptureMetadata | undefined {
+  const diagnostics = lastCaptureDiagnostics;
+  lastCaptureDiagnostics = undefined;
+
+  if (!diagnostics) {
+    return undefined;
+  }
+
+  const risk = Boolean(
+    diagnostics.cssFallbackCount
+    || diagnostics.removedBackgroundImageCount
+    || diagnostics.unloadedVisibleImageCount
+    || diagnostics.crossOriginIframeCount
+    || diagnostics.fontReadyTimedOut
+    || diagnostics.preparationTimedOut
+  );
+
+  return {
+    source: "client",
+    risk,
+    ...diagnostics
+  };
 }
 
 async function createImageThumbnail(dataUrl: string): Promise<string | undefined> {
@@ -2693,6 +3016,27 @@ async function createImageThumbnail(dataUrl: string): Promise<string | undefined
 
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   return encodeCanvas(canvas, thumbnailQuality);
+}
+
+function readCaptureUpload(file: File): Promise<string> {
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > maxManualCaptureUploadBytes) {
+    return Promise.reject(new Error("Invalid capture upload"));
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (isSafeImageDataUrl(result)) {
+        resolve(result);
+        return;
+      }
+
+      reject(new Error("Invalid capture upload data URL"));
+    };
+    reader.onerror = () => reject(new Error("Unable to read capture upload"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function resizeCanvasToMax(source: HTMLCanvasElement, maxDimension: number): HTMLCanvasElement {

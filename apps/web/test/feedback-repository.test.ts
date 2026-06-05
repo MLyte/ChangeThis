@@ -83,6 +83,29 @@ test("file repository persists feedbacks, events, and screenshot assets", async 
   });
 });
 
+test("file repository stores manual and browser capture assets with explicit kinds", async () => {
+  await withRepository(async (repository) => {
+    const payload = feedbackPayload({
+      screenshotDataUrl: "data:image/png;base64,AAAA",
+      screenshotSource: "user_upload"
+    });
+    const stored = await repository.create({
+      projectKey: "demo_project_key",
+      projectName: "Demo Project",
+      issueTarget,
+      payload,
+      issueDraft: buildIssueDraft(payload),
+      screenshotDataUrl: payload.screenshotDataUrl
+    });
+
+    assert.equal(stored.screenshotAsset?.kind, "user_upload");
+
+    const updated = await repository.recordBrowserCapture(stored.id, "data:image/jpeg;base64,BBBB");
+    assert.equal(updated.browserCaptureAsset?.kind, "browser_capture");
+    assert.equal(updated.browserCaptureAsset?.mimeType, "image/jpeg");
+  });
+});
+
 test("file repository records retryable and successful issue attempts", async () => {
   await withRepository(async (repository) => {
     const payload = feedbackPayload();

@@ -127,8 +127,23 @@ export type FeedbackMetadata = {
   timezone?: string;
   online?: boolean;
   app?: FeedbackAppEnvironment;
+  capture?: FeedbackCaptureMetadata;
   createdAt: string;
 };
+
+export type FeedbackCaptureMetadata = {
+  source: "client";
+  risk: boolean;
+  cssColorConversionCount?: number;
+  cssFallbackCount?: number;
+  removedBackgroundImageCount?: number;
+  unloadedVisibleImageCount?: number;
+  crossOriginIframeCount?: number;
+  fontReadyTimedOut?: boolean;
+  preparationTimedOut?: boolean;
+};
+
+export type FeedbackScreenshotSource = "client_capture" | "user_upload" | "browser_capture";
 
 export type FeedbackReporter = {
   name?: string;
@@ -146,6 +161,7 @@ export type FeedbackPayload = {
   captureArea?: CaptureArea;
   screenshotDataUrl?: string;
   screenshotThumbnailDataUrl?: string;
+  screenshotSource?: FeedbackScreenshotSource;
 };
 
 export type IssueTarget = {
@@ -298,6 +314,14 @@ export function validateFeedbackPayload(
     }
   }
 
+  const screenshotSource = value.screenshotSource;
+  if (screenshotSource !== undefined
+    && screenshotSource !== "client_capture"
+    && screenshotSource !== "user_upload"
+    && screenshotSource !== "browser_capture") {
+    return invalid("screenshotSource must be client_capture, user_upload, or browser_capture");
+  }
+
   return {
     ok: true,
     value: {
@@ -310,7 +334,8 @@ export function validateFeedbackPayload(
       pins: normalizedPins,
       captureArea: captureArea.value,
       screenshotDataUrl: normalizedScreenshotDataUrl,
-      screenshotThumbnailDataUrl: normalizedScreenshotThumbnailDataUrl
+      screenshotThumbnailDataUrl: normalizedScreenshotThumbnailDataUrl,
+      screenshotSource
     }
   };
 }
@@ -676,10 +701,66 @@ function validateMetadata(value: unknown): MetadataValidationResult {
     metadata.app = app.value;
   }
 
+  if (value.capture !== undefined) {
+    const capture = validateCaptureMetadata(value.capture);
+    if (!capture.ok) {
+      return capture;
+    }
+
+    metadata.capture = capture.value;
+  }
+
   return {
     ok: true,
     value: metadata
   };
+}
+
+function validateCaptureMetadata(value: unknown): { ok: true; value: FeedbackCaptureMetadata } | { ok: false; error: string } {
+  if (!isRecord(value)) {
+    return invalid("metadata.capture must be an object");
+  }
+
+  if (value.source !== "client") {
+    return invalid("metadata.capture.source must be client");
+  }
+
+  if (typeof value.risk !== "boolean") {
+    return invalid("metadata.capture.risk must be a boolean");
+  }
+
+  const capture: FeedbackCaptureMetadata = {
+    source: "client",
+    risk: value.risk
+  };
+
+  for (const key of ["cssColorConversionCount", "cssFallbackCount", "removedBackgroundImageCount", "unloadedVisibleImageCount", "crossOriginIframeCount"] as const) {
+    const item = value[key];
+    if (item === undefined) {
+      continue;
+    }
+
+    if (!isNonNegativeNumber(item, 100_000)) {
+      return invalid(`metadata.capture.${key} must be a non-negative number`);
+    }
+
+    capture[key] = Math.round(item);
+  }
+
+  for (const key of ["fontReadyTimedOut", "preparationTimedOut"] as const) {
+    const item = value[key];
+    if (item === undefined) {
+      continue;
+    }
+
+    if (typeof item !== "boolean") {
+      return invalid(`metadata.capture.${key} must be a boolean`);
+    }
+
+    capture[key] = item;
+  }
+
+  return { ok: true, value: capture };
 }
 
 function validateAppEnvironment(value: unknown): { ok: true; value: FeedbackAppEnvironment } | { ok: false; error: string } {

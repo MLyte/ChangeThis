@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useState, type SyntheticEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 
 type DemoTestPanelProps = {
   publicKey: string;
@@ -10,17 +10,15 @@ type DemoTestPanelProps = {
 const storageKey = "changethis-demo-test-panel-dismissed";
 
 export function DemoTestPanel({ publicKey }: DemoTestPanelProps) {
-  const [isVisible, setIsVisible] = useState(() => {
-    if (typeof window === "undefined") {
-      return true;
-    }
+  const [isVisible, setIsVisible] = useState(true);
 
+  useEffect(() => {
     try {
-      return window.localStorage.getItem(storageKey) !== "true";
+      setIsVisible(window.localStorage.getItem(storageKey) !== "true");
     } catch {
-      return true;
+      setIsVisible(true);
     }
-  });
+  }, []);
 
   const dismissPanel = (event?: SyntheticEvent<HTMLElement>) => {
     event?.preventDefault();

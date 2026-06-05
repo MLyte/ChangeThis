@@ -4077,9 +4077,32 @@ dd {
 
 .feedback-capture-preview {
   align-self: start;
-  height: 76px;
+  display: grid;
+  gap: 4px;
   justify-self: stretch;
   width: 100%;
+}
+
+.capture-risk-badge {
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
+  border-radius: 999px;
+  color: var(--warning-ink) !important;
+  display: inline-flex;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  justify-self: start;
+  line-height: 1.1;
+  max-width: 100%;
+  padding: 3px 7px;
+  white-space: normal !important;
+}
+
+.capture-risk-detail {
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border) !important;
+  border-radius: 7px;
+  padding: 10px !important;
 }
 
 .feedback-capture-empty {

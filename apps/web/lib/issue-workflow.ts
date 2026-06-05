@@ -121,7 +121,7 @@ export async function createIssueForFeedback(
 }
 
 function issueScreenshotAttachment(feedback: StoredFeedback): IssueProviderAttachment | undefined {
-  const asset = feedback.screenshotAsset;
+  const asset = preferredIssueAsset(feedback);
   const dataUrl = asset?.dataUrl ?? asset?.thumbnailDataUrl;
 
   if (!asset || !dataUrl || feedback.issueTarget.provider !== "gitlab") {
@@ -133,6 +133,14 @@ function issueScreenshotAttachment(feedback: StoredFeedback): IssueProviderAttac
     filename: `changethis-${feedback.id}.${extensionFromMimeType(asset.mimeType)}`,
     mimeType: asset.mimeType
   };
+}
+
+function preferredIssueAsset(feedback: StoredFeedback): StoredFeedback["screenshotAsset"] {
+  if (feedback.screenshotAsset?.kind === "user_upload") {
+    return feedback.screenshotAsset;
+  }
+
+  return feedback.browserCaptureAsset ?? feedback.screenshotAsset;
 }
 
 function extensionFromMimeType(mimeType: string): string {
