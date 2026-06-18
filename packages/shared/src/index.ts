@@ -70,6 +70,20 @@ export type PinTarget = {
   text?: string;
 };
 
+export type PinReplayPayload = {
+  v: 1;
+  n: number;
+  x: number;
+  y: number;
+  ox?: number;
+  oy?: number;
+  s?: string;
+  vw: number;
+  vh: number;
+  sx?: number;
+  sy?: number;
+};
+
 export type CaptureArea = {
   x: number;
   y: number;
@@ -231,6 +245,7 @@ const defaultMaxScreenshotBytes = 2_000_000;
 const defaultMaxScreenshotThumbnailBytes = 250_000;
 const maxPins = 20;
 const allowedScreenshotMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+export const pinReplayQueryParam = "changethis_pin";
 
 const labelByType: Record<FeedbackType, string> = {
   comment: "mode:comment",
@@ -440,7 +455,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     ...(appEnvironmentLines.length ? [""] : []),
     "## Localisation",
     "",
-    ...formatPinsForIssue(pins),
+    ...formatPinsForIssue(pins, feedback.metadata),
     "",
     "## Donnees techniques",
     "",
@@ -502,7 +517,27 @@ function formatReporterForIssue(reporter: FeedbackReporter | undefined): string[
   ].filter((line): line is string => typeof line === "string");
 }
 
-function formatPinsForIssue(pins: PinTarget[]): string[] {
+export function buildPinReplayUrl(metadata: FeedbackMetadata, pin: PinTarget, pinNumber: number): string {
+  const url = new URL(metadata.url);
+  const payload: PinReplayPayload = {
+    v: 1,
+    n: pinNumber,
+    x: Math.round(pin.x),
+    y: Math.round(pin.y),
+    ox: typeof pin.elementOffsetX === "number" ? Math.round(pin.elementOffsetX) : undefined,
+    oy: typeof pin.elementOffsetY === "number" ? Math.round(pin.elementOffsetY) : undefined,
+    s: pin.selector,
+    vw: metadata.viewport.width,
+    vh: metadata.viewport.height,
+    sx: metadata.scroll ? Math.round(metadata.scroll.x) : undefined,
+    sy: metadata.scroll ? Math.round(metadata.scroll.y) : undefined
+  };
+
+  url.searchParams.set(pinReplayQueryParam, JSON.stringify(payload));
+  return url.toString();
+}
+
+function formatPinsForIssue(pins: PinTarget[], metadata: FeedbackMetadata): string[] {
   if (pins.length === 0) {
     return [
       "- Position: Non applicable",
@@ -513,6 +548,7 @@ function formatPinsForIssue(pins: PinTarget[]): string[] {
 
   return pins.flatMap((pin, index) => [
     `- Pin #${index + 1}: x=${pin.x}, y=${pin.y}`,
+    `  - Revoir sur la page: ${buildPinReplayUrl(metadata, pin, index + 1)}`,
     pin.selector ? `  - Element probable: \`${pin.selector}\`` : "  - Element probable: Non disponible",
     pin.text ? `  - Texte visible: ${pin.text}` : "  - Texte visible: Non disponible"
   ]);

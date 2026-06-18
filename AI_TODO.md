@@ -7,6 +7,9 @@
 - Cocher la tâche terminée et ajouter une note courte dans la section "Journal".
 - S'arrêter avant la section "Intervention utilisateur requise" si une tâche dépend d'une décision, d'un accès, d'un secret, d'un compte ou d'une validation humaine.
 
+## Notes IA recentes
+- [2026-06-18] Relecture pins par URL: ajout d'un lien `Revoir sur la page` dans les brouillons d'issues, de liens `Revoir pin #n` dans le dashboard et d'un overlay widget qui relit `changethis_pin` pour replacer la pin sur la page reelle via selector/offset ou coordonnees. Validation: `git diff --check` OK; `npm run build --workspace @changethis/shared` et `npm run typecheck --workspace @changethis/widget` bloques car `tsc` est introuvable dans le workspace (`node_modules` absent).
+
 ## Priorisation active installation interne CRA
 Cette priorisation remanie les tâches restantes selon **importance produit/sécurité**, **facilité technique** et **rapidité de livraison**. Elle sert de guide de choix avant l'ordre historique des sections.
 
@@ -311,6 +314,7 @@ Note 2026-05-27: domaine applicatif interne retenu: `https://changethis.cra.wall
 - [ ] (P2) Formaliser conformité opérationnelle: privacy/RGPD, retention, DPA, politique cookies si analytics marketing.
 
 ## Workflow IA / blocages
+- [2026-06-18] Validation locale widget bloquee dans ce workspace Codex: `node_modules` est absent, donc `npm run test --workspace @changethis/widget` echoue sur `tsx` introuvable et `npm run typecheck --workspace @changethis/widget` echoue sur `tsc` introuvable. Relancer apres installation des dependances.
 - [2026-06-05] Validation locale web bloquee dans ce workspace Codex: `node_modules` est absent, donc `npm.cmd run typecheck --workspace @changethis/web` echoue sur `tsc` introuvable. Relancer apres installation des dependances.
 - [2026-05-29] Prod signup CRA sert encore un build anterieur avec `signup.organization` / `name="workspaceName"` malgre `gitrural/main` a `318db17`. Action requise sur `front-tool-prod`: relancer `sudo APP_URL=https://changethis.cra.wallonie.be scripts/internal/deploy-frontend.sh`, puis verifier que `curl -fsSL https://changethis.cra.wallonie.be/signup` ne contient plus `Nom de l'organisation`.
 - [2026-05-19] Passage beta ouverte production: le code ouvre maintenant le signup par defaut; si Railway force encore `ENABLE_PUBLIC_SIGNUP=false`, supprimer cette variable ou la passer a `true` dans l'environnement production.
@@ -363,6 +367,7 @@ Note 2026-05-27: domaine applicatif interne retenu: `https://changethis.cra.wall
 - [ ] Valider les clients pilotes et le périmètre du dry-run staging.
 
 ## Journal
+- [2026-06-18] Pull `main` local et ajustement capture widget sur code a jour: branche `main` avancee en fast-forward jusqu'a `a28f703`, puis masquage temporaire du bouton `Definir la zone` dans l'onglet Capture en conservant `Joindre une image` et `Depuis le presse-papier`; affichage d'un raccourci systeme adapte au client (Windows, macOS, Ubuntu/Linux). Validation ciblee: `git diff --check` OK; `npm run test --workspace @changethis/widget` et `npm run typecheck --workspace @changethis/widget` bloques localement car `node_modules` est absent (`tsx`/`tsc` introuvables).
 - [2026-06-05] Correctif payload capture manuelle widget: les images jointes/presse-papier trop grandes sont redimensionnees cote client avant envoi, les captures client au-dessus du budget POST sont ecartees avant `fetch`, et la route publique conserve les headers CORS sur les rejets `413` pour exposer l'erreur au widget au lieu d'un `NetworkError` opaque. Validation ciblee: `npm run test --workspace @changethis/widget` OK, `npm run typecheck --workspace @changethis/widget` OK, `npm run test --workspace @changethis/web -- public-feedback-route.test.ts` OK, `npm run typecheck --workspace @changethis/web` OK, `npm run build --workspace @changethis/widget` OK (286.7 KiB / 287.0 KiB).
 - [2026-06-05] Correctif performance capture widget sur pages cartes: le widget saute maintenant la capture automatique `html2canvas` quand une carte Leaflet/OpenLayers/Mapbox/MapLibre est detectee, pour eviter le blocage navigateur sur Agromet/Brave/Firefox; l'envoi continue sans capture client automatique, avec upload/presse-papier toujours disponibles. Les erreurs API publiques incluent aussi le detail de validation dans la console, et les captures trop lourdes sont ecartees cote client avant POST. Budget widget releve a 287 KiB. Validation ciblee: `npm run test --workspace @changethis/widget` OK, `npm run typecheck --workspace @changethis/widget` OK, `npm run build --workspace @changethis/widget` OK (286.6 KiB / 287.0 KiB).
 - [2026-06-05] Durcissement smoke checks deploy interne: `scripts/internal/deploy.sh` et `deploy-frontend.sh` attendent maintenant les endpoints `/api/health` et `/api/ready` avec retry court apres restart, pour eviter un faux echec `curl: (7)` pendant la fenetre ou Next.js n'ecoute pas encore le port 3000. Validation ciblee: `bash -n scripts/internal/deploy.sh` OK, `bash -n scripts/internal/deploy-frontend.sh` OK.

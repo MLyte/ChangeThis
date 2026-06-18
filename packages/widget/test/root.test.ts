@@ -86,6 +86,45 @@ test("shouldSkipAutomaticClientCaptureForPage skips map pages in any browser", a
   assert.equal(shouldSkipAutomaticClientCaptureForPage(plainDocument), false);
 });
 
+test("parsePinReplayTargetFromUrl accepts valid replay links and rejects invalid payloads", async () => {
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      currentScript: null
+    }
+  });
+
+  const { parsePinReplayTargetFromUrl } = await import("../src/index.ts");
+  const payload = {
+    v: 1,
+    n: 2,
+    x: 420,
+    y: 1280,
+    ox: 12,
+    oy: 24,
+    s: ".hero-cta",
+    vw: 1440,
+    vh: 900
+  };
+  const url = new URL("https://client.example.test/account");
+  url.searchParams.set("changethis_pin", JSON.stringify(payload));
+
+  assert.deepEqual(parsePinReplayTargetFromUrl(url.toString()), {
+    number: 2,
+    pin: {
+      x: 420,
+      y: 1280,
+      elementOffsetX: 12,
+      elementOffsetY: 24,
+      selector: ".hero-cta"
+    }
+  });
+
+  url.searchParams.set("changethis_pin", JSON.stringify({ ...payload, x: -1 }));
+  assert.equal(parsePinReplayTargetFromUrl(url.toString()), undefined);
+  assert.equal(parsePinReplayTargetFromUrl("not an url"), undefined);
+});
+
 
 test("initChangeThis does not create another root when one already exists", async () => {
   let createElementCalls = 0;
@@ -744,7 +783,9 @@ test("initChangeThis shows clipboard paste for screenshot uploads when supported
         async read() {
           return [];
         }
-      }
+      },
+      platform: "Win32",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
   });
   Object.defineProperty(globalThis, "window", {
@@ -784,9 +825,10 @@ test("initChangeThis shows clipboard paste for screenshot uploads when supported
 
   const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
 
-  assert.match(html, /class="add-pin capture-main" data-action="define-capture"/);
+  assert.doesNotMatch(html, /data-action="define-capture"/);
   assert.match(html, /data-action="paste-capture"/);
   assert.match(html, /Depuis le presse-papier/);
+  assert.match(html, /Windows: Win \+ Maj \+ S, puis Ctrl \+ V/);
 });
 
 test("initChangeThis disables clipboard paste when clipboard image reads are unavailable", async () => {
@@ -818,7 +860,9 @@ test("initChangeThis disables clipboard paste when clipboard image reads are una
   Object.defineProperty(globalThis, "navigator", {
     configurable: true,
     value: {
-      clipboard: {}
+      clipboard: {},
+      platform: "Linux x86_64",
+      userAgent: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64)"
     }
   });
   Object.defineProperty(globalThis, "window", {
@@ -860,9 +904,10 @@ test("initChangeThis disables clipboard paste when clipboard image reads are una
 
   assert.match(html, /data-action="paste-capture" disabled/);
   assert.match(html, /Depuis le presse-papier/);
+  assert.match(html, /Ubuntu: Ctrl \+ Maj \+ Impr\. écran, puis Ctrl \+ V/);
 });
 
-test("initChangeThis captures the visible viewport instead of selecting an area on touch viewports", async () => {
+test("initChangeThis hides area capture on touch viewports", async () => {
   let appendCount = 0;
   let appendedRoot: FakeElement | undefined;
   const documentRef = {
@@ -889,6 +934,14 @@ test("initChangeThis captures the visible viewport instead of selecting an area 
   Object.defineProperty(globalThis, "document", {
     configurable: true,
     value: documentRef
+  });
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: {
+      clipboard: {},
+      platform: "Linux armv8l",
+      userAgent: "Mozilla/5.0 (X11; Ubuntu; Linux armv8l)"
+    }
   });
   Object.defineProperty(globalThis, "window", {
     configurable: true,
@@ -930,12 +983,9 @@ test("initChangeThis captures the visible viewport instead of selecting an area 
   appendedRoot?.shadowRoot?.querySelector("[data-action='toggle']")?.click();
 
   const openHtml = appendedRoot?.shadowRoot?.innerHTML ?? "";
-  assert.match(openHtml, /Capture visible screen/);
-
-  appendedRoot?.shadowRoot?.querySelector("[data-action='define-capture']")?.click();
-  const captureHtml = appendedRoot?.shadowRoot?.innerHTML ?? "";
 
   assert.equal(appendCount, 1);
-  assert.match(captureHtml, /Capture: 390x720/);
-  assert.match(captureHtml, /Capture visible screen/);
+  assert.doesNotMatch(openHtml, /data-action="define-capture"/);
+  assert.match(openHtml, /Attach image/);
+  assert.match(openHtml, /From clipboard/);
 });

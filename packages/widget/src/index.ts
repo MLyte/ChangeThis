@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas";
-import type { CaptureArea, FeedbackAppEnvironment, FeedbackCaptureMetadata, FeedbackPayload, FeedbackReporter, FeedbackType, PinTarget, WidgetMode, WidgetReporterFields } from "@changethis/shared";
+import { pinReplayQueryParam } from "@changethis/shared";
+import type { CaptureArea, FeedbackAppEnvironment, FeedbackCaptureMetadata, FeedbackPayload, FeedbackReporter, FeedbackType, PinReplayPayload, PinTarget, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import { captureFeedbackScreenshot } from "./capture.js";
 import { inferEndpoint, inferLocale } from "./inference.js";
 
@@ -82,6 +83,7 @@ const rootId = "changethis-widget-root";
 const sentPinsStorageKeyPrefix = "changethis:sentPins:";
 const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
 const reporterStorageKeyPrefix = "changethis:reporter:";
+const pinReplayRootId = "changethis-pin-replay";
 const contactWebsiteUrl = "https://mathieuluyten.be";
 const maxScreenshotDimension = 1600;
 const pageFeedbackScreenshotMaxDimension = 960;
@@ -148,6 +150,10 @@ const widgetCopy = {
     captureVisibleViewport: "Capturer l’écran visible",
     uploadCapture: "Joindre une image",
     pasteCapture: "Depuis le presse-papier",
+    captureShortcutWindows: "Windows: Win + Maj + S, puis Ctrl + V",
+    captureShortcutMac: "macOS: Ctrl + Cmd + Maj + 4, puis Cmd + V",
+    captureShortcutUbuntu: "Ubuntu: Ctrl + Maj + Impr. écran, puis Ctrl + V",
+    captureShortcutFallback: "Capture une zone avec l'outil de ton système, puis colle l'image ici.",
     removeUploadCapture: "Retirer l'image",
     uploadCaptureInvalid: "Image invalide ou trop lourde.",
     addPin: "Ajouter une pin",
@@ -216,6 +222,10 @@ const widgetCopy = {
     captureVisibleViewport: "Capture visible screen",
     uploadCapture: "Attach image",
     pasteCapture: "From clipboard",
+    captureShortcutWindows: "Windows: Win + Shift + S, then Ctrl + V",
+    captureShortcutMac: "macOS: Control + Command + Shift + 4, then Command + V",
+    captureShortcutUbuntu: "Ubuntu: Ctrl + Shift + Print Screen, then Ctrl + V",
+    captureShortcutFallback: "Capture an area with your system tool, then paste the image here.",
     removeUploadCapture: "Remove image",
     uploadCaptureInvalid: "Invalid or oversized image.",
     addPin: "Add pin",
@@ -477,7 +487,7 @@ export function initChangeThis(options: WidgetOptions): void {
     const isPinTab = state.type === "pin";
     const isCaptureTab = state.type === "screenshot";
     const hasPins = isPinTab && state.pins.length > 0;
-    const captureActionLabel = prefersViewportCapture() ? copy.captureVisibleViewport : copy.defineCapture;
+    const captureShortcut = captureSystemShortcut(copy);
     const canPasteCapture = typeof (navigator.clipboard as { read?: unknown } | undefined)?.read === "function";
     const sentPins = state.pins.filter((pin) => pin.status === "sent");
     const draftPins = state.pins
@@ -1569,7 +1579,6 @@ export function initChangeThis(options: WidgetOptions): void {
           ${isCaptureTab ? `
             <div class="selection-summary capture-summary">
               <div class="capture-actions">
-                <button class="add-pin capture-main" data-action="define-capture">${lucideIcons.scan}${escapeHtml(captureActionLabel)}</button>
                 <label class="add-pin">
                   ${lucideIcons.upload}
                   ${escapeHtml(copy.uploadCapture)}
@@ -1577,6 +1586,7 @@ export function initChangeThis(options: WidgetOptions): void {
                 </label>
                 <button class="add-pin" data-action="paste-capture" ${canPasteCapture ? "" : "disabled"}>${lucideIcons["clipboard-paste"]}${escapeHtml(copy.pasteCapture)}</button>
               </div>
+              <p class="shortcut-hint capture-shortcut">${escapeHtml(captureShortcut)}</p>
               ${state.captureArea ? `<p class="shortcut-hint">${escapeHtml(feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault))}</p>` : ""}
               ${state.captureUploadName ? `
                 <div class="capture-upload-row">
@@ -2308,6 +2318,7 @@ export function initChangeThis(options: WidgetOptions): void {
   const handleScrollOrResize = () => {
     updatePinnedMarkers();
     updateFloatingOffset();
+    updatePinReplayOverlayPosition();
   };
 
   window.addEventListener("scroll", handleScrollOrResize, { capture: true, passive: true });
@@ -2326,11 +2337,13 @@ export function initChangeThis(options: WidgetOptions): void {
     render();
   }, true);
   installNavigationListener(() => {
+    renderPinReplayOverlayFromLocation();
     if (syncDraftView()) {
       render();
     }
   });
 
+  renderPinReplayOverlayFromLocation();
   render();
 }
 
@@ -3186,6 +3199,189 @@ function pinViewportPosition(pin: PinTarget): { x: number; y: number } {
   };
 }
 
+function renderPinReplayOverlayFromLocation(): void {
+  document.getElementById(pinReplayRootId)?.remove();
+  const target = parsePinReplayTargetFromUrl(window.location.href);
+  if (!target) {
+    return;
+  }
+
+  const root = document.createElement("div");
+  root.id = pinReplayRootId;
+  root.innerHTML = `
+    <style>
+      #${pinReplayRootId} {
+        pointer-events: none;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483646;
+      }
+      #${pinReplayRootId} .changethis-replay-pin {
+        align-items: center;
+        background: #dc2626;
+        border: 3px solid #fff;
+        border-radius: 999px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.28);
+        color: #fff;
+        display: flex;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: 14px;
+        font-weight: 900;
+        height: 34px;
+        justify-content: center;
+        left: 0;
+        line-height: 1;
+        position: fixed;
+        top: 0;
+        transform: translate(-50%, -100%);
+        width: 34px;
+      }
+      #${pinReplayRootId} .changethis-replay-pin::after {
+        border: 8px solid transparent;
+        border-top-color: #dc2626;
+        content: "";
+        left: 50%;
+        position: absolute;
+        top: 100%;
+        transform: translateX(-50%);
+      }
+      #${pinReplayRootId} .changethis-replay-close {
+        background: #111827;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        color: #fff;
+        cursor: pointer;
+        font: 800 13px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+        pointer-events: auto;
+        position: fixed;
+        right: 18px;
+        top: 18px;
+        padding: 9px 12px;
+      }
+    </style>
+    <div class="changethis-replay-pin" data-changethis-pin-replay-marker>${target.number}</div>
+    <button class="changethis-replay-close" type="button" data-changethis-pin-replay-close>Fermer</button>
+  `;
+  document.documentElement.appendChild(root);
+  root.dataset.pinReplayTarget = JSON.stringify(target.pin);
+
+  root.querySelector<HTMLElement>("[data-changethis-pin-replay-close]")?.addEventListener("click", () => root.remove());
+  scrollToPinReplayTarget(target.pin);
+  updatePinReplayOverlayPosition();
+}
+
+function updatePinReplayOverlayPosition(): void {
+  const root = document.getElementById(pinReplayRootId);
+  const marker = root?.querySelector<HTMLElement>("[data-changethis-pin-replay-marker]");
+  if (!root || !marker) {
+    return;
+  }
+
+  const target = parseStoredPinTarget(root.dataset.pinReplayTarget);
+  if (!target) {
+    root.remove();
+    return;
+  }
+
+  const position = pinViewportPosition(target);
+  marker.style.left = `${position.x}px`;
+  marker.style.top = `${position.y}px`;
+}
+
+function scrollToPinReplayTarget(pin: PinTarget): void {
+  window.setTimeout(() => {
+    const element = pin.selector ? safeQuerySelector(pin.selector) : null;
+    if (element) {
+      element.scrollIntoView({ block: "center", inline: "center" });
+      updatePinReplayOverlayPosition();
+      return;
+    }
+
+    window.scrollTo({
+      left: Math.max(0, pin.x - window.innerWidth / 2),
+      top: Math.max(0, pin.y - window.innerHeight / 2),
+      behavior: "smooth"
+    });
+    updatePinReplayOverlayPosition();
+  }, 0);
+}
+
+export function parsePinReplayTargetFromUrl(urlValue: string): { number: number; pin: PinTarget } | undefined {
+  let url: URL;
+  try {
+    url = new URL(urlValue);
+  } catch {
+    return undefined;
+  }
+
+  const rawPayload = url.searchParams.get(pinReplayQueryParam);
+  if (!rawPayload) {
+    return undefined;
+  }
+
+  let payload: PinReplayPayload;
+  try {
+    payload = JSON.parse(rawPayload) as PinReplayPayload;
+  } catch {
+    return undefined;
+  }
+
+  if (
+    payload.v !== 1
+    || !isReplayNumber(payload.n, 1, 99)
+    || !isReplayNumber(payload.x, 0, 100_000)
+    || !isReplayNumber(payload.y, 0, 100_000)
+    || !isReplayNumber(payload.vw, 1, 10_000)
+    || !isReplayNumber(payload.vh, 1, 10_000)
+  ) {
+    return undefined;
+  }
+
+  if (payload.s !== undefined && (typeof payload.s !== "string" || payload.s.length > 512)) {
+    return undefined;
+  }
+
+  if (payload.ox !== undefined && !isReplayNumber(payload.ox, 0, 100_000)) {
+    return undefined;
+  }
+
+  if (payload.oy !== undefined && !isReplayNumber(payload.oy, 0, 100_000)) {
+    return undefined;
+  }
+
+  return {
+    number: Math.round(payload.n),
+    pin: {
+      x: Math.round(payload.x),
+      y: Math.round(payload.y),
+      elementOffsetX: typeof payload.ox === "number" ? Math.round(payload.ox) : undefined,
+      elementOffsetY: typeof payload.oy === "number" ? Math.round(payload.oy) : undefined,
+      selector: payload.s
+    }
+  };
+}
+
+function parseStoredPinTarget(value: string | undefined): PinTarget | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as PinTarget;
+    if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+      return parsed;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+function isReplayNumber(value: unknown, min: number, max: number): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
+}
+
 function resolvePinTargetForSubmission(pin: PinTarget): PinTarget {
   const element = pin.selector ? safeQuerySelector(pin.selector) : null;
   if (!element || typeof pin.elementOffsetX !== "number" || typeof pin.elementOffsetY !== "number") {
@@ -3210,7 +3406,32 @@ function safeQuerySelector(selector: string): Element | null {
 }
 
 function currentViewKey(): string {
-  return `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const url = new URL(window.location.href);
+  url.searchParams.delete(pinReplayQueryParam);
+  return `${url.origin}${url.pathname}${url.search}${url.hash}`;
+}
+
+function captureSystemShortcut(copy: {
+  captureShortcutFallback: string;
+  captureShortcutMac: string;
+  captureShortcutUbuntu: string;
+  captureShortcutWindows: string;
+}): string {
+  const fingerprint = `${navigator.platform} ${navigator.userAgent}`;
+
+  if (/Mac|iPhone|iPad|iPod/i.test(fingerprint)) {
+    return copy.captureShortcutMac;
+  }
+
+  if (/Win/i.test(fingerprint)) {
+    return copy.captureShortcutWindows;
+  }
+
+  if (/Linux|Ubuntu/i.test(fingerprint)) {
+    return copy.captureShortcutUbuntu;
+  }
+
+  return copy.captureShortcutFallback;
 }
 
 function currentReporter(name: string, email: string): FeedbackReporter | undefined {

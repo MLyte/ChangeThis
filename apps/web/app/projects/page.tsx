@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Clock3, Code2, GitBranch, Globe2, Inbox, MessageSquareText, RotateCcw, type LucideIcon } from "lucide-react";
+import { buildPinReplayUrl } from "@changethis/shared";
 import type { FeedbackStatus } from "@changethis/shared";
 import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import { workspaceDemoProjectKeyPrefix, workspaceDemoProjectName, type ChangeThisProject } from "../../lib/demo-project";
@@ -703,6 +704,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const appEnvironmentSummary = formatAppEnvironmentSummary(appEnvironment);
   const displayMessage = formatFeedbackMessage(feedback);
   const cardTitle = formatFeedbackCardTitle(feedback, demoFeedback ? workspaceDemoProjectName : feedback.projectName);
+  const feedbackPins = feedback.payload.pins?.length ? feedback.payload.pins : feedback.payload.pin ? [feedback.payload.pin] : [];
   const canBulkCreateIssue = feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
   const issueLabelKey = feedback.externalIssue?.url
@@ -762,6 +764,17 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
               ) : feedback.payload.pin ? (
                 <span>Pin: {Math.round(feedback.payload.pin.x)}, {Math.round(feedback.payload.pin.y)}</span>
               ) : null}
+              {feedbackPins.map((pin, index) => (
+                <a
+                  className="inline-link"
+                  href={buildPinReplayUrl(feedback.payload.metadata, pin, index + 1)}
+                  key={`${pin.x}-${pin.y}-${index}`}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Revoir pin #{index + 1}
+                </a>
+              ))}
               {demoFeedback ? null : (
                 <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}>
                   <T k="projects.feedback.destination" />
