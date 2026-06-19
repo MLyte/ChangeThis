@@ -8,6 +8,7 @@
 - S'arrêter avant la section "Intervention utilisateur requise" si une tâche dépend d'une décision, d'un accès, d'un secret, d'un compte ou d'une validation humaine.
 
 ## Notes IA recentes
+- [2026-06-19] Correction envoi captures GitLab: en mode creation automatique, la route publique attend maintenant la capture navigateur activee avant de creer l'issue, afin que le workflow GitLab recoive l'asset et puisse l'uploader en piece jointe. Validation: `git diff --check` OK; `npm run typecheck --workspace @changethis/web` bloque car `tsc` est introuvable (`node_modules` absent); `npx tsx --test apps/web/test/issue-providers.test.ts apps/web/test/feedback-repository.test.ts` bloque car `tsx` n'est pas en cache et le registre npm est indisponible en mode cache.
 - [2026-06-18] Relecture pins par URL: ajout d'un lien `Revoir sur la page` dans les brouillons d'issues, de liens `Revoir pin #n` dans le dashboard et d'un overlay widget qui relit `changethis_pin` pour replacer la pin sur la page reelle via selector/offset ou coordonnees. Validation: `git diff --check` OK; `npm run build --workspace @changethis/shared` et `npm run typecheck --workspace @changethis/widget` bloques car `tsc` est introuvable dans le workspace (`node_modules` absent).
 
 ## Priorisation active installation interne CRA

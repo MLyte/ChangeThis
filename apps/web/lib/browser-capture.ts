@@ -41,7 +41,7 @@ type Page = {
 };
 
 export function scheduleBrowserCaptureForFeedback(feedback: StoredFeedback, requestId: string, allowedOrigin: string): void {
-  if (process.env.ENABLE_BROWSER_CAPTURE !== "true") {
+  if (!isBrowserCaptureEnabled()) {
     return;
   }
 
@@ -50,7 +50,11 @@ export function scheduleBrowserCaptureForFeedback(feedback: StoredFeedback, requ
   }, 0);
 }
 
-export async function captureBrowserScreenshotForFeedback(feedback: StoredFeedback, requestId: string, allowedOrigin: string): Promise<void> {
+export async function captureBrowserScreenshotForFeedback(feedback: StoredFeedback, requestId: string, allowedOrigin: string): Promise<StoredFeedback | undefined> {
+  if (!isBrowserCaptureEnabled()) {
+    return undefined;
+  }
+
   try {
     if (!isAllowedCaptureUrl(feedback.payload.metadata.url, allowedOrigin)) {
       logWarn("browser_capture_rejected_url_origin", {
@@ -58,20 +62,21 @@ export async function captureBrowserScreenshotForFeedback(feedback: StoredFeedba
         feedback_id: feedback.id,
         project_id: feedback.projectKey
       });
-      return;
+      return undefined;
     }
 
     const dataUrl = await captureBrowserScreenshot(feedback);
     if (!dataUrl) {
-      return;
+      return undefined;
     }
 
-    await getFeedbackRepository().recordBrowserCapture(feedback.id, dataUrl, { workspaceId: feedback.workspaceId });
+    const updated = await getFeedbackRepository().recordBrowserCapture(feedback.id, dataUrl, { workspaceId: feedback.workspaceId });
     logInfo("browser_capture_created", {
       request_id: requestId,
       feedback_id: feedback.id,
       project_id: feedback.projectKey
     });
+    return updated;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown browser capture error";
     logWarn("browser_capture_skipped", {
@@ -80,7 +85,12 @@ export async function captureBrowserScreenshotForFeedback(feedback: StoredFeedba
       project_id: feedback.projectKey,
       error: message
     });
+    return undefined;
   }
+}
+
+function isBrowserCaptureEnabled(): boolean {
+  return process.env.ENABLE_BROWSER_CAPTURE === "true";
 }
 
 function isAllowedCaptureUrl(value: string, allowedOrigin: string): boolean {

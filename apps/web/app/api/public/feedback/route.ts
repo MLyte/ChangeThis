@@ -2,7 +2,7 @@ import { buildIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { methodNotAllowed } from "../../../../lib/api-security";
 import { getCurrentSession } from "../../../../lib/auth";
-import { scheduleBrowserCaptureForFeedback } from "../../../../lib/browser-capture";
+import { captureBrowserScreenshotForFeedback, scheduleBrowserCaptureForFeedback } from "../../../../lib/browser-capture";
 import { demoProject } from "../../../../lib/demo-project";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../lib/issue-workflow";
@@ -125,11 +125,11 @@ export async function POST(request: Request) {
   });
 
   let processedFeedback = feedback;
-  scheduleBrowserCaptureForFeedback(feedback, requestId, origin);
 
   if (project.issueCreationMode === "automatic") {
     try {
-      processedFeedback = await createIssueForFeedback(feedback, requestId, {
+      const capturedFeedback = await captureBrowserScreenshotForFeedback(feedback, requestId, origin);
+      processedFeedback = await createIssueForFeedback(capturedFeedback ?? feedback, requestId, {
         workspaceId: project.workspaceId
       });
     } catch (error) {
@@ -141,6 +141,8 @@ export async function POST(request: Request) {
         error: message
       });
     }
+  } else {
+    scheduleBrowserCaptureForFeedback(feedback, requestId, origin);
   }
 
   logInfo("feedback_received", {
