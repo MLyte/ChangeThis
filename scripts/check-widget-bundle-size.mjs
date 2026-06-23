@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const bundlePath = resolve(scriptDir, "../packages/widget/dist/widget.global.js");
 
-// Commercial widget budget: keep the raw IIFE bundle under 287 KiB.
-// The extra room covers screenshot diagnostics, manual image upload, clipboard paste, and map capture safeguards while keeping growth visible.
-const maxBytes = 287 * 1024;
+// Commercial widget budget: keep the raw IIFE bundle under 292 KiB.
+// The extra room covers screenshot diagnostics, manual image upload, clipboard paste, map capture safeguards, and pin replay links while keeping growth visible.
+const maxBytes = 292 * 1024;
 
 const formatKiB = (bytes) => `${(bytes / 1024).toFixed(1)} KiB`;
 
