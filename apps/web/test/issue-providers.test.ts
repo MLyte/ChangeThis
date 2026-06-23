@@ -342,7 +342,7 @@ test("uploads GitLab screenshot attachments before creating the issue", async ()
       "",
       "## Capture",
       "",
-      "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant."
+      "Capture disponible dans ChangeThis. Elle sera jointe a l'issue Git si la destination le supporte."
     ].join("\n"),
     labels: ["source:client-feedback"]
   };

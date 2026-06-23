@@ -385,9 +385,15 @@ async function uploadGitLabIssueAttachment(
 }
 
 function issueDescriptionWithAttachment(description: string, markdown: string): string {
-  const captureLine = "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant.";
-  if (description.includes(captureLine)) {
-    return description.replace(captureLine, `Capture jointe: ${markdown}`);
+  const captureLines = [
+    "Capture disponible dans ChangeThis. Elle sera jointe a l'issue Git si la destination le supporte.",
+    "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant."
+  ];
+
+  for (const captureLine of captureLines) {
+    if (description.includes(captureLine)) {
+      return description.replace(captureLine, `Capture jointe: ${markdown}`);
+    }
   }
 
   return `${description}\n\n## Capture\n\n${markdown}`;

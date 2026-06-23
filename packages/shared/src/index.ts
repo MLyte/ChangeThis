@@ -479,7 +479,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     "## Capture",
     "",
     feedback.screenshotDataUrl
-      ? "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant."
+      ? "Capture disponible dans ChangeThis. Elle sera jointe a l'issue Git si la destination le supporte."
       : "Aucune capture jointe.",
     "",
     "## Analyse IA",

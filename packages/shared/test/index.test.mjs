@@ -282,7 +282,7 @@ test("buildPinReplayUrl stores replay coordinates without user message or visibl
   assert.equal(JSON.stringify(replayPayload).includes("Visible customer data"), false);
 });
 
-test("buildIssueDraft does not imply screenshots are attached to Git issues", () => {
+test("buildIssueDraft explains screenshots can be attached by supported Git providers", () => {
   const validation = validateFeedbackPayload(validPayload({
     screenshotDataUrl: "data:image/png;base64,AAAA"
   }));
@@ -291,7 +291,7 @@ test("buildIssueDraft does not imply screenshots are attached to Git issues", ()
   const draft = buildIssueDraft(validation.value);
 
   assert.match(draft.description, /Capture disponible dans ChangeThis/);
-  assert.match(draft.description, /n'est pas jointe a l'issue Git/);
+  assert.match(draft.description, /sera jointe a l'issue Git si la destination le supporte/);
   assert.doesNotMatch(draft.description, /external object storage/);
 });
 
