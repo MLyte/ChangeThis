@@ -480,11 +480,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     "",
     feedback.screenshotDataUrl
       ? "Capture disponible dans ChangeThis. Elle sera jointe a l'issue Git si la destination le supporte."
-      : "Aucune capture jointe.",
-    "",
-    "## Analyse IA",
-    "",
-    "A completer automatiquement."
+      : "Aucune capture jointe."
   ].filter((line): line is string => typeof line === "string");
 
   return lines.join("\n");

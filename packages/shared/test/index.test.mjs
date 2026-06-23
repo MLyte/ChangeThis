@@ -293,6 +293,7 @@ test("buildIssueDraft explains screenshots can be attached by supported Git prov
   assert.match(draft.description, /Capture disponible dans ChangeThis/);
   assert.match(draft.description, /sera jointe a l'issue Git si la destination le supporte/);
   assert.doesNotMatch(draft.description, /external object storage/);
+  assert.doesNotMatch(draft.description, /Analyse IA/);
 });
 
 test("buildIssueDraft includes developer diagnostics metadata", () => {

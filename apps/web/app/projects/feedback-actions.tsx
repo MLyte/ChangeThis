@@ -23,13 +23,13 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isIgnoreConfirmOpen, setIsIgnoreConfirmOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState(issueDraft.title);
-  const [draftDescription, setDraftDescription] = useState(issueDraft.description);
+  const [draftDescription, setDraftDescription] = useState(normalizeIssueDraftDescription(issueDraft.description));
   const [draftLabels, setDraftLabels] = useState(issueDraft.labels.join(", "));
   const isSubmitting = isPending || runningAction !== undefined;
 
   function openComposer() {
     setDraftTitle(issueDraft.title);
-    setDraftDescription(issueDraft.description);
+    setDraftDescription(normalizeIssueDraftDescription(issueDraft.description));
     setDraftLabels(issueDraft.labels.join(", "));
     setIsComposerOpen(true);
   }
@@ -124,7 +124,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
       "issue",
       {
         issueDraft: {
-          description: draftDescription.trim(),
+          description: normalizeIssueDraftDescription(draftDescription).trim(),
           labels,
           title: draftTitle.trim()
         }
@@ -311,6 +311,16 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
       ) : null}
     </div>
   );
+}
+
+function normalizeIssueDraftDescription(description: string): string {
+  return description
+    .replace(
+      "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant.",
+      "Capture disponible dans ChangeThis. Elle sera jointe a l'issue Git si la destination le supporte."
+    )
+    .replace(/\n+## Analyse IA\n+\n?A completer automatiquement\.\s*$/u, "")
+    .trimEnd();
 }
 
 function FeedbackIgnoreConfirmationModal({
