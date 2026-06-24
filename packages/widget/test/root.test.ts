@@ -61,31 +61,6 @@ class FakeShadowRoot {
   }
 }
 
-test("shouldSkipAutomaticClientCaptureForPage skips map pages in any browser", async () => {
-  Object.defineProperty(globalThis, "document", {
-    configurable: true,
-    value: {
-      currentScript: null
-    }
-  });
-
-  const { shouldSkipAutomaticClientCaptureForPage } = await import("../src/index.ts");
-  const mapDocument = {
-    querySelector(selector: string) {
-      assert.match(selector, /leaflet-container/);
-      return { className: "leaflet-container" };
-    }
-  } as unknown as Document;
-  const plainDocument = {
-    querySelector() {
-      return null;
-    }
-  } as unknown as Document;
-
-  assert.equal(shouldSkipAutomaticClientCaptureForPage(mapDocument), true);
-  assert.equal(shouldSkipAutomaticClientCaptureForPage(plainDocument), false);
-});
-
 test("parsePinReplayTargetFromUrl accepts valid replay links and rejects invalid payloads", async () => {
   Object.defineProperty(globalThis, "document", {
     configurable: true,
@@ -124,7 +99,6 @@ test("parsePinReplayTargetFromUrl accepts valid replay links and rejects invalid
   assert.equal(parsePinReplayTargetFromUrl(url.toString()), undefined);
   assert.equal(parsePinReplayTargetFromUrl("not an url"), undefined);
 });
-
 
 test("initChangeThis does not create another root when one already exists", async () => {
   let createElementCalls = 0;
@@ -907,6 +881,86 @@ test("initChangeThis disables clipboard paste when clipboard image reads are una
   assert.match(html, /Ubuntu: Ctrl \+ Maj \+ Impr\. écran, puis Ctrl \+ V/);
 });
 
+test("initChangeThis disables clipboard paste on iOS browsers", async () => {
+  let appendedRoot: FakeElement | undefined;
+  const documentRef = {
+    currentScript: null,
+    documentElement: {
+      appendChild(element: FakeElement) {
+        appendedRoot = element;
+      },
+      lang: "fr"
+    },
+    getElementById() {
+      return null;
+    },
+    createElement() {
+      return new FakeElement();
+    },
+    addEventListener() {},
+    querySelectorAll() {
+      return [];
+    }
+  };
+
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: documentRef
+  });
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: {
+      clipboard: {
+        async read() {
+          return [];
+        }
+      },
+      maxTouchPoints: 5,
+      platform: "iPhone",
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15"
+    }
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      addEventListener() {},
+      history: {
+        pushState() {},
+        replaceState() {}
+      },
+      innerHeight: 768,
+      localStorage: {
+        getItem() {
+          return null;
+        },
+        setItem() {}
+      },
+      location: {
+        hash: "",
+        href: "https://client.example.test/page",
+        origin: "https://client.example.test",
+        pathname: "/page",
+        search: ""
+      },
+      queueMicrotask(callback: () => void) {
+        callback();
+      },
+      scrollX: 0,
+      scrollY: 0
+    }
+  });
+
+  const { initChangeThis } = await import("../src/index.ts");
+
+  initChangeThis({ projectKey: "pk_clipboard_ios", locale: "fr", modes: ["screenshot"] });
+  appendedRoot?.shadowRoot?.querySelector("[data-action='toggle']")?.click();
+
+  const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
+
+  assert.match(html, /data-action="paste-capture" disabled/);
+  assert.match(html, /Depuis le presse-papier/);
+});
+
 test("initChangeThis hides area capture on touch viewports", async () => {
   let appendCount = 0;
   let appendedRoot: FakeElement | undefined;
@@ -988,4 +1042,65 @@ test("initChangeThis hides area capture on touch viewports", async () => {
   assert.doesNotMatch(openHtml, /data-action="define-capture"/);
   assert.match(openHtml, /Attach image/);
   assert.match(openHtml, /From clipboard/);
+});
+
+test("readCaptureUpload compresses mobile photos before enforcing the API payload budget", async () => {
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      currentScript: null,
+      createElement(tagName: string) {
+        assert.equal(tagName, "canvas");
+        return {
+          width: 0,
+          height: 0,
+          getContext(contextType: string) {
+            assert.equal(contextType, "2d");
+            return {
+              drawImage() {
+                // Test double: encoding is asserted through toDataURL.
+              }
+            };
+          },
+          toDataURL(mimeType: string) {
+            assert.equal(mimeType, "image/webp");
+            return `data:image/webp;base64,${"a".repeat(1200)}`;
+          }
+        };
+      }
+    }
+  });
+  Object.defineProperty(globalThis, "URL", {
+    configurable: true,
+    value: {
+      createObjectURL() {
+        return "blob:changethis-large-photo";
+      },
+      revokeObjectURL() {
+        // Test double: cleanup has no observable side effect here.
+      }
+    }
+  });
+  Object.defineProperty(globalThis, "Image", {
+    configurable: true,
+    value: class FakeImage {
+      decoding = "";
+      naturalWidth = 4032;
+      naturalHeight = 3024;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+
+      set src(_value: string) {
+        this.onload?.();
+      }
+    }
+  });
+
+  const { readCaptureUpload } = await import("../src/index.ts");
+  const image = new Blob(["x".repeat(2_500_000)], { type: "image/jpeg" });
+
+  const dataUrl = await readCaptureUpload(image);
+
+  assert.match(dataUrl, /^data:image\/webp;base64,/);
+  assert.ok(dataUrl.length < 1_700_000);
 });

@@ -15,8 +15,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@changethis/shared": "0.1.0",
-    "html2canvas": "^1.4.1"
+    "@changethis/shared": "0.1.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

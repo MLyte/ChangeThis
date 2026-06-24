@@ -1,10 +1,6 @@
-import html2canvas from "html2canvas";
 import { pinReplayQueryParam } from "@changethis/shared";
-import type { CaptureArea, FeedbackAppEnvironment, FeedbackCaptureMetadata, FeedbackPayload, FeedbackReporter, FeedbackType, PinReplayPayload, PinTarget, WidgetMode, WidgetReporterFields } from "@changethis/shared";
-import { captureFeedbackScreenshot } from "./capture.js";
+import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackReporter, FeedbackType, PinReplayPayload, PinTarget, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import { inferEndpoint, inferLocale } from "./inference.js";
-
-const capturePage = html2canvas as unknown as typeof import("html2canvas").default;
 
 type WidgetOptions = {
   projectKey: string;
@@ -77,29 +73,29 @@ type StoredSentFeedback = {
   screenshotDataUrl?: string;
 };
 
-type CaptureDiagnostics = Omit<FeedbackCaptureMetadata, "risk" | "source">;
-
 const rootId = "changethis-widget-root";
 const sentPinsStorageKeyPrefix = "changethis:sentPins:";
 const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
 const reporterStorageKeyPrefix = "changethis:reporter:";
 const pinReplayRootId = "changethis-pin-replay";
 const contactWebsiteUrl = "https://mathieuluyten.be";
-const maxScreenshotDimension = 1600;
-const pageFeedbackScreenshotMaxDimension = 960;
 const maxManualCaptureDimension = 1200;
 const maxThumbnailDimension = 400;
 const maxClientScreenshotDataUrlLength = 1_700_000;
 const maxManualCaptureUploadBytes = 2_000_000;
+const maxManualCaptureSourceBytes = 18_000_000;
 const manualCaptureUploadTypes = ["image/png", "image/jpeg", "image/webp"];
+const manualCaptureSourceTypes = [...manualCaptureUploadTypes, "image/heic", "image/heif"];
 const screenshotQuality = 0.8;
-const pageFeedbackScreenshotQuality = 0.62;
+const manualCaptureCompressionAttempts = [
+  { maxDimension: maxManualCaptureDimension, quality: screenshotQuality },
+  { maxDimension: 960, quality: 0.68 },
+  { maxDimension: 720, quality: 0.58 }
+];
 const thumbnailQuality = 0.74;
-const capturePreparationTimeoutMs = 1200;
 const defaultWidgetModes: WidgetMode[] = ["comment", "pin", "screenshot"];
 const maxWidgetTitleLength = 240;
 const widgetConfigStartupTimeoutMs = 700;
-let lastCaptureDiagnostics: CaptureDiagnostics | undefined;
 const changethisHandLogoSvg = '<svg class="brand-logo-icon" aria-hidden="true" viewBox="14 1 17 23" role="img"><g transform="rotate(180 22.5 12)"><path d="M19 1h2v1h1v4h2v1h3v1h2v1h1v1h1v7h-1v3h-1v3H19v-3h-1v-2h-1v-2h-1v-2h-1v-1h-1v-3h3v1h1V2h1"/><path fill="#fff" d="M21 2v9h1V7h2v4h1V8h2v4h1V9h1v1h1v7h-1v3h-1v2h-8v-2h-1v-2h-1v-2h-1v-2h-1v-1h-1v-2h2v1h1v1h1V2"/></g></svg>';
 const lucideIcons = {
   bug: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/><path d="M6 17H3"/><path d="M21 17h-3"/></svg>',
@@ -433,44 +429,6 @@ export function initChangeThis(options: WidgetOptions): void {
     });
   };
 
-  const requestCaptureArea = () => {
-    if (!isModeEnabled("screenshot", activeModes) || !advancedModesEnabled) {
-      state.type = firstMode as FeedbackType;
-      render();
-      return;
-    }
-
-    syncDraftView();
-    const viewKey = currentViewKey();
-    state.type = "screenshot";
-    state.draftViewKey = viewKey;
-
-    if (prefersViewportCapture()) {
-      state.captureArea = currentViewportCaptureArea();
-      state.open = true;
-      render();
-      return;
-    }
-
-    state.open = false;
-    render();
-    startCaptureSelection(copy.selectArea, copy.close, (area) => {
-      if (currentViewKey() !== viewKey) {
-        clearViewBoundDraft();
-        render();
-        return;
-      }
-
-      state.captureArea = area;
-      state.open = true;
-      render();
-    }, () => {
-      state.type = "screenshot";
-      state.open = true;
-      render();
-    });
-  };
-
   const render = () => {
     const shadow = root.shadowRoot;
     if (!shadow) return;
@@ -488,7 +446,7 @@ export function initChangeThis(options: WidgetOptions): void {
     const isCaptureTab = state.type === "screenshot";
     const hasPins = isPinTab && state.pins.length > 0;
     const captureShortcut = captureSystemShortcut(copy);
-    const canPasteCapture = typeof (navigator.clipboard as { read?: unknown } | undefined)?.read === "function";
+    const canPasteCapture = canReadClipboardImages();
     const sentPins = state.pins.filter((pin) => pin.status === "sent");
     const draftPins = state.pins
       .map((pin, index) => ({ pin, index }))
@@ -1582,7 +1540,7 @@ export function initChangeThis(options: WidgetOptions): void {
                 <label class="add-pin">
                   ${lucideIcons.upload}
                   ${escapeHtml(copy.uploadCapture)}
-                  <input accept="image/png,image/jpeg,image/webp" data-capture-upload style="display:none" type="file">
+                  <input accept="image/png,image/jpeg,image/webp,image/heic,image/heif" data-capture-upload style="display:none" type="file">
                 </label>
                 <button class="add-pin" data-action="paste-capture" ${canPasteCapture ? "" : "disabled"}>${lucideIcons["clipboard-paste"]}${escapeHtml(copy.pasteCapture)}</button>
               </div>
@@ -1988,12 +1946,11 @@ export function initChangeThis(options: WidgetOptions): void {
       state.pinsVisible = !state.pinsVisible;
       render();
     });
-    shadow.querySelector<HTMLButtonElement>("[data-action='define-capture']")?.addEventListener("click", requestCaptureArea);
     shadow.querySelector<HTMLButtonElement>("[data-action='paste-capture']")?.addEventListener("click", async () => {
       try {
         const items = await navigator.clipboard.read();
         for (const item of items) {
-          const type = item.types.find((candidate) => manualCaptureUploadTypes.includes(candidate));
+          const type = item.types.find((candidate) => manualCaptureSourceTypes.includes(candidate));
           if (type) {
             state.captureUploadDataUrl = await readCaptureUpload(await item.getType(type));
             state.captureUploadName = "clipboard-image";
@@ -2358,21 +2315,11 @@ async function submitFeedback(params: {
   uploadedScreenshotDataUrl?: string;
   appEnvironment?: FeedbackAppEnvironment;
 }): Promise<{ id?: string; screenshotDataUrl?: string }> {
-  lastCaptureDiagnostics = undefined;
-  let screenshotDataUrl = params.uploadedScreenshotDataUrl ?? await captureFeedbackScreenshot({
-    type: params.type,
-    captureArea: params.captureArea,
-    pinTargets: params.pins,
-    captureViewport,
-    capturePageFeedbackPreview,
-    warn: console.warn
-  });
+  let screenshotDataUrl = params.uploadedScreenshotDataUrl;
   if (screenshotDataUrl && screenshotDataUrl.length > maxClientScreenshotDataUrlLength) {
     console.warn("[ChangeThis] Feedback screenshot skipped because it is too large for the public API");
     screenshotDataUrl = undefined;
-    lastCaptureDiagnostics = mergeCaptureDiagnostics(lastCaptureDiagnostics, { preparationTimedOut: true });
   }
-  const capture = takeLastCaptureMetadata();
   const screenshotThumbnailDataUrl = screenshotDataUrl
     ? await createImageThumbnail(screenshotDataUrl)
     : undefined;
@@ -2417,7 +2364,6 @@ async function submitFeedback(params: {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       online: navigator.onLine,
       app: params.appEnvironment,
-      capture,
       createdAt: new Date().toISOString()
     }
   };
@@ -2483,158 +2429,6 @@ function publicFeedbackActionUrl(endpoint: string, actionPath: string): string {
   const basePath = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
   url.pathname = `${basePath}${actionPath}`;
   return url.toString();
-}
-
-function startCaptureSelection(label: string, cancelLabel: string, onSelect: (area: CaptureArea) => void, onCancel?: () => void): void {
-  const layer = document.createElement("div");
-  layer.innerHTML = `
-    <style>
-      .changethis-selection-layer {
-        position: fixed;
-        inset: 0;
-        z-index: 2147483647;
-        cursor: crosshair;
-        background: rgba(17, 24, 39, 0.18);
-        touch-action: none;
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      .changethis-selection-help {
-        align-items: center;
-        display: flex;
-        gap: 10px;
-        position: fixed;
-        left: 50%;
-        top: 18px;
-        transform: translateX(-50%);
-        border-radius: 999px;
-        background: #111827;
-        color: #fff;
-        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-        font-size: 13px;
-        font-weight: 800;
-        padding: 10px 14px;
-      }
-      .changethis-selection-help button {
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.12);
-        color: #fff;
-        cursor: pointer;
-        font: inherit;
-        padding: 4px 8px;
-      }
-      .changethis-selection-box {
-        position: fixed;
-        border: 2px solid #fff;
-        background: rgba(15, 118, 110, 0.22);
-        box-shadow: 0 0 0 9999px rgba(17, 24, 39, 0.36);
-      }
-    </style>
-    <div class="changethis-selection-layer">
-      <div class="changethis-selection-help">${escapeHtml(label)} <button type="button" data-changethis-selection-cancel>${escapeHtml(cancelLabel)}</button></div>
-      <div class="changethis-selection-box" hidden></div>
-    </div>
-  `;
-  document.documentElement.appendChild(layer);
-
-  const surface = layer.querySelector<HTMLElement>(".changethis-selection-layer");
-  const box = layer.querySelector<HTMLElement>(".changethis-selection-box");
-  let startX = 0;
-  let startY = 0;
-  let latestX = 0;
-  let latestY = 0;
-  let dragging = false;
-  let isFinished = false;
-
-  const finish = (callback?: () => void) => {
-    if (isFinished) {
-      return;
-    }
-
-    isFinished = true;
-    document.removeEventListener("keydown", handleKeydown, true);
-    layer.remove();
-    callback?.();
-  };
-
-  const updateBox = () => {
-    if (!box) return;
-    const left = Math.min(startX, latestX);
-    const top = Math.min(startY, latestY);
-    const width = Math.abs(latestX - startX);
-    const height = Math.abs(latestY - startY);
-    box.hidden = width < 4 || height < 4;
-    box.style.left = `${left}px`;
-    box.style.top = `${top}px`;
-    box.style.width = `${width}px`;
-    box.style.height = `${height}px`;
-  };
-
-  layer.querySelector<HTMLElement>("[data-changethis-selection-cancel]")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    finish(onCancel);
-  });
-
-  surface?.addEventListener("pointerdown", (event) => {
-    if ((event.target as Element | null)?.closest("[data-changethis-selection-cancel]")) {
-      return;
-    }
-
-    event.preventDefault();
-    dragging = true;
-    startX = event.clientX;
-    startY = event.clientY;
-    latestX = event.clientX;
-    latestY = event.clientY;
-    surface.setPointerCapture(event.pointerId);
-    updateBox();
-  });
-
-  surface?.addEventListener("pointermove", (event) => {
-    if (!dragging) return;
-    event.preventDefault();
-    latestX = event.clientX;
-    latestY = event.clientY;
-    updateBox();
-  });
-
-  surface?.addEventListener("pointerup", (event) => {
-    if (!dragging) return;
-    event.preventDefault();
-    dragging = false;
-    latestX = event.clientX;
-    latestY = event.clientY;
-    const x = Math.min(startX, latestX);
-    const y = Math.min(startY, latestY);
-    const width = Math.abs(latestX - startX);
-    const height = Math.abs(latestY - startY);
-
-    if (width < 8 || height < 8) {
-      finish(onCancel);
-      return;
-    }
-
-    finish(() => onSelect({
-      x: Math.round(x),
-      y: Math.round(y),
-      width: Math.round(width),
-      height: Math.round(height)
-    }));
-  });
-
-  const handleKeydown = (event: KeyboardEvent) => {
-    if (event.key !== "Escape") {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    finish(onCancel);
-  };
-
-  document.addEventListener("keydown", handleKeydown, true);
 }
 
 function startPinMode(label: string, cancelLabel: string, onSelect: (pin: PinTarget) => void, onCancel?: () => void): void {
@@ -2747,303 +2541,6 @@ function startPinMode(label: string, cancelLabel: string, onSelect: (pin: PinTar
   document.addEventListener("keydown", handleKeydown, true);
 }
 
-async function capturePageFeedbackPreview(): Promise<string | undefined> {
-  try {
-    return await captureViewport(undefined, {
-      maxDimension: pageFeedbackScreenshotMaxDimension,
-      quality: pageFeedbackScreenshotQuality
-    });
-  } catch (error) {
-    console.warn("[ChangeThis] Failed to capture page preview", error);
-    return undefined;
-  }
-}
-
-async function captureViewport(
-  area?: CaptureArea,
-  options: { maxDimension?: number; quality?: number; pinTargets?: PinTarget[] } = {}
-): Promise<string | undefined> {
-  if (shouldSkipAutomaticClientCaptureForPage()) {
-    lastCaptureDiagnostics = mergeCaptureDiagnostics(lastCaptureDiagnostics, { preparationTimedOut: true });
-    console.warn("[ChangeThis] Client screenshot skipped on a heavy map page to keep the host page responsive");
-    return undefined;
-  }
-
-  const pinCaptureOverlay = options.pinTargets?.length ? renderTemporaryPinCaptureOverlay(options.pinTargets) : undefined;
-  const preparationDiagnostics = await prepareDocumentForCapture();
-
-  try {
-    maskSensitiveFields(true);
-    const canvas = await capturePage(document.body, {
-      height: window.innerHeight,
-      onclone: (clonedDocument) => {
-        const styleDiagnostics = sanitizeUnsupportedCaptureStyles(clonedDocument);
-        lastCaptureDiagnostics = mergeCaptureDiagnostics(preparationDiagnostics, styleDiagnostics);
-      },
-      width: window.innerWidth,
-      windowHeight: window.innerHeight,
-      windowWidth: window.innerWidth,
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
-      useCORS: true
-    });
-    const output = area ? cropCanvas(canvas, area) : canvas;
-    const resized = resizeCanvasToMax(output, options.maxDimension ?? maxScreenshotDimension);
-    return encodeCanvas(resized, options.quality ?? screenshotQuality);
-  } finally {
-    pinCaptureOverlay?.remove();
-    maskSensitiveFields(false);
-  }
-}
-
-function renderTemporaryPinCaptureOverlay(pinTargets: PinTarget[]): HTMLElement {
-  const overlay = document.createElement("div");
-  overlay.dataset.changethisCaptureOverlay = "pins";
-  overlay.style.cssText = [
-    "position:fixed",
-    "inset:0",
-    "z-index:2147483646",
-    "pointer-events:none",
-    "font-family:Inter,ui-sans-serif,system-ui,sans-serif"
-  ].join(";");
-
-  pinTargets.forEach((pin, index) => {
-    const position = pinViewportPosition(pin);
-    const marker = document.createElement("div");
-    marker.textContent = String(index + 1);
-    marker.style.cssText = [
-      "position:absolute",
-      `left:${Math.round(position.x)}px`,
-      `top:${Math.round(position.y)}px`,
-      "width:28px",
-      "height:28px",
-      "transform:translate(-50%,-50%)",
-      "border-radius:999px",
-      "background:#e11d48",
-      "border:3px solid #fff",
-      "box-shadow:0 8px 18px rgba(15,23,42,.35)",
-      "color:#fff",
-      "display:grid",
-      "place-items:center",
-      "font-size:13px",
-      "font-weight:900",
-      "line-height:1"
-    ].join(";");
-    overlay.appendChild(marker);
-  });
-
-  document.body.appendChild(overlay);
-  return overlay;
-}
-
-function sanitizeUnsupportedCaptureStyles(clonedDocument: Document): CaptureDiagnostics {
-  const view = clonedDocument.defaultView;
-  const root = clonedDocument.documentElement;
-  const diagnostics: CaptureDiagnostics = {
-    cssColorConversionCount: 0,
-    cssFallbackCount: 0,
-    removedBackgroundImageCount: 0
-  };
-
-  if (!view || !root) {
-    return diagnostics;
-  }
-
-  const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement | SVGElement>("*"))];
-
-  for (const element of elements) {
-    const computed = view.getComputedStyle(element);
-    for (let index = 0; index < computed.length; index += 1) {
-      const property = computed.item(index);
-      const value = computed.getPropertyValue(property);
-
-      if (hasUnsupportedColorFunction(value)) {
-        const convertedValue = convertUnsupportedColorFunctions(clonedDocument, value);
-        if (convertedValue && convertedValue !== value) {
-          element.style.setProperty(property, convertedValue, "important");
-          diagnostics.cssColorConversionCount = (diagnostics.cssColorConversionCount ?? 0) + 1;
-          continue;
-        }
-
-        const fallback = captureFallbackValue(property);
-        element.style.setProperty(property, fallback, "important");
-        diagnostics.cssFallbackCount = (diagnostics.cssFallbackCount ?? 0) + 1;
-        if (property === "background-image" && fallback === "none") {
-          diagnostics.removedBackgroundImageCount = (diagnostics.removedBackgroundImageCount ?? 0) + 1;
-        }
-      }
-    }
-  }
-
-  return diagnostics;
-}
-
-function hasUnsupportedColorFunction(value: string): boolean {
-  return /\b(?:oklch|oklab|lch|lab)\(/i.test(value);
-}
-
-function convertUnsupportedColorFunctions(document: Document, value: string): string | undefined {
-  const colorFunctionPattern = /\b(?:oklch|oklab|lch|lab)\([^)]*\)/gi;
-  let converted = value;
-
-  for (const match of value.match(colorFunctionPattern) ?? []) {
-    const resolved = resolveCssColor(document, match);
-    if (!resolved) {
-      return undefined;
-    }
-
-    converted = converted.replace(match, resolved);
-  }
-
-  return converted;
-}
-
-function resolveCssColor(document: Document, color: string): string | undefined {
-  const view = document.defaultView;
-  if (!view || !document.body) {
-    return undefined;
-  }
-
-  const probe = document.createElement("span");
-  probe.style.color = color;
-  if (!probe.style.color) {
-    return undefined;
-  }
-
-  probe.style.position = "absolute";
-  probe.style.visibility = "hidden";
-  probe.style.pointerEvents = "none";
-  document.body.appendChild(probe);
-  const resolved = view.getComputedStyle(probe).color;
-  probe.remove();
-  return resolved && resolved !== color ? resolved : undefined;
-}
-
-function captureFallbackValue(property: string): string {
-  if (property.includes("shadow") || property.includes("gradient") || property === "background-image") {
-    return "none";
-  }
-
-  if (property === "background-color") {
-    return "transparent";
-  }
-
-  if (property === "color") {
-    return "#111827";
-  }
-
-  if (property.endsWith("color") || property === "stroke") {
-    return "rgba(17, 24, 39, 0.28)";
-  }
-
-  if (property === "fill") {
-    return "currentColor";
-  }
-
-  return "initial";
-}
-
-async function prepareDocumentForCapture(): Promise<CaptureDiagnostics> {
-  const diagnostics: CaptureDiagnostics = {
-    crossOriginIframeCount: document.querySelectorAll("iframe[src]").length,
-    fontReadyTimedOut: await waitForFontsReady(),
-    unloadedVisibleImageCount: countUnloadedVisibleImages()
-  };
-  await nextAnimationFrame();
-  await nextAnimationFrame();
-  return diagnostics;
-}
-
-async function waitForFontsReady(): Promise<boolean> {
-  const fonts = document.fonts;
-  if (!fonts?.ready) {
-    return false;
-  }
-
-  return await withTimeout(fonts.ready.then(() => undefined), capturePreparationTimeoutMs);
-}
-
-function countUnloadedVisibleImages(): number {
-  const images = Array.from(document.images).filter((image) => isVisibleImage(image));
-  return images.filter((image) => !image.complete || image.naturalWidth === 0 || image.naturalHeight === 0).length;
-}
-
-function isVisibleImage(image: HTMLImageElement): boolean {
-  const rect = image.getBoundingClientRect();
-  return rect.width > 0
-    && rect.height > 0
-    && rect.bottom >= 0
-    && rect.right >= 0
-    && rect.top <= window.innerHeight
-    && rect.left <= window.innerWidth;
-}
-
-async function withTimeout(promise: Promise<unknown>, timeoutMs: number): Promise<boolean> {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  const timedOut = await Promise.race([
-    promise.then(() => false, () => false),
-    new Promise<boolean>((resolve) => {
-      timeout = setTimeout(() => resolve(true), timeoutMs);
-    })
-  ]);
-
-  if (timeout) {
-    clearTimeout(timeout);
-  }
-
-  return timedOut;
-}
-
-function nextAnimationFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    window.requestAnimationFrame(() => resolve());
-  });
-}
-
-function mergeCaptureDiagnostics(...items: Array<CaptureDiagnostics | undefined>): CaptureDiagnostics {
-  const merged: CaptureDiagnostics = {};
-
-  for (const item of items) {
-    if (!item) {
-      continue;
-    }
-
-    merged.cssColorConversionCount = (merged.cssColorConversionCount ?? 0) + (item.cssColorConversionCount ?? 0);
-    merged.cssFallbackCount = (merged.cssFallbackCount ?? 0) + (item.cssFallbackCount ?? 0);
-    merged.removedBackgroundImageCount = (merged.removedBackgroundImageCount ?? 0) + (item.removedBackgroundImageCount ?? 0);
-    merged.unloadedVisibleImageCount = (merged.unloadedVisibleImageCount ?? 0) + (item.unloadedVisibleImageCount ?? 0);
-    merged.crossOriginIframeCount = (merged.crossOriginIframeCount ?? 0) + (item.crossOriginIframeCount ?? 0);
-    merged.fontReadyTimedOut = Boolean(merged.fontReadyTimedOut || item.fontReadyTimedOut);
-    merged.preparationTimedOut = Boolean(merged.preparationTimedOut || item.preparationTimedOut);
-  }
-
-  return merged;
-}
-
-function takeLastCaptureMetadata(): FeedbackCaptureMetadata | undefined {
-  const diagnostics = lastCaptureDiagnostics;
-  lastCaptureDiagnostics = undefined;
-
-  if (!diagnostics) {
-    return undefined;
-  }
-
-  const risk = Boolean(
-    diagnostics.cssFallbackCount
-    || diagnostics.removedBackgroundImageCount
-    || diagnostics.unloadedVisibleImageCount
-    || diagnostics.crossOriginIframeCount
-    || diagnostics.fontReadyTimedOut
-    || diagnostics.preparationTimedOut
-  );
-
-  return {
-    source: "client",
-    risk,
-    ...diagnostics
-  };
-}
-
 async function createImageThumbnail(dataUrl: string): Promise<string | undefined> {
   return resizeImageDataUrl(dataUrl, maxThumbnailDimension, thumbnailQuality);
 }
@@ -3076,33 +2573,81 @@ async function resizeImageDataUrl(dataUrl: string, maxDimension: number, quality
   return encodeCanvas(canvas, thumbnailQuality);
 }
 
-function readCaptureUpload(file: Blob): Promise<string> {
-  if (!manualCaptureUploadTypes.includes(file.type) || file.size > maxManualCaptureUploadBytes) {
-    return Promise.reject(new Error("Invalid capture upload"));
+export async function readCaptureUpload(file: Blob): Promise<string> {
+  if (!manualCaptureSourceTypes.includes(file.type) || file.size > maxManualCaptureSourceBytes) {
+    throw new Error("Invalid capture upload");
   }
 
+  if (file.size > maxManualCaptureUploadBytes) {
+    return compressCaptureUpload(file);
+  }
+
+  const dataUrl = await readBlobAsDataUrl(file);
+  if (!isUploadImageDataUrl(dataUrl)) {
+    throw new Error("Invalid capture upload data URL");
+  }
+
+  if (dataUrl.length <= maxClientScreenshotDataUrlLength) {
+    return dataUrl;
+  }
+
+  return compressCaptureUpload(file);
+}
+
+function readBlobAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = async () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      if (!isSafeImageDataUrl(result)) {
-        reject(new Error("Invalid capture upload data URL"));
-        return;
-      }
-
-      const normalized = result.length > maxClientScreenshotDataUrlLength
-        ? await resizeImageDataUrl(result, maxManualCaptureDimension, screenshotQuality)
-        : result;
-      if (normalized && normalized.length <= maxClientScreenshotDataUrlLength) {
-        resolve(normalized);
-        return;
-      }
-
-      reject(new Error("Capture upload is too large"));
-    };
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
     reader.onerror = () => reject(new Error("Unable to read capture upload"));
     reader.readAsDataURL(file);
   });
+}
+
+function isUploadImageDataUrl(value: string): boolean {
+  return /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=\s]+$/i.test(value);
+}
+
+async function compressCaptureUpload(file: Blob): Promise<string> {
+  for (const attempt of manualCaptureCompressionAttempts) {
+    const compressed = await resizeImageBlob(file, attempt.maxDimension, attempt.quality);
+    if (compressed && compressed.length <= maxClientScreenshotDataUrlLength) {
+      return compressed;
+    }
+  }
+
+  throw new Error("Capture upload is too large");
+}
+
+async function resizeImageBlob(file: Blob, maxDimension: number, quality: number): Promise<string | undefined> {
+  const objectUrl = typeof URL !== "undefined" && typeof URL.createObjectURL === "function"
+    ? URL.createObjectURL(file)
+    : undefined;
+
+  try {
+    if (objectUrl) {
+      return resizeImageDataUrl(objectUrl, maxDimension, quality);
+    }
+
+    const dataUrl = await readBlobAsDataUrl(file);
+    return resizeImageDataUrl(dataUrl, maxDimension, quality);
+  } finally {
+    if (objectUrl && typeof URL.revokeObjectURL === "function") {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+}
+
+function canReadClipboardImages(): boolean {
+  const clipboard = navigator.clipboard as { read?: unknown } | undefined;
+  return typeof clipboard?.read === "function" && !isIosBrowser();
+}
+
+function isIosBrowser(): boolean {
+  const platform = navigator.platform ?? "";
+  const userAgent = navigator.userAgent ?? "";
+  return /iPad|iPhone|iPod/.test(platform)
+    || /iPad|iPhone|iPod/.test(userAgent)
+    || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
 function resizeCanvasToMax(source: HTMLCanvasElement, maxDimension: number): HTMLCanvasElement {
@@ -3131,10 +2676,6 @@ function encodeCanvas(canvas: HTMLCanvasElement, quality: number): string {
     : canvas.toDataURL("image/jpeg", quality);
 }
 
-export function shouldSkipAutomaticClientCaptureForPage(documentRef: Document = document): boolean {
-  return Boolean(documentRef.querySelector(".leaflet-container,.ol-viewport,.mapboxgl-map,.maplibregl-map"));
-}
-
 async function feedbackApiErrorDetail(response: Response): Promise<string> {
   try {
     const text = await response.text();
@@ -3144,43 +2685,6 @@ async function feedbackApiErrorDetail(response: Response): Promise<string> {
   } catch {
     return "";
   }
-}
-
-function cropCanvas(source: HTMLCanvasElement, area: CaptureArea): HTMLCanvasElement {
-  const ratio = window.devicePixelRatio || 1;
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(area.width * ratio));
-  canvas.height = Math.max(1, Math.round(area.height * ratio));
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    return source;
-  }
-
-  context.drawImage(
-    source,
-    Math.round(area.x * ratio),
-    Math.round(area.y * ratio),
-    canvas.width,
-    canvas.height,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-  return canvas;
-}
-
-function maskSensitiveFields(enabled: boolean): void {
-  document.querySelectorAll<HTMLElement>("input, textarea, select, [contenteditable='true'], [data-changethis-mask], [data-changethis-exclude]").forEach((element) => {
-    if (enabled) {
-      element.dataset.changethisPreviousVisibility = element.style.visibility;
-      element.style.visibility = "hidden";
-    } else {
-      element.style.visibility = element.dataset.changethisPreviousVisibility ?? "";
-      delete element.dataset.changethisPreviousVisibility;
-    }
-  });
 }
 
 function pinViewportPosition(pin: PinTarget): { x: number; y: number } {
@@ -4026,21 +3530,6 @@ function removeWidgetRoot(): void {
 
 function isWidgetShortcut(event: KeyboardEvent): boolean {
   return event.altKey && event.shiftKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "f";
-}
-
-function prefersViewportCapture(): boolean {
-  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches === true;
-  const smallViewport = window.matchMedia?.("(max-width: 640px)").matches === true || window.innerWidth <= 640;
-  return coarsePointer || smallViewport;
-}
-
-function currentViewportCaptureArea(): CaptureArea {
-  return {
-    x: 0,
-    y: 0,
-    width: Math.max(1, Math.round(window.innerWidth)),
-    height: Math.max(1, Math.round(window.innerHeight))
-  };
 }
 
 function normalizeWidgetTitle(value: string | undefined, fallback: string | undefined): string | undefined {
