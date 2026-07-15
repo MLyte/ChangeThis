@@ -482,7 +482,7 @@ test("initChangeThis skips disabled display mode", async () => {
   assert.equal(createElementCalls, 0);
 });
 
-test("initChangeThis renders a pin visibility toggle on the pin tab", async () => {
+test("initChangeThis ignores the temporarily disabled pin mode", async () => {
   let appendedRoot: FakeElement | undefined;
   const viewUrl = "https://client.example.test/page";
   const sentPins = [{
@@ -558,17 +558,12 @@ test("initChangeThis renders a pin visibility toggle on the pin tab", async () =
 
   const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
 
-  assert.match(html, /class="selection-header"[\s\S]*data-action="add-pin"[\s\S]*class="pin-meta-row"/);
-  assert.match(html, /Pins \(1\)/);
-  assert.match(html, /data-action="toggle-pins"/);
-  assert.match(html, /Hide all pins/);
-  assert.match(html, /<div class="pin" data-pin-index="0" data-status="sent"/);
-
-  appendedRoot?.shadowRoot?.querySelector("[data-action='toggle-pins']")?.click();
-  const hiddenHtml = appendedRoot?.shadowRoot?.innerHTML ?? "";
-
-  assert.match(hiddenHtml, /Show all pins/);
-  assert.doesNotMatch(hiddenHtml, /<div class="pin" data-pin-index="0" data-status="sent"/);
+  assert.match(html, /data-mode="comment"/);
+  assert.match(html, /data-mode="screenshot"/);
+  assert.doesNotMatch(html, /data-mode="pin"/);
+  assert.doesNotMatch(html, /data-action="add-pin"/);
+  assert.doesNotMatch(html, /data-action="toggle-pins"/);
+  assert.doesNotMatch(html, /<div class="pin"/);
 });
 
 test("initChangeThis renders configured title and enabled modes", async () => {
@@ -651,7 +646,7 @@ test("initChangeThis renders configured title and enabled modes", async () => {
   assert.doesNotMatch(html, /data-mode="screenshot"/);
 });
 
-test("initChangeThis keeps pin and capture modes on touch viewports", async () => {
+test("initChangeThis keeps comment and capture modes on touch viewports", async () => {
   let appendedRoot: FakeElement | undefined;
   const documentRef = {
     currentScript: null,
@@ -720,7 +715,7 @@ test("initChangeThis keeps pin and capture modes on touch viewports", async () =
 
   assert.match(html, /data-advanced="true"/);
   assert.match(html, /data-mode="comment"/);
-  assert.match(html, /data-mode="pin"/);
+  assert.doesNotMatch(html, /data-mode="pin"/);
   assert.match(html, /data-mode="screenshot"/);
 });
 

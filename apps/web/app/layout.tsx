@@ -4,6 +4,7 @@ import "./styles.css";
 import { AppToaster } from "./app-toaster";
 import { HiddenProjectShortcut } from "./hidden-project-shortcut";
 import { LanguageProvider } from "./i18n";
+import { isChangeThisWidgetEnabled } from "../lib/widget-availability";
 
 export const metadata: Metadata = {
   title: "ChangeThis",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 const betaFeedbackProjectKey = process.env.NEXT_PUBLIC_CHANGETHIS_PROJECT_KEY?.trim();
+const betaFeedbackWidgetEnabled = isChangeThisWidgetEnabled();
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -21,7 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <HiddenProjectShortcut />
           <AppToaster />
         </LanguageProvider>
-        {betaFeedbackProjectKey ? (
+        {betaFeedbackWidgetEnabled && betaFeedbackProjectKey ? (
           <Script
             id="changethis-beta-feedback-widget"
             src="/widget.js"

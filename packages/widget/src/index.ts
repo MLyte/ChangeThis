@@ -93,7 +93,8 @@ const manualCaptureCompressionAttempts = [
   { maxDimension: 720, quality: 0.58 }
 ];
 const thumbnailQuality = 0.74;
-const defaultWidgetModes: WidgetMode[] = ["comment", "pin", "screenshot"];
+// Pin placement is temporarily disabled until its positioning is reliable again.
+const defaultWidgetModes: WidgetMode[] = ["comment", "screenshot"];
 const maxWidgetTitleLength = 240;
 const widgetConfigStartupTimeoutMs = 700;
 const changethisHandLogoSvg = '<svg class="brand-logo-icon" aria-hidden="true" viewBox="14 1 17 23" role="img"><g transform="rotate(180 22.5 12)"><path d="M19 1h2v1h1v4h2v1h3v1h2v1h1v1h1v7h-1v3h-1v3H19v-3h-1v-2h-1v-2h-1v-2h-1v-1h-1v-3h3v1h1V2h1"/><path fill="#fff" d="M21 2v9h1V7h2v4h1V8h2v4h1V9h1v1h1v7h-1v3h-1v2h-8v-2h-1v-2h-1v-2h-1v-2h-1v-1h-1v-2h2v1h1v1h1V2"/></g></svg>';
@@ -284,6 +285,7 @@ export function initChangeThis(options: WidgetOptions): void {
   const advancedModesEnabled = true;
   const enabledModes = configuredModes.filter((mode) => mode === "comment" || advancedModesEnabled);
   const activeModes: WidgetMode[] = enabledModes.length > 0 ? enabledModes : ["comment"];
+  const pinsEnabled = activeModes.includes("pin");
   const firstMode: WidgetMode = activeModes[0] ?? "comment";
   const reporterFields = options.reporterFields ?? "optional";
   const appEnvironment = buildAppEnvironment(options);
@@ -438,7 +440,7 @@ export function initChangeThis(options: WidgetOptions): void {
     if (!isModeEnabled(state.type, activeModes)) {
       state.type = firstMode as FeedbackType;
     }
-    const pinMarkers = state.pinsVisible ? state.pins.map((pin, index) => {
+    const pinMarkers = pinsEnabled && state.pinsVisible ? state.pins.map((pin, index) => {
       const position = pinViewportPosition(pin.target);
       return `<div class="pin" data-pin-index="${index}" data-status="${pin.status}" style="left:${position.x}px;top:${position.y}px">${pin.number}</div>`;
     }).join("") : "";
@@ -447,10 +449,10 @@ export function initChangeThis(options: WidgetOptions): void {
     const hasPins = isPinTab && state.pins.length > 0;
     const captureShortcut = captureSystemShortcut(copy);
     const canPasteCapture = canReadClipboardImages();
-    const sentPins = state.pins.filter((pin) => pin.status === "sent");
-    const draftPins = state.pins
+    const sentPins = pinsEnabled ? state.pins.filter((pin) => pin.status === "sent") : [];
+    const draftPins = pinsEnabled ? state.pins
       .map((pin, index) => ({ pin, index }))
-      .filter((entry) => entry.pin.status === "draft");
+      .filter((entry) => entry.pin.status === "draft") : [];
     const draftNotes = state.noteMessage.trim() ? [{
       id: "note-draft",
       title: copy.note,
@@ -3583,7 +3585,7 @@ function renderInlineMarkdown(value: string): string {
 }
 
 function normalizeWidgetModes(value: WidgetMode[] | undefined): WidgetMode[] {
-  const modes = value?.filter((mode): mode is WidgetMode => mode === "comment" || mode === "pin" || mode === "screenshot") ?? defaultWidgetModes;
+  const modes = value?.filter((mode): mode is WidgetMode => mode === "comment" || mode === "screenshot") ?? defaultWidgetModes;
   const uniqueModes = defaultWidgetModes.filter((mode) => modes.includes(mode));
   return uniqueModes.length > 0 ? uniqueModes : defaultWidgetModes;
 }

@@ -149,7 +149,10 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 AUTH_MODE=local
 DATA_STORE=file
 CHANGETHIS_DATA_DIR=.changethis-data
+ENABLE_CHANGETHIS_WIDGET=false
 ```
+
+`ENABLE_CHANGETHIS_WIDGET=false` empêche l'injection du widget dans l'application web et évite donc ses appels réseau en local. La variable est activée par défaut lorsqu'elle est absente; redémarrer Next.js après toute modification du fichier `.env`.
 
 Configuration cible interne frontend:
 
@@ -160,6 +163,7 @@ AUTH_MODE=internal
 DATA_STORE=internal
 INTERNAL_API_URL=http://127.0.0.1:8000
 CHANGETHIS_SECRET_KEY=...
+ENABLE_CHANGETHIS_WIDGET=true
 ```
 
 Le backend FastAPI utilise son propre fichier d'environnement avec `DATABASE_URL`, `SESSION_SECRET`, `CHANGETHIS_SECRET_KEY` et `ALLOWED_PUBLIC_ORIGINS`. Voir [docs/internal-ubuntu24-install.fr.md](docs/internal-ubuntu24-install.fr.md).

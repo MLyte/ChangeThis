@@ -112,7 +112,6 @@ const defaultWidgetTitle = "Que faut-il changer ?";
 const maxWidgetTitleLength = 240;
 const widgetModeOptions: Array<{ label: string; value: WidgetMode }> = [
   { label: "Retour page", value: "comment" },
-  { label: "Pin", value: "pin" },
   { label: "Capture", value: "screenshot" }
 ];
 
@@ -167,7 +166,7 @@ export function IssueDestinationSetup({
   const [siteWidgetButtonPosition, setSiteWidgetButtonPosition] = useState<WidgetButtonPosition>("bottom-right");
   const [siteWidgetReporterFields, setSiteWidgetReporterFields] = useState<WidgetReporterFields>("optional");
   const [siteWidgetTitle, setSiteWidgetTitle] = useState(defaultWidgetTitle);
-  const [siteWidgetModes, setSiteWidgetModes] = useState<WidgetMode[]>(["comment", "pin", "screenshot"]);
+  const [siteWidgetModes, setSiteWidgetModes] = useState<WidgetMode[]>(["comment", "screenshot"]);
   const [siteIssueCreationMode, setSiteIssueCreationMode] = useState<IssueCreationMode>("manual");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
@@ -218,12 +217,15 @@ export function IssueDestinationSetup({
           return;
         }
 
-        const body = await response.json() as unknown;
+        const body = await parseJsonResponse<unknown>(response);
 
         if (!response.ok) {
           setRepositoryOptions([]);
           setRepositoryLoadState("error");
-          setRepositoryLoadMessage(repositoryErrorMessage(body) ?? "Impossible de charger les dépôts. La saisie URL reste disponible en secours.");
+          setRepositoryLoadMessage(repositoryErrorMessage(body) ?? repositoryResponseErrorMessage(
+            response,
+            "Impossible de charger les dépôts. La saisie URL reste disponible en secours."
+          ));
           return;
         }
 
@@ -360,7 +362,7 @@ export function IssueDestinationSetup({
         setSiteWidgetButtonPosition("bottom-right");
         setSiteWidgetReporterFields("optional");
         setSiteWidgetTitle(defaultWidgetTitle);
-        setSiteWidgetModes(["comment", "pin", "screenshot"]);
+        setSiteWidgetModes(["comment", "screenshot"]);
         setSiteIssueCreationMode("manual");
         setIsSiteModalOpen(false);
         toast.success("Site connecté", {
@@ -1267,14 +1269,14 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
         },
         signal
       });
-      const body = await response.json() as unknown;
+      const body = await parseJsonResponse<unknown>(response);
 
       if (!response.ok) {
         const errorState: ConnectionTestResult = {
           state: "error",
           message: integration.provider === "gitlab"
-            ? repositoryErrorMessage(body) ?? "Token enregistré. Avec un Project Access Token, collez l'URL du projet dans Sites connectés pour valider le dépôt cible."
-            : repositoryErrorMessage(body) ?? "Connexion impossible. Vérifiez le token ou les permissions.",
+            ? repositoryErrorMessage(body) ?? repositoryResponseErrorMessage(response, "GitLab ne renvoie pas une réponse exploitable. Vérifiez l'URL de l'instance, le token et le proxy.")
+            : repositoryErrorMessage(body) ?? repositoryResponseErrorMessage(response, "Connexion impossible. Vérifiez le token ou les permissions."),
           checkedAt: new Date()
         };
         setConnectionStates((current) => ({
@@ -2858,9 +2860,9 @@ function normalizeWidgetTitle(value: string | undefined): string {
 }
 
 function normalizeWidgetModes(value: WidgetMode[] | undefined): WidgetMode[] {
-  const modes = value?.filter((mode): mode is WidgetMode => mode === "comment" || mode === "pin" || mode === "screenshot") ?? ["comment", "pin", "screenshot"];
+  const modes = value?.filter((mode): mode is WidgetMode => mode === "comment" || mode === "screenshot") ?? ["comment", "screenshot"];
   const uniqueModes = widgetModeOptions.map((option) => option.value).filter((mode) => modes.includes(mode));
-  return uniqueModes.length > 0 ? uniqueModes : ["comment", "pin", "screenshot"];
+  return uniqueModes.length > 0 ? uniqueModes : ["comment", "screenshot"];
 }
 
 function repositoryErrorMessage(value: unknown): string | undefined {
@@ -2869,6 +2871,26 @@ function repositoryErrorMessage(value: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+function repositoryResponseErrorMessage(response: Response, fallback: string): string {
+  if (response.status === 401) {
+    return "Token refusé par GitLab. Vérifiez que le token est encore valide et possède le scope api.";
+  }
+
+  if (response.status === 403) {
+    return "GitLab accepte le token, mais refuse l'accès aux projets ou aux issues. Vérifiez les droits du compte et le scope api.";
+  }
+
+  if (response.status === 404) {
+    return "Instance ou projet GitLab introuvable. Vérifiez l'URL de l'instance configurée dans ChangeThis.";
+  }
+
+  if (response.status >= 500) {
+    return `GitLab ou le proxy a renvoyé une erreur HTTP ${response.status}. Vérifiez les logs serveur et la configuration du proxy après la mise à jour GitLab.`;
+  }
+
+  return `${fallback} HTTP ${response.status}.`;
 }
 
 function splitFullName(value?: string): { namespace: string; project: string } | undefined {
