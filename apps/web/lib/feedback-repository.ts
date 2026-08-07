@@ -12,6 +12,8 @@ import type {
   IssueProvider,
   IssueTarget
 } from "@changethis/shared";
+import { getInternalApiUrl, getInternalSessionCookieHeader } from "./internal-api";
+import { getDataStoreMode } from "./runtime";
 
 export type StoredFeedback = {
   id: string;
@@ -123,7 +125,7 @@ let repository: FeedbackRepository | undefined;
 let fileLock: Promise<unknown> = Promise.resolve();
 
 export function getFeedbackRepository(): FeedbackRepository {
-  repository ??= new FileFeedbackRepository(localDataFile);
+  repository ??= getDataStoreMode() === "internal" ? new InternalFeedbackRepository() : new FileFeedbackRepository(localDataFile);
   return repository;
 }
 
@@ -430,6 +432,419 @@ export class FileFeedbackRepository implements FeedbackRepository {
     fileLock = next.catch(() => undefined);
     return next;
   }
+}
+
+type InternalAssetRow = {
+  id?: unknown;
+  feedback_id?: unknown;
+  kind?: unknown;
+  mime_type?: unknown;
+  bytes?: unknown;
+  data_url?: unknown;
+  thumbnail_data_url?: unknown;
+  storage_path?: unknown;
+  hash?: unknown;
+  status?: unknown;
+  last_used_at?: unknown;
+  usage_count?: unknown;
+  archived_at?: unknown;
+  deleted_at?: unknown;
+  created_at?: unknown;
+};
+
+type InternalExternalIssueRow = {
+  provider?: unknown;
+  id?: unknown;
+  iid?: unknown;
+  number?: unknown;
+  url?: unknown;
+  state?: unknown;
+};
+
+type InternalIssueTargetRow = {
+  provider?: unknown;
+  namespace?: unknown;
+  project_name?: unknown;
+  integration_id?: unknown;
+  external_project_id?: unknown;
+  web_url?: unknown;
+};
+
+type InternalIssueDraftRow = {
+  title?: unknown;
+  description?: unknown;
+  labels?: unknown;
+};
+
+type InternalFeedbackRow = {
+  id?: unknown;
+  project_key?: unknown;
+  workspace_id?: unknown;
+  project_name?: unknown;
+  issue_target?: InternalIssueTargetRow | null;
+  payload?: unknown;
+  issue_draft?: InternalIssueDraftRow | null;
+  status?: unknown;
+  screenshot_asset?: InternalAssetRow | null;
+  browser_capture_asset?: InternalAssetRow | null;
+  external_issue?: InternalExternalIssueRow | null;
+  last_error?: unknown;
+  retry_count?: unknown;
+  next_retry_at?: unknown;
+  created_at?: unknown;
+  updated_at?: unknown;
+};
+
+type InternalFeedbackEventRow = {
+  id?: unknown;
+  feedback_id?: unknown;
+  from_status?: unknown;
+  to_status?: unknown;
+  reason?: unknown;
+  provider?: unknown;
+  external_url?: unknown;
+  created_at?: unknown;
+};
+
+export class InternalFeedbackRepository implements FeedbackRepository {
+  async create(input: CreateFeedbackInput): Promise<StoredFeedback> {
+    const origin = input.payload.metadata.origin ?? safeOriginFromUrl(input.payload.metadata.url);
+    const row = await internalFeedbackRequest<InternalFeedbackRow>("/public/feedback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(origin ? { Origin: origin } : {})
+      },
+      body: JSON.stringify({
+        projectKey: input.projectKey,
+        type: input.payload.type,
+        message: input.payload.message,
+        reporter: input.payload.reporter,
+        metadata: input.payload.metadata,
+        pin: input.payload.pin,
+        pins: input.payload.pins,
+        captureArea: input.payload.captureArea,
+        screenshotDataUrl: input.screenshotDataUrl,
+        screenshotThumbnailDataUrl: input.payload.screenshotThumbnailDataUrl,
+        screenshotSource: input.payload.screenshotSource,
+        issueDraft: input.issueDraft
+      })
+    });
+    return mapInternalFeedback(row);
+  }
+
+  async list(filters: { projectKey?: string; status?: FeedbackStatus; workspaceId?: string } = {}): Promise<StoredFeedback[]> {
+    const params = new URLSearchParams();
+    if (filters.workspaceId) {
+      params.set("workspace_id", filters.workspaceId);
+    }
+    if (filters.projectKey) {
+      params.set("project_key", filters.projectKey);
+    }
+    if (filters.status) {
+      params.set("status", filters.status);
+    }
+
+    const rows = await internalFeedbackRequest<InternalFeedbackRow[]>(`/feedbacks?${params.toString()}`);
+    return rows.map(mapInternalFeedback);
+  }
+
+  async get(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback | undefined> {
+    const params = new URLSearchParams();
+    if (filters.workspaceId) {
+      params.set("workspace_id", filters.workspaceId);
+    }
+
+    const response = await internalFeedbackFetch(`/feedbacks/${encodeURIComponent(id)}?${params.toString()}`);
+    if (response.status === 404) {
+      return undefined;
+    }
+    if (!response.ok) {
+      throw new Error(await readInternalFeedbackErrorMessage(response));
+    }
+
+    return mapInternalFeedback((await response.json()) as InternalFeedbackRow);
+  }
+
+  async updateIssueDraft(id: string, issueDraft: IssueDraft, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    const row = await internalFeedbackRequest<InternalFeedbackRow>(`/feedbacks/${encodeURIComponent(id)}/issue-draft`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workspace_id: filters.workspaceId,
+        title: issueDraft.title,
+        description: issueDraft.description,
+        labels: issueDraft.labels
+      })
+    });
+    return mapInternalFeedback(row);
+  }
+
+  async updateReporter(id: string, reporter: FeedbackReporter | undefined, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    const current = await this.requireExisting(id, filters);
+    const issueDraft = buildIssueDraft({ ...current.payload, reporter });
+
+    const row = await internalFeedbackRequest<InternalFeedbackRow>(`/feedbacks/${encodeURIComponent(id)}/reporter`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspace_id: filters.workspaceId, reporter, issue_draft: issueDraft })
+    });
+    return mapInternalFeedback(row);
+  }
+
+  async markIssueCreationPending(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.postAction(id, "issue-pending", filters.workspaceId);
+  }
+
+  async recordIssueAttempt(id: string, result: IssueAttemptResult, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    const body = result.ok
+      ? { workspace_id: filters.workspaceId, ok: true, external_issue: result.externalIssue }
+      : {
+          workspace_id: filters.workspaceId,
+          ok: false,
+          error: result.error,
+          retryable: result.retryable,
+          next_retry_at: result.nextRetryAt
+        };
+
+    const row = await internalFeedbackRequest<InternalFeedbackRow>(`/feedbacks/${encodeURIComponent(id)}/issue-attempt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    return mapInternalFeedback(row);
+  }
+
+  async recordExternalIssueState(id: string, externalIssue: ExternalIssueRef, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    const row = await internalFeedbackRequest<InternalFeedbackRow>(`/feedbacks/${encodeURIComponent(id)}/external-issue-state`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspace_id: filters.workspaceId, ...externalIssue })
+    });
+    return mapInternalFeedback(row);
+  }
+
+  async markKept(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.postAction(id, "keep", filters.workspaceId);
+  }
+
+  async markResolved(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.postAction(id, "resolve", filters.workspaceId);
+  }
+
+  async markIgnored(id: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    return this.postAction(id, "ignore", filters.workspaceId);
+  }
+
+  async recordBrowserCapture(id: string, dataUrl: string, filters: { workspaceId?: string } = {}): Promise<StoredFeedback> {
+    const row = await internalFeedbackRequest<InternalFeedbackRow>(`/feedbacks/${encodeURIComponent(id)}/browser-capture`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspace_id: filters.workspaceId, data_url: dataUrl })
+    });
+    return mapInternalFeedback(row);
+  }
+
+  async dueForRetry(filters: Date | { workspaceId?: string; now?: Date } = {}): Promise<StoredFeedback[]> {
+    const normalized = filters instanceof Date ? { now: filters } : filters;
+    const params = new URLSearchParams();
+    if (normalized.workspaceId) {
+      params.set("workspace_id", normalized.workspaceId);
+    }
+    if (normalized.now) {
+      params.set("now", normalized.now.toISOString());
+    }
+
+    const rows = await internalFeedbackRequest<InternalFeedbackRow[]>(`/feedbacks/due-for-retry?${params.toString()}`);
+    return rows.map(mapInternalFeedback);
+  }
+
+  async events(feedbackId: string, filters: { workspaceId?: string } = {}): Promise<FeedbackEvent[]> {
+    const params = new URLSearchParams();
+    if (filters.workspaceId) {
+      params.set("workspace_id", filters.workspaceId);
+    }
+
+    const response = await internalFeedbackFetch(`/feedbacks/${encodeURIComponent(feedbackId)}/events?${params.toString()}`);
+    if (response.status === 404) {
+      return [];
+    }
+    if (!response.ok) {
+      throw new Error(await readInternalFeedbackErrorMessage(response));
+    }
+
+    const rows = (await response.json()) as InternalFeedbackEventRow[];
+    return rows.map(mapInternalFeedbackEvent);
+  }
+
+  async clearWorkspace(workspaceId: string): Promise<{ feedbacks: number; events: number }> {
+    const params = new URLSearchParams({ workspace_id: workspaceId });
+    return internalFeedbackRequest<{ feedbacks: number; events: number }>(`/feedbacks?${params.toString()}`, { method: "DELETE" });
+  }
+
+  async cleanupScreenshotAssets(policy: ScreenshotCleanupPolicy = {}): Promise<ScreenshotCleanupResult> {
+    return internalFeedbackRequest<ScreenshotCleanupResult>("/feedbacks/cleanup-screenshots", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.CHANGETHIS_CRON_SECRET ?? process.env.CHANGETHIS_SECRET_KEY ?? ""}`
+      },
+      body: JSON.stringify({
+        archive_after_days: policy.archiveAfterDays ?? 30,
+        delete_after_days: policy.deleteAfterDays ?? 90,
+        min_archive_bytes: policy.minArchiveBytes ?? 1_000_000
+      })
+    });
+  }
+
+  private async postAction(id: string, action: string, workspaceId: string | undefined): Promise<StoredFeedback> {
+    const row = await internalFeedbackRequest<InternalFeedbackRow>(`/feedbacks/${encodeURIComponent(id)}/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspace_id: workspaceId })
+    });
+    return mapInternalFeedback(row);
+  }
+
+  private async requireExisting(id: string, filters: { workspaceId?: string }): Promise<StoredFeedback> {
+    const feedback = await this.get(id, filters);
+    if (!feedback) {
+      throw new Error(`Feedback ${id} was not found`);
+    }
+    return feedback;
+  }
+}
+
+async function internalFeedbackFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const cookieHeader = await getInternalSessionCookieHeader();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(init.headers as Record<string, string> | undefined)
+  };
+
+  if (cookieHeader && !headers.Authorization) {
+    headers.Cookie = cookieHeader;
+  }
+
+  return fetch(`${getInternalApiUrl()}${path}`, { ...init, headers, cache: "no-store" });
+}
+
+async function internalFeedbackRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await internalFeedbackFetch(path, init);
+  if (!response.ok) {
+    throw new Error(await readInternalFeedbackErrorMessage(response));
+  }
+  return (await response.json()) as T;
+}
+
+async function readInternalFeedbackErrorMessage(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: unknown; error?: unknown };
+    if (typeof body.detail === "string") {
+      return body.detail;
+    }
+    if (typeof body.error === "string") {
+      return body.error;
+    }
+  } catch {
+    // Keep the generic message when the API does not return JSON.
+  }
+  return `Feedback request failed with status ${response.status}`;
+}
+
+function safeOriginFromUrl(value: string): string | undefined {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function mapInternalAsset(row: InternalAssetRow | null | undefined): StoredAsset | undefined {
+  if (!row) {
+    return undefined;
+  }
+
+  return {
+    id: String(row.id),
+    feedbackId: String(row.feedback_id),
+    kind: row.kind as FeedbackScreenshotSource | undefined,
+    mimeType: String(row.mime_type),
+    bytes: Number(row.bytes ?? 0),
+    dataUrl: typeof row.data_url === "string" ? row.data_url : undefined,
+    thumbnailDataUrl: typeof row.thumbnail_data_url === "string" ? row.thumbnail_data_url : undefined,
+    storagePath: typeof row.storage_path === "string" ? row.storage_path : undefined,
+    hash: typeof row.hash === "string" ? row.hash : undefined,
+    status: (row.status as StoredAsset["status"] | undefined) ?? "active",
+    lastUsedAt: typeof row.last_used_at === "string" ? row.last_used_at : undefined,
+    usageCount: Number(row.usage_count ?? 0),
+    archivedAt: typeof row.archived_at === "string" ? row.archived_at : undefined,
+    deletedAt: typeof row.deleted_at === "string" ? row.deleted_at : undefined,
+    createdAt: typeof row.created_at === "string" ? row.created_at : new Date().toISOString()
+  };
+}
+
+function mapInternalExternalIssue(row: InternalExternalIssueRow | null | undefined): ExternalIssueRef | undefined {
+  if (!row) {
+    return undefined;
+  }
+
+  return {
+    provider: row.provider as IssueProvider,
+    id: typeof row.id === "string" ? row.id : undefined,
+    iid: typeof row.iid === "number" ? row.iid : undefined,
+    number: typeof row.number === "number" ? row.number : undefined,
+    url: String(row.url),
+    state: row.state as "open" | "closed" | undefined
+  };
+}
+
+function mapInternalFeedback(row: InternalFeedbackRow): StoredFeedback {
+  const issueTargetRow = row.issue_target;
+  const issueDraftRow = row.issue_draft;
+
+  return {
+    id: String(row.id),
+    projectKey: String(row.project_key),
+    workspaceId: typeof row.workspace_id === "string" ? row.workspace_id : undefined,
+    projectName: String(row.project_name),
+    issueTarget: {
+      provider: (issueTargetRow?.provider as IssueProvider) ?? "github",
+      namespace: typeof issueTargetRow?.namespace === "string" ? issueTargetRow.namespace : "",
+      project: typeof issueTargetRow?.project_name === "string" ? issueTargetRow.project_name : "",
+      integrationId: typeof issueTargetRow?.integration_id === "string" ? issueTargetRow.integration_id : undefined,
+      externalProjectId: typeof issueTargetRow?.external_project_id === "string" ? issueTargetRow.external_project_id : undefined,
+      webUrl: typeof issueTargetRow?.web_url === "string" ? issueTargetRow.web_url : undefined
+    },
+    payload: row.payload as FeedbackPayload,
+    issueDraft: {
+      title: typeof issueDraftRow?.title === "string" ? issueDraftRow.title : "",
+      description: typeof issueDraftRow?.description === "string" ? issueDraftRow.description : "",
+      labels: Array.isArray(issueDraftRow?.labels) ? issueDraftRow.labels.filter((label): label is string => typeof label === "string") : []
+    },
+    status: row.status as FeedbackStatus,
+    screenshotAsset: mapInternalAsset(row.screenshot_asset),
+    browserCaptureAsset: mapInternalAsset(row.browser_capture_asset),
+    externalIssue: mapInternalExternalIssue(row.external_issue),
+    lastError: typeof row.last_error === "string" ? row.last_error : undefined,
+    retryCount: Number(row.retry_count ?? 0),
+    nextRetryAt: typeof row.next_retry_at === "string" ? row.next_retry_at : undefined,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at)
+  };
+}
+
+function mapInternalFeedbackEvent(row: InternalFeedbackEventRow): FeedbackEvent {
+  return {
+    id: String(row.id),
+    feedbackId: String(row.feedback_id),
+    fromStatus: row.from_status as FeedbackStatus | undefined,
+    toStatus: row.to_status as FeedbackStatus,
+    reason: typeof row.reason === "string" ? row.reason : undefined,
+    provider: row.provider as IssueProvider | undefined,
+    externalUrl: typeof row.external_url === "string" ? row.external_url : undefined,
+    createdAt: String(row.created_at)
+  };
 }
 
 function canCleanupFeedbackStatus(status: FeedbackStatus): boolean {

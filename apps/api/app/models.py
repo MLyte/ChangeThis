@@ -225,6 +225,19 @@ class Feedback(TimestampMixin, Base):
     screenshot_usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     screenshot_archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     screenshot_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    screenshot_kind: Mapped[str | None] = mapped_column(Text)
+    browser_capture_mime_type: Mapped[str | None] = mapped_column(Text)
+    browser_capture_bytes: Mapped[int | None] = mapped_column(Integer)
+    browser_capture_data_url: Mapped[str | None] = mapped_column(Text)
+    browser_capture_thumbnail_data_url: Mapped[str | None] = mapped_column(Text)
+    browser_capture_storage_path: Mapped[str | None] = mapped_column(Text)
+    browser_capture_hash: Mapped[str | None] = mapped_column(Text)
+    browser_capture_status: Mapped[str] = mapped_column(Text, default="active", nullable=False)
+    browser_capture_last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    browser_capture_usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    browser_capture_archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    browser_capture_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    browser_capture_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class FeedbackStatusEvent(Base):
