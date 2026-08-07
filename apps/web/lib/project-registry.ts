@@ -20,6 +20,8 @@ import {
   workspaceDemoProjectName,
   type ChangeThisProject
 } from "./demo-project";
+import { getInternalApiUrl, getInternalSessionCookieHeader } from "./internal-api";
+import { getDataStoreMode } from "./runtime";
 
 type StoredConnectedSite = Site & {
   issueTarget: IssueTarget;
@@ -82,6 +84,15 @@ const localDataFile = path.join(localDataDir, "connected-sites.json");
 let lock: Promise<unknown> = Promise.resolve();
 
 export async function listConfiguredProjects(workspaceId?: string): Promise<ChangeThisProject[]> {
+  if (usesInternalProjectRegistry()) {
+    if (!workspaceId) {
+      return [];
+    }
+
+    const rows = await internalRequest<InternalSiteRow[]>(`/sites?${new URLSearchParams({ workspace_id: workspaceId }).toString()}`);
+    return rows.map(mapInternalSite);
+  }
+
   const store = await readStore();
   return store.sites
     .filter((site) => !workspaceId || site.workspaceId === workspaceId)
@@ -93,6 +104,20 @@ export async function findConfiguredProjectByKey(
   projectKey: string,
   workspaceId?: string
 ): Promise<ChangeThisProject | undefined> {
+  if (usesInternalProjectRegistry()) {
+    if (workspaceId) {
+      const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === projectKey);
+      return project ?? (projectKey === demoProject.publicKey ? demoProject : undefined);
+    }
+
+    const row = await internalRequest<InternalSiteRow>(`/public/projects/${encodeURIComponent(projectKey)}`, { auth: false, allow404: true });
+    if (row) {
+      return mapInternalSite(row);
+    }
+
+    return projectKey === demoProject.publicKey ? demoProject : undefined;
+  }
+
   const project = (await listConfiguredProjects(workspaceId)).find((item) => item.publicKey === projectKey);
   if (project) {
     return project;
@@ -130,21 +155,62 @@ export async function createConnectedSite(input: CreateConnectedSiteInput): Prom
   }
 
   const workspaceId = input.workspaceId ?? localWorkspace.id;
+  const publicKey = `ct_${crypto.randomUUID().replaceAll("-", "")}`;
+  const name = normalizeSiteName(input.name) ?? issueTarget.project;
+  const widgetLocale = input.widgetLocale ?? "fr";
+  const widgetButtonPosition = input.widgetButtonPosition ?? "bottom-right";
+  const widgetButtonVariant = input.widgetButtonVariant ?? "default";
+  const widgetDisplayMode = input.widgetDisplayMode ?? widgetDisplayModeFromVariant(input.widgetButtonVariant);
+  const widgetReporterFields = input.widgetReporterFields ?? "optional";
+  const widgetTitle = normalizeWidgetTitle(input.widgetTitle);
+  const widgetModes = normalizeWidgetModes(input.widgetModes);
+  const issueCreationMode = input.issueCreationMode ?? "manual";
+
+  if (usesInternalProjectRegistry()) {
+    const row = await internalRequest<InternalSiteRow>("/sites", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workspace_id: workspaceId,
+        public_key: publicKey,
+        name,
+        allowed_origins: [allowedOrigin],
+        widget_locale: widgetLocale,
+        widget_button_position: widgetButtonPosition,
+        widget_button_variant: widgetButtonVariant,
+        widget_display_mode: widgetDisplayMode,
+        widget_reporter_fields: widgetReporterFields,
+        widget_title: widgetTitle,
+        widget_modes: widgetModes,
+        issue_creation_mode: issueCreationMode,
+        issue_target: {
+          provider: issueTarget.provider,
+          namespace: issueTarget.namespace,
+          project_name: issueTarget.project,
+          integration_id: issueTarget.integrationId,
+          external_project_id: issueTarget.externalProjectId,
+          web_url: issueTarget.webUrl
+        }
+      })
+    });
+    return mapInternalSite(row);
+  }
+
   const now = new Date().toISOString();
   const site: StoredConnectedSite = {
     id: `site_${crypto.randomUUID()}`,
     workspaceId,
-    publicKey: `ct_${crypto.randomUUID().replaceAll("-", "")}`,
-    name: normalizeSiteName(input.name) ?? issueTarget.project,
+    publicKey,
+    name,
     allowedOrigins: [allowedOrigin],
-    widgetLocale: input.widgetLocale ?? "fr",
-    widgetButtonPosition: input.widgetButtonPosition ?? "bottom-right",
-    widgetButtonVariant: input.widgetButtonVariant ?? "default",
-    widgetDisplayMode: input.widgetDisplayMode ?? widgetDisplayModeFromVariant(input.widgetButtonVariant),
-    widgetReporterFields: input.widgetReporterFields ?? "optional",
-    widgetTitle: normalizeWidgetTitle(input.widgetTitle),
-    widgetModes: normalizeWidgetModes(input.widgetModes),
-    issueCreationMode: input.issueCreationMode ?? "manual",
+    widgetLocale,
+    widgetButtonPosition,
+    widgetButtonVariant,
+    widgetDisplayMode,
+    widgetReporterFields,
+    widgetTitle,
+    widgetModes,
+    issueCreationMode,
     issueTarget,
     createdAt: now,
     updatedAt: now
@@ -167,6 +233,25 @@ export async function updateProjectWidgetSettings(
 
   if (update.allowedOrigin !== undefined && !allowedOrigin) {
     throw new ProjectTargetValidationError("Site URL must be a valid HTTP origin", 422);
+  }
+
+  if (usesInternalProjectRegistry()) {
+    const row = await internalRequest<InternalSiteRow>(`/sites/${encodeURIComponent(update.projectKey)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        widget_locale: update.widgetLocale,
+        widget_button_position: update.widgetButtonPosition,
+        widget_button_variant: update.widgetButtonVariant,
+        widget_display_mode: update.widgetDisplayMode,
+        widget_reporter_fields: update.widgetReporterFields,
+        widget_title: normalizeWidgetTitle(update.widgetTitle),
+        widget_modes: normalizeWidgetModes(update.widgetModes),
+        issue_creation_mode: update.issueCreationMode,
+        allowed_origin: allowedOrigin
+      })
+    });
+    return mapInternalSite(row);
   }
 
   let updatedProject: ChangeThisProject | undefined;
@@ -205,6 +290,17 @@ export async function updateProjectWidgetSettings(
 }
 
 export async function deleteConnectedSite(projectKey: string, workspaceId?: string): Promise<boolean> {
+  if (usesInternalProjectRegistry()) {
+    const response = await internalFetch(`/sites/${encodeURIComponent(projectKey)}`, { method: "DELETE" });
+    if (response.status === 404) {
+      return false;
+    }
+    if (!response.ok) {
+      throw new ProjectTargetValidationError(await readInternalErrorMessage(response), response.status);
+    }
+    return true;
+  }
+
   let deleted = false;
 
   await updateStore((store) => {
@@ -223,6 +319,13 @@ export async function deleteConnectedSite(projectKey: string, workspaceId?: stri
 }
 
 export async function clearConnectedSites(workspaceId: string): Promise<number> {
+  if (usesInternalProjectRegistry()) {
+    const result = await internalRequest<{ deleted: number }>(`/sites?${new URLSearchParams({ workspace_id: workspaceId }).toString()}`, {
+      method: "DELETE"
+    });
+    return result.deleted;
+  }
+
   let deleted = 0;
 
   await updateStore((store) => {
@@ -257,6 +360,23 @@ export async function saveProjectIssueTarget(update: ProjectIssueTargetUpdate, w
     throw new ProjectTargetValidationError("Repository URL must match the selected provider", 422);
   }
 
+  if (usesInternalProjectRegistry()) {
+    const row = await internalRequest<InternalSiteRow>(`/sites/${encodeURIComponent(update.projectKey)}/issue-target`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project_key: update.projectKey,
+        provider: issueTarget.provider,
+        namespace: issueTarget.namespace,
+        project_name: issueTarget.project,
+        integration_id: issueTarget.integrationId,
+        external_project_id: issueTarget.externalProjectId,
+        web_url: issueTarget.webUrl
+      })
+    });
+    return mapInternalSite(row);
+  }
+
   await updateStore((store) => {
     store.sites = store.sites.map((site) => {
       if (site.publicKey !== update.projectKey || (workspaceId && site.workspaceId !== workspaceId)) {
@@ -282,8 +402,20 @@ export async function isKnownOrigin(origin: string | null): Promise<boolean> {
     return false;
   }
 
+  if (demoProject.allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  if (usesInternalProjectRegistry()) {
+    const result = await internalRequest<{ known: boolean }>(
+      `/public/origins/known?${new URLSearchParams({ origin }).toString()}`,
+      { auth: false }
+    );
+    return result.known;
+  }
+
   const store = await readStore();
-  return demoProject.allowedOrigins.includes(origin) || store.sites.some((site) => site.allowedOrigins.includes(origin));
+  return store.sites.some((site) => site.allowedOrigins.includes(origin));
 }
 
 export function ensureIssueTargetConfigured(project: ChangeThisProject): IssueTarget {
@@ -301,6 +433,129 @@ export function installSnippet(project: string | Pick<ChangeThisProject, "public
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return `<script src="${appUrl}/widget-loader.js" data-project="${projectKey}"></script>`;
+}
+
+type InternalIssueTargetRow = {
+  provider?: unknown;
+  namespace?: unknown;
+  project_name?: unknown;
+  integration_id?: unknown;
+  external_project_id?: unknown;
+  web_url?: unknown;
+};
+
+type InternalSiteRow = {
+  id?: unknown;
+  workspace_id?: unknown;
+  public_key?: unknown;
+  name?: unknown;
+  allowed_origins?: unknown;
+  widget_locale?: unknown;
+  widget_button_position?: unknown;
+  widget_button_variant?: unknown;
+  widget_display_mode?: unknown;
+  widget_reporter_fields?: unknown;
+  widget_title?: unknown;
+  widget_modes?: unknown;
+  issue_creation_mode?: unknown;
+  issue_target?: InternalIssueTargetRow | null;
+  created_at?: unknown;
+  updated_at?: unknown;
+};
+
+function usesInternalProjectRegistry(): boolean {
+  return getDataStoreMode() === "internal";
+}
+
+async function internalFetch(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<Response> {
+  const { auth = true, headers, ...rest } = init;
+  const requestHeaders: Record<string, string> = { Accept: "application/json", ...(headers as Record<string, string> | undefined) };
+
+  if (auth) {
+    const cookieHeader = await getInternalSessionCookieHeader();
+    if (cookieHeader) {
+      requestHeaders.Cookie = cookieHeader;
+    }
+  }
+
+  return fetch(`${getInternalApiUrl()}${path}`, {
+    ...rest,
+    headers: requestHeaders,
+    cache: "no-store"
+  });
+}
+
+async function readInternalErrorMessage(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: unknown; error?: unknown };
+    if (typeof body.detail === "string") {
+      return body.detail;
+    }
+    if (typeof body.error === "string") {
+      return body.error;
+    }
+  } catch {
+    // Keep the generic message when the API does not return JSON.
+  }
+  return "Unable to complete the request";
+}
+
+async function internalRequest<T>(
+  path: string,
+  init: RequestInit & { auth?: boolean; allow404?: boolean } = {}
+): Promise<T> {
+  const { allow404 = false, ...requestInit } = init;
+  const response = await internalFetch(path, requestInit);
+
+  if (allow404 && response.status === 404) {
+    return undefined as T;
+  }
+
+  if (!response.ok) {
+    throw new ProjectTargetValidationError(await readInternalErrorMessage(response), response.status);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+function mapInternalIssueTarget(row: InternalIssueTargetRow | null | undefined): IssueTarget | undefined {
+  if (!row || typeof row.provider !== "string" || typeof row.namespace !== "string" || typeof row.project_name !== "string") {
+    return undefined;
+  }
+
+  return {
+    provider: row.provider as IssueProvider,
+    namespace: row.namespace,
+    project: row.project_name,
+    externalProjectId: typeof row.external_project_id === "string" ? row.external_project_id : undefined,
+    integrationId: typeof row.integration_id === "string" ? row.integration_id : undefined,
+    webUrl: typeof row.web_url === "string" ? row.web_url : undefined
+  };
+}
+
+function mapInternalSite(row: InternalSiteRow): ChangeThisProject {
+  return {
+    id: String(row.id),
+    workspaceId: String(row.workspace_id),
+    publicKey: String(row.public_key),
+    name: String(row.name),
+    allowedOrigins: Array.isArray(row.allowed_origins) ? row.allowed_origins.filter((origin): origin is string => typeof origin === "string") : [],
+    widgetLocale: parseWidgetLocale(row.widget_locale),
+    widgetButtonPosition: parseWidgetButtonPosition(row.widget_button_position),
+    widgetButtonVariant: parseWidgetButtonVariant(row.widget_button_variant),
+    widgetDisplayMode: parseWidgetDisplayMode(row.widget_display_mode),
+    widgetReporterFields: parseWidgetReporterFields(row.widget_reporter_fields),
+    widgetTitle: parseWidgetTitle(row.widget_title),
+    widgetModes: parseWidgetModes(row.widget_modes),
+    issueCreationMode: parseIssueCreationMode(row.issue_creation_mode),
+    issueTarget: mapInternalIssueTarget(row.issue_target) ?? { provider: "github", namespace: "", project: "" },
+    createdAt: typeof row.created_at === "string" ? row.created_at : new Date().toISOString(),
+    updatedAt: typeof row.updated_at === "string" ? row.updated_at : new Date().toISOString()
+  };
 }
 
 export class ProjectTargetValidationError extends Error {
