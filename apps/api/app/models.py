@@ -152,6 +152,9 @@ class ProviderIntegration(TimestampMixin, Base):
 
 class ProviderCredential(TimestampMixin, Base):
     __tablename__ = "provider_integration_credentials"
+    __table_args__ = (
+        Index("provider_integration_credentials_integration_kind_unique", "integration_id", "credential_kind", unique=True),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     integration_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("provider_integrations.id", ondelete="CASCADE"), nullable=False)

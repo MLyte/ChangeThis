@@ -363,3 +363,44 @@ class CleanupScreenshotsRequest(BaseModel):
     archive_after_days: int = 30
     delete_after_days: int = 90
     min_archive_bytes: int = 1_000_000
+
+
+class ProviderIntegrationEnsureRequest(BaseModel):
+    workspace_id: UUID
+    auth_type: str = "personal_token"
+    base_url: str | None = None
+
+
+class ProviderIntegrationResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    provider: str
+    auth_type: str
+    external_account_id: str | None = None
+    installation_id: str | None = None
+    base_url: str | None = None
+    status: str
+
+
+class ProviderIntegrationStatusUpdateRequest(BaseModel):
+    integration_id: UUID
+    status: str | None = None
+    installation_id: str | None = None
+    external_account_id: str | None = None
+    base_url: str | None = None
+
+
+class CredentialSaveRequest(BaseModel):
+    integration_id: UUID
+    kind: str = Field(min_length=1)
+    value: str = Field(min_length=1)
+    expires_at: datetime | None = None
+    scopes: list[str] = Field(default_factory=list)
+
+
+class CredentialSaveResponse(BaseModel):
+    storage_reference: str
+
+
+class CredentialValueResponse(BaseModel):
+    value: str | None = None

@@ -3,6 +3,8 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { IssueProvider } from "@changethis/shared";
+import { getInternalApiUrl, getInternalSessionCookieHeader } from "./internal-api";
+import { getDataStoreMode } from "./runtime";
 
 type StoredCredential = {
   workspaceId?: string;
@@ -70,6 +72,21 @@ export function saveProviderCredentialSecret(secret: ProviderCredentialSecret): 
 }
 
 export async function saveProviderCredentialSecretAsync(secret: ProviderCredentialSecret): Promise<string> {
+  if (usesInternalCredentialStore()) {
+    const response = await internalIntegrationRequest<{ storage_reference: string }>(`/integrations/${secret.provider}/credentials`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        integration_id: secret.integrationId,
+        kind: secret.kind,
+        value: secret.value,
+        expires_at: secret.expiresAt,
+        scopes: secret.scopes ?? []
+      })
+    });
+    return response.storage_reference;
+  }
+
   return saveProviderCredentialSecret(secret);
 }
 
@@ -110,6 +127,16 @@ export async function getProviderCredentialSecretAsync(
   kind: string,
   workspaceId?: string
 ): Promise<string | undefined> {
+  if (usesInternalCredentialStore()) {
+    if (!integrationId) {
+      return undefined;
+    }
+
+    const params = new URLSearchParams({ integration_id: integrationId, kind });
+    const response = await internalIntegrationRequest<{ value: string | null }>(`/integrations/${provider}/credentials?${params.toString()}`);
+    return response.value ?? undefined;
+  }
+
   return getProviderCredentialSecret(provider, integrationId, kind, workspaceId);
 }
 
@@ -129,7 +156,50 @@ export function deleteProviderCredentialSecrets(provider: IssueProvider, integra
 }
 
 export async function deleteProviderCredentialSecretsAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<number> {
+  if (usesInternalCredentialStore()) {
+    const params = new URLSearchParams({ integration_id: integrationId });
+    const response = await internalIntegrationRequest<{ removed: number }>(`/integrations/${provider}/credentials?${params.toString()}`, {
+      method: "DELETE"
+    });
+    return response.removed;
+  }
+
   return deleteProviderCredentialSecrets(provider, integrationId, workspaceId);
+}
+
+function usesInternalCredentialStore(): boolean {
+  return getDataStoreMode() === "internal";
+}
+
+async function internalIntegrationRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const cookieHeader = await getInternalSessionCookieHeader();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(init.headers as Record<string, string> | undefined)
+  };
+
+  if (cookieHeader) {
+    headers.Cookie = cookieHeader;
+  }
+
+  const response = await fetch(`${getInternalApiUrl()}${path}`, { ...init, headers, cache: "no-store" });
+
+  if (!response.ok) {
+    let message = `Provider credential request failed with status ${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown; error?: unknown };
+      if (typeof body.detail === "string") {
+        message = body.detail;
+      } else if (typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // Keep the generic message when the API does not return JSON.
+    }
+    throw new Error(message);
+  }
+
+  return (await response.json()) as T;
 }
 
 function readStore(): CredentialStore {

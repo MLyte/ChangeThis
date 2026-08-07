@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     session_secret: str = Field(alias="SESSION_SECRET")
     changethis_secret_key: str | None = Field(default=None, alias="CHANGETHIS_SECRET_KEY")
     changethis_cron_secret: str | None = Field(default=None, alias="CHANGETHIS_CRON_SECRET")
+    credential_encryption_key: str | None = Field(default=None, alias="CREDENTIAL_ENCRYPTION_KEY")
     allowed_public_origins: str = Field(default="https://changethis.cra.wallonie.be", alias="ALLOWED_PUBLIC_ORIGINS")
     enable_public_signup: bool = Field(default=True, alias="ENABLE_PUBLIC_SIGNUP")
     session_cookie_name: str = "changethis_internal_session"

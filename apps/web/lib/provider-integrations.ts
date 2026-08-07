@@ -1,8 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IssueProvider } from "@changethis/shared";
-import { getProviderCredentialSecret, getProviderCredentialSecretAsync } from "./credential-store";
-import { isProviderIntegrationDisabled } from "./provider-integration-state";
-import { isProductionRuntime } from "./runtime";
+import { getProviderCredentialSecretAsync } from "./credential-store";
+import { getInternalApiUrl, getInternalSessionCookieHeader } from "./internal-api";
+import { isProviderIntegrationDisabledAsync } from "./provider-integration-state";
+import { getDataStoreMode, isProductionRuntime } from "./runtime";
 
 export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_reconnect";
 
@@ -48,8 +49,9 @@ export function isIssueProvider(value: unknown): value is IssueProvider {
   return typeof value === "string" && providers.includes(value as IssueProvider);
 }
 
-export function listProviderIntegrations(workspaceId?: string): ProviderIntegrationSummary[] {
-  return getRuntimeProviderIntegrations(workspaceId).map((integration) => ({
+export async function listProviderIntegrations(workspaceId?: string): Promise<ProviderIntegrationSummary[]> {
+  const integrations = await getRuntimeProviderIntegrations(workspaceId);
+  return integrations.map((integration) => ({
     id: integration.id,
     provider: integration.provider,
     name: integration.name,
@@ -72,8 +74,9 @@ export async function listProviderIntegrationsAsync(workspaceId?: string): Promi
   return listProviderIntegrations(workspaceId);
 }
 
-export function getProviderIntegration(provider: IssueProvider, integrationId?: string, workspaceId?: string): RuntimeProviderIntegration | undefined {
-  return getRuntimeProviderIntegrations(workspaceId).find(
+export async function getProviderIntegration(provider: IssueProvider, integrationId?: string, workspaceId?: string): Promise<RuntimeProviderIntegration | undefined> {
+  const integrations = await getRuntimeProviderIntegrations(workspaceId);
+  return integrations.find(
     (integration) => integration.provider === provider && (!integrationId || integration.id === integrationId)
   );
 }
@@ -82,19 +85,20 @@ export async function getProviderIntegrationAsync(provider: IssueProvider, integ
   return getProviderIntegration(provider, integrationId, workspaceId);
 }
 
-export function getProviderIntegrationToken(provider: IssueProvider, integrationId?: string, workspaceId?: string): string | undefined {
-  return getProviderIntegration(provider, integrationId, workspaceId)?.token;
+export async function getProviderIntegrationToken(provider: IssueProvider, integrationId?: string, workspaceId?: string): Promise<string | undefined> {
+  const integration = await getProviderIntegration(provider, integrationId, workspaceId);
+  return integration?.token;
 }
 
 export async function getProviderIntegrationTokenAsync(provider: IssueProvider, integrationId?: string, workspaceId?: string): Promise<string | undefined> {
-  const integration = getProviderIntegration(provider, integrationId, workspaceId);
+  const integration = await getProviderIntegration(provider, integrationId, workspaceId);
   return integration && !integration.disabled
     ? getProviderCredentialSecretAsync(provider, integration.id, "access_token", workspaceId)
     : undefined;
 }
 
-export function getProviderConnectUrl(provider: IssueProvider, requestUrl: string, returnTo: string, workspaceId: string): string | undefined {
-  const integration = getProviderIntegration(provider, undefined, workspaceId);
+export async function getProviderConnectUrl(provider: IssueProvider, requestUrl: string, returnTo: string, workspaceId: string): Promise<string | undefined> {
+  const integration = await getProviderIntegration(provider, undefined, workspaceId);
 
   if (!integration) {
     return undefined;
@@ -137,21 +141,92 @@ export async function recordProviderConnection(input: {
   externalAccountId?: string;
   baseUrl?: string;
 }): Promise<void> {
-  void input;
+  if (getDataStoreMode() !== "internal" || !input.workspaceId) {
+    return;
+  }
+
+  await internalIntegrationRequest(`/integrations/${input.provider}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      integration_id: input.integrationId,
+      status: "connected",
+      installation_id: input.installationId,
+      external_account_id: input.externalAccountId,
+      base_url: input.baseUrl
+    })
+  });
 }
 
-function getRuntimeProviderIntegrations(workspaceId?: string): RuntimeProviderIntegration[] {
+async function resolveIntegrationIds(workspaceId: string | undefined): Promise<{ github: string; gitlab: string }> {
+  const fallback = {
+    github: process.env.GITHUB_PROVIDER_INTEGRATION_ID ?? "local-github",
+    gitlab: process.env.GITLAB_PROVIDER_INTEGRATION_ID ?? "local-gitlab"
+  };
+
+  if (getDataStoreMode() !== "internal" || !workspaceId) {
+    return fallback;
+  }
+
+  const [github, gitlab] = await Promise.all([
+    ensureInternalProviderIntegration("github", workspaceId),
+    ensureInternalProviderIntegration("gitlab", workspaceId)
+  ]);
+
+  return { github: github ?? fallback.github, gitlab: gitlab ?? fallback.gitlab };
+}
+
+async function ensureInternalProviderIntegration(provider: IssueProvider, workspaceId: string): Promise<string | undefined> {
+  const response = await internalIntegrationRequest<{ id: string }>(`/integrations/${provider}/ensure`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ workspace_id: workspaceId, auth_type: "personal_token" })
+  });
+  return response.id;
+}
+
+async function internalIntegrationRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const cookieHeader = await getInternalSessionCookieHeader();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(init.headers as Record<string, string> | undefined)
+  };
+
+  if (cookieHeader) {
+    headers.Cookie = cookieHeader;
+  }
+
+  const response = await fetch(`${getInternalApiUrl()}${path}`, { ...init, headers, cache: "no-store" });
+
+  if (!response.ok) {
+    let message = `Provider integration request failed with status ${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown; error?: unknown };
+      if (typeof body.detail === "string") {
+        message = body.detail;
+      } else if (typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // Keep the generic message when the API does not return JSON.
+    }
+    throw new Error(message);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function getRuntimeProviderIntegrations(workspaceId?: string): Promise<RuntimeProviderIntegration[]> {
+  const { github: githubIntegrationId, gitlab: gitlabIntegrationId } = await resolveIntegrationIds(workspaceId);
   const githubToken = firstConfiguredValue("CHANGETHIS_GITHUB_TOKEN", "GITHUB_TOKEN");
   const gitlabToken = firstConfiguredValue("CHANGETHIS_GITLAB_TOKEN", "GITLAB_TOKEN");
   const gitlabBaseUrl = process.env.GITLAB_BASE_URL ?? "https://gitlab.com";
-  const githubIntegrationId = process.env.GITHUB_PROVIDER_INTEGRATION_ID ?? "local-github";
-  const gitlabIntegrationId = process.env.GITLAB_PROVIDER_INTEGRATION_ID ?? "local-gitlab";
-  const storedGithubToken = getProviderCredentialSecret("github", githubIntegrationId, "access_token", workspaceId);
-  const storedGitlabToken = getProviderCredentialSecret("gitlab", gitlabIntegrationId, "access_token", workspaceId);
-  const githubInstallationId = getProviderCredentialSecret("github", githubIntegrationId, "installation_id", workspaceId) ?? process.env.GITHUB_INSTALLATION_ID;
+  const storedGithubToken = await getProviderCredentialSecretAsync("github", githubIntegrationId, "access_token", workspaceId);
+  const storedGitlabToken = await getProviderCredentialSecretAsync("gitlab", gitlabIntegrationId, "access_token", workspaceId);
+  const githubInstallationId = (await getProviderCredentialSecretAsync("github", githubIntegrationId, "installation_id", workspaceId)) ?? process.env.GITHUB_INSTALLATION_ID;
   const githubAppConfigured = Boolean(process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY && githubInstallationId);
-  const githubDisabled = isProviderIntegrationDisabled("github", githubIntegrationId, workspaceId);
-  const gitlabDisabled = isProviderIntegrationDisabled("gitlab", gitlabIntegrationId, workspaceId);
+  const githubDisabled = await isProviderIntegrationDisabledAsync("github", githubIntegrationId, workspaceId);
+  const gitlabDisabled = await isProviderIntegrationDisabledAsync("gitlab", gitlabIntegrationId, workspaceId);
   const githubEnvironmentCredentialConfigured = !workspaceId && Boolean(githubToken || githubAppConfigured);
   const gitlabEnvironmentCredentialConfigured = !workspaceId && Boolean(gitlabToken);
   const githubCredentialAvailable = Boolean(storedGithubToken || (!workspaceId && githubToken) || (!workspaceId && githubAppConfigured));

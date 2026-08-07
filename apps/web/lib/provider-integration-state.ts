@@ -3,6 +3,8 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { IssueProvider } from "@changethis/shared";
+import { getInternalApiUrl, getInternalSessionCookieHeader } from "./internal-api";
+import { getDataStoreMode } from "./runtime";
 
 type DisabledProviderIntegration = {
   workspaceId?: string;
@@ -25,6 +27,14 @@ export function isProviderIntegrationDisabled(provider: IssueProvider, integrati
 }
 
 export async function isProviderIntegrationDisabledAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<boolean> {
+  if (usesInternalProviderIntegrationState()) {
+    const integration = await internalIntegrationRequest<{ status: string } | undefined>(
+      `/integrations/${provider}?${new URLSearchParams({ integration_id: integrationId }).toString()}`,
+      { allow404: true }
+    );
+    return integration?.status === "disabled";
+  }
+
   return isProviderIntegrationDisabled(provider, integrationId, workspaceId);
 }
 
@@ -47,6 +57,11 @@ export function disableProviderIntegration(provider: IssueProvider, integrationI
 }
 
 export async function disableProviderIntegrationAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<void> {
+  if (usesInternalProviderIntegrationState()) {
+    await setInternalIntegrationStatus(provider, integrationId, "disabled");
+    return;
+  }
+
   disableProviderIntegration(provider, integrationId, workspaceId);
 }
 
@@ -61,7 +76,60 @@ export function enableProviderIntegration(provider: IssueProvider, integrationId
 }
 
 export async function enableProviderIntegrationAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<void> {
+  if (usesInternalProviderIntegrationState()) {
+    await setInternalIntegrationStatus(provider, integrationId, "connected");
+    return;
+  }
+
   enableProviderIntegration(provider, integrationId, workspaceId);
+}
+
+function usesInternalProviderIntegrationState(): boolean {
+  return getDataStoreMode() === "internal";
+}
+
+async function setInternalIntegrationStatus(provider: IssueProvider, integrationId: string, status: "connected" | "disabled"): Promise<void> {
+  await internalIntegrationRequest(`/integrations/${provider}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ integration_id: integrationId, status })
+  });
+}
+
+async function internalIntegrationRequest<T>(path: string, init: RequestInit & { allow404?: boolean } = {}): Promise<T> {
+  const { allow404 = false, ...requestInit } = init;
+  const cookieHeader = await getInternalSessionCookieHeader();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(requestInit.headers as Record<string, string> | undefined)
+  };
+
+  if (cookieHeader) {
+    headers.Cookie = cookieHeader;
+  }
+
+  const response = await fetch(`${getInternalApiUrl()}${path}`, { ...requestInit, headers, cache: "no-store" });
+
+  if (allow404 && response.status === 404) {
+    return undefined as T;
+  }
+
+  if (!response.ok) {
+    let message = `Provider integration request failed with status ${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown; error?: unknown };
+      if (typeof body.detail === "string") {
+        message = body.detail;
+      } else if (typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // Keep the generic message when the API does not return JSON.
+    }
+    throw new Error(message);
+  }
+
+  return (await response.json()) as T;
 }
 
 function readStore(): ProviderIntegrationStateStore {
