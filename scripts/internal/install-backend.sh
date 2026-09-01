@@ -46,9 +46,10 @@ User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${APP_ROOT}/repo/apps/api
 EnvironmentFile=/etc/changethis/api.env
-ExecStart=${APP_ROOT}/repo/apps/api/.venv/bin/uvicorn app.main:app --host ${API_HOST} --port ${API_PORT}
+ExecStart=${APP_ROOT}/repo/apps/api/.venv/bin/uvicorn app.main:app --host ${API_HOST} --port ${API_PORT} --timeout-graceful-shutdown 10
 Restart=always
 RestartSec=5
+TimeoutStopSec=20
 
 [Install]
 WantedBy=multi-user.target

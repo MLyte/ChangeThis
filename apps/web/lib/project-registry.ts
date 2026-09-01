@@ -467,8 +467,12 @@ function usesInternalProjectRegistry(): boolean {
   return getDataStoreMode() === "internal";
 }
 
+// Keep in sync with INTERNAL_API_TIMEOUT_MS in internal-api.ts: a stalled
+// internal API must abort here rather than bubble up as an nginx 504.
+const INTERNAL_API_TIMEOUT_MS = Number(process.env.INTERNAL_API_TIMEOUT_MS ?? 12_000);
+
 async function internalFetch(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<Response> {
-  const { auth = true, headers, ...rest } = init;
+  const { auth = true, headers, signal, ...rest } = init;
   const requestHeaders: Record<string, string> = { Accept: "application/json", ...(headers as Record<string, string> | undefined) };
 
   if (auth) {
@@ -481,7 +485,8 @@ async function internalFetch(path: string, init: RequestInit & { auth?: boolean 
   return fetch(`${getInternalApiUrl()}${path}`, {
     ...rest,
     headers: requestHeaders,
-    cache: "no-store"
+    cache: "no-store",
+    signal: signal ?? AbortSignal.timeout(INTERNAL_API_TIMEOUT_MS)
   });
 }
 

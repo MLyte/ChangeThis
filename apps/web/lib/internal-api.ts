@@ -5,6 +5,20 @@ import type { AuthSession, WorkspaceRole } from "./auth";
 const DEFAULT_INTERNAL_API_URL = "http://127.0.0.1:8000";
 export const INTERNAL_SESSION_COOKIE = "changethis_internal_session";
 
+// Server-side calls to the internal API must never hang a request thread: if the
+// API stalls (e.g. its DB path is wedged), a missing timeout turns into an nginx
+// 504. Abort well before the proxy's read timeout so callers get a clean
+// "unavailable" instead.
+const INTERNAL_API_TIMEOUT_MS = Number(process.env.INTERNAL_API_TIMEOUT_MS ?? 12_000);
+
+function internalApiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(`${getInternalApiUrl()}${path}`, {
+    ...init,
+    cache: "no-store",
+    signal: init.signal ?? AbortSignal.timeout(INTERNAL_API_TIMEOUT_MS)
+  });
+}
+
 type InternalLoginResult =
   | {
       ok: true;
@@ -73,8 +87,7 @@ export function isInternalApiConfigured(): boolean {
 
 export async function probeInternalApi(path = "/ready"): Promise<boolean> {
   try {
-    const response = await fetch(`${getInternalApiUrl()}${path}`, {
-      cache: "no-store",
+    const response = await internalApiFetch(path, {
       headers: {
         Accept: "application/json"
       }
@@ -94,13 +107,12 @@ export async function signInWithInternalPassword(input: {
   }
 
   try {
-    const response = await fetch(`${getInternalApiUrl()}/auth/login`, {
+    const response = await internalApiFetch("/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(input),
-      cache: "no-store"
+      body: JSON.stringify(input)
     });
 
     if (!response.ok) {
@@ -131,7 +143,7 @@ export async function signUpWithInternalPassword(input: {
   }
 
   try {
-    const response = await fetch(`${getInternalApiUrl()}/auth/signup`, {
+    const response = await internalApiFetch("/auth/signup", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -140,8 +152,7 @@ export async function signUpWithInternalPassword(input: {
         email: input.email,
         password: input.password,
         workspace_name: input.workspaceName
-      }),
-      cache: "no-store"
+      })
     });
 
     if (!response.ok) {
@@ -200,13 +211,12 @@ export async function logoutInternalSession(request?: Request): Promise<void> {
   }
 
   try {
-    await fetch(`${getInternalApiUrl()}/auth/logout`, {
+    await internalApiFetch("/auth/logout", {
       method: "POST",
       headers: {
         Cookie: cookieHeader,
         Accept: "application/json"
-      },
-      cache: "no-store"
+      }
     });
   } catch {
     // Logout must still clear the browser cookie when the internal API is unavailable.
@@ -223,7 +233,7 @@ export async function changeInternalPassword(input: {
   }
 
   try {
-    const response = await fetch(`${getInternalApiUrl()}/auth/password`, {
+    const response = await internalApiFetch("/auth/password", {
       method: "POST",
       headers: {
         Cookie: `${INTERNAL_SESSION_COOKIE}=${encodeURIComponent(token)}`,
@@ -233,8 +243,7 @@ export async function changeInternalPassword(input: {
       body: JSON.stringify({
         current_password: input.currentPassword,
         new_password: input.newPassword
-      }),
-      cache: "no-store"
+      })
     });
 
     if (!response.ok) {
@@ -255,12 +264,11 @@ export async function listInternalWorkspaceMembers(workspaceId: string): Promise
 
   try {
     const params = new URLSearchParams({ workspace_id: workspaceId });
-    const response = await fetch(`${getInternalApiUrl()}/workspace/members?${params.toString()}`, {
+    const response = await internalApiFetch(`/workspace/members?${params.toString()}`, {
       headers: {
         Cookie: cookieHeader,
         Accept: "application/json"
-      },
-      cache: "no-store"
+      }
     });
 
     if (!response.ok) {
@@ -285,7 +293,7 @@ export async function addInternalWorkspaceMember(input: {
   }
 
   try {
-    const response = await fetch(`${getInternalApiUrl()}/workspace/members`, {
+    const response = await internalApiFetch("/workspace/members", {
       method: "POST",
       headers: {
         Cookie: cookieHeader,
@@ -296,8 +304,7 @@ export async function addInternalWorkspaceMember(input: {
         workspace_id: input.workspaceId,
         email: input.email,
         role: input.role
-      }),
-      cache: "no-store"
+      })
     });
 
     if (!response.ok) {
@@ -330,7 +337,7 @@ export async function disableInternalWorkspaceMember(input: {
   }
 
   try {
-    const response = await fetch(`${getInternalApiUrl()}/workspace/members`, {
+    const response = await internalApiFetch("/workspace/members", {
       method: "PATCH",
       headers: {
         Cookie: cookieHeader,
@@ -341,8 +348,7 @@ export async function disableInternalWorkspaceMember(input: {
         workspace_id: input.workspaceId,
         user_id: input.userId,
         status: "disabled"
-      }),
-      cache: "no-store"
+      })
     });
 
     if (!response.ok) {
@@ -368,12 +374,11 @@ export async function getInternalCurrentSession(request?: Request): Promise<Auth
   }
 
   try {
-    const response = await fetch(`${getInternalApiUrl()}/auth/session`, {
+    const response = await internalApiFetch("/auth/session", {
       headers: {
         Cookie: cookieHeader,
         Accept: "application/json"
-      },
-      cache: "no-store"
+      }
     });
 
     if (!response.ok) {
