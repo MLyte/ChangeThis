@@ -104,7 +104,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const sharedAccesses = (await listProjectIssueAccesses({ userId: session.user.id }))
     .filter((access) => access.status === "active" && access.workspaceId && access.workspaceId !== workspaceId);
   const sharedWorkspaceIds = [...new Set(sharedAccesses.map((access) => access.workspaceId).filter((id): id is string => Boolean(id)))];
-  const sharedProjectGroups = await Promise.all(sharedWorkspaceIds.map(async (sharedWorkspaceId) => {
+  const sharedProjectGroupResults = await Promise.allSettled(sharedWorkspaceIds.map(async (sharedWorkspaceId) => {
     const allowedKeys = new Set(sharedAccesses
       .filter((access) => access.workspaceId === sharedWorkspaceId)
       .map((access) => access.projectKey));
@@ -118,6 +118,9 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       feedbacks: workspaceFeedbacks.filter((feedback) => allowedKeys.has(feedback.projectKey))
     };
   }));
+  const sharedProjectGroups = sharedProjectGroupResults.flatMap((result) => (
+    result.status === "fulfilled" ? [result.value] : []
+  ));
   const projects = dedupeProjects([...ownProjects, ...sharedProjectGroups.flatMap((group) => group.projects)]);
   const feedbacks = [...ownFeedbacks, ...sharedProjectGroups.flatMap((group) => group.feedbacks)];
   const filteredFeedbacks = feedbacks.filter((feedback) => matchesDashboardFilters(feedback, filters));

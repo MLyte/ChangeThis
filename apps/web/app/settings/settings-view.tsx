@@ -115,7 +115,7 @@ async function sharedProjectGroups(accesses: Awaited<ReturnType<typeof listProje
   const activeAccesses = accesses.filter((access) => access.status === "active" && access.workspaceId);
   const workspaceIds = [...new Set(activeAccesses.map((access) => access.workspaceId).filter((id): id is string => Boolean(id)))];
 
-  return Promise.all(workspaceIds.map(async (workspaceId) => {
+  const results = await Promise.allSettled(workspaceIds.map(async (workspaceId) => {
     const allowedKeys = new Set(activeAccesses
       .filter((access) => access.workspaceId === workspaceId)
       .map((access) => access.projectKey));
@@ -126,6 +126,10 @@ async function sharedProjectGroups(accesses: Awaited<ReturnType<typeof listProje
       projects: (await listConfiguredProjects(workspaceId)).filter((project) => allowedKeys.has(project.publicKey))
     };
   }));
+
+  return results.flatMap((result) => (
+    result.status === "fulfilled" ? [result.value] : []
+  ));
 }
 
 function settingsPath(section: SettingsSection): string {
