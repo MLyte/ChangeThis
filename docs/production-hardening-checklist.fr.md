@@ -1,7 +1,7 @@
 # Checklist hardening production — ChangeThis
 
 Version: 2026-05-21
-Référence: `docs/current-state.fr.md`, `docs/production-runbook.md`, `docs/internal-ubuntu24-install.fr.md`, `AI_TODO.md`
+Référence: `docs/current-state.fr.md`, `docs/production-runbook.md`, `docs/internal-ubuntu24-install.fr.md`, `CHANGE_LOG.md`
 
 Ce document propose une check-list opérationnelle pour stabiliser l'installation interne CRA de ChangeThis: Next.js, FastAPI et PostgreSQL interne sur Ubuntu 24.
 

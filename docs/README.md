@@ -16,7 +16,7 @@ Les anciens documents d'experimentation SaaS ne doivent plus guider l'installati
 
 - [Etat actuel](current-state.fr.md): statut produit/technique court, a lire avant toute mise a jour generale.
 - [Architecture](architecture.md): vue systeme interne, dataflow et contraintes de runtime.
-- [AI_TODO](../AI_TODO.md): priorisation active et carnet de travail IA.
+- [CHANGE_LOG](../CHANGE_LOG.md): priorisation active, carnet de travail IA et journal des changements.
 
 ## Installation et exploitation interne
 

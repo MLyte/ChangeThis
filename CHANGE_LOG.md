@@ -1,4 +1,6 @@
-# AI_TODO.md
+# CHANGE_LOG.md
+
+(anciennement `AI_TODO.md`)
 
 ## Règle d'exécution IA
 - Utiliser ce fichier comme carnet de travail et de priorisation; une demande explicite de l'utilisateur prime sur l'ordre historique des tâches.
@@ -8,6 +10,7 @@
 - S'arrêter avant la section "Intervention utilisateur requise" si une tâche dépend d'une décision, d'un accès, d'un secret, d'un compte ou d'une validation humaine.
 
 ## Notes IA recentes
+- [2026-09-10] Correction partage projet pour utilisateur ayant deja son propre workspace: `GET /sites` (utilise par Sites connectes et par `/projects` pour les projets partages) refusait systematiquement l'acces via `project_issue_members` des qu'un utilisateur possedait deja sa propre `WorkspaceMember` (cas de tous les comptes crees via signup), car `session_from_token` privilegiait toujours cette appartenance et ne retombait sur `ProjectIssueMember` que si l'utilisateur n'avait aucune appartenance du tout. Ajout de `workspace_access_from_token` dans `apps/api/app/security.py` qui verifie l'acces au workspace demande specifiquement (WorkspaceMember reel puis, a defaut, `ProjectIssueMember` actif en role synthetique `viewer`), utilisee par `require_workspace_session` dans `apps/api/app/routers/sites.py` en conservant la distinction 401/403. Cas reel: `m.luyten@cra.wallonie.be` partage sur `socmo-webapp` sans rien voir malgre un `project_issue_members` actif. Validation: nouveaux tests `apps/api/tests/test_workspace_access.py`, suite complete backend 58/58 OK.
 - [2026-07-15] Interrupteur global widget par environnement: `ENABLE_CHANGETHIS_WIDGET=false` empêche l'injection du script dans le layout web, avec activation par défaut pour préserver les environnements existants; instance locale désactivée via `.env.local`. Exemples `.env`, README et test ciblé ajoutés. Validation: 67 tests web OK, typecheck web OK, lint ciblé OK.
 - [2026-07-15] Désactivation temporaire du mode pin: retrait du mode dans le widget et dans les options de configuration des sites, y compris le masquage des anciens marqueurs locaux, sans supprimer le code ni les données historiques afin de permettre une réactivation simple. Validation ciblée: `npm run test --workspace @changethis/widget` OK, typechecks widget/web OK, build widget et budget bundle OK.
 - [2026-06-24] Suppression capture automatique widget: retrait complet de `html2canvas`, du module `captureFeedbackScreenshot` et de l'ancien flux de selection de zone; les commentaires/pins n'envoient plus d'image automatiquement, le mode capture joint une image uniquement via import ou presse-papier. Validation ciblee: `npm run test --workspace @changethis/widget` OK, `npm run typecheck --workspace @changethis/widget` OK, `npm run build --workspace @changethis/widget` OK.

@@ -14,7 +14,7 @@ from ..schemas import (
     SiteResponse,
     SiteWidgetUpdateRequest,
 )
-from ..security import session_from_token
+from ..security import session_from_token, workspace_access_from_token
 
 router = APIRouter(prefix="/sites", tags=["sites"])
 
@@ -179,15 +179,16 @@ async def find_site_or_404(db: AsyncSession, public_key: str) -> tuple[Project, 
 
 
 async def require_workspace_session(token: str | None, db: AsyncSession, workspace_id: UUID):
-    resolved = await session_from_token(db, token)
-    if not resolved:
+    resolved = await workspace_access_from_token(db, token, workspace_id)
+    if resolved:
+        return resolved
+
+    # Distinguish "no session at all" (401) from "valid session but no
+    # access to this particular workspace" (403).
+    if not await session_from_token(db, token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
 
-    user, membership, workspace = resolved
-    if membership.workspace_id != workspace_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Workspace access required")
-
-    return user, membership, workspace
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Workspace access required")
 
 
 async def require_workspace_admin(token: str | None, db: AsyncSession, workspace_id: UUID):
