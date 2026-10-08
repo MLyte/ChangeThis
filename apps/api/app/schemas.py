@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class WorkspaceSummary(BaseModel):
@@ -198,6 +198,7 @@ class SiteCreateRequest(BaseModel):
 
 
 class SiteWidgetUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
     widget_locale: str
     widget_button_position: str
     widget_button_variant: str
@@ -207,6 +208,13 @@ class SiteWidgetUpdateRequest(BaseModel):
     widget_modes: list[str] = Field(min_length=1)
     issue_creation_mode: str
     allowed_origin: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("Project name cannot be empty")
+        return value.strip() if value is not None else None
 
 
 class IssueTargetUpdateRequest(BaseModel):

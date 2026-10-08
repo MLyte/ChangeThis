@@ -175,12 +175,14 @@ test("updateProjectWidgetSettings sends a PATCH to the site's endpoint", async (
     assert.equal(call.init.method, "PATCH");
     assert.match(call.url, /\/sites\/ct_abc123$/);
     const body = JSON.parse(call.init.body as string);
+    assert.equal(body.name, "Renamed project");
     assert.equal(body.widget_title, "Give feedback");
     return jsonResponse(siteRow);
   });
   try {
     await updateProjectWidgetSettings({
       projectKey: "ct_abc123",
+      name: "Renamed project",
       widgetLocale: "en",
       widgetButtonPosition: "top-left",
       widgetButtonVariant: "subtle",

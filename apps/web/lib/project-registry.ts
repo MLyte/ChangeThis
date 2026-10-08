@@ -59,6 +59,7 @@ export type ProjectIssueTargetUpdate = {
 
 export type ProjectWidgetSettingsUpdate = {
   projectKey: string;
+  name?: string;
   allowedOrigin?: string;
   widgetLocale: WidgetLocale;
   widgetButtonPosition: WidgetButtonPosition;
@@ -235,11 +236,17 @@ export async function updateProjectWidgetSettings(
     throw new ProjectTargetValidationError("Site URL must be a valid HTTP origin", 422);
   }
 
+  const name = update.name?.trim();
+  if (update.name !== undefined && (!name || name.length > 120)) {
+    throw new ProjectTargetValidationError("Project name must contain 1 to 120 characters", 422);
+  }
+
   if (usesInternalProjectRegistry()) {
     const row = await internalRequest<InternalSiteRow>(`/sites/${encodeURIComponent(update.projectKey)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        name,
         widget_locale: update.widgetLocale,
         widget_button_position: update.widgetButtonPosition,
         widget_button_variant: update.widgetButtonVariant,
@@ -265,6 +272,7 @@ export async function updateProjectWidgetSettings(
 
       const updatedSite = {
         ...site,
+        name: name ?? site.name,
         widgetLocale: update.widgetLocale,
         widgetButtonPosition: update.widgetButtonPosition,
         widgetButtonVariant: update.widgetButtonVariant,

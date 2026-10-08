@@ -146,6 +146,7 @@ test("updates and deletes a connected site", async () => {
 
   const originUpdated = await updateProjectWidgetSettings({
     projectKey: site.publicKey,
+    name: "Documentation",
     allowedOrigin: "https://docs.example/help",
     widgetLocale: updated.widgetLocale,
     widgetButtonPosition: updated.widgetButtonPosition,
@@ -158,6 +159,7 @@ test("updates and deletes a connected site", async () => {
   });
 
   assert.deepEqual(originUpdated.allowedOrigins, ["https://docs.example"]);
+  assert.equal(originUpdated.name, "Documentation");
   assert.equal(originUpdated.widgetDisplayMode, "disabled");
 
   assert.equal(await deleteConnectedSite(site.publicKey), true);

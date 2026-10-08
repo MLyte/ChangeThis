@@ -54,6 +54,7 @@ export async function PATCH(
     || !isWidgetTitle(body.widgetTitle)
     || !isWidgetModes(body.widgetModes)
     || !isIssueCreationMode(body.issueCreationMode)
+    || (body.name !== undefined && (typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 120))
     || (body.allowedOrigin !== undefined && typeof body.allowedOrigin !== "string")) {
     return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant, widgetDisplayMode, widgetReporterFields, widgetTitle, widgetModes and issueCreationMode are required" }, { status: 422 });
   }
@@ -63,6 +64,7 @@ export async function PATCH(
   try {
     const site = await updateProjectWidgetSettings({
       projectKey,
+      name: body.name,
       widgetLocale: body.widgetLocale,
       widgetButtonPosition: body.widgetButtonPosition,
       widgetButtonVariant: body.widgetButtonVariant,

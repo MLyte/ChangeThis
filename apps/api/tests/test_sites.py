@@ -193,6 +193,7 @@ async def test_update_site_widget_settings_updates_project(monkeypatch):
     monkeypatch.setattr(sites, "require_workspace_admin", fake_require_workspace_admin)
 
     payload = SiteWidgetUpdateRequest(
+        name="Nouveau nom",
         widget_locale="en",
         widget_button_position="top-left",
         widget_button_variant="subtle",
@@ -207,6 +208,7 @@ async def test_update_site_widget_settings_updates_project(monkeypatch):
     result = await sites.update_site_widget_settings(project.public_key, payload, changethis_internal_session="token", db=db)
 
     assert db.committed is True
+    assert project.name == "Nouveau nom"
     assert project.widget_locale == "en"
     assert project.allowed_origins == ["https://new-origin.example.com"]
     assert result.widget_title == "Give feedback"

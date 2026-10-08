@@ -8,6 +8,7 @@ import {
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { methodNotAllowed, requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
 import { getProviderIntegrationAsync } from "../../../../lib/provider-integrations";
+import { getIssueProviderRepositoryFromUrl, IssueProviderError, listIssueProviderRepositories } from "../../../../lib/issue-providers";
 import { logInfo, logWarn, requestIdFrom } from "../../../../lib/logger";
 
 const unsupportedMethod = methodNotAllowed(["GET", "HEAD", "POST"]);
@@ -80,23 +81,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Request body must be valid JSON" }, { status: 400 });
   }
 
-  if (!isRecord(body) || typeof body.projectKey !== "string" || !isIssueProvider(body.provider) || typeof body.repositoryUrl !== "string") {
-    return NextResponse.json({ error: "projectKey, provider, and repositoryUrl are required" }, { status: 422 });
+  if (!isRecord(body) || typeof body.projectKey !== "string" || !isIssueProvider(body.provider)
+    || (typeof body.repositoryUrl !== "string" && typeof body.repositoryId !== "string")) {
+    return NextResponse.json({ error: "projectKey, provider, and repositoryId or repositoryUrl are required" }, { status: 422 });
   }
 
   const integrationId = typeof body.integrationId === "string" ? body.integrationId : undefined;
+  const integration = await getProviderIntegrationAsync(body.provider, integrationId, workspaceId);
 
-  if (integrationId && !await getProviderIntegrationAsync(body.provider, integrationId, workspaceId)) {
-    return NextResponse.json({ error: "Unknown provider integration" }, { status: 422 });
+  if (!integration?.credentialConfigured) {
+    return NextResponse.json({ error: "Provider is not connected" }, { status: 409 });
   }
 
   try {
+    const repository = typeof body.repositoryUrl === "string" && body.repositoryUrl.trim()
+      ? await getIssueProviderRepositoryFromUrl(body.provider, body.repositoryUrl, { integrationId: integration.id, workspaceId })
+      : (await listIssueProviderRepositories(body.provider, { integrationId: integration.id, workspaceId }))
+        .find((item) => item.id === body.repositoryId || item.webUrl === body.repositoryId);
+
+    if (!repository) {
+      return NextResponse.json({ error: "Repository is not accessible from this provider connection" }, { status: 422 });
+    }
+
     const project = await saveProjectIssueTarget({
       projectKey: body.projectKey,
       provider: body.provider,
-      repositoryUrl: body.repositoryUrl,
-      integrationId,
-      externalProjectId: typeof body.externalProjectId === "string" ? body.externalProjectId : undefined
+      repositoryUrl: repository.webUrl,
+      integrationId: integration.id,
+      externalProjectId: repository.externalProjectId
     }, workspaceId);
 
     logInfo("project_issue_target_updated", {
@@ -117,6 +129,10 @@ export async function POST(request: Request) {
       });
 
       return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
+    if (error instanceof IssueProviderError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status ?? 502 });
     }
 
     throw error;

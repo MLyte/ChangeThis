@@ -92,6 +92,8 @@ async def update_site_widget_settings(
     project, issue_target = await find_site_or_404(db, public_key)
     await require_workspace_admin(changethis_internal_session, db, project.workspace_id)
 
+    if payload.name is not None:
+        project.name = payload.name.strip()
     project.widget_locale = payload.widget_locale
     project.widget_button_position = payload.widget_button_position
     project.widget_button_variant = payload.widget_button_variant

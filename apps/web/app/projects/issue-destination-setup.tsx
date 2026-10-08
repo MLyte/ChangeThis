@@ -131,6 +131,7 @@ type DeleteSiteConfirmation = {
 
 type SiteOriginEditor = {
   projectKey: string;
+  name: string;
   value: string;
 };
 
@@ -155,6 +156,7 @@ export function IssueDestinationSetup({
   const [, setMessage] = useState(t("destinations.message.initial"));
   const [isPending, startTransition] = useTransition();
   const [isSiteModalOpen, setIsSiteModalOpen] = useState(false);
+  const [repositoryEditProjectKey, setRepositoryEditProjectKey] = useState<string | undefined>();
   const [repositoryOptions, setRepositoryOptions] = useState<RepositoryOption[]>([]);
   const [selectedRepositoryId, setSelectedRepositoryId] = useState("");
   const [repositoryUrl, setRepositoryUrl] = useState("");
@@ -191,7 +193,7 @@ export function IssueDestinationSetup({
     && (repositoryLoadState === "empty" || repositoryLoadState === "error" || repositoryLoadState === "unavailable");
 
   useEffect(() => {
-    if (!isSiteModalOpen || !connectedProviders.has(selectedProvider)) {
+    if ((!isSiteModalOpen && !repositoryEditProjectKey) || !connectedProviders.has(selectedProvider)) {
       return;
     }
 
@@ -248,7 +250,7 @@ export function IssueDestinationSetup({
     void loadRepositories();
 
     return () => abortController.abort();
-  }, [connectedProviders, isSiteModalOpen, selectedIntegration?.id, selectedProvider]);
+  }, [connectedProviders, isSiteModalOpen, repositoryEditProjectKey, selectedIntegration?.id, selectedProvider]);
 
   function selectProvider(provider: IssueProvider) {
     setSelectedProvider(provider);
@@ -280,6 +282,57 @@ export function IssueDestinationSetup({
 
   function openSiteModal() {
     setIsSiteModalOpen(true);
+  }
+
+  function openRepositoryEditor(project: ProjectView) {
+    setSelectedProvider(project.issueTarget.provider);
+    setSelectedRepositoryId("");
+    setRepositoryUrl("");
+    setRepositoryOptions([]);
+    setRepositoryLoadState("idle");
+    setRepositoryEditProjectKey(project.publicKey);
+  }
+
+  function saveRepository() {
+    if (!repositoryEditProjectKey || !selectedIntegration?.credentialConfigured
+      || (!selectedRepository && !(canUseRepositoryUrlFallback && normalizedRepositoryUrl))) {
+      return;
+    }
+
+    const projectKey = repositoryEditProjectKey;
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/projects/issue-targets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectKey,
+            provider: selectedProvider,
+            integrationId: selectedIntegration.id,
+            repositoryId: selectedRepository?.id,
+            repositoryUrl: canUseRepositoryUrlFallback ? normalizedRepositoryUrl || undefined : undefined
+          })
+        });
+        const body = await parseJsonResponse<{ project?: ProjectView; error?: string }>(response);
+
+        if (!response.ok || !body?.project) {
+          throw new Error(body?.error ?? "Impossible de changer le dépôt.");
+        }
+
+        const updatedTarget = body.project.issueTarget;
+        setProjectViews((current) => current.map((project) => project.publicKey === projectKey
+          ? { ...project, issueTarget: updatedTarget }
+          : project));
+        setRepositoryEditProjectKey(undefined);
+        toast.success("Dépôt Git modifié", {
+          description: "Les prochaines issues seront créées dans le nouveau dépôt. Les issues existantes restent dans leur dépôt d'origine."
+        });
+      } catch (error) {
+        toast.error("Dépôt non modifié", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
+        });
+      }
+    });
   }
 
   function copyInstallSnippet(project: ProjectView) {
@@ -453,6 +506,7 @@ export function IssueDestinationSetup({
   function startSiteOriginEdit(project: ProjectView) {
     setSiteOriginEditor({
       projectKey: project.publicKey,
+      name: project.name,
       value: project.allowedOrigins[0] ?? ""
     });
   }
@@ -464,6 +518,11 @@ export function IssueDestinationSetup({
     }
 
     const validation = validateAllowedOrigin(siteOriginEditor.value);
+    const name = siteOriginEditor.name.trim();
+    if (!name || name.length > 120) {
+      toast.error("Nom non enregistré", { description: "Saisissez un nom de 1 à 120 caractères." });
+      return;
+    }
     if (!validation.ok || !validation.normalizedOrigin) {
       toast.error("URL non enregistrée", {
         description: validation.message
@@ -474,6 +533,7 @@ export function IssueDestinationSetup({
     const previousProject = project;
     const nextProject = {
       ...project,
+      name,
       allowedOrigins: [validation.normalizedOrigin]
     };
 
@@ -487,6 +547,7 @@ export function IssueDestinationSetup({
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
+            name,
             allowedOrigin: validation.normalizedOrigin,
             widgetLocale: project.widgetLocale,
             widgetButtonPosition: project.widgetButtonPosition,
@@ -502,7 +563,7 @@ export function IssueDestinationSetup({
 
         if (!response.ok || !body?.site) {
           const requestId = body?.requestId ? ` (${body.requestId})` : "";
-          throw new Error(`${body?.error ?? "Impossible d'enregistrer l'URL du site."}${requestId}`);
+          throw new Error(`${body?.error ?? "Impossible d'enregistrer le site."}${requestId}`);
         }
 
         setProjectViews((current) => current.map((item) => item.publicKey === projectKey
@@ -514,13 +575,13 @@ export function IssueDestinationSetup({
             }
           : item));
         setSiteOriginEditor(undefined);
-        toast.success("URL du site enregistrée", {
-          description: `Origine autorisée: ${body.site.allowedOrigins.join(", ")}`
+        toast.success("Site enregistré", {
+          description: `${body.site.name} · ${body.site.allowedOrigins.join(", ")}`
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
         setProjectViews((current) => current.map((item) => item.publicKey === projectKey ? previousProject : item));
-        toast.error("URL non enregistrée", {
+        toast.error("Site non enregistré", {
           description: errorMessage
         });
       }
@@ -848,6 +909,10 @@ export function IssueDestinationSetup({
               onSaveSiteOrigin={saveSiteOrigin}
               onCopyInstallSnippet={copyInstallSnippet}
               onOpenSiteModal={openSiteModal}
+              repositoryEditProjectKey={repositoryEditProjectKey}
+              onEditRepository={openRepositoryEditor}
+              onCloseRepositoryEditor={() => setRepositoryEditProjectKey(undefined)}
+              onSaveRepository={saveRepository}
               onSelectProvider={selectProvider}
               onUpdateWidgetSettings={updateWidgetSettings}
               onLeaveSharedProject={leaveSharedProject}
@@ -856,6 +921,7 @@ export function IssueDestinationSetup({
               currentUserId={currentUserId}
               siteOriginEditor={siteOriginEditor}
               onSiteOriginEditorChange={(value) => setSiteOriginEditor((current) => current ? { ...current, value } : current)}
+              onSiteNameEditorChange={(name) => setSiteOriginEditor((current) => current ? { ...current, name } : current)}
               onCancelSiteOriginEdit={() => setSiteOriginEditor(undefined)}
               repositoryLoadMessage={repositoryLoadMessage}
               repositoryLoadState={repositoryLoadState}
@@ -1984,6 +2050,10 @@ function ConnectedSitesSection({
   onSaveSiteOrigin,
   onCopyInstallSnippet,
   onOpenSiteModal,
+  repositoryEditProjectKey,
+  onEditRepository,
+  onCloseRepositoryEditor,
+  onSaveRepository,
   onRepositoryUrlChange,
   onSelectProvider,
   onSelectRepository,
@@ -1991,6 +2061,7 @@ function ConnectedSitesSection({
   onCancelSiteOriginEdit,
   onUpdateWidgetSettings,
   onSiteOriginEditorChange,
+  onSiteNameEditorChange,
   projects,
   currentUserId,
   siteOriginEditor,
@@ -2032,6 +2103,10 @@ function ConnectedSitesSection({
   onSaveSiteOrigin: (projectKey: string) => void;
   onCopyInstallSnippet: (project: ProjectView) => void;
   onOpenSiteModal: () => void;
+  repositoryEditProjectKey?: string;
+  onEditRepository: (project: ProjectView) => void;
+  onCloseRepositoryEditor: () => void;
+  onSaveRepository: () => void;
   onRepositoryUrlChange: (repositoryUrl: string) => void;
   onSelectProvider: (provider: IssueProvider) => void;
   onSelectRepository: (repositoryId: string) => void;
@@ -2039,6 +2114,7 @@ function ConnectedSitesSection({
   onCancelSiteOriginEdit: () => void;
   onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetDisplayMode" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) => void;
   onSiteOriginEditorChange: (value: string) => void;
+  onSiteNameEditorChange: (name: string) => void;
   projects: ProjectView[];
   currentUserId?: string;
   siteOriginEditor?: SiteOriginEditor;
@@ -2105,6 +2181,7 @@ function ConnectedSitesSection({
   const repositorySearchResultText = repositoryLoadState === "ready"
     ? `${filteredRepositoryOptions.length} dépôt${filteredRepositoryOptions.length > 1 ? "s" : ""} sur ${repositoryOptions.length}`
     : "";
+  const repositoryEditProject = projects.find((project) => project.publicKey === repositoryEditProjectKey);
 
   return (
     <section className="settings-section linked-sites" aria-labelledby="linked-sites-title">
@@ -2241,6 +2318,10 @@ function ConnectedSitesSection({
                     ) : null}
                     {canManageProject ? (
                       <>
+                        <button className="button secondary-button" disabled={isPending} onClick={() => { setRepositorySearch(""); onEditRepository(project); }} type="button">
+                          <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Changer dépôt
+                        </button>
                         {!isEditingOrigin ? (
                           <button className="button secondary-button" disabled={isPending} onClick={() => onEditSiteOrigin(project)} type="button">
                             <Pencil aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
@@ -2273,11 +2354,22 @@ function ConnectedSitesSection({
                       event.preventDefault();
                       onSaveSiteOrigin(project.publicKey);
                     }}>
-                      <section className="site-config-panel site-url-config-panel" aria-label={`URL autorisée pour ${project.name}`}>
+                      <section className="site-config-panel site-url-config-panel" aria-label={`Site ${project.name}`}>
                         <div className="site-config-panel-heading">
                           <span>Site</span>
                         </div>
                         <div className="site-origin-editor">
+                          <label>
+                            <span>Nom du projet</span>
+                            <input
+                              aria-label={`Nom du projet ${project.name}`}
+                              disabled={isPending}
+                              maxLength={120}
+                              onChange={(event) => onSiteNameEditorChange(event.target.value)}
+                              required
+                              value={activeSiteOriginEditor.name}
+                            />
+                          </label>
                           <label>
                             <span>URL du site</span>
                             <input
@@ -2373,7 +2465,7 @@ function ConnectedSitesSection({
                         </div>
                       </section>
                       <div className="site-origin-editor-actions site-edit-actions">
-                        <button className="button" disabled={isPending || !editingOriginValidation?.ok} type="submit">
+                        <button className="button" disabled={isPending || !editingOriginValidation?.ok || !activeSiteOriginEditor.name.trim()} type="submit">
                           <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                           Enregistrer
                         </button>
@@ -2447,6 +2539,76 @@ function ConnectedSitesSection({
         </div>
         </>
       )}
+
+      {repositoryEditProject ? (
+        <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="repository-edit-title">
+          <button className="settings-modal-backdrop" aria-label="Fermer" onClick={onCloseRepositoryEditor} type="button" />
+          <div className="settings-modal-panel">
+            <div className="settings-modal-header">
+              <div>
+                <p className="eyebrow">{repositoryEditProject.name}</p>
+                <h2 id="repository-edit-title">Changer le dépôt Git</h2>
+              </div>
+              <button className="icon-button" aria-label="Fermer" onClick={onCloseRepositoryEditor} type="button">
+                <X aria-hidden="true" className="ui-icon" size={18} strokeWidth={2.2} />
+              </button>
+            </div>
+            <div className="modal-copy">
+              <strong>Dépôt actuel : {repositoryEditProject.issueTarget.namespace}/{repositoryEditProject.issueTarget.project}</strong>
+              <span>Les prochaines issues iront dans le dépôt choisi. Les issues déjà créées restent dans leur dépôt actuel.</span>
+            </div>
+            <div className="repo-linker in-modal">
+              <form className="repo-form site-create-form" onSubmit={(event) => { event.preventDefault(); onSaveRepository(); }}>
+                <label>
+                  Service Git
+                  <select value={selectedProvider} onChange={(event) => { setRepositorySearch(""); onSelectProvider(event.target.value as IssueProvider); }}>
+                    <option disabled={!connectedProviders.has("github")} value="github">GitHub</option>
+                    <option disabled={!connectedProviders.has("gitlab")} value="gitlab">GitLab</option>
+                  </select>
+                </label>
+                {shouldShowRepositoryStatus && repositoryLoadState !== "ready" ? (
+                  <div className={`repository-loader ${repositoryLoadState}`} role="status">
+                    <strong>{repositoryStatusTitle(repositoryLoadState)}</strong>
+                    <span>{repositoryStatusText(repositoryLoadState, repositoryLoadMessage)}</span>
+                  </div>
+                ) : null}
+                <label className="repo-select-field">
+                  Dépôt connecté
+                  <span className="repository-search-field">
+                    <Search aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+                    <input aria-label="Rechercher un dépôt connecté" disabled={isRepositorySelectDisabled}
+                      onChange={(event) => setRepositorySearch(event.target.value)} placeholder="Rechercher par nom, groupe ou URL"
+                      type="search" value={repositorySearch} />
+                    {repositorySearchResultText ? <small>{repositorySearchResultText}</small> : null}
+                  </span>
+                  <select disabled={isRepositorySelectDisabled || filteredRepositoryOptions.length === 0}
+                    value={selectedRepositoryId} onChange={(event) => { onSelectRepository(event.target.value); setRepositorySearch(""); }}>
+                    <option value="">{repositorySelectPlaceholder(repositoryLoadState, isSelectedProviderConnected)}</option>
+                    {filteredRepositoryOptions.map((repository) => (
+                      <option key={repository.id} value={repository.id}>{repository.label}</option>
+                    ))}
+                  </select>
+                </label>
+                {canUseRepositoryUrlFallback ? (
+                  <label>
+                    URL du dépôt en secours
+                    <input onChange={(event) => onRepositoryUrlChange(event.target.value)}
+                      placeholder={selectedProvider === "gitlab" ? "https://gitlab.com/groupe/projet" : "https://github.com/organisation/projet"}
+                      value={repositoryUrl} />
+                  </label>
+                ) : null}
+                <div className="site-create-actions">
+                  <button className="button" disabled={isPending || !hasRepositoryDestination || !isSelectedProviderConnected} type="submit">
+                    {isPending ? <LoadingSpinner /> : <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
+                    Enregistrer le dépôt
+                  </button>
+                  <button className="button secondary-button" disabled={isPending} onClick={onCloseRepositoryEditor} type="button">Annuler</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isSiteModalOpen ? (
         <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="site-modal-title">
