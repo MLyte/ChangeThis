@@ -558,9 +558,8 @@ test("initChangeThis ignores the temporarily disabled pin mode", async () => {
 
   const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
 
-  assert.match(html, /data-mode="comment"/);
-  assert.match(html, /data-mode="screenshot"/);
-  assert.doesNotMatch(html, /data-mode="pin"/);
+  assert.doesNotMatch(html, /data-mode=/);
+  assert.match(html, /data-capture-upload/);
   assert.doesNotMatch(html, /data-action="add-pin"/);
   assert.doesNotMatch(html, /data-action="toggle-pins"/);
   assert.doesNotMatch(html, /<div class="pin"/);
@@ -641,9 +640,9 @@ test("initChangeThis renders configured title and enabled modes", async () => {
   assert.match(html, /<strong>Retour UX prioritaire<\/strong>/);
   assert.match(html, /<li>Décris le problème<\/li>/);
   assert.match(html, /href="https:\/\/mathieuluyten\.be"/);
-  assert.match(html, /data-mode="comment"/);
-  assert.doesNotMatch(html, /data-mode="pin"/);
-  assert.doesNotMatch(html, /data-mode="screenshot"/);
+  assert.doesNotMatch(html, /data-mode=/);
+  assert.match(html, /data-capture-message/);
+  assert.doesNotMatch(html, /data-capture-upload/);
 });
 
 test("initChangeThis keeps comment and capture modes on touch viewports", async () => {
@@ -713,10 +712,9 @@ test("initChangeThis keeps comment and capture modes on touch viewports", async 
 
   const html = appendedRoot?.shadowRoot?.innerHTML ?? "";
 
-  assert.match(html, /data-advanced="true"/);
-  assert.match(html, /data-mode="comment"/);
-  assert.doesNotMatch(html, /data-mode="pin"/);
-  assert.match(html, /data-mode="screenshot"/);
+  assert.doesNotMatch(html, /data-mode=/);
+  assert.match(html, /data-capture-message/);
+  assert.match(html, /data-capture-upload/);
 });
 
 test("initChangeThis shows clipboard paste for screenshot uploads when supported", async () => {

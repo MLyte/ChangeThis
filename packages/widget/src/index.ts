@@ -122,9 +122,9 @@ const widgetCopy = {
     brandLabel: "Aide",
     helpTitle: "Comment utiliser ce widget",
     helpIntro: "Ce widget sert à signaler simplement ce qui doit être amélioré sur cette page.",
-    helpStepComment: "Utilise Commentaire pour laisser un retour général.",
+    helpStepComment: "Décris ton retour dans le champ texte.",
     helpStepPin: "Utilise Pin pour pointer précisément un élément à corriger.",
-    helpStepCapture: "Utilise Capture pour encadrer une zone visible de l'écran.",
+    helpStepCapture: "Joins une image si besoin, depuis un fichier ou le presse-papier.",
     helpCustomTitle: "Consigne du site",
     contactLabel: "Contact",
     title: "Que faut-il changer ?",
@@ -140,7 +140,7 @@ const widgetCopy = {
     sending: "Envoi...",
     send: "Envoyer",
     sendAll: "Tout envoyer",
-    sendAllPending: "Envoyer tous les retours en attente",
+    sendAllPending: "Envoyer le feedback",
     sendPendingCount: "Envoyer {count} retours en attente",
     selectArea: "Trace la zone à capturer",
     defineCapture: "Définir la zone",
@@ -194,9 +194,9 @@ const widgetCopy = {
     brandLabel: "Help",
     helpTitle: "How to use this widget",
     helpIntro: "This widget helps you report what should be improved on this page.",
-    helpStepComment: "Use Page review to leave a general comment.",
+    helpStepComment: "Describe your feedback in the text field.",
     helpStepPin: "Use Pin to point at a specific element to fix.",
-    helpStepCapture: "Use Screenshot to frame a visible area of the screen.",
+    helpStepCapture: "Attach an image if needed, from a file or the clipboard.",
     helpCustomTitle: "Site guidance",
     contactLabel: "Contact",
     title: "What should change?",
@@ -212,7 +212,7 @@ const widgetCopy = {
     sending: "Sending...",
     send: "Send",
     sendAll: "Send all",
-    sendAllPending: "Send all pending feedbacks",
+    sendAllPending: "Send feedback",
     sendPendingCount: "Send {count} pending feedbacks",
     selectArea: "Drag the area to capture",
     defineCapture: "Define area",
@@ -445,7 +445,9 @@ export function initChangeThis(options: WidgetOptions): void {
       return `<div class="pin" data-pin-index="${index}" data-status="${pin.status}" style="left:${position.x}px;top:${position.y}px">${pin.number}</div>`;
     }).join("") : "";
     const isPinTab = state.type === "pin";
-    const isCaptureTab = state.type === "screenshot";
+    const isFeedbackForm = !isPinTab;
+    const captureInputsEnabled = activeModes.includes("screenshot");
+    const hasCaptureImage = Boolean(state.captureArea || state.captureUploadDataUrl);
     const hasPins = isPinTab && state.pins.length > 0;
     const captureShortcut = captureSystemShortcut(copy);
     const canPasteCapture = canReadClipboardImages();
@@ -460,9 +462,9 @@ export function initChangeThis(options: WidgetOptions): void {
       status: "draft" as const
     }] : [];
     const sentNotes = state.sentFeedbacks.filter((feedback) => feedback.type === "comment");
-    const draftCaptures = state.captureMessage.trim() || state.captureArea || state.captureUploadDataUrl ? [{
+    const draftCaptures = state.captureMessage.trim() || hasCaptureImage ? [{
       id: "capture-draft",
-      title: copy.screenshot,
+      title: hasCaptureImage ? copy.screenshot : copy.note,
       message: state.captureMessage || state.captureUploadName || feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault),
       status: "draft" as const
     }] : [];
@@ -472,7 +474,7 @@ export function initChangeThis(options: WidgetOptions): void {
     const totalFeedbacks = totalDraftFeedbacks + totalSentFeedbacks;
     const getReadyDraftFeedbackCount = () => (state.noteMessage.trim() ? 1 : 0)
       + state.pins.filter((pin) => pin.status === "draft" && pin.message.trim()).length
-      + ((state.captureArea || state.captureUploadDataUrl) && state.captureMessage.trim() ? 1 : 0);
+      + (state.captureMessage.trim() ? 1 : 0);
     const readyDraftFeedbackCount = getReadyDraftFeedbackCount();
     const reporter = currentReporter(state.reporterName, state.reporterEmail);
     const reporterEmailInvalid = Boolean(state.reporterEmail.trim()) && !isValidEmail(state.reporterEmail.trim());
@@ -1494,15 +1496,6 @@ export function initChangeThis(options: WidgetOptions): void {
             </div>
           </div>
           <p class="title">${renderInlineMarkdown(copy.title)}</p>
-          <div class="modes" data-advanced="${advancedModesEnabled}">
-            ${activeModes.includes("comment") ? `<button class="mode" data-mode="comment" data-active="${state.type === "comment"}">${lucideIcons["message-square"]}${escapeHtml(copy.note)}</button>` : ""}
-            ${activeModes.includes("pin") ? `<button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>` : ""}
-            ${activeModes.includes("screenshot") ? `<button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>` : ""}
-          </div>
-          ${state.type === "comment" ? `
-            <textarea data-note-message placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.noteMessage)}</textarea>
-            <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
-          ` : ""}
           ${isPinTab ? `
             <div class="selection-summary">
               <div class="selection-header">
@@ -1536,8 +1529,8 @@ export function initChangeThis(options: WidgetOptions): void {
               </ul>` : ""}
             </div>
           ` : ""}
-          ${isCaptureTab ? `
-            <div class="selection-summary capture-summary">
+          ${isFeedbackForm ? `
+            ${captureInputsEnabled ? `<div class="selection-summary capture-summary">
               <div class="capture-actions">
                 <label class="add-pin">
                   ${lucideIcons.upload}
@@ -1554,8 +1547,8 @@ export function initChangeThis(options: WidgetOptions): void {
                   ${state.captureUploadDataUrl ? `<button class="clear-selection" data-action="remove-capture-upload" aria-label="${escapeHtml(copy.removeUploadCapture)}" title="${escapeHtml(copy.removeUploadCapture)}">${lucideIcons.trash}</button>` : ""}
                 </div>
               ` : ""}
-            </div>
-            <textarea data-capture-message placeholder="${escapeHtml(copy.capturePlaceholder)}">${escapeHtml(state.captureMessage)}</textarea>
+            </div>` : ""}
+            <textarea data-capture-message placeholder="${escapeHtml(hasCaptureImage ? copy.capturePlaceholder : copy.placeholder)}">${escapeHtml(state.captureMessage)}</textarea>
             <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
           ` : ""}
           <div class="actions">
@@ -2157,11 +2150,13 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLButtonElement>("[data-action='send']")?.addEventListener("click", async () => {
       syncDraftView();
-      const pendingNoteMessage = state.noteMessage.trim();
+      const hasCaptureImage = Boolean(state.captureArea || state.captureUploadDataUrl);
+      // Sans image jointe, le texte du formulaire part comme simple commentaire.
+      const pendingNoteMessage = (hasCaptureImage ? state.noteMessage : state.noteMessage || state.captureMessage).trim();
       const pendingPins = state.pins
         .map((pin, index) => ({ pin, index }))
         .filter((entry) => entry.pin.status === "draft" && entry.pin.message.trim());
-      const pendingCapture = (state.captureArea || state.captureUploadDataUrl) && state.captureMessage.trim()
+      const pendingCapture = hasCaptureImage && state.captureMessage.trim()
         ? { message: state.captureMessage, captureArea: state.captureArea, uploadedScreenshotDataUrl: state.captureUploadDataUrl }
         : undefined;
       const reporter = currentReporter(state.reporterName, state.reporterEmail);
@@ -2198,6 +2193,9 @@ export function initChangeThis(options: WidgetOptions): void {
           }
 
           state.noteMessage = "";
+          if (!hasCaptureImage) {
+            state.captureMessage = "";
+          }
         }
 
         for (const { pin, index } of pendingPins) {
