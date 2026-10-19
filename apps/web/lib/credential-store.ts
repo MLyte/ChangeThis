@@ -3,8 +3,8 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { IssueProvider } from "@changethis/shared";
+import { getInternalApiUrl, getInternalSessionCookieHeader } from "./internal-api";
 import { getDataStoreMode } from "./runtime";
-import { supabaseServiceRest } from "./supabase-server";
 
 type StoredCredential = {
   workspaceId?: string;
@@ -23,19 +23,6 @@ type CredentialStore = {
   credentials: StoredCredential[];
 };
 
-type SupabaseCredentialRow = {
-  id: string;
-  integration_id: string;
-  credential_kind: string;
-  storage_reference: string;
-  scopes?: string[] | null;
-  expires_at?: string | null;
-  ciphertext?: string | null;
-  iv?: string | null;
-  tag?: string | null;
-  updated_at: string;
-};
-
 export type ProviderCredentialSecret = {
   workspaceId?: string;
   provider: IssueProvider;
@@ -50,14 +37,10 @@ const localDataDir = process.env.CHANGETHIS_DATA_DIR ?? path.join(process.cwd(),
 const credentialStorePath = path.join(localDataDir, "provider-credentials.json");
 
 export function credentialStorageReference(provider: IssueProvider, integrationId: string, kind: string): string {
-  return `${getDataStoreMode() === "supabase" ? "supabase" : "local"}:${provider}:${integrationId}:${kind}`;
+  return `local:${provider}:${integrationId}:${kind}`;
 }
 
 export function saveProviderCredentialSecret(secret: ProviderCredentialSecret): string {
-  if (getDataStoreMode() === "supabase" && isUuid(secret.integrationId)) {
-    throw new Error("Use saveProviderCredentialSecretAsync when DATA_STORE=supabase");
-  }
-
   const key = encryptionKey();
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
@@ -89,50 +72,22 @@ export function saveProviderCredentialSecret(secret: ProviderCredentialSecret): 
 }
 
 export async function saveProviderCredentialSecretAsync(secret: ProviderCredentialSecret): Promise<string> {
-  if (getDataStoreMode() !== "supabase") {
-    return saveProviderCredentialSecret(secret);
-  }
-
-  const encrypted = encryptSecret(secret.value);
-  const credentialKind = toSupabaseCredentialKind(secret.provider, secret.kind);
-  const storageReference = credentialStorageReference(secret.provider, secret.integrationId, secret.kind);
-  const existing = await supabaseServiceRest<SupabaseCredentialRow[]>(
-    `/rest/v1/provider_integration_credentials?integration_id=eq.${encodeURIComponent(secret.integrationId)}&credential_kind=eq.${encodeURIComponent(credentialKind)}&status=eq.active&select=id&limit=1`
-  );
-  const row = {
-    integration_id: secret.integrationId,
-    credential_kind: credentialKind,
-    storage_reference: storageReference,
-    display_name: displayNameForCredential(secret.provider, secret.kind),
-    scopes: secret.scopes ?? [],
-    expires_at: secret.expiresAt,
-    status: "active",
-    rotated_at: new Date().toISOString(),
-    algorithm: "aes-256-gcm",
-    ciphertext: encrypted.ciphertext,
-    iv: encrypted.iv,
-    tag: encrypted.tag
-  };
-
-  if (existing[0]?.id) {
-    await supabaseServiceRest(`/rest/v1/provider_integration_credentials?id=eq.${encodeURIComponent(existing[0].id)}`, {
-      method: "PATCH",
-      headers: {
-        Prefer: "return=minimal"
-      },
-      body: JSON.stringify(row)
-    });
-  } else {
-    await supabaseServiceRest("/rest/v1/provider_integration_credentials", {
+  if (usesInternalCredentialStore()) {
+    const response = await internalIntegrationRequest<{ storage_reference: string }>(`/integrations/${secret.provider}/credentials`, {
       method: "POST",
-      headers: {
-        Prefer: "return=minimal"
-      },
-      body: JSON.stringify(row)
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        integration_id: secret.integrationId,
+        kind: secret.kind,
+        value: secret.value,
+        expires_at: secret.expiresAt,
+        scopes: secret.scopes ?? []
+      })
     });
+    return response.storage_reference;
   }
 
-  return storageReference;
+  return saveProviderCredentialSecret(secret);
 }
 
 export function getProviderCredentialSecret(
@@ -141,10 +96,6 @@ export function getProviderCredentialSecret(
   kind: string,
   workspaceId?: string
 ): string | undefined {
-  if (getDataStoreMode() === "supabase" && integrationId && isUuid(integrationId)) {
-    throw new Error("Use getProviderCredentialSecretAsync when DATA_STORE=supabase");
-  }
-
   const store = readStore();
   const credential = store.credentials.find((item) =>
     item.workspaceId === workspaceId
@@ -176,32 +127,20 @@ export async function getProviderCredentialSecretAsync(
   kind: string,
   workspaceId?: string
 ): Promise<string | undefined> {
-  if (getDataStoreMode() !== "supabase" || !integrationId) {
-    return getProviderCredentialSecret(provider, integrationId, kind, workspaceId);
+  if (usesInternalCredentialStore()) {
+    if (!integrationId) {
+      return undefined;
+    }
+
+    const params = new URLSearchParams({ integration_id: integrationId, kind });
+    const response = await internalIntegrationRequest<{ value: string | null }>(`/integrations/${provider}/credentials?${params.toString()}`);
+    return response.value ?? undefined;
   }
 
-  const credentialKind = toSupabaseCredentialKind(provider, kind);
-  const rows = await supabaseServiceRest<SupabaseCredentialRow[]>(
-    `/rest/v1/provider_integration_credentials?integration_id=eq.${encodeURIComponent(integrationId)}&credential_kind=eq.${encodeURIComponent(credentialKind)}&status=eq.active&select=id,integration_id,credential_kind,storage_reference,scopes,expires_at,ciphertext,iv,tag,updated_at&limit=1`
-  );
-  const credential = rows[0];
-
-  if (!credential?.ciphertext || !credential.iv || !credential.tag) {
-    return undefined;
-  }
-
-  return decryptSecret({
-    ciphertext: credential.ciphertext,
-    iv: credential.iv,
-    tag: credential.tag
-  });
+  return getProviderCredentialSecret(provider, integrationId, kind, workspaceId);
 }
 
 export function deleteProviderCredentialSecrets(provider: IssueProvider, integrationId: string, workspaceId?: string): number {
-  if (getDataStoreMode() === "supabase" && isUuid(integrationId)) {
-    throw new Error("Use deleteProviderCredentialSecretsAsync when DATA_STORE=supabase");
-  }
-
   const store = readStore();
   const initialCount = store.credentials.length;
 
@@ -217,26 +156,50 @@ export function deleteProviderCredentialSecrets(provider: IssueProvider, integra
 }
 
 export async function deleteProviderCredentialSecretsAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<number> {
-  if (getDataStoreMode() !== "supabase") {
-    return deleteProviderCredentialSecrets(provider, integrationId, workspaceId);
+  if (usesInternalCredentialStore()) {
+    const params = new URLSearchParams({ integration_id: integrationId });
+    const response = await internalIntegrationRequest<{ removed: number }>(`/integrations/${provider}/credentials?${params.toString()}`, {
+      method: "DELETE"
+    });
+    return response.removed;
   }
 
-  const rows = await supabaseServiceRest<Array<{ id: string }>>(
-    `/rest/v1/provider_integration_credentials?integration_id=eq.${encodeURIComponent(integrationId)}&select=id`
-  );
+  return deleteProviderCredentialSecrets(provider, integrationId, workspaceId);
+}
 
-  if (rows.length === 0) {
-    return 0;
+function usesInternalCredentialStore(): boolean {
+  return getDataStoreMode() === "internal";
+}
+
+async function internalIntegrationRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const cookieHeader = await getInternalSessionCookieHeader();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(init.headers as Record<string, string> | undefined)
+  };
+
+  if (cookieHeader) {
+    headers.Cookie = cookieHeader;
   }
 
-  await supabaseServiceRest(`/rest/v1/provider_integration_credentials?integration_id=eq.${encodeURIComponent(integrationId)}`, {
-    method: "DELETE",
-    headers: {
-      Prefer: "return=minimal"
+  const response = await fetch(`${getInternalApiUrl()}${path}`, { ...init, headers, cache: "no-store" });
+
+  if (!response.ok) {
+    let message = `Provider credential request failed with status ${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown; error?: unknown };
+      if (typeof body.detail === "string") {
+        message = body.detail;
+      } else if (typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // Keep the generic message when the API does not return JSON.
     }
-  });
+    throw new Error(message);
+  }
 
-  return rows.length;
+  return (await response.json()) as T;
 }
 
 function readStore(): CredentialStore {
@@ -296,64 +259,6 @@ function encryptionKey(): Buffer {
   }
 
   return createHash("sha256").update(configuredKey ?? "changethis-local-development-secret").digest();
-}
-
-function encryptSecret(value: string): { iv: string; tag: string; ciphertext: string } {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
-  const ciphertext = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-
-  return {
-    iv: iv.toString("base64url"),
-    tag: tag.toString("base64url"),
-    ciphertext: ciphertext.toString("base64url")
-  };
-}
-
-function decryptSecret(secret: { iv: string; tag: string; ciphertext: string }): string {
-  const decipher = createDecipheriv("aes-256-gcm", encryptionKey(), Buffer.from(secret.iv, "base64url"));
-  decipher.setAuthTag(Buffer.from(secret.tag, "base64url"));
-  return Buffer.concat([
-    decipher.update(Buffer.from(secret.ciphertext, "base64url")),
-    decipher.final()
-  ]).toString("utf8");
-}
-
-function toSupabaseCredentialKind(provider: IssueProvider, kind: string): string {
-  if (provider === "github" && kind === "installation_id") {
-    return "github_app_installation";
-  }
-
-  if (kind === "access_token") {
-    return "oauth_token";
-  }
-
-  if (kind === "refresh_token") {
-    return "oauth_refresh_token";
-  }
-
-  return kind;
-}
-
-function displayNameForCredential(provider: IssueProvider, kind: string): string {
-  if (provider === "github" && kind === "installation_id") {
-    return "GitHub App installation";
-  }
-
-  if (provider === "gitlab" && kind === "access_token") {
-    return "GitLab OAuth token";
-  }
-
-  if (provider === "gitlab" && kind === "refresh_token") {
-    return "GitLab OAuth refresh token";
-  }
-
-  return `${provider} ${kind}`;
-}
-
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function isIssueProvider(value: unknown): value is IssueProvider {

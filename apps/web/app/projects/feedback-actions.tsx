@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Archive, ExternalLink, RotateCcw, Send } from "lucide-react";
+import { Archive, ExternalLink, LoaderCircle, RotateCcw, Send } from "lucide-react";
 import type { FeedbackStatus, IssueDraft } from "@changethis/shared";
 import { T, useLanguage } from "../i18n";
 
@@ -18,16 +18,18 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
   const { t } = useLanguage();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [runningAction, setRunningAction] = useState<"issue" | "ignore" | "keep" | "sync" | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isIgnoreConfirmOpen, setIsIgnoreConfirmOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState(issueDraft.title);
-  const [draftDescription, setDraftDescription] = useState(issueDraft.description);
+  const [draftDescription, setDraftDescription] = useState(normalizeIssueDraftDescription(issueDraft.description));
   const [draftLabels, setDraftLabels] = useState(issueDraft.labels.join(", "));
+  const isSubmitting = isPending || runningAction !== undefined;
 
   function openComposer() {
     setDraftTitle(issueDraft.title);
-    setDraftDescription(issueDraft.description);
+    setDraftDescription(normalizeIssueDraftDescription(issueDraft.description));
     setDraftLabels(issueDraft.labels.join(", "));
     setIsComposerOpen(true);
   }
@@ -38,6 +40,11 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
     payload?: unknown,
     onSuccess?: () => void
   ) {
+    if (runningAction) {
+      return;
+    }
+
+    setRunningAction(action);
     startTransition(async () => {
       setError(undefined);
 
@@ -100,6 +107,8 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
         toast.error("Connexion interrompue", {
           description: message
         });
+      } finally {
+        setRunningAction(undefined);
       }
     });
   }
@@ -115,7 +124,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
       "issue",
       {
         issueDraft: {
-          description: draftDescription.trim(),
+          description: normalizeIssueDraftDescription(draftDescription).trim(),
           labels,
           title: draftTitle.trim()
         }
@@ -133,7 +142,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
     const action = event.currentTarget.value;
     event.currentTarget.value = "";
 
-    if (isPending || action === "") {
+    if (isSubmitting || action === "") {
       return;
     }
 
@@ -163,7 +172,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
           <select
             aria-label="Actions"
             className="feedback-action-select"
-            disabled={isPending}
+            disabled={isSubmitting}
             defaultValue=""
             onChange={handleMoreAction}
           >
@@ -171,7 +180,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
               Plus
             </option>
             <option value="sync">
-              {isPending ? t("actions.processing") : t("actions.issue.sync")}
+              {isSubmitting ? t("actions.processing") : t("actions.issue.sync")}
             </option>
           </select>
         ) : null}
@@ -195,21 +204,23 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
     <div className="feedback-actions">
       <button
         className={isReplayAction ? "button retry-batch-button" : "button"}
-        disabled={isPending}
+        disabled={isSubmitting}
         onClick={openComposer}
         type="button"
       >
-        {isPending ? null : isReplayAction ? (
+        {isSubmitting ? (
+          <LoaderCircle aria-hidden="true" className="ui-icon loading-spinner" size={16} strokeWidth={2.2} />
+        ) : isReplayAction ? (
           <RotateCcw aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
         ) : (
           <Send aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
         )}
-        {isPending ? <T k="actions.processing" /> : <T k={createLabelKey} />}
+        {isSubmitting ? <T k="actions.processing" /> : <T k={createLabelKey} />}
       </button>
       <select
         aria-label="Actions"
         className="feedback-action-select"
-        disabled={isPending}
+        disabled={isSubmitting}
         defaultValue=""
         onChange={handleMoreAction}
       >
@@ -226,7 +237,7 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
       {error ? <span className="action-error" role="alert">{error}</span> : null}
       {isIgnoreConfirmOpen ? (
         <FeedbackIgnoreConfirmationModal
-          isPending={isPending}
+          isPending={isSubmitting}
           onCancel={() => setIsIgnoreConfirmOpen(false)}
           onConfirm={ignoreFeedback}
         />
@@ -281,8 +292,18 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
               <button className="button secondary-button" onClick={() => setIsComposerOpen(false)} type="button">
                 <T k="issueComposer.cancel" />
               </button>
-              <button className="button" disabled={isPending || !canCreateIssue} onClick={createIssueFromDraft} type="button">
-                {isPending ? <T k="actions.processing" /> : <T k="issueComposer.submit" />}
+              <button className="button" disabled={isSubmitting || !canCreateIssue} onClick={createIssueFromDraft} type="button">
+                {isSubmitting ? (
+                  <>
+                    <LoaderCircle aria-hidden="true" className="ui-icon loading-spinner" size={16} strokeWidth={2.2} />
+                    <T k="actions.processing" />
+                  </>
+                ) : (
+                  <>
+                    <Send aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    <T k="issueComposer.submit" />
+                  </>
+                )}
               </button>
             </div>
           </section>
@@ -290,6 +311,16 @@ export function FeedbackActions({ feedbackId, issueDraft, status, externalIssueU
       ) : null}
     </div>
   );
+}
+
+function normalizeIssueDraftDescription(description: string): string {
+  return description
+    .replace(
+      "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant.",
+      "Capture disponible dans ChangeThis. Elle sera jointe a l'issue Git si la destination le supporte."
+    )
+    .replace(/\n+## Analyse IA\n+\n?A completer automatiquement\.\s*$/u, "")
+    .trimEnd();
 }
 
 function FeedbackIgnoreConfirmationModal({
@@ -320,7 +351,12 @@ function FeedbackIgnoreConfirmationModal({
             Annuler
           </button>
           <button className="button" disabled={isPending} onClick={onConfirm} type="button">
-            {isPending ? "Archivage..." : "Ignorer"}
+            {isPending ? (
+              <>
+                <LoaderCircle aria-hidden="true" className="ui-icon loading-spinner" size={16} strokeWidth={2.2} />
+                Archivage...
+              </>
+            ) : "Ignorer"}
           </button>
         </div>
       </div>

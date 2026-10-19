@@ -1,4 +1,4 @@
-import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetReporterFields } from "@changethis/shared";
+import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetDisplayMode, WidgetLocale, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../lib/api-security";
@@ -116,7 +116,10 @@ export async function POST(request: Request) {
       widgetLocale: parseWidgetLocale(body.widgetLocale),
       widgetButtonPosition: parseWidgetButtonPosition(body.widgetButtonPosition),
       widgetButtonVariant: parseWidgetButtonVariant(body.widgetButtonVariant),
+      widgetDisplayMode: parseWidgetDisplayMode(body.widgetDisplayMode),
       widgetReporterFields: parseWidgetReporterFields(body.widgetReporterFields),
+      widgetTitle: parseWidgetTitle(body.widgetTitle),
+      widgetModes: parseWidgetModes(body.widgetModes),
       issueCreationMode: parseIssueCreationMode(body.issueCreationMode)
     });
 
@@ -173,8 +176,30 @@ function parseWidgetButtonVariant(value: unknown): WidgetButtonVariant | undefin
   return value === "default" || value === "subtle" ? value : undefined;
 }
 
+function parseWidgetDisplayMode(value: unknown): WidgetDisplayMode | undefined {
+  return value === "standard" || value === "subtle" || value === "hidden" || value === "disabled" ? value : undefined;
+}
+
 function parseWidgetReporterFields(value: unknown): WidgetReporterFields | undefined {
   return value === "hidden" || value === "optional" || value === "required" ? value : undefined;
+}
+
+function parseWidgetTitle(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const title = value.trim();
+  return title.length > 0 && title.length <= 240 ? title : undefined;
+}
+
+function parseWidgetModes(value: unknown): WidgetMode[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const modes = ["comment", "pin", "screenshot"].filter((mode): mode is WidgetMode => value.includes(mode));
+  return modes.length > 0 ? modes : undefined;
 }
 
 function parseIssueCreationMode(value: unknown): IssueCreationMode | undefined {

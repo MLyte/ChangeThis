@@ -1,19 +1,23 @@
 # Checklist hardening production — ChangeThis
 
-Version: 2026-05-04  
-Référence: `docs/current-state.fr.md`, `docs/production-runbook.md`, `docs/deploy-railway-ovh-changethis-dev.md`, `AI_TODO.md`
+Version: 2026-05-21
+Référence: `docs/current-state.fr.md`, `docs/production-runbook.md`, `docs/internal-ubuntu24-install.fr.md`, `CHANGE_LOG.md`
 
-Ce document propose une check-list opérationnelle pour passer de la bêta ouverte contrôlée à un fonctionnement production robuste, en distinguant:
+Ce document propose une check-list opérationnelle pour stabiliser l'installation interne CRA de ChangeThis: Next.js, FastAPI et PostgreSQL interne sur Ubuntu 24.
+
+On distingue:
 - **Quick wins (2–4 semaines)**: actions à faible surface, rapide à exécuter, peu de refacto.
 - **Plus grand scope**: actions structurantes, plus coûteuses, à planifier par jalons.
 
 ## 0) Pré-conditions obligatoires
 
-- [ ] `AUTH_MODE=supabase`
-- [ ] `DATA_STORE=supabase`
-- [ ] `/api/ready` vert en staging et en production sur une vérification manuelle.
-- [ ] `npm run prod:check` vert avant chaque release candidate.
-- [ ] `supabase/migrations/0001` à `0008` applicées et vérifiées.
+- [ ] `AUTH_MODE=internal`
+- [ ] `DATA_STORE=internal`
+- [ ] `INTERNAL_API_URL=http://127.0.0.1:8000` pointe vers FastAPI local sur `front-tool-prod`.
+- [ ] `alembic upgrade head` appliqué sur PostgreSQL interne.
+- [ ] `systemctl status changethis-web changethis-api` vert.
+- [ ] `/api/ready` vert via le domaine frontal.
+- [ ] Smoke widget externe validé depuis une origine réellement autorisée.
 
 ## 1) Sécurité
 
@@ -27,7 +31,7 @@ Ce document propose une check-list opérationnelle pour passer de la bêta ouver
 - [ ] Ajouter redaction systématique des secrets/PII dans les logs.
 - [ ] Ajouter une revue CI `secrets scan` (git + historique) sur chaque PR.
 - [ ] Bloquer `NEXT_PUBLIC_` pour clés sensibles ou valeurs non prévues en front (revue de `env:check`).
-- [ ] Finaliser audit RLS minimum (lecture/écriture) selon les rôles `owner/admin/member/viewer`.
+- [ ] Finaliser audit des controles d'acces API minimum (lecture/écriture) selon les rôles `owner/admin/member/viewer`.
 
 ### Plus grand scope
 - [ ] Introduire coffre KMS/Vault pour les credentials provider (même si chiffrement applicatif existant en place, migrer vers un secret store géré).
@@ -92,11 +96,11 @@ Ce document propose une check-list opérationnelle pour passer de la bêta ouver
   - reprise de commit antérieur + migration DB non destructive uniquement.
 
 ### Plus grand scope
-- [ ] Blue/Green ou canary sur Railway (ou migration vers orchestrateur plus fin si besoin).
+- [ ] Blue/Green ou canary interne si l'infra le permet.
 - [ ] Script de vérification post-déploiement automatisé:
   - `/api/health`, `/api/ready`, login, smoke widget->feedback, création d’issue en pilotage.
 - [ ] Plan d’exécution pour rollback migration (forward-only + script de repli).
-- [ ] Chaos validation trimestrielle (redémarrage, latence Supabase, timeout provider).
+- [ ] Chaos validation trimestrielle (redémarrage service, latence PostgreSQL/FastAPI, timeout provider).
 
 ## 5) Runbooks
 
@@ -154,7 +158,7 @@ Ce document propose une check-list opérationnelle pour passer de la bêta ouver
 ### Phase 3 — Scale/Hardening avancé (Semaines 9-16)
 - File durable + worker séparé + DLQ.
 - Tracing distribué + observabilité complète.
-- RLS tests complets + secret management avancé.
+- Tests d'autorisation complets + secret management avancé.
 - Plan d’incident mature (post-mortems, escalation, KPI MTTR).
 - Sécurisation/rotation avancée des credentials provider.
 

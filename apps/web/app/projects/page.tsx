@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { forbidden, unauthorized } from "next/navigation";
+import { redirect } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Clock3, Code2, GitBranch, Globe2, Inbox, MessageSquareText, RotateCcw, type LucideIcon } from "lucide-react";
+import { buildPinReplayUrl } from "@changethis/shared";
 import type { FeedbackStatus } from "@changethis/shared";
 import { isAuthFailure, requireWorkspaceSession } from "../../lib/auth";
 import { workspaceDemoProjectKeyPrefix, workspaceDemoProjectName, type ChangeThisProject } from "../../lib/demo-project";
 import { isDemoFeedback } from "../../lib/demo-feedback-actions";
 import { getFeedbackRepository, type StoredFeedback } from "../../lib/feedback-repository";
+import { filterFeedbacksForIssueAccess, filterProjectsForIssueAccess, getIssueAccessScope, listProjectIssueAccesses } from "../../lib/project-issue-access";
 import { listConfiguredProjects } from "../../lib/project-registry";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
@@ -83,21 +85,44 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   if (isAuthFailure(session)) {
     if (session.status === 401) {
-      unauthorized();
+      redirect("/login?next=/projects");
     }
 
-    forbidden();
+    redirect("/login?next=/projects");
   }
 
   if (!session.workspace) {
-    forbidden();
+    redirect("/signup/set-password");
   }
 
   const workspaceId = session.workspace.id;
   const params = await searchParams;
   const filters = parseDashboardFilters(params);
-  const projects = await listConfiguredProjects(workspaceId);
-  const feedbacks = await getFeedbackRepository().list({ workspaceId });
+  const issueAccessScope = await getIssueAccessScope(session);
+  const ownProjects = filterProjectsForIssueAccess(await listConfiguredProjects(workspaceId), issueAccessScope);
+  const ownFeedbacks = filterFeedbacksForIssueAccess(await getFeedbackRepository().list({ workspaceId }), issueAccessScope);
+  const sharedAccesses = (await listProjectIssueAccesses({ userId: session.user.id }))
+    .filter((access) => access.status === "active" && access.workspaceId && access.workspaceId !== workspaceId);
+  const sharedWorkspaceIds = [...new Set(sharedAccesses.map((access) => access.workspaceId).filter((id): id is string => Boolean(id)))];
+  const sharedProjectGroupResults = await Promise.allSettled(sharedWorkspaceIds.map(async (sharedWorkspaceId) => {
+    const allowedKeys = new Set(sharedAccesses
+      .filter((access) => access.workspaceId === sharedWorkspaceId)
+      .map((access) => access.projectKey));
+    const [workspaceProjects, workspaceFeedbacks] = await Promise.all([
+      listConfiguredProjects(sharedWorkspaceId),
+      getFeedbackRepository().list({ workspaceId: sharedWorkspaceId })
+    ]);
+
+    return {
+      projects: workspaceProjects.filter((project) => allowedKeys.has(project.publicKey)),
+      feedbacks: workspaceFeedbacks.filter((feedback) => allowedKeys.has(feedback.projectKey))
+    };
+  }));
+  const sharedProjectGroups = sharedProjectGroupResults.flatMap((result) => (
+    result.status === "fulfilled" ? [result.value] : []
+  ));
+  const projects = dedupeProjects([...ownProjects, ...sharedProjectGroups.flatMap((group) => group.projects)]);
+  const feedbacks = [...ownFeedbacks, ...sharedProjectGroups.flatMap((group) => group.feedbacks)];
   const filteredFeedbacks = feedbacks.filter((feedback) => matchesDashboardFilters(feedback, filters));
   const activeFeedbacks = feedbacks.filter(isActiveFeedback);
   const historyFeedbacks = feedbacks.filter(isHistoryFeedback);
@@ -671,6 +696,7 @@ function ProjectRouteRow({
 
 function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const demoFeedback = isDemoFeedback(feedback);
+  const captureAsset = preferredCaptureAsset(feedback);
   const draftLabels = feedback.issueDraft.labels.join(" / ");
   const viewport = `${feedback.payload.metadata.viewport.width} x ${feedback.payload.metadata.viewport.height}`;
   const deviceContext = formatDeviceContext(feedback.payload.metadata);
@@ -681,6 +707,7 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
   const appEnvironmentSummary = formatAppEnvironmentSummary(appEnvironment);
   const displayMessage = formatFeedbackMessage(feedback);
   const cardTitle = formatFeedbackCardTitle(feedback, demoFeedback ? workspaceDemoProjectName : feedback.projectName);
+  const feedbackPins = feedback.payload.pins?.length ? feedback.payload.pins : feedback.payload.pin ? [feedback.payload.pin] : [];
   const canBulkCreateIssue = feedback.status === "raw" || feedback.status === "retrying" || feedback.status === "failed";
   const hasRetry = feedback.status === "retrying" && feedback.nextRetryAt;
   const issueLabelKey = feedback.externalIssue?.url
@@ -740,6 +767,17 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
               ) : feedback.payload.pin ? (
                 <span>Pin: {Math.round(feedback.payload.pin.x)}, {Math.round(feedback.payload.pin.y)}</span>
               ) : null}
+              {feedbackPins.map((pin, index) => (
+                <a
+                  className="inline-link"
+                  href={buildPinReplayUrl(feedback.payload.metadata, pin, index + 1)}
+                  key={`${pin.x}-${pin.y}-${index}`}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Revoir pin #{index + 1}
+                </a>
+              ))}
               {demoFeedback ? null : (
                 <a className="inline-link" href={feedback.issueTarget.webUrl ?? "#"}>
                   <T k="projects.feedback.destination" />
@@ -769,10 +807,10 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
         </span>
       </div>
       <div className="feedback-capture-cell">
-        {feedback.screenshotAsset ? (
+        {captureAsset ? (
           <div className="feedback-capture-preview">
             <ScreenshotPreview
-              asset={feedback.screenshotAsset}
+              asset={captureAsset}
               feedback={{
                 createdAt: feedback.createdAt,
                 issueTarget: feedback.issueTarget,
@@ -786,6 +824,9 @@ function FeedbackCard({ feedback }: { feedback: StoredFeedback }) {
               pin={feedback.payload.pin}
               pins={feedback.payload.pins}
             />
+            {feedback.payload.metadata.capture?.risk ? (
+              <span className="capture-risk-badge">À vérifier</span>
+            ) : null}
           </div>
         ) : (
           <span className="feedback-capture-empty">—</span>
@@ -1023,6 +1064,14 @@ function isFeedbackStatus(value?: string): value is FeedbackStatus {
     || value === "ignored";
 }
 
+function preferredCaptureAsset(feedback: StoredFeedback): StoredFeedback["screenshotAsset"] {
+  if (feedback.screenshotAsset?.kind === "user_upload") {
+    return feedback.screenshotAsset;
+  }
+
+  return feedback.browserCaptureAsset ?? feedback.screenshotAsset;
+}
+
 function formatFeedbackMessage(feedback: StoredFeedback): { message: string; reporter?: string } {
   const message = feedback.payload.message;
   const reporter = formatFeedbackReporter(feedback.payload.reporter);
@@ -1209,6 +1258,23 @@ function inferOperatingSystemLabel(userAgent: string): string | undefined {
 
 function formatCompactNumber(value: number): string {
   return Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function dedupeProjects(projects: ChangeThisProject[]): ChangeThisProject[] {
+  const seen = new Set<string>();
+  const deduped: ChangeThisProject[] = [];
+
+  for (const project of projects) {
+    const key = `${project.workspaceId ?? ""}:${project.publicKey}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    deduped.push(project);
+  }
+
+  return deduped;
 }
 
 function formatAppEnvironmentSummary(app?: StoredFeedback["payload"]["metadata"]["app"]): string | undefined {

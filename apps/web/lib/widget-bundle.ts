@@ -18,8 +18,12 @@ export async function readWidgetBundle(): Promise<string> {
   return readFile(widgetPath, "utf8");
 }
 
+export function widgetBundleVersion(widget: string): string {
+  return createHash("sha256").update(widget).digest("hex").slice(0, 16);
+}
+
 export function widgetBundleResponse(widget: string): NextResponse {
-  const widgetVersion = createHash("sha256").update(widget).digest("hex").slice(0, 16);
+  const widgetVersion = widgetBundleVersion(widget);
 
   return new NextResponse(widget, {
     headers: {

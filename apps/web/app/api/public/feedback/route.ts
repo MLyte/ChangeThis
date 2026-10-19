@@ -2,6 +2,7 @@ import { buildIssueDraft, validateFeedbackPayload } from "@changethis/shared";
 import { NextResponse } from "next/server";
 import { methodNotAllowed } from "../../../../lib/api-security";
 import { getCurrentSession } from "../../../../lib/auth";
+import { captureBrowserScreenshotForFeedback, scheduleBrowserCaptureForFeedback } from "../../../../lib/browser-capture";
 import { demoProject } from "../../../../lib/demo-project";
 import { getFeedbackRepository } from "../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../lib/issue-workflow";
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
 
   if (contentLength && Number(contentLength) > maxBodyBytes) {
     logWarn("feedback_rejected_payload_too_large", { request_id: requestId, origin, content_length: contentLength });
-    return NextResponse.json({ error: "Payload is too large" }, { status: 413, headers });
+    return NextResponse.json({ error: "Payload is too large" }, { status: 413, headers: { ...headers, ...corsHeaders(origin) } });
   }
 
   let rawPayload: unknown;
@@ -127,7 +128,8 @@ export async function POST(request: Request) {
 
   if (project.issueCreationMode === "automatic") {
     try {
-      processedFeedback = await createIssueForFeedback(feedback, requestId, {
+      const capturedFeedback = await captureBrowserScreenshotForFeedback(feedback, requestId, origin);
+      processedFeedback = await createIssueForFeedback(capturedFeedback ?? feedback, requestId, {
         workspaceId: project.workspaceId
       });
     } catch (error) {
@@ -139,6 +141,8 @@ export async function POST(request: Request) {
         error: message
       });
     }
+  } else {
+    scheduleBrowserCaptureForFeedback(feedback, requestId, origin);
   }
 
   logInfo("feedback_received", {

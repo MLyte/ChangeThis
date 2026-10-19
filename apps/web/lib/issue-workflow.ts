@@ -4,7 +4,7 @@ import { createDemoExternalIssueRef } from "./demo-provider-data";
 import { isDemoFeedback } from "./demo-feedback-actions";
 import type { StoredFeedback } from "./feedback-repository";
 import { getFeedbackRepository } from "./feedback-repository";
-import { getIssueProviderClient, IssueProviderError } from "./issue-providers";
+import { getIssueProviderClient, IssueProviderError, type IssueProviderAttachment } from "./issue-providers";
 import { logError, logInfo, logWarn } from "./logger";
 
 const retryBaseDelayMs = 30_000;
@@ -79,7 +79,10 @@ export async function createIssueForFeedback(
   });
 
   try {
-    const externalIssue = await client.createIssue(pendingFeedback.issueTarget, pendingFeedback.issueDraft, { idempotencyKey });
+    const externalIssue = await client.createIssue(pendingFeedback.issueTarget, pendingFeedback.issueDraft, {
+      attachment: issueScreenshotAttachment(pendingFeedback),
+      idempotencyKey
+    });
     const updated = await repository.recordIssueAttempt(pendingFeedback.id, { ok: true, externalIssue }, options);
 
     logInfo("provider_issue_create_succeeded", {
@@ -115,6 +118,45 @@ export async function createIssueForFeedback(
 
     return updated;
   }
+}
+
+function issueScreenshotAttachment(feedback: StoredFeedback): IssueProviderAttachment | undefined {
+  const asset = preferredIssueAsset(feedback);
+  const dataUrl = asset?.dataUrl ?? asset?.thumbnailDataUrl;
+
+  if (!asset || !dataUrl || feedback.issueTarget.provider !== "gitlab") {
+    return undefined;
+  }
+
+  return {
+    dataUrl,
+    filename: `changethis-${feedback.id}.${extensionFromMimeType(asset.mimeType)}`,
+    mimeType: asset.mimeType
+  };
+}
+
+function preferredIssueAsset(feedback: StoredFeedback): StoredFeedback["screenshotAsset"] {
+  if (feedback.screenshotAsset?.kind === "user_upload") {
+    return feedback.screenshotAsset;
+  }
+
+  return feedback.browserCaptureAsset ?? feedback.screenshotAsset;
+}
+
+function extensionFromMimeType(mimeType: string): string {
+  if (mimeType === "image/png") {
+    return "png";
+  }
+
+  if (mimeType === "image/jpeg") {
+    return "jpg";
+  }
+
+  if (mimeType === "image/webp") {
+    return "webp";
+  }
+
+  return "png";
 }
 
 export async function processDueIssueRetries(requestId: string, options: { workspaceId?: string } = {}): Promise<StoredFeedback[]> {

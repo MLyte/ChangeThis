@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildGitHubIssueDraft, buildIssueDraft, validateFeedbackPayload, validateIssueTarget } from "../dist/index.js";
+import { buildGitHubIssueDraft, buildIssueDraft, buildPinReplayUrl, pinReplayQueryParam, validateFeedbackPayload, validateIssueTarget } from "../dist/index.js";
 
 function validPayload(overrides = {}) {
   return {
@@ -69,6 +69,38 @@ test("validateFeedbackPayload accepts developer diagnostics metadata", () => {
   });
 });
 
+test("validateFeedbackPayload accepts capture risk metadata", () => {
+  const result = validateFeedbackPayload(validPayload({
+    metadata: {
+      ...validPayload().metadata,
+      capture: {
+        source: "client",
+        risk: true,
+        cssColorConversionCount: 12,
+        cssFallbackCount: 2,
+        removedBackgroundImageCount: 1,
+        unloadedVisibleImageCount: 1,
+        crossOriginIframeCount: 1,
+        fontReadyTimedOut: false,
+        preparationTimedOut: true
+      }
+    }
+  }));
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value.metadata.capture, {
+    source: "client",
+    risk: true,
+    cssColorConversionCount: 12,
+    cssFallbackCount: 2,
+    removedBackgroundImageCount: 1,
+    unloadedVisibleImageCount: 1,
+    crossOriginIframeCount: 1,
+    fontReadyTimedOut: false,
+    preparationTimedOut: true
+  });
+});
+
 test("validateFeedbackPayload accepts reporter contact details", () => {
   const result = validateFeedbackPayload(validPayload({
     reporter: {
@@ -130,10 +162,12 @@ test("validateFeedbackPayload rejects oversized screenshots", () => {
 test("validateFeedbackPayload accepts safe screenshot MIME types", () => {
   for (const mimeType of ["image/png", "image/jpeg", "image/webp"]) {
     const result = validateFeedbackPayload(validPayload({
-      screenshotDataUrl: `data:${mimeType};base64,AAAA`
+      screenshotDataUrl: `data:${mimeType};base64,AAAA`,
+      screenshotSource: "user_upload"
     }));
 
     assert.equal(result.ok, true);
+    assert.equal(result.value.screenshotSource, "user_upload");
   }
 });
 
@@ -199,7 +233,7 @@ test("buildIssueDraft includes reporter contact details when present", () => {
 test("buildIssueDraft numbers multiple pins in the issue description", () => {
   const validation = validateFeedbackPayload(validPayload({
     pins: [
-      { x: 42, y: 128, selector: ".hero-cta", text: "Demander un devis" },
+      { x: 42, y: 128, elementOffsetX: 10, elementOffsetY: 20, selector: ".hero-cta", text: "Demander un devis" },
       { x: 210, y: 360, selector: ".pricing", text: "Tarifs" }
     ]
   }));
@@ -209,9 +243,46 @@ test("buildIssueDraft numbers multiple pins in the issue description", () => {
 
   assert.match(draft.description, /Pin #1: x=42, y=128/);
   assert.match(draft.description, /Pin #2: x=210, y=360/);
+  assert.match(draft.description, new RegExp(`${pinReplayQueryParam}=`));
+  assert.match(draft.description, /Revoir sur la page: https:\/\/example.com\/contact\?/);
 });
 
-test("buildIssueDraft does not imply screenshots are attached to Git issues", () => {
+test("buildPinReplayUrl stores replay coordinates without user message or visible text", () => {
+  const payload = validPayload({
+    message: "Private feedback",
+    metadata: {
+      ...validPayload().metadata,
+      url: "https://example.com/contact?tab=details#/account",
+      scroll: {
+        x: 0,
+        y: 500
+      }
+    },
+    pin: {
+      x: 42,
+      y: 128,
+      elementOffsetX: 10,
+      elementOffsetY: 20,
+      selector: ".hero-cta",
+      text: "Visible customer data"
+    }
+  });
+  const url = new URL(buildPinReplayUrl(payload.metadata, payload.pin, 1));
+  const replayPayload = JSON.parse(url.searchParams.get(pinReplayQueryParam));
+
+  assert.equal(url.hash, "#/account");
+  assert.equal(replayPayload.n, 1);
+  assert.equal(replayPayload.x, 42);
+  assert.equal(replayPayload.y, 128);
+  assert.equal(replayPayload.ox, 10);
+  assert.equal(replayPayload.oy, 20);
+  assert.equal(replayPayload.s, ".hero-cta");
+  assert.equal(replayPayload.sy, 500);
+  assert.equal(JSON.stringify(replayPayload).includes("Private feedback"), false);
+  assert.equal(JSON.stringify(replayPayload).includes("Visible customer data"), false);
+});
+
+test("buildIssueDraft explains screenshots can be attached by supported Git providers", () => {
   const validation = validateFeedbackPayload(validPayload({
     screenshotDataUrl: "data:image/png;base64,AAAA"
   }));
@@ -220,8 +291,9 @@ test("buildIssueDraft does not imply screenshots are attached to Git issues", ()
   const draft = buildIssueDraft(validation.value);
 
   assert.match(draft.description, /Capture disponible dans ChangeThis/);
-  assert.match(draft.description, /n'est pas jointe a l'issue Git/);
-  assert.doesNotMatch(draft.description, /Supabase Storage/);
+  assert.match(draft.description, /sera jointe a l'issue Git si la destination le supporte/);
+  assert.doesNotMatch(draft.description, /external object storage/);
+  assert.doesNotMatch(draft.description, /Analyse IA/);
 });
 
 test("buildIssueDraft includes developer diagnostics metadata", () => {

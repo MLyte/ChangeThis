@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import type { IssueDraft } from "@changethis/shared";
-import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../../../lib/auth";
 import { methodNotAllowed, parsePrivateTextField, requirePrivateMutationOrigin } from "../../../../../../lib/api-security";
 import { resolveFeedbackForAction } from "../../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../../lib/logger";
+import { getIssueAccessScope, getIssueAccessWorkspaceIds, hasFeedbackIssueAccess, issueAccessFailure } from "../../../../../../lib/project-issue-access";
 
 const issueDraftTitleMaxLength = 240;
 const issueDraftDescriptionMaxLength = 12000;
@@ -26,7 +27,7 @@ export const DELETE = unsupportedMethod;
 export const OPTIONS = unsupportedMethod;
 
 export async function POST(request: Request, context: RouteContext) {
-  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "member");
+  const session = await requireWorkspaceSession(request);
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);
@@ -47,10 +48,15 @@ export async function POST(request: Request, context: RouteContext) {
   const draftOverride = await readIssueDraftOverride(request);
   const { id } = await context.params;
   const repository = getFeedbackRepository();
-  const actionScope = await resolveFeedbackForAction(repository, id, workspaceId);
+  const actionScope = await resolveFeedbackForAction(repository, id, await getIssueAccessWorkspaceIds(session));
 
   if (!actionScope) {
     return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+  }
+
+  const issueAccessScope = await getIssueAccessScope(session);
+  if (!hasFeedbackIssueAccess(issueAccessScope, actionScope.feedback)) {
+    return authFailureResponse(issueAccessFailure());
   }
 
   if (draftOverride && !draftOverride.ok) {

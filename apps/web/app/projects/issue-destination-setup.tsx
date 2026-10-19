@@ -4,20 +4,25 @@ import Link from "next/link";
 import { type FocusEvent, type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  Check,
   Copy,
   ExternalLink,
   GitBranch,
   Globe2,
   Info,
+  KeyRound,
   Link2,
+  Loader2,
   Mail,
+  Pencil,
   Plus,
+  Search,
   ShieldCheck,
   Trash2,
   UserRound,
   X,
 } from "lucide-react";
-import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetLocale, WidgetReporterFields } from "@changethis/shared";
+import type { IssueCreationMode, IssueProvider, WidgetButtonPosition, WidgetButtonVariant, WidgetDisplayMode, WidgetLocale, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import type { ChangeThisProject } from "../../lib/demo-project";
 import type { ProviderIntegrationSummary } from "../../lib/provider-integrations";
 import { T, useLanguage } from "../i18n";
@@ -27,14 +32,15 @@ type Props = {
   projects: ChangeThisProject[];
   integrations: ProviderIntegrationSummary[];
   section: SettingsSection;
-  users?: WorkspaceUserView[];
-  workspaceName?: string;
   canManageMembers?: boolean;
+  canViewConnectedSites?: boolean;
+  currentUserEmail?: string;
   currentUserId?: string;
 };
 
 type ProjectView = ChangeThisProject & {
   installSnippet?: string;
+  issueAccesses?: SiteIssueAccessView[];
   metrics?: {
     feedbacksReceived: number;
     issuesCreated: number;
@@ -42,13 +48,14 @@ type ProjectView = ChangeThisProject & {
     lastFeedbackAt?: string;
   };
 };
-export type SettingsSection = "git-connections" | "connected-sites" | "users";
-export type WorkspaceUserView = {
+export type SettingsSection = "account" | "git-connections" | "connected-sites";
+
+type SiteIssueAccessView = {
+  projectKey: string;
   userId: string;
-  email: string;
-  role: "viewer" | "member" | "admin" | "owner" | string;
-  status: string;
-  joinedAt?: string;
+  email?: string;
+  role: "issue_member";
+  status: "active" | "disabled";
 };
 
 type RepositoryOption = {
@@ -83,9 +90,11 @@ const widgetPositionOptions: Array<{ label: string; value: WidgetButtonPosition 
   { label: "Haut gauche", value: "top-left" }
 ];
 
-const widgetVariantOptions: Array<{ label: string; value: WidgetButtonVariant }> = [
-  { label: "Standard", value: "default" },
-  { label: "Discret production", value: "subtle" }
+const widgetDisplayModeOptions: Array<{ label: string; value: WidgetDisplayMode }> = [
+  { label: "Standard", value: "standard" },
+  { label: "Discret", value: "subtle" },
+  { label: "Invisible", value: "hidden" },
+  { label: "Non présent", value: "disabled" }
 ];
 
 const widgetReporterFieldOptions: Array<{ label: string; value: WidgetReporterFields }> = [
@@ -97,6 +106,13 @@ const widgetReporterFieldOptions: Array<{ label: string; value: WidgetReporterFi
 const issueCreationModeOptions: Array<{ label: string; value: IssueCreationMode }> = [
   { label: "Manuelle", value: "manual" },
   { label: "Automatique", value: "automatic" }
+];
+
+const defaultWidgetTitle = "Que faut-il changer ?";
+const maxWidgetTitleLength = 240;
+const widgetModeOptions: Array<{ label: string; value: WidgetMode }> = [
+  { label: "Retour page", value: "comment" },
+  { label: "Capture", value: "screenshot" }
 ];
 
 type OriginValidation = {
@@ -113,23 +129,34 @@ type DeleteSiteConfirmation = {
   projectKey: string;
 };
 
+type SiteOriginEditor = {
+  projectKey: string;
+  name: string;
+  value: string;
+};
+
+type SiteAccessEditor = {
+  projectKey: string;
+  userIds: string[];
+};
+
 export function IssueDestinationSetup({
   projects,
   integrations,
   section,
-  users = [],
-  workspaceName,
   canManageMembers = false,
+  canViewConnectedSites = canManageMembers,
+  currentUserEmail,
   currentUserId
 }: Props) {
   const { t } = useLanguage();
   const [projectViews, setProjectViews] = useState<ProjectView[]>(projects);
-  const [workspaceUsers, setWorkspaceUsers] = useState<WorkspaceUserView[]>(users);
   const firstConnectedProvider = integrations.find((integration) => integration.status === "connected")?.provider ?? "github";
   const [selectedProvider, setSelectedProvider] = useState<IssueProvider>(firstConnectedProvider);
   const [, setMessage] = useState(t("destinations.message.initial"));
   const [isPending, startTransition] = useTransition();
   const [isSiteModalOpen, setIsSiteModalOpen] = useState(false);
+  const [repositoryEditProjectKey, setRepositoryEditProjectKey] = useState<string | undefined>();
   const [repositoryOptions, setRepositoryOptions] = useState<RepositoryOption[]>([]);
   const [selectedRepositoryId, setSelectedRepositoryId] = useState("");
   const [repositoryUrl, setRepositoryUrl] = useState("");
@@ -137,15 +164,22 @@ export function IssueDestinationSetup({
   const [siteOrigin, setSiteOrigin] = useState("");
   const [siteWidgetLocale, setSiteWidgetLocale] = useState<WidgetLocale>("fr");
   const [siteWidgetButtonVariant, setSiteWidgetButtonVariant] = useState<WidgetButtonVariant>("default");
+  const [siteWidgetDisplayMode, setSiteWidgetDisplayMode] = useState<WidgetDisplayMode>("standard");
   const [siteWidgetButtonPosition, setSiteWidgetButtonPosition] = useState<WidgetButtonPosition>("bottom-right");
   const [siteWidgetReporterFields, setSiteWidgetReporterFields] = useState<WidgetReporterFields>("optional");
+  const [siteWidgetTitle, setSiteWidgetTitle] = useState(defaultWidgetTitle);
+  const [siteWidgetModes, setSiteWidgetModes] = useState<WidgetMode[]>(["comment", "screenshot"]);
   const [siteIssueCreationMode, setSiteIssueCreationMode] = useState<IssueCreationMode>("manual");
   const [repositoryLoadState, setRepositoryLoadState] = useState<RepositoryLoadState>("idle");
   const [repositoryLoadMessage, setRepositoryLoadMessage] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"viewer" | "member" | "admin">("member");
+  const [siteAccessEmail, setSiteAccessEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("");
   const [automaticIssueConfirmation, setAutomaticIssueConfirmation] = useState<AutomaticIssueConfirmation | undefined>();
   const [deleteSiteConfirmation, setDeleteSiteConfirmation] = useState<DeleteSiteConfirmation | undefined>();
+  const [siteOriginEditor, setSiteOriginEditor] = useState<SiteOriginEditor | undefined>();
+  const [siteAccessEditor, setSiteAccessEditor] = useState<SiteAccessEditor | undefined>();
 
   const connectedProviders = useMemo(
     () => new Set(integrations.filter((integration) => integration.status === "connected").map((integration) => integration.provider)),
@@ -159,7 +193,7 @@ export function IssueDestinationSetup({
     && (repositoryLoadState === "empty" || repositoryLoadState === "error" || repositoryLoadState === "unavailable");
 
   useEffect(() => {
-    if (!isSiteModalOpen || !connectedProviders.has(selectedProvider)) {
+    if ((!isSiteModalOpen && !repositoryEditProjectKey) || !connectedProviders.has(selectedProvider)) {
       return;
     }
 
@@ -185,12 +219,15 @@ export function IssueDestinationSetup({
           return;
         }
 
-        const body = await response.json() as unknown;
+        const body = await parseJsonResponse<unknown>(response);
 
         if (!response.ok) {
           setRepositoryOptions([]);
           setRepositoryLoadState("error");
-          setRepositoryLoadMessage(repositoryErrorMessage(body) ?? "Impossible de charger les dépôts. La saisie URL reste disponible en secours.");
+          setRepositoryLoadMessage(repositoryErrorMessage(body) ?? repositoryResponseErrorMessage(
+            response,
+            "Impossible de charger les dépôts. La saisie URL reste disponible en secours."
+          ));
           return;
         }
 
@@ -213,7 +250,7 @@ export function IssueDestinationSetup({
     void loadRepositories();
 
     return () => abortController.abort();
-  }, [connectedProviders, isSiteModalOpen, selectedIntegration?.id, selectedProvider]);
+  }, [connectedProviders, isSiteModalOpen, repositoryEditProjectKey, selectedIntegration?.id, selectedProvider]);
 
   function selectProvider(provider: IssueProvider) {
     setSelectedProvider(provider);
@@ -245,6 +282,57 @@ export function IssueDestinationSetup({
 
   function openSiteModal() {
     setIsSiteModalOpen(true);
+  }
+
+  function openRepositoryEditor(project: ProjectView) {
+    setSelectedProvider(project.issueTarget.provider);
+    setSelectedRepositoryId("");
+    setRepositoryUrl("");
+    setRepositoryOptions([]);
+    setRepositoryLoadState("idle");
+    setRepositoryEditProjectKey(project.publicKey);
+  }
+
+  function saveRepository() {
+    if (!repositoryEditProjectKey || !selectedIntegration?.credentialConfigured
+      || (!selectedRepository && !(canUseRepositoryUrlFallback && normalizedRepositoryUrl))) {
+      return;
+    }
+
+    const projectKey = repositoryEditProjectKey;
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/projects/issue-targets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectKey,
+            provider: selectedProvider,
+            integrationId: selectedIntegration.id,
+            repositoryId: selectedRepository?.id,
+            repositoryUrl: canUseRepositoryUrlFallback ? normalizedRepositoryUrl || undefined : undefined
+          })
+        });
+        const body = await parseJsonResponse<{ project?: ProjectView; error?: string }>(response);
+
+        if (!response.ok || !body?.project) {
+          throw new Error(body?.error ?? "Impossible de changer le dépôt.");
+        }
+
+        const updatedTarget = body.project.issueTarget;
+        setProjectViews((current) => current.map((project) => project.publicKey === projectKey
+          ? { ...project, issueTarget: updatedTarget }
+          : project));
+        setRepositoryEditProjectKey(undefined);
+        toast.success("Dépôt Git modifié", {
+          description: "Les prochaines issues seront créées dans le nouveau dépôt. Les issues existantes restent dans leur dépôt d'origine."
+        });
+      } catch (error) {
+        toast.error("Dépôt non modifié", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
+        });
+      }
+    });
   }
 
   function copyInstallSnippet(project: ProjectView) {
@@ -290,7 +378,10 @@ export function IssueDestinationSetup({
             widgetLocale: siteWidgetLocale,
             widgetButtonPosition: siteWidgetButtonPosition,
             widgetButtonVariant: siteWidgetButtonVariant,
+            widgetDisplayMode: siteWidgetDisplayMode,
             widgetReporterFields: siteWidgetReporterFields,
+            widgetTitle: siteWidgetTitle,
+            widgetModes: siteWidgetModes,
             issueCreationMode: siteIssueCreationMode
           })
         });
@@ -320,8 +411,11 @@ export function IssueDestinationSetup({
         setSiteOrigin("");
         setSiteWidgetLocale("fr");
         setSiteWidgetButtonVariant("default");
+        setSiteWidgetDisplayMode("standard");
         setSiteWidgetButtonPosition("bottom-right");
         setSiteWidgetReporterFields("optional");
+        setSiteWidgetTitle(defaultWidgetTitle);
+        setSiteWidgetModes(["comment", "screenshot"]);
         setSiteIssueCreationMode("manual");
         setIsSiteModalOpen(false);
         toast.success("Site connecté", {
@@ -337,7 +431,7 @@ export function IssueDestinationSetup({
     });
   }
 
-  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) {
+  function updateWidgetSettings(projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetDisplayMode" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) {
     const project = projectViews.find((item) => item.publicKey === projectKey);
     if (!project) {
       return;
@@ -351,12 +445,16 @@ export function IssueDestinationSetup({
     applyWidgetSettings(project, update);
   }
 
-  function applyWidgetSettings(project: ProjectView, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) {
+  function applyWidgetSettings(project: ProjectView, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetDisplayMode" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) {
+    const nextDisplayMode = update.widgetDisplayMode ?? project.widgetDisplayMode;
     const nextSettings = {
       widgetLocale: update.widgetLocale ?? project.widgetLocale,
       widgetButtonPosition: update.widgetButtonPosition ?? project.widgetButtonPosition,
-      widgetButtonVariant: update.widgetButtonVariant ?? project.widgetButtonVariant,
+      widgetButtonVariant: update.widgetButtonVariant ?? widgetButtonVariantFromDisplayMode(nextDisplayMode),
+      widgetDisplayMode: nextDisplayMode,
       widgetReporterFields: update.widgetReporterFields ?? project.widgetReporterFields,
+      widgetTitle: normalizeWidgetTitle(update.widgetTitle ?? project.widgetTitle),
+      widgetModes: normalizeWidgetModes(update.widgetModes ?? project.widgetModes),
       issueCreationMode: update.issueCreationMode ?? project.issueCreationMode
     };
 
@@ -405,6 +503,235 @@ export function IssueDestinationSetup({
     });
   }
 
+  function startSiteOriginEdit(project: ProjectView) {
+    setSiteOriginEditor({
+      projectKey: project.publicKey,
+      name: project.name,
+      value: project.allowedOrigins[0] ?? ""
+    });
+  }
+
+  function saveSiteOrigin(projectKey: string) {
+    const project = projectViews.find((item) => item.publicKey === projectKey);
+    if (!project || siteOriginEditor?.projectKey !== projectKey) {
+      return;
+    }
+
+    const validation = validateAllowedOrigin(siteOriginEditor.value);
+    const name = siteOriginEditor.name.trim();
+    if (!name || name.length > 120) {
+      toast.error("Nom non enregistré", { description: "Saisissez un nom de 1 à 120 caractères." });
+      return;
+    }
+    if (!validation.ok || !validation.normalizedOrigin) {
+      toast.error("URL non enregistrée", {
+        description: validation.message
+      });
+      return;
+    }
+
+    const previousProject = project;
+    const nextProject = {
+      ...project,
+      name,
+      allowedOrigins: [validation.normalizedOrigin]
+    };
+
+    setProjectViews((current) => current.map((item) => item.publicKey === projectKey ? nextProject : item));
+
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name,
+            allowedOrigin: validation.normalizedOrigin,
+            widgetLocale: project.widgetLocale,
+            widgetButtonPosition: project.widgetButtonPosition,
+            widgetButtonVariant: project.widgetButtonVariant,
+            widgetDisplayMode: project.widgetDisplayMode,
+            widgetReporterFields: project.widgetReporterFields,
+            widgetTitle: project.widgetTitle,
+            widgetModes: project.widgetModes,
+            issueCreationMode: project.issueCreationMode
+          })
+        });
+        const body = await parseJsonResponse<{ site?: ProjectView; installSnippet?: string; error?: string; requestId?: string }>(response);
+
+        if (!response.ok || !body?.site) {
+          const requestId = body?.requestId ? ` (${body.requestId})` : "";
+          throw new Error(`${body?.error ?? "Impossible d'enregistrer le site."}${requestId}`);
+        }
+
+        setProjectViews((current) => current.map((item) => item.publicKey === projectKey
+          ? {
+              ...item,
+              ...body.site,
+              installSnippet: body.installSnippet,
+              metrics: item.metrics
+            }
+          : item));
+        setSiteOriginEditor(undefined);
+        toast.success("Site enregistré", {
+          description: `${body.site.name} · ${body.site.allowedOrigins.join(", ")}`
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
+        setProjectViews((current) => current.map((item) => item.publicKey === projectKey ? previousProject : item));
+        toast.error("Site non enregistré", {
+          description: errorMessage
+        });
+      }
+    });
+  }
+
+  function openSiteAccess(project: ProjectView) {
+    setSiteAccessEditor({
+      projectKey: project.publicKey,
+      userIds: (project.issueAccesses ?? []).filter((access) => access.status === "active").map((access) => access.userId)
+    });
+    setSiteAccessEmail("");
+  }
+
+  function toggleSiteAccessUser(userId: string) {
+    setSiteAccessEditor((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const selected = new Set(current.userIds);
+      if (selected.has(userId)) {
+        selected.delete(userId);
+      } else {
+        selected.add(userId);
+      }
+
+      return {
+        ...current,
+        userIds: [...selected]
+      };
+    });
+  }
+
+  function saveSiteAccess() {
+    if (!siteAccessEditor) {
+      return;
+    }
+
+    const projectKey = siteAccessEditor.projectKey;
+    const userIds = siteAccessEditor.userIds;
+
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/issue-members`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userIds })
+        });
+        const body = await parseJsonResponse<{ accesses?: SiteIssueAccessView[]; error?: string }>(response);
+
+        if (!response.ok || !body?.accesses) {
+          throw new Error(body?.error ?? "Impossible d'enregistrer les accès.");
+        }
+
+        setProjectViews((current) => current.map((project) => project.publicKey === projectKey
+          ? { ...project, issueAccesses: body.accesses }
+          : project));
+        setSiteAccessEditor(undefined);
+        const project = projectViews.find((item) => item.publicKey === projectKey);
+        toast.success("Accès enregistrés", {
+          description: `Les accès dashboard${project ? ` de ${project.name}` : ""} ont été mis à jour.`
+        });
+      } catch (error) {
+        toast.error("Accès non enregistrés", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
+        });
+      }
+    });
+  }
+
+  function addSiteAccessEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!siteAccessEditor) {
+      return;
+    }
+
+    const email = siteAccessEmail.trim().toLowerCase();
+    if (!email) {
+      toast.error("Accès non ajouté", {
+        description: "Ajoutez l'adresse e-mail d'un compte ChangeThis existant."
+      });
+      return;
+    }
+
+    const projectKey = siteAccessEditor.projectKey;
+    const userIds = siteAccessEditor.userIds;
+
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/issue-members`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userIds, userEmails: [email] })
+        });
+        const body = await parseJsonResponse<{ accesses?: SiteIssueAccessView[]; error?: string }>(response);
+
+        if (!response.ok || !body?.accesses) {
+          throw new Error(body?.error ?? "Impossible d'ajouter cet accès.");
+        }
+
+        setProjectViews((current) => current.map((project) => project.publicKey === projectKey
+          ? { ...project, issueAccesses: body.accesses }
+          : project));
+        setSiteAccessEditor({
+          projectKey,
+          userIds: body.accesses.filter((access) => access.status === "active").map((access) => access.userId)
+        });
+        setSiteAccessEmail("");
+        toast.success("Accès ajouté", {
+          description: `${email} peut consulter et traiter les retours de ce site.`
+        });
+      } catch (error) {
+        toast.error("Accès non ajouté", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
+        });
+      }
+    });
+  }
+
+  function leaveSharedProject(projectKey: string) {
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/projects/sites/${encodeURIComponent(projectKey)}/issue-members`, {
+          method: "DELETE"
+        });
+        const body = await parseJsonResponse<{ ok?: boolean; error?: string }>(response);
+
+        if (!response.ok || !body?.ok) {
+          throw new Error(body?.error ?? "Impossible de retirer cet accès.");
+        }
+
+        const project = projectViews.find((item) => item.publicKey === projectKey);
+        setProjectViews((current) => current.filter((item) => item.publicKey !== projectKey));
+        toast.success("Accès retiré", {
+          description: project ? `Vous n'avez plus accès à ${project.name}.` : "Vous n'avez plus accès à ce projet."
+        });
+      } catch (error) {
+        toast.error("Accès conservé", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
+        });
+      }
+    });
+  }
+
   function deleteSite(projectKey: string) {
     startTransition(async () => {
       try {
@@ -436,80 +763,55 @@ export function IssueDestinationSetup({
     });
   }
 
-  function inviteWorkspaceMember(event: FormEvent<HTMLFormElement>) {
+  function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const email = inviteEmail.trim();
-    if (!email) {
-      toast.error("Invitation impossible", {
-        description: "Ajoutez une adresse email."
+    if (newPassword.length < 8) {
+      toast.error("Mot de passe trop court", {
+        description: "Le nouveau mot de passe doit contenir au moins 8 caractères."
+      });
+      return;
+    }
+
+    if (newPassword !== newPasswordConfirmation) {
+      toast.error("Confirmation incorrecte", {
+        description: "Les deux nouveaux mots de passe doivent être identiques."
       });
       return;
     }
 
     startTransition(async () => {
       try {
-        const response = await fetch("/api/workspace/members", {
+        const response = await fetch("/api/auth/password", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            email,
-            role: inviteRole
+            currentPassword,
+            newPassword
           })
         });
-        const body = (await response.json()) as { member?: WorkspaceUserView; error?: string };
 
-        const invitedMember = body.member;
-        if (!response.ok || !invitedMember) {
-          throw new Error(body.error ?? "Impossible d'inviter ce membre.");
+        if (!response.ok) {
+          const description = response.status === 401
+            ? "Le mot de passe actuel ne correspond pas."
+            : response.status === 409
+              ? "Le changement de mot de passe n'est pas disponible avec ce mode d'authentification."
+              : "Réessayez dans quelques instants.";
+          toast.error("Mot de passe non modifié", { description });
+          return;
         }
 
-        setWorkspaceUsers((current) => [invitedMember, ...current.filter((member) => member.userId !== invitedMember.userId)]);
-        setInviteEmail("");
-        toast.success("Invitation envoyée", {
-          description: `${invitedMember.email} peut maintenant rejoindre le workspace.`
+        setCurrentPassword("");
+        setNewPassword("");
+        setNewPasswordConfirmation("");
+        toast.success("Mot de passe modifié", {
+          description: "Votre prochain accès utilisera ce nouveau mot de passe."
         });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
-        toast.error("Invitation impossible", {
-          description: errorMessage
-        });
-      }
-    });
-  }
-
-  function disableWorkspaceUser(userId: string) {
-    startTransition(async () => {
-      try {
-        const response = await fetch("/api/workspace/members", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            userId,
-            status: "disabled"
-          })
-        });
-        const body = (await response.json()) as { member?: WorkspaceUserView; error?: string };
-        const updatedMember = body.member;
-
-        if (!response.ok || !updatedMember) {
-          throw new Error(body.error ?? "Impossible de désactiver le membre.");
-        }
-
-        setWorkspaceUsers((current) => current.map((member) => member.userId === updatedMember.userId
-          ? updatedMember
-          : member));
-        toast.success("Membre désactivé", {
-          description: `${updatedMember.email} n'a plus accès au workspace.`
-        });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : t("actions.error.connection");
-        toast.error("Action impossible", {
-          description: errorMessage
+        toast.error("Mot de passe non modifié", {
+          description: error instanceof Error ? error.message : "Réessayez dans quelques instants."
         });
       }
     });
@@ -556,23 +858,39 @@ export function IssueDestinationSetup({
 
       <div className="settings-layout">
         <aside className="settings-sidebar" aria-label={t("settings.sidebar.label")}>
-          <a className={section === "git-connections" ? "is-active" : ""} href="/settings/git-connections">
-            <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            <T k="settings.sidebar.gitConnections" />
-          </a>
-          <a className={section === "connected-sites" ? "is-active" : ""} href="/settings/connected-sites">
-            <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-            <T k="settings.sidebar.connectedSites" />
-          </a>
           {canManageMembers ? (
-            <a className={section === "users" ? "is-active" : ""} href="/settings/users">
-              <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-              <T k="settings.sidebar.users" />
+            <a className={section === "git-connections" ? "is-active" : ""} href="/settings/git-connections">
+              <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+              <T k="settings.sidebar.gitConnections" />
             </a>
           ) : null}
+          {canViewConnectedSites ? (
+            <a className={section === "connected-sites" ? "is-active" : ""} href="/settings/connected-sites">
+              <Globe2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+              <T k="settings.sidebar.connectedSites" />
+            </a>
+          ) : null}
+          <a className={section === "account" ? "is-active" : ""} href="/settings/account">
+            <KeyRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            <T k="settings.sidebar.account" />
+          </a>
         </aside>
 
         <div className="settings-content">
+          {section === "account" ? (
+            <AccountSection
+              currentPassword={currentPassword}
+              email={currentUserEmail}
+              isPending={isPending}
+              newPassword={newPassword}
+              newPasswordConfirmation={newPasswordConfirmation}
+              onChangeCurrentPassword={setCurrentPassword}
+              onChangeNewPassword={setNewPassword}
+              onChangeNewPasswordConfirmation={setNewPasswordConfirmation}
+              onSubmit={changePassword}
+            />
+          ) : null}
+
           {section === "git-connections" ? (
             <GitConnectionsSection integrations={integrations} />
           ) : null}
@@ -586,11 +904,25 @@ export function IssueDestinationSetup({
               onCloseModal={() => setIsSiteModalOpen(false)}
               onCreateSite={createSite}
               onDeleteSite={requestDeleteSite}
+              onEditSiteOrigin={startSiteOriginEdit}
+              onOpenSiteAccess={openSiteAccess}
+              onSaveSiteOrigin={saveSiteOrigin}
               onCopyInstallSnippet={copyInstallSnippet}
               onOpenSiteModal={openSiteModal}
+              repositoryEditProjectKey={repositoryEditProjectKey}
+              onEditRepository={openRepositoryEditor}
+              onCloseRepositoryEditor={() => setRepositoryEditProjectKey(undefined)}
+              onSaveRepository={saveRepository}
               onSelectProvider={selectProvider}
               onUpdateWidgetSettings={updateWidgetSettings}
+              onLeaveSharedProject={leaveSharedProject}
               projects={projectViews}
+              canManageMembers={canManageMembers}
+              currentUserId={currentUserId}
+              siteOriginEditor={siteOriginEditor}
+              onSiteOriginEditorChange={(value) => setSiteOriginEditor((current) => current ? { ...current, value } : current)}
+              onSiteNameEditorChange={(name) => setSiteOriginEditor((current) => current ? { ...current, name } : current)}
+              onCancelSiteOriginEdit={() => setSiteOriginEditor(undefined)}
               repositoryLoadMessage={repositoryLoadMessage}
               repositoryLoadState={repositoryLoadState}
               repositoryOptions={repositoryOptions}
@@ -598,9 +930,14 @@ export function IssueDestinationSetup({
               selectedProvider={selectedProvider}
               selectedRepositoryId={selectedRepositoryId}
               setSiteWidgetButtonPosition={setSiteWidgetButtonPosition}
-              setSiteWidgetButtonVariant={setSiteWidgetButtonVariant}
+              setSiteWidgetDisplayMode={(mode) => {
+                setSiteWidgetDisplayMode(mode);
+                setSiteWidgetButtonVariant(widgetButtonVariantFromDisplayMode(mode));
+              }}
               setSiteWidgetLocale={setSiteWidgetLocale}
+              setSiteWidgetModes={setSiteWidgetModes}
               setSiteWidgetReporterFields={setSiteWidgetReporterFields}
+              setSiteWidgetTitle={setSiteWidgetTitle}
               onRepositoryUrlChange={updateRepositoryUrl}
               onSelectRepository={selectRepository}
               setSiteName={setSiteName}
@@ -608,28 +945,16 @@ export function IssueDestinationSetup({
               siteName={siteName}
               siteOrigin={siteOrigin}
               siteWidgetButtonPosition={siteWidgetButtonPosition}
-              siteWidgetButtonVariant={siteWidgetButtonVariant}
+              siteWidgetDisplayMode={siteWidgetDisplayMode}
               siteIssueCreationMode={siteIssueCreationMode}
+              siteWidgetModes={siteWidgetModes}
               siteWidgetLocale={siteWidgetLocale}
               siteWidgetReporterFields={siteWidgetReporterFields}
+              siteWidgetTitle={siteWidgetTitle}
               setSiteIssueCreationMode={setSiteIssueCreationMode}
             />
           ) : null}
 
-          {section === "users" && canManageMembers ? (
-            <UsersSection
-              canManageMembers={canManageMembers}
-              currentUserId={currentUserId}
-              onDisable={disableWorkspaceUser}
-              onInvite={inviteWorkspaceMember}
-              users={workspaceUsers}
-              inviteEmail={inviteEmail}
-              inviteRole={inviteRole}
-              onInviteEmailChange={setInviteEmail}
-              onInviteRoleChange={setInviteRole}
-              workspaceName={workspaceName}
-            />
-          ) : null}
         </div>
       </div>
 
@@ -650,151 +975,244 @@ export function IssueDestinationSetup({
           project={pendingDeleteSiteProject}
         />
       ) : null}
+
+      {siteAccessEditor ? (
+        <SiteAccessModal
+          editor={siteAccessEditor}
+          isPending={isPending}
+          onCancel={() => setSiteAccessEditor(undefined)}
+          onEmailChange={setSiteAccessEmail}
+          onAddEmail={addSiteAccessEmail}
+          onSave={saveSiteAccess}
+          onToggleUser={toggleSiteAccessUser}
+          project={projectViews.find((project) => project.publicKey === siteAccessEditor.projectKey)}
+          email={siteAccessEmail}
+        />
+      ) : null}
     </section>
   );
 }
 
-function UsersSection({
-  users,
-  workspaceName,
-  canManageMembers,
-  currentUserId,
-  inviteEmail,
-  inviteRole,
-  onInvite,
-  onInviteEmailChange,
-  onInviteRoleChange,
-  onDisable
+function AccountSection({
+  currentPassword,
+  email,
+  isPending,
+  newPassword,
+  newPasswordConfirmation,
+  onChangeCurrentPassword,
+  onChangeNewPassword,
+  onChangeNewPasswordConfirmation,
+  onSubmit
 }: {
-  users: WorkspaceUserView[];
-  workspaceName?: string;
-  canManageMembers: boolean;
-  currentUserId?: string;
-  inviteEmail: string;
-  inviteRole: "viewer" | "member" | "admin";
-  onInvite: (event: FormEvent<HTMLFormElement>) => void;
-  onInviteEmailChange: (email: string) => void;
-  onInviteRoleChange: (role: "viewer" | "member" | "admin") => void;
-  onDisable: (userId: string) => void;
+  currentPassword: string;
+  email?: string;
+  isPending: boolean;
+  newPassword: string;
+  newPasswordConfirmation: string;
+  onChangeCurrentPassword: (value: string) => void;
+  onChangeNewPassword: (value: string) => void;
+  onChangeNewPasswordConfirmation: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const activeUsers = users.filter((user) => user.status === "active").length;
-  const adminUsers = users.filter((user) => user.role === "owner" || user.role === "admin").length;
-
   return (
-    <section className="settings-section users-settings" aria-labelledby="users-settings-title">
+    <section className="settings-section account-settings" aria-labelledby="account-settings-title">
       <div className="setup-heading">
         <div>
-          <p className="eyebrow">Application</p>
-          <h3 id="users-settings-title"><T k="settings.users.title" /></h3>
+          <p className="eyebrow">Compte</p>
+          <h3 id="account-settings-title">Sécurité du compte</h3>
           <p className="section-lede">
-            <T k="settings.users.copy" />
+            Gérez le mot de passe utilisé pour accéder au dashboard ChangeThis.
           </p>
         </div>
       </div>
 
-      <div className="users-summary-grid">
-        <div className="summary-tile">
-          <span>{users.length}</span>
-          <small>Utilisateurs</small>
-        </div>
-        <div className="summary-tile">
-          <span>{activeUsers}</span>
-          <small>Actifs</small>
-        </div>
-        <div className="summary-tile">
-          <span>{adminUsers}</span>
-          <small>Admins</small>
-        </div>
-      </div>
-
-      <div className="user-management-panel">
-        <div className="user-management-heading">
+      <div className="account-security-panel">
+        <div className="account-security-heading">
           <div>
-            <strong>{workspaceName ?? "Workspace ChangeThis"}</strong>
-            <span>Les feedbacks publics restent ouverts. Cette liste ne concerne que l&apos;accès au dashboard.</span>
+            <strong>{email ?? "Compte ChangeThis"}</strong>
+            <span>Le changement est immédiat. Gardez votre mot de passe actuel sous la main pour confirmer l&apos;action.</span>
           </div>
-          {canManageMembers ? (
-            <form className="member-invite-form" onSubmit={onInvite}>
-              <div className="member-invite-fields">
-                <input
-                  aria-label="E-mail à inviter"
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(event) => onInviteEmailChange(event.target.value)}
-                  placeholder="email@exemple.com"
-                  required
-                />
-                <div className="member-role-segment" aria-label="Rôle du membre" role="group">
-                  {memberRoleOptions.map((option) => (
-                    <button
-                      aria-pressed={inviteRole === option.value}
-                      className={inviteRole === option.value ? "active" : ""}
-                      key={option.value}
-                      onClick={() => onInviteRoleChange(option.value)}
-                      type="button"
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <button className="button secondary-button" type="submit">
-                <Mail aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                Inviter
-              </button>
-            </form>
-          ) : null}
         </div>
 
-        <div className="users-table" role="table" aria-label="Utilisateurs du workspace">
-          <div className="users-table-row users-table-head" role="row">
-            <span role="columnheader">Utilisateur</span>
-            <span role="columnheader">Rôle</span>
-            <span role="columnheader">Statut</span>
-            <span role="columnheader">Actions</span>
-            <span role="columnheader">Arrivée</span>
+        <form className="password-change-form" onSubmit={onSubmit}>
+          <label>
+            <span>Mot de passe actuel</span>
+            <input
+              autoComplete="current-password"
+              onChange={(event) => onChangeCurrentPassword(event.target.value)}
+              required
+              type="password"
+              value={currentPassword}
+            />
+          </label>
+          <label>
+            <span>Nouveau mot de passe</span>
+            <input
+              autoComplete="new-password"
+              minLength={8}
+              onChange={(event) => onChangeNewPassword(event.target.value)}
+              required
+              type="password"
+              value={newPassword}
+            />
+          </label>
+          <label>
+            <span>Confirmer le nouveau mot de passe</span>
+            <input
+              autoComplete="new-password"
+              minLength={8}
+              onChange={(event) => onChangeNewPasswordConfirmation(event.target.value)}
+              required
+              type="password"
+              value={newPasswordConfirmation}
+            />
+          </label>
+          <div className="password-change-actions">
+            <button className="button primary-button" disabled={isPending} type="submit">
+              {isPending ? <LoadingSpinner /> : <KeyRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
+              {isPending ? "Enregistrement..." : "Modifier le mot de passe"}
+            </button>
           </div>
-          {users.map((user) => (
-            <div className="users-table-row" role="row" key={user.userId}>
-              <span role="cell">
-                <span className="user-avatar" aria-hidden="true">{user.email.slice(0, 1).toUpperCase()}</span>
-                <strong>{user.email}</strong>
-              </span>
-              <span role="cell">
-                <ShieldCheck aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
-                {roleLabel(user.role)}
-              </span>
-              <span role="cell">
-                <span className={`status-badge ${user.status === "active" ? "connected" : "inactive"}`}>
-                  {user.status === "active" ? "Actif" : user.status}
-                </span>
-              </span>
-              <span role="cell">
-                {canManageMembers && user.status !== "disabled" && user.userId !== currentUserId ? (
-                  <button className="button secondary-button" onClick={() => onDisable(user.userId)} type="button">
-                    Désactiver
-                  </button>
-                ) : null}
-              </span>
-              <span role="cell">{user.joinedAt ? formatMemberDate(user.joinedAt) : "Session locale"}</span>
-            </div>
-          ))}
-        </div>
+        </form>
       </div>
     </section>
   );
 }
 
-const memberRoleOptions: Array<{ label: string; value: "viewer" | "member" | "admin" }> = [
-  { label: "Membre", value: "member" },
-  { label: "Admin", value: "admin" },
-  { label: "Lecteur", value: "viewer" }
-];
+function SiteAccessModal({
+  email,
+  editor,
+  isPending,
+  onAddEmail,
+  onCancel,
+  onEmailChange,
+  onSave,
+  onToggleUser,
+  project
+}: {
+  email: string;
+  editor: SiteAccessEditor;
+  isPending: boolean;
+  onAddEmail: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+  onEmailChange: (email: string) => void;
+  onSave: () => void;
+  onToggleUser: (userId: string) => void;
+  project?: ProjectView;
+}) {
+  const activeAccesses = (project?.issueAccesses ?? []).filter((access) => access.status === "active");
+  const selectedUserIds = new Set(editor.userIds);
+
+  return (
+    <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="site-access-title">
+      <button className="settings-modal-backdrop" aria-label="Fermer" onClick={onCancel} type="button" />
+      <div className="settings-modal-panel site-access-modal-panel">
+        <div className="settings-modal-header">
+          <div>
+            <p className="eyebrow">Accès par site</p>
+            <h2 id="site-access-title">Accès dashboard</h2>
+          </div>
+          <button className="icon-button" aria-label="Fermer" onClick={onCancel} type="button">
+            <X aria-hidden="true" className="ui-icon" size={18} strokeWidth={2.2} />
+          </button>
+        </div>
+
+        <div className="modal-copy">
+          <strong>{project?.name ?? "Site connecté"}</strong>
+          <span>Ajoutez un compte ChangeThis existant pour lui donner accès uniquement aux retours et actions issue de ce site.</span>
+        </div>
+
+        <form className="site-access-add-form" onSubmit={onAddEmail}>
+          <label>
+            <span>Compte ChangeThis</span>
+            <input
+              aria-label="E-mail du compte ChangeThis"
+              disabled={isPending}
+              onChange={(event) => onEmailChange(event.target.value)}
+              placeholder="email@exemple.com"
+              type="email"
+              value={email}
+            />
+          </label>
+          <button className="button secondary-button" disabled={isPending || !email.trim()} type="submit">
+            <Mail aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            Ajouter
+          </button>
+        </form>
+
+        {activeAccesses.length === 0 ? (
+          <div className="empty-state compact-empty-state">
+            <strong>Aucun accès limité sur ce site</strong>
+            <p>Ajoutez l&apos;e-mail d&apos;un compte ChangeThis existant.</p>
+          </div>
+        ) : (
+          <div className="site-access-list" role="list" aria-label="Accès limités du site">
+            {activeAccesses.map((access) => {
+              const checked = selectedUserIds.has(access.userId);
+              return (
+                <label className="site-access-row" key={access.userId}>
+                  <span className="user-avatar" aria-hidden="true">{(access.email ?? "?").slice(0, 1).toUpperCase()}</span>
+                  <span className="site-access-user">
+                    <strong>{access.email ?? access.userId}</strong>
+                    <small>Accès limité à ce site</small>
+                  </span>
+                  <span className={`status-badge ${checked ? "connected" : "inactive"}`}>
+                    {checked ? "Accès au site" : "Retiré"}
+                  </span>
+                  <input
+                    checked={checked}
+                    disabled={isPending}
+                    onChange={() => onToggleUser(access.userId)}
+                    type="checkbox"
+                  />
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="settings-modal-actions">
+          <button className="button secondary-button" disabled={isPending} onClick={onCancel} type="button">
+            Annuler
+          </button>
+          <button className="button" disabled={isPending} onClick={onSave} type="button">
+            {isPending ? <LoadingSpinner /> : <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
+            {isPending ? "Enregistrement..." : "Enregistrer les accès"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type ThemeDropdownOption<T extends string> = {
   label: string;
   value: T;
 };
+
+function optionLabel<T extends string>(options: Array<ThemeDropdownOption<T>>, value: T) {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function widgetButtonVariantFromDisplayMode(mode: WidgetDisplayMode): WidgetButtonVariant {
+  return mode === "subtle" ? "subtle" : "default";
+}
+
+function widgetDisplayModeDescription(mode: WidgetDisplayMode): string {
+  if (mode === "subtle") {
+    return "Bouton compact, adapté aux sites en production.";
+  }
+
+  if (mode === "hidden") {
+    return "Aucun bouton visible; le widget s'ouvre avec Alt+Shift+F.";
+  }
+
+  if (mode === "disabled") {
+    return "Le script reste installé, mais le widget ne s'affiche pas sur ce site.";
+  }
+
+  return "Bouton complet visible sur le site.";
+}
 
 function ThemeDropdown<T extends string>({
   disabled = false,
@@ -860,6 +1278,10 @@ function ThemeDropdown<T extends string>({
   );
 }
 
+function LoadingSpinner({ size = 16 }: { size?: number }) {
+  return <Loader2 aria-hidden="true" className="ui-icon loading-spinner" size={size} strokeWidth={2.2} />;
+}
+
 function GitConnectionsSection({ integrations }: { integrations: ProviderIntegrationSummary[] }) {
   const [disabledProviders, setDisabledProviders] = useState<Set<IssueProvider>>(
     () => new Set(integrations.filter((integration) => integration.disabled).map((integration) => integration.provider))
@@ -913,14 +1335,14 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
         },
         signal
       });
-      const body = await response.json() as unknown;
+      const body = await parseJsonResponse<unknown>(response);
 
       if (!response.ok) {
         const errorState: ConnectionTestResult = {
           state: "error",
           message: integration.provider === "gitlab"
-            ? repositoryErrorMessage(body) ?? "Token enregistré. Avec un Project Access Token, collez l'URL du projet dans Sites connectés pour valider le dépôt cible."
-            : repositoryErrorMessage(body) ?? "Connexion impossible. Vérifiez le token ou les permissions.",
+            ? repositoryErrorMessage(body) ?? repositoryResponseErrorMessage(response, "GitLab ne renvoie pas une réponse exploitable. Vérifiez l'URL de l'instance, le token et le proxy.")
+            : repositoryErrorMessage(body) ?? repositoryResponseErrorMessage(response, "Connexion impossible. Vérifiez le token ou les permissions."),
           checkedAt: new Date()
         };
         setConnectionStates((current) => ({
@@ -1327,7 +1749,10 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               <p>{connectionAccountLabel(integration)}</p>
               <div className={`connection-health ${connectionState.state}`} role="status">
                 <div>
-                  <strong>{connectionHealthTitle(connectionState.state)}</strong>
+                  <strong>
+                    {connectionState.state === "checking" ? <LoadingSpinner size={14} /> : null}
+                    {connectionHealthTitle(connectionState.state)}
+                  </strong>
                   {connectionState.message ? <span>{connectionState.message}</span> : null}
                 </div>
                 {typeof connectionState.repositoryCount === "number" ? (
@@ -1372,7 +1797,7 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
                       value={tokenInputs[integration.provider] ?? ""}
                     />
                     <button className="button" disabled={isSavingToken} type="submit">
-                      <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                      {isSavingToken ? <LoadingSpinner /> : <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
                       {isSavingToken ? "Enregistrement..." : "Enregistrer"}
                     </button>
                   </div>
@@ -1387,12 +1812,12 @@ function GitConnectionsSection({ integrations }: { integrations: ProviderIntegra
               <div className="integration-actions">
                 {credentialConfigured ? (
                   <button className="button danger-button" disabled={connectionState.state === "checking"} onClick={() => void disconnectConnection(integration)} type="button">
-                    <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    {connectionState.state === "checking" ? <LoadingSpinner /> : <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
                     Déconnecter
                   </button>
                 ) : isLocallyDisabled && integration.environmentCredentialConfigured ? (
                   <button className="button" disabled={connectionState.state === "checking"} onClick={() => void enableConnection(integration)} type="button">
-                    <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    {connectionState.state === "checking" ? <LoadingSpinner /> : <Link2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
                     Réactiver
                   </button>
                 ) : null}
@@ -1523,34 +1948,6 @@ function formatConnectionCheckDate(date: Date): string {
   }).format(date);
 }
 
-function formatMemberDate(value: string): string {
-  return new Intl.DateTimeFormat("fr-BE", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  }).format(new Date(value));
-}
-
-function roleLabel(role: WorkspaceUserView["role"]): string {
-  if (role === "owner") {
-    return "Propriétaire";
-  }
-
-  if (role === "admin") {
-    return "Admin";
-  }
-
-  if (role === "member") {
-    return "Membre";
-  }
-
-  if (role === "viewer") {
-    return "Lecture seule";
-  }
-
-  return role;
-}
-
 function AutomaticIssueConfirmationModal({
   isPending,
   onCancel,
@@ -1585,6 +1982,7 @@ function AutomaticIssueConfirmationModal({
             Annuler
           </button>
           <button className="button" disabled={isPending} onClick={onConfirm} type="button">
+            {isPending ? <LoadingSpinner /> : null}
             {isPending ? "Activation..." : "Activer"}
           </button>
         </div>
@@ -1629,6 +2027,7 @@ function DeleteSiteConfirmationModal({
             Annuler
           </button>
           <button className="button danger-button" disabled={isPending} onClick={onConfirm} type="button">
+            {isPending ? <LoadingSpinner /> : null}
             {isPending ? "Suppression..." : "Supprimer"}
           </button>
         </div>
@@ -1638,6 +2037,7 @@ function DeleteSiteConfirmationModal({
 }
 
 function ConnectedSitesSection({
+  canManageMembers,
   connectedProviders,
   integrations,
   isPending,
@@ -1645,13 +2045,26 @@ function ConnectedSitesSection({
   onCloseModal,
   onCreateSite,
   onDeleteSite,
+  onEditSiteOrigin,
+  onOpenSiteAccess,
+  onSaveSiteOrigin,
   onCopyInstallSnippet,
   onOpenSiteModal,
+  repositoryEditProjectKey,
+  onEditRepository,
+  onCloseRepositoryEditor,
+  onSaveRepository,
   onRepositoryUrlChange,
   onSelectProvider,
   onSelectRepository,
+  onLeaveSharedProject,
+  onCancelSiteOriginEdit,
   onUpdateWidgetSettings,
+  onSiteOriginEditorChange,
+  onSiteNameEditorChange,
   projects,
+  currentUserId,
+  siteOriginEditor,
   repositoryLoadMessage,
   repositoryLoadState,
   repositoryOptions,
@@ -1659,20 +2072,25 @@ function ConnectedSitesSection({
   selectedProvider,
   selectedRepositoryId,
   setSiteWidgetButtonPosition,
-  setSiteWidgetButtonVariant,
+  setSiteWidgetDisplayMode,
   setSiteWidgetLocale,
+  setSiteWidgetModes,
   setSiteWidgetReporterFields,
+  setSiteWidgetTitle,
   setSiteName,
   setSiteOrigin,
   siteName,
   siteOrigin,
   siteWidgetButtonPosition,
-  siteWidgetButtonVariant,
+  siteWidgetDisplayMode,
   siteIssueCreationMode,
+  siteWidgetModes,
   siteWidgetLocale,
   siteWidgetReporterFields,
+  siteWidgetTitle,
   setSiteIssueCreationMode
 }: {
+  canManageMembers: boolean;
   connectedProviders: Set<IssueProvider>;
   integrations: ProviderIntegrationSummary[];
   isPending: boolean;
@@ -1680,13 +2098,26 @@ function ConnectedSitesSection({
   onCloseModal: () => void;
   onCreateSite: () => void;
   onDeleteSite: (projectKey: string) => void;
+  onEditSiteOrigin: (project: ProjectView) => void;
+  onOpenSiteAccess: (project: ProjectView) => void;
+  onSaveSiteOrigin: (projectKey: string) => void;
   onCopyInstallSnippet: (project: ProjectView) => void;
   onOpenSiteModal: () => void;
+  repositoryEditProjectKey?: string;
+  onEditRepository: (project: ProjectView) => void;
+  onCloseRepositoryEditor: () => void;
+  onSaveRepository: () => void;
   onRepositoryUrlChange: (repositoryUrl: string) => void;
   onSelectProvider: (provider: IssueProvider) => void;
   onSelectRepository: (repositoryId: string) => void;
-  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields" | "issueCreationMode">>) => void;
+  onLeaveSharedProject: (projectKey: string) => void;
+  onCancelSiteOriginEdit: () => void;
+  onUpdateWidgetSettings: (projectKey: string, update: Partial<Pick<ProjectView, "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetDisplayMode" | "widgetReporterFields" | "widgetTitle" | "widgetModes" | "issueCreationMode">>) => void;
+  onSiteOriginEditorChange: (value: string) => void;
+  onSiteNameEditorChange: (name: string) => void;
   projects: ProjectView[];
+  currentUserId?: string;
+  siteOriginEditor?: SiteOriginEditor;
   repositoryLoadMessage: string;
   repositoryLoadState: RepositoryLoadState;
   repositoryOptions: RepositoryOption[];
@@ -1694,18 +2125,22 @@ function ConnectedSitesSection({
   selectedProvider: IssueProvider;
   selectedRepositoryId: string;
   setSiteWidgetButtonPosition: (position: WidgetButtonPosition) => void;
-  setSiteWidgetButtonVariant: (variant: WidgetButtonVariant) => void;
+  setSiteWidgetDisplayMode: (mode: WidgetDisplayMode) => void;
   setSiteWidgetLocale: (locale: WidgetLocale) => void;
+  setSiteWidgetModes: (modes: WidgetMode[]) => void;
   setSiteWidgetReporterFields: (fields: WidgetReporterFields) => void;
+  setSiteWidgetTitle: (title: string) => void;
   setSiteName: (name: string) => void;
   setSiteOrigin: (origin: string) => void;
   siteName: string;
   siteOrigin: string;
   siteWidgetButtonPosition: WidgetButtonPosition;
-  siteWidgetButtonVariant: WidgetButtonVariant;
+  siteWidgetDisplayMode: WidgetDisplayMode;
   siteIssueCreationMode: IssueCreationMode;
+  siteWidgetModes: WidgetMode[];
   siteWidgetLocale: WidgetLocale;
   siteWidgetReporterFields: WidgetReporterFields;
+  siteWidgetTitle: string;
   setSiteIssueCreationMode: (mode: IssueCreationMode) => void;
 }) {
   const isSelectedProviderConnected = connectedProviders.has(selectedProvider);
@@ -1716,6 +2151,12 @@ function ConnectedSitesSection({
   const hasRepositoryDestination = Boolean(selectedRepositoryId || (canUseRepositoryUrlFallback && repositoryUrl.trim()));
   const connectedIntegrations = Array.from(connectedProviders);
   const hasConnectedProvider = connectedIntegrations.length > 0;
+  const ownProjects = canManageMembers
+    ? projects.filter((project) => !project.issueAccesses?.some((access) => access.status === "active" && access.userId === currentUserId))
+    : [];
+  const sharedProjects = canManageMembers
+    ? projects.filter((project) => project.issueAccesses?.some((access) => access.status === "active" && access.userId === currentUserId))
+    : projects;
   const gitConnectionSummaries = providerOrder.map((provider) => {
     const integration = integrations.find((item) => item.provider === provider);
     const connected = connectedProviders.has(provider);
@@ -1729,6 +2170,18 @@ function ConnectedSitesSection({
     };
   });
   const siteOriginValidation = validateAllowedOrigin(siteOrigin);
+  const [repositorySearch, setRepositorySearch] = useState("");
+  const normalizedRepositorySearch = repositorySearch.trim().toLowerCase();
+  const filteredRepositoryOptions = useMemo(
+    () => normalizedRepositorySearch
+      ? repositoryOptions.filter((repository) => repositorySearchText(repository).includes(normalizedRepositorySearch))
+      : repositoryOptions,
+    [normalizedRepositorySearch, repositoryOptions]
+  );
+  const repositorySearchResultText = repositoryLoadState === "ready"
+    ? `${filteredRepositoryOptions.length} dépôt${filteredRepositoryOptions.length > 1 ? "s" : ""} sur ${repositoryOptions.length}`
+    : "";
+  const repositoryEditProject = projects.find((project) => project.publicKey === repositoryEditProjectKey);
 
   return (
     <section className="settings-section linked-sites" aria-labelledby="linked-sites-title">
@@ -1737,20 +2190,27 @@ function ConnectedSitesSection({
           <p className="eyebrow">Pages connectées</p>
           <h2 id="linked-sites-title">Sites connectés</h2>
         </div>
-        <button className="button" onClick={() => onOpenSiteModal()} type="button">
-          <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-          Ajouter un nouveau site
-        </button>
+        {canManageMembers ? (
+          <button className="button" onClick={() => onOpenSiteModal()} type="button">
+            <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+            Ajouter un nouveau site
+          </button>
+        ) : null}
       </div>
 
       {projects.length === 0 ? (
         <div className="empty-state connected-sites-empty">
           <div>
-            <p className="eyebrow">Premier site</p>
-            <h2>Aucun site connecté</h2>
-            <p>Créez un site réel pour obtenir une clé publique, limiter les origines autorisées et envoyer les retours vers le bon dépôt Git.</p>
+            <p className="eyebrow">{canManageMembers ? "Premier site" : "Projets partagés"}</p>
+            <h2>{canManageMembers ? "Aucun site connecté" : "Aucun projet partagé"}</h2>
+            <p>
+              {canManageMembers
+                ? "Créez un site réel pour obtenir une clé publique, limiter les origines autorisées et envoyer les retours vers le bon dépôt Git."
+                : "Les projets qu'un autre utilisateur partage avec vous apparaîtront ici."}
+            </p>
           </div>
-          <div className="onboarding-steps" aria-label="Étapes pour connecter un site">
+          {canManageMembers ? (
+            <div className="onboarding-steps" aria-label="Étapes pour connecter un site">
             <div className={`onboarding-step${hasConnectedProvider ? " done" : " current"}`}>
               <span>1</span>
               <div>
@@ -1782,33 +2242,49 @@ function ConnectedSitesSection({
                 <p>Copiez la balise widget générée puis vérifiez sa présence depuis cette page.</p>
               </div>
             </div>
-          </div>
+            </div>
+          ) : null}
           <div className="empty-state-actions">
-            {hasConnectedProvider ? (
+            {canManageMembers && hasConnectedProvider ? (
               <button className="button" onClick={() => onOpenSiteModal()} type="button">
                 <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                 Ajouter un nouveau site
               </button>
-            ) : (
+            ) : canManageMembers ? (
               <Link className="button" href="/settings/git-connections">
                 <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
                 Connecter Git
               </Link>
-            )}
+            ) : null}
             <Link className="button secondary-button" href="/projects">
               Voir la file
             </Link>
           </div>
         </div>
       ) : (
+        <>
+        <div className="site-project-tabs" aria-label="Groupes de projets">
+          <span className={canManageMembers ? "is-active" : ""}>Mes projets <strong>{ownProjects.length}</strong></span>
+          <span className={!canManageMembers ? "is-active" : ""}>Projets partagés avec moi <strong>{sharedProjects.length}</strong></span>
+        </div>
         <div className="site-repo-list">
           {projects.map((project) => {
+            const isSharedProject = !canManageMembers || project.issueAccesses?.some((access) => access.status === "active" && access.userId === currentUserId) === true;
+            const canManageProject = canManageMembers && !isSharedProject;
             const issueTarget = project.issueTarget;
             const providerConnected = connectedProviders.has(issueTarget.provider);
             const isReady = providerConnected && issueTarget.namespace && issueTarget.project;
             const originValidation = validateAllowedOrigins(project.allowedOrigins);
             const snippet = project.installSnippet ?? installSnippet(project);
             const failedIssueCount = project.metrics?.failedIssues ?? 0;
+            const isEditingOrigin = siteOriginEditor?.projectKey === project.publicKey;
+            const activeSiteOriginEditor = isEditingOrigin ? siteOriginEditor : undefined;
+            const editingOriginValidation = activeSiteOriginEditor ? validateAllowedOrigin(activeSiteOriginEditor.value) : undefined;
+            const siteAccessCount = project.issueAccesses?.filter((access) => access.status === "active").length ?? 0;
+            const widgetModeSummary = normalizeWidgetModes(project.widgetModes)
+              .map((mode) => optionLabel(widgetModeOptions, mode))
+              .join(", ");
+            const issueCreationSummary = optionLabel(issueCreationModeOptions, project.issueCreationMode);
 
             return (
               <article className="site-repo-row connected-site-row" key={project.publicKey}>
@@ -1820,6 +2296,7 @@ function ConnectedSitesSection({
                         {isReady ? "Actif" : "Git déconnecté"}
                       </span>
                       <ProviderBadge provider={issueTarget.provider} />
+                      <span className="status-badge muted">{isSharedProject ? "Partagé avec moi" : siteAccessCount > 0 ? `${siteAccessCount} accès` : "Mes projets"}</span>
                     </div>
                     <p>{project.allowedOrigins.join(", ")}</p>
                   </div>
@@ -1839,10 +2316,29 @@ function ConnectedSitesSection({
                         <T k="destinations.open" />
                       </a>
                     ) : null}
-                    <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
-                      <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
-                      Supprimer
-                    </button>
+                    {canManageProject ? (
+                      <>
+                        <button className="button secondary-button" disabled={isPending} onClick={() => { setRepositorySearch(""); onEditRepository(project); }} type="button">
+                          <GitBranch aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Changer dépôt
+                        </button>
+                        {!isEditingOrigin ? (
+                          <button className="button secondary-button" disabled={isPending} onClick={() => onEditSiteOrigin(project)} type="button">
+                            <Pencil aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                            Éditer
+                          </button>
+                        ) : null}
+                        <button className="button secondary-button" disabled={isPending} onClick={() => onOpenSiteAccess(project)} type="button">
+                          <UserRound aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Accès
+                        </button>
+                      </>
+                    ) : (
+                      <button className="button danger-button" disabled={isPending} onClick={() => onLeaveSharedProject(project.publicKey)} type="button">
+                        <X aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                        Retirer mon accès
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="site-row-meta">
@@ -1853,76 +2349,293 @@ function ConnectedSitesSection({
                       <span title="Créations d'issues Git en échec"><strong>{failedIssueCount}</strong><small>Échecs Git</small></span>
                     ) : null}
                   </div>
-                  <div className="widget-settings">
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Langue widget"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetLocale: value })}
-                      options={widgetLocaleOptions}
-                      value={project.widgetLocale}
-                    />
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Visibilité"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonVariant: value })}
-                      options={widgetVariantOptions}
-                      value={project.widgetButtonVariant}
-                    />
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Position bouton"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonPosition: value })}
-                      options={widgetPositionOptions}
-                      value={project.widgetButtonPosition}
-                    />
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Identité visiteur"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetReporterFields: value })}
-                      options={widgetReporterFieldOptions}
-                      value={project.widgetReporterFields}
-                    />
-                  </div>
-                  <div className="issue-automation-settings">
-                    <ThemeDropdown
-                      disabled={isPending}
-                      label="Création d'issues"
-                      onChange={(value) => onUpdateWidgetSettings(project.publicKey, { issueCreationMode: value })}
-                      options={issueCreationModeOptions}
-                      value={project.issueCreationMode}
-                    />
-                    <p>
-                      {project.issueCreationMode === "automatic"
-                        ? "Les nouveaux feedbacks créent directement une issue Git."
-                        : "Les feedbacks restent à valider avant Git."}
-                    </p>
-                  </div>
-                  <div className="site-script">
-                    {originValidation.ok ? (
-                      <button aria-label="Copier le script widget" className="site-script-copy-card" onClick={() => onCopyInstallSnippet(project)} type="button">
-                        <code>{snippet}</code>
-                      </button>
-                    ) : (
-                      <span className="site-script-placeholder">Origine autorisée à corriger avant installation.</span>
-                    )}
-                  </div>
+                  {canManageProject && activeSiteOriginEditor ? (
+                    <form className="site-edit-panel" onSubmit={(event) => {
+                      event.preventDefault();
+                      onSaveSiteOrigin(project.publicKey);
+                    }}>
+                      <section className="site-config-panel site-url-config-panel" aria-label={`Site ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Site</span>
+                        </div>
+                        <div className="site-origin-editor">
+                          <label>
+                            <span>Nom du projet</span>
+                            <input
+                              aria-label={`Nom du projet ${project.name}`}
+                              disabled={isPending}
+                              maxLength={120}
+                              onChange={(event) => onSiteNameEditorChange(event.target.value)}
+                              required
+                              value={activeSiteOriginEditor.name}
+                            />
+                          </label>
+                          <label>
+                            <span>URL du site</span>
+                            <input
+                              aria-label={`URL autorisée pour ${project.name}`}
+                              disabled={isPending}
+                              onChange={(event) => onSiteOriginEditorChange(event.target.value)}
+                              type="url"
+                              value={activeSiteOriginEditor.value}
+                            />
+                          </label>
+                          <p className={`origin-create-status ${editingOriginValidation?.ok ? "success" : activeSiteOriginEditor.value.trim() ? "error" : ""}`} role="status">
+                            {editingOriginValidation?.message ?? "Saisissez l'URL du site à autoriser."}
+                          </p>
+                        </div>
+                      </section>
+                      <section className="site-config-panel widget-config-panel" aria-label={`Configuration widget pour ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Widget</span>
+                        </div>
+                        <div className="widget-settings">
+                          <label className="widget-title-field">
+                            <span>Titre widget</span>
+                            <textarea
+                              defaultValue={project.widgetTitle}
+                              disabled={isPending}
+                              maxLength={maxWidgetTitleLength}
+                              onBlur={(event) => {
+                                const title = normalizeWidgetTitle(event.currentTarget.value);
+                                event.currentTarget.value = title;
+                                if (title !== project.widgetTitle) {
+                                  onUpdateWidgetSettings(project.publicKey, { widgetTitle: title });
+                                }
+                              }}
+                            />
+                            <small>{maxWidgetTitleLength} caractères max</small>
+                          </label>
+                          <WidgetModeCheckboxes
+                            disabled={isPending}
+                            modes={project.widgetModes}
+                            onChange={(modes) => onUpdateWidgetSettings(project.publicKey, { widgetModes: modes })}
+                          />
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Langue"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetLocale: value })}
+                            options={widgetLocaleOptions}
+                            value={project.widgetLocale}
+                          />
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Affichage"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, {
+                              widgetButtonVariant: widgetButtonVariantFromDisplayMode(value),
+                              widgetDisplayMode: value
+                            })}
+                            options={widgetDisplayModeOptions}
+                            value={project.widgetDisplayMode}
+                          />
+                          <p className="widget-setting-help">{widgetDisplayModeDescription(project.widgetDisplayMode)}</p>
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Position"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetButtonPosition: value })}
+                            options={widgetPositionOptions}
+                            value={project.widgetButtonPosition}
+                          />
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Identité"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { widgetReporterFields: value })}
+                            options={widgetReporterFieldOptions}
+                            value={project.widgetReporterFields}
+                          />
+                        </div>
+                      </section>
+                      <section className="site-config-panel issue-config-panel" aria-label={`Création d'issues pour ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Issues</span>
+                        </div>
+                        <div className="issue-automation-settings">
+                          <ThemeDropdown
+                            disabled={isPending}
+                            label="Création"
+                            onChange={(value) => onUpdateWidgetSettings(project.publicKey, { issueCreationMode: value })}
+                            options={issueCreationModeOptions}
+                            value={project.issueCreationMode}
+                          />
+                          <p>
+                            {project.issueCreationMode === "automatic"
+                              ? "Les nouveaux feedbacks créent directement une issue Git."
+                              : "Les feedbacks restent à valider avant Git."}
+                          </p>
+                        </div>
+                      </section>
+                      <div className="site-origin-editor-actions site-edit-actions">
+                        <button className="button" disabled={isPending || !editingOriginValidation?.ok || !activeSiteOriginEditor.name.trim()} type="submit">
+                          <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Enregistrer
+                        </button>
+                        <button className="button secondary-button" disabled={isPending} onClick={onCancelSiteOriginEdit} type="button">
+                          <X aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Annuler
+                        </button>
+                        <button className="button danger-button" disabled={isPending} onClick={() => onDeleteSite(project.publicKey)} type="button">
+                          <Trash2 aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                          Supprimer
+                        </button>
+                      </div>
+                    </form>
+                  ) : canManageProject ? (
+                    <div className="site-read-panel">
+                      <section className="site-config-summary" aria-label={`Résumé de configuration pour ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Configuration</span>
+                        </div>
+                        <dl>
+                          <div>
+                            <dt>Titre widget</dt>
+                            <dd>{project.widgetTitle}</dd>
+                          </div>
+                          <div>
+                            <dt>Types de retour</dt>
+                            <dd>{widgetModeSummary}</dd>
+                          </div>
+                          <div>
+                            <dt>Langue</dt>
+                            <dd>{optionLabel(widgetLocaleOptions, project.widgetLocale)}</dd>
+                          </div>
+                          <div>
+                            <dt>Affichage</dt>
+                            <dd>{optionLabel(widgetDisplayModeOptions, project.widgetDisplayMode)}</dd>
+                          </div>
+                          <div>
+                            <dt>Position</dt>
+                            <dd>{optionLabel(widgetPositionOptions, project.widgetButtonPosition)}</dd>
+                          </div>
+                          <div>
+                            <dt>Identité</dt>
+                            <dd>{optionLabel(widgetReporterFieldOptions, project.widgetReporterFields)}</dd>
+                          </div>
+                          <div>
+                            <dt>Issues</dt>
+                            <dd>{issueCreationSummary}</dd>
+                          </div>
+                        </dl>
+                      </section>
+                      <section className="site-config-panel script-config-panel" aria-label={`Script widget pour ${project.name}`}>
+                        <div className="site-config-panel-heading">
+                          <span>Installation</span>
+                        </div>
+                        <div className="site-script">
+                          {originValidation.ok ? (
+                            <button aria-label="Copier le script widget" className="site-script-copy-card" onClick={() => onCopyInstallSnippet(project)} type="button">
+                              <code>{snippet}</code>
+                            </button>
+                          ) : (
+                            <span className="site-script-placeholder">Origine autorisée à corriger avant installation.</span>
+                          )}
+                        </div>
+                      </section>
+                    </div>
+                  ) : null}
                 </div>
               </article>
             );
           })}
         </div>
+        </>
       )}
+
+      {repositoryEditProject ? (
+        <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="repository-edit-title">
+          <button className="settings-modal-backdrop" aria-label="Fermer" onClick={onCloseRepositoryEditor} type="button" />
+          <div className="settings-modal-panel">
+            <div className="settings-modal-header">
+              <div>
+                <p className="eyebrow">{repositoryEditProject.name}</p>
+                <h2 id="repository-edit-title">Changer le dépôt Git</h2>
+              </div>
+              <button className="icon-button" aria-label="Fermer" onClick={onCloseRepositoryEditor} type="button">
+                <X aria-hidden="true" className="ui-icon" size={18} strokeWidth={2.2} />
+              </button>
+            </div>
+            <div className="modal-copy">
+              <strong>Dépôt actuel : {repositoryEditProject.issueTarget.namespace}/{repositoryEditProject.issueTarget.project}</strong>
+              <span>Les prochaines issues iront dans le dépôt choisi. Les issues déjà créées restent dans leur dépôt actuel.</span>
+            </div>
+            <div className="repo-linker in-modal">
+              <form className="repo-form site-create-form" onSubmit={(event) => { event.preventDefault(); onSaveRepository(); }}>
+                <label>
+                  Service Git
+                  <select value={selectedProvider} onChange={(event) => { setRepositorySearch(""); onSelectProvider(event.target.value as IssueProvider); }}>
+                    <option disabled={!connectedProviders.has("github")} value="github">GitHub</option>
+                    <option disabled={!connectedProviders.has("gitlab")} value="gitlab">GitLab</option>
+                  </select>
+                </label>
+                {shouldShowRepositoryStatus && repositoryLoadState !== "ready" ? (
+                  <div className={`repository-loader ${repositoryLoadState}`} role="status">
+                    <strong>{repositoryStatusTitle(repositoryLoadState)}</strong>
+                    <span>{repositoryStatusText(repositoryLoadState, repositoryLoadMessage)}</span>
+                  </div>
+                ) : null}
+                <label className="repo-select-field">
+                  Dépôt connecté
+                  <span className="repository-search-field">
+                    <Search aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+                    <input aria-label="Rechercher un dépôt connecté" disabled={isRepositorySelectDisabled}
+                      onChange={(event) => setRepositorySearch(event.target.value)} placeholder="Rechercher par nom, groupe ou URL"
+                      type="search" value={repositorySearch} />
+                    {repositorySearchResultText ? <small>{repositorySearchResultText}</small> : null}
+                  </span>
+                  <select disabled={isRepositorySelectDisabled || filteredRepositoryOptions.length === 0}
+                    value={selectedRepositoryId} onChange={(event) => { onSelectRepository(event.target.value); setRepositorySearch(""); }}>
+                    <option value="">{repositorySelectPlaceholder(repositoryLoadState, isSelectedProviderConnected)}</option>
+                    {filteredRepositoryOptions.map((repository) => (
+                      <option key={repository.id} value={repository.id}>{repository.label}</option>
+                    ))}
+                  </select>
+                </label>
+                {canUseRepositoryUrlFallback ? (
+                  <label>
+                    URL du dépôt en secours
+                    <input onChange={(event) => onRepositoryUrlChange(event.target.value)}
+                      placeholder={selectedProvider === "gitlab" ? "https://gitlab.com/groupe/projet" : "https://github.com/organisation/projet"}
+                      value={repositoryUrl} />
+                  </label>
+                ) : null}
+                <div className="site-create-actions">
+                  <button className="button" disabled={isPending || !hasRepositoryDestination || !isSelectedProviderConnected} type="submit">
+                    {isPending ? <LoadingSpinner /> : <Check aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
+                    Enregistrer le dépôt
+                  </button>
+                  <button className="button secondary-button" disabled={isPending} onClick={onCloseRepositoryEditor} type="button">Annuler</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isSiteModalOpen ? (
         <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="site-modal-title">
-          <button className="settings-modal-backdrop" aria-label="Fermer" onClick={onCloseModal} type="button" />
+          <button
+            className="settings-modal-backdrop"
+            aria-label="Fermer"
+            onClick={() => {
+              setRepositorySearch("");
+              onCloseModal();
+            }}
+            type="button"
+          />
           <div className="settings-modal-panel">
             <div className="settings-modal-header">
               <div>
                 <p className="eyebrow">Pages connectées</p>
                 <h2 id="site-modal-title">Ajouter un nouveau site</h2>
               </div>
-              <button className="icon-button" aria-label="Fermer" onClick={onCloseModal} type="button">
+              <button
+                className="icon-button"
+                aria-label="Fermer"
+                onClick={() => {
+                  setRepositorySearch("");
+                  onCloseModal();
+                }}
+                type="button"
+              >
                 <X aria-hidden="true" className="ui-icon" size={18} strokeWidth={2.2} />
               </button>
             </div>
@@ -1958,23 +2671,48 @@ function ConnectedSitesSection({
               <form className="repo-form site-create-form" onSubmit={(event) => event.preventDefault()}>
                 <label>
                   Service Git
-                  <select name="provider" value={selectedProvider} onChange={(event) => onSelectProvider(event.target.value as IssueProvider)}>
+                  <select
+                    name="provider"
+                    value={selectedProvider}
+                    onChange={(event) => {
+                      setRepositorySearch("");
+                      onSelectProvider(event.target.value as IssueProvider);
+                    }}
+                  >
                     <option disabled={!connectedProviders.has("github")} value="github">GitHub</option>
                     <option disabled={!connectedProviders.has("gitlab")} value="gitlab">GitLab</option>
                   </select>
                 </label>
                 <label className="repo-select-field">
                   Dépôt connecté
+                  <span className="repository-search-field">
+                    <Search aria-hidden="true" className="ui-icon" size={15} strokeWidth={2.2} />
+                    <input
+                      aria-label="Rechercher un dépôt connecté"
+                      disabled={isRepositorySelectDisabled}
+                      name="repositorySearch"
+                      onChange={(event) => setRepositorySearch(event.target.value)}
+                      placeholder="Rechercher par nom, groupe ou URL"
+                      type="search"
+                      value={repositorySearch}
+                    />
+                    {repositorySearchResultText ? <small>{repositorySearchResultText}</small> : null}
+                  </span>
                   <select
-                    disabled={isRepositorySelectDisabled}
+                    disabled={isRepositorySelectDisabled || filteredRepositoryOptions.length === 0}
                     name="repositorySelect"
                     value={selectedRepositoryId}
                     onChange={(event) => {
                       onSelectRepository(event.target.value);
+                      setRepositorySearch("");
                     }}
                   >
-                    <option value="">{repositorySelectPlaceholder(repositoryLoadState, isSelectedProviderConnected)}</option>
-                    {repositoryOptions.map((repository) => (
+                    <option value="">
+                      {normalizedRepositorySearch && filteredRepositoryOptions.length === 0
+                        ? "Aucun dépôt ne correspond à cette recherche"
+                        : repositorySelectPlaceholder(repositoryLoadState, isSelectedProviderConnected)}
+                    </option>
+                    {filteredRepositoryOptions.map((repository) => (
                       <option key={repository.id} value={repository.id}>
                         {repository.label}
                       </option>
@@ -2018,15 +2756,29 @@ function ConnectedSitesSection({
                 </label>
                 <fieldset className="site-create-widget-options">
                   <legend>Options de placement du feedback</legend>
+                  <label className="widget-title-field">
+                    <span>Titre widget</span>
+                    <textarea
+                      maxLength={maxWidgetTitleLength}
+                      onChange={(event) => setSiteWidgetTitle(event.target.value)}
+                      value={siteWidgetTitle}
+                    />
+                    <small>{maxWidgetTitleLength} caractères max</small>
+                  </label>
+                  <WidgetModeCheckboxes
+                    modes={siteWidgetModes}
+                    onChange={setSiteWidgetModes}
+                  />
                   <ThemeDropdown label="Langue" onChange={setSiteWidgetLocale} options={widgetLocaleOptions} value={siteWidgetLocale} />
-                  <ThemeDropdown label="Visibilité" onChange={setSiteWidgetButtonVariant} options={widgetVariantOptions} value={siteWidgetButtonVariant} />
+                  <ThemeDropdown label="Affichage" onChange={setSiteWidgetDisplayMode} options={widgetDisplayModeOptions} value={siteWidgetDisplayMode} />
+                  <p className="widget-setting-help">{widgetDisplayModeDescription(siteWidgetDisplayMode)}</p>
                   <ThemeDropdown label="Position bouton" onChange={setSiteWidgetButtonPosition} options={widgetPositionOptions} value={siteWidgetButtonPosition} />
                   <ThemeDropdown label="Identité visiteur" onChange={setSiteWidgetReporterFields} options={widgetReporterFieldOptions} value={siteWidgetReporterFields} />
                   <ThemeDropdown label="Création issues" onChange={setSiteIssueCreationMode} options={issueCreationModeOptions} value={siteIssueCreationMode} />
                 </fieldset>
                 <div className="site-create-actions">
                   <button className="button" disabled={isPending || !siteOriginValidation.ok || !hasRepositoryDestination || !isSelectedProviderConnected} onClick={onCreateSite} type="button">
-                    <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />
+                    {isPending ? <LoadingSpinner /> : <Plus aria-hidden="true" className="ui-icon" size={16} strokeWidth={2.2} />}
                     {isPending ? "Création..." : "Créer le site"}
                   </button>
                 </div>
@@ -2036,6 +2788,43 @@ function ConnectedSitesSection({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function WidgetModeCheckboxes({
+  disabled = false,
+  modes,
+  onChange
+}: {
+  disabled?: boolean;
+  modes: WidgetMode[];
+  onChange: (modes: WidgetMode[]) => void;
+}) {
+  const normalizedModes = normalizeWidgetModes(modes);
+
+  function toggleMode(mode: WidgetMode, checked: boolean) {
+    const nextModes = checked
+      ? normalizeWidgetModes([...normalizedModes, mode])
+      : normalizedModes.filter((item) => item !== mode);
+
+    onChange(nextModes.length > 0 ? normalizeWidgetModes(nextModes) : normalizedModes);
+  }
+
+  return (
+    <fieldset className="widget-mode-checkboxes">
+      <legend>Types de retour</legend>
+      {widgetModeOptions.map((option) => (
+        <label key={option.value}>
+          <input
+            checked={normalizedModes.includes(option.value)}
+            disabled={disabled || (normalizedModes.length === 1 && normalizedModes.includes(option.value))}
+            onChange={(event) => toggleMode(option.value, event.target.checked)}
+            type="checkbox"
+          />
+          <span>{option.label}</span>
+        </label>
+      ))}
+    </fieldset>
   );
 }
 
@@ -2184,7 +2973,9 @@ function parseRepositoryOptions(value: unknown, provider: IssueProvider): Reposi
         ? value.repos
         : [];
 
-  return repositories.flatMap((repository) => parseRepositoryOption(repository, provider));
+  return repositories
+    .flatMap((repository) => parseRepositoryOption(repository, provider))
+    .sort(compareRepositoryOptions);
 }
 
 function parseRepositoryOption(value: unknown, provider: IssueProvider): RepositoryOption[] {
@@ -2211,12 +3002,57 @@ function parseRepositoryOption(value: unknown, provider: IssueProvider): Reposit
   }];
 }
 
+function compareRepositoryOptions(first: RepositoryOption, second: RepositoryOption): number {
+  return first.label.localeCompare(second.label, "fr", { sensitivity: "base" })
+    || first.webUrl.localeCompare(second.webUrl, "fr", { sensitivity: "base" });
+}
+
+function repositorySearchText(repository: RepositoryOption): string {
+  return [
+    repository.label,
+    repository.namespace,
+    repository.project,
+    repository.webUrl
+  ].join(" ").toLowerCase();
+}
+
+function normalizeWidgetTitle(value: string | undefined): string {
+  const title = value?.trim();
+  return title ? title.slice(0, maxWidgetTitleLength) : defaultWidgetTitle;
+}
+
+function normalizeWidgetModes(value: WidgetMode[] | undefined): WidgetMode[] {
+  const modes = value?.filter((mode): mode is WidgetMode => mode === "comment" || mode === "screenshot") ?? ["comment", "screenshot"];
+  const uniqueModes = widgetModeOptions.map((option) => option.value).filter((mode) => modes.includes(mode));
+  return uniqueModes.length > 0 ? uniqueModes : ["comment", "screenshot"];
+}
+
 function repositoryErrorMessage(value: unknown): string | undefined {
   if (isRecord(value) && typeof value.error === "string") {
     return value.error;
   }
 
   return undefined;
+}
+
+function repositoryResponseErrorMessage(response: Response, fallback: string): string {
+  if (response.status === 401) {
+    return "Token refusé par GitLab. Vérifiez que le token est encore valide et possède le scope api.";
+  }
+
+  if (response.status === 403) {
+    return "GitLab accepte le token, mais refuse l'accès aux projets ou aux issues. Vérifiez les droits du compte et le scope api.";
+  }
+
+  if (response.status === 404) {
+    return "Instance ou projet GitLab introuvable. Vérifiez l'URL de l'instance configurée dans ChangeThis.";
+  }
+
+  if (response.status >= 500) {
+    return `GitLab ou le proxy a renvoyé une erreur HTTP ${response.status}. Vérifiez les logs serveur et la configuration du proxy après la mise à jour GitLab.`;
+  }
+
+  return `${fallback} HTTP ${response.status}.`;
 }
 
 function splitFullName(value?: string): { namespace: string; project: string } | undefined {
@@ -2256,9 +3092,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function installSnippet(project: Pick<ProjectView, "publicKey" | "widgetLocale" | "widgetButtonPosition" | "widgetButtonVariant" | "widgetReporterFields">): string {
+function installSnippet(project: Pick<ProjectView, "publicKey">): string {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  const variant = project.widgetButtonVariant !== "default" ? ` data-button-variant="${project.widgetButtonVariant}"` : "";
-  const reporterFields = project.widgetReporterFields !== "hidden" ? ` data-reporter-fields="${project.widgetReporterFields}"` : "";
-  return `<script src="${origin}/widget.js" data-project="${project.publicKey}" data-locale="${project.widgetLocale}" data-position="${project.widgetButtonPosition}"${variant}${reporterFields}></script>`;
+  return `<script src="${origin}/widget-loader.js" data-project="${project.publicKey}"></script>`;
 }

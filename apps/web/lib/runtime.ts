@@ -3,8 +3,12 @@ export const isProductionRuntime =
   || process.env.VERCEL_ENV === "production"
   || process.env.RAILWAY_ENVIRONMENT === "production";
 
-export function getDataStoreMode(): "file" | "supabase" {
-  return process.env.DATA_STORE === "supabase" ? "supabase" : "file";
+export function getDataStoreMode(): "file" | "internal" {
+  if (process.env.DATA_STORE === "internal") {
+    return process.env.DATA_STORE;
+  }
+
+  return "file";
 }
 
 export function usesUnsafeLocalDataStoreInProduction(): boolean {

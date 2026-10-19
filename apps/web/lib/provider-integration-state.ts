@@ -3,8 +3,8 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { IssueProvider } from "@changethis/shared";
+import { getInternalApiUrl, getInternalSessionCookieHeader } from "./internal-api";
 import { getDataStoreMode } from "./runtime";
-import { isSupabaseServiceConfigured, supabaseServiceRest } from "./supabase-server";
 
 type DisabledProviderIntegration = {
   workspaceId?: string;
@@ -21,41 +21,24 @@ const localDataDir = process.env.CHANGETHIS_DATA_DIR ?? path.join(process.cwd(),
 const providerIntegrationStatePath = path.join(localDataDir, "provider-integrations.json");
 
 export function isProviderIntegrationDisabled(provider: IssueProvider, integrationId: string, workspaceId?: string): boolean {
-  if (getDataStoreMode() === "supabase" && isUuid(integrationId) && isSupabaseServiceConfigured()) {
-    throw new Error("Use isProviderIntegrationDisabledAsync when DATA_STORE=supabase");
-  }
-
   return readStore().disabledIntegrations.some((integration) =>
     integration.workspaceId === workspaceId && integration.provider === provider && integration.integrationId === integrationId
   );
 }
 
 export async function isProviderIntegrationDisabledAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<boolean> {
-  if (getDataStoreMode() !== "supabase" || !isUuid(integrationId) || !isSupabaseServiceConfigured()) {
-    return isProviderIntegrationDisabled(provider, integrationId, workspaceId);
+  if (usesInternalProviderIntegrationState()) {
+    const integration = await internalIntegrationRequest<{ status: string } | undefined>(
+      `/integrations/${provider}?${new URLSearchParams({ integration_id: integrationId }).toString()}`,
+      { allow404: true }
+    );
+    return integration?.status === "disabled";
   }
 
-  const params = new URLSearchParams({
-    id: `eq.${integrationId}`,
-    provider: `eq.${provider}`,
-    status: "eq.disabled",
-    select: "id",
-    limit: "1"
-  });
-
-  if (workspaceId && isUuid(workspaceId)) {
-    params.set("organization_id", `eq.${workspaceId}`);
-  }
-
-  const rows = await supabaseServiceRest<Array<{ id: string }>>(`/rest/v1/provider_integrations?${params.toString()}`);
-  return rows.length > 0;
+  return isProviderIntegrationDisabled(provider, integrationId, workspaceId);
 }
 
 export function disableProviderIntegration(provider: IssueProvider, integrationId: string, workspaceId?: string): void {
-  if (getDataStoreMode() === "supabase" && isUuid(integrationId) && isSupabaseServiceConfigured()) {
-    throw new Error("Use disableProviderIntegrationAsync when DATA_STORE=supabase");
-  }
-
   const store = readStore();
 
   store.disabledIntegrations = [
@@ -74,26 +57,15 @@ export function disableProviderIntegration(provider: IssueProvider, integrationI
 }
 
 export async function disableProviderIntegrationAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<void> {
-  if (getDataStoreMode() !== "supabase" || !isUuid(integrationId) || !isSupabaseServiceConfigured()) {
-    disableProviderIntegration(provider, integrationId, workspaceId);
+  if (usesInternalProviderIntegrationState()) {
+    await setInternalIntegrationStatus(provider, integrationId, "disabled");
     return;
   }
 
-  const params = providerIntegrationPatchParams(provider, integrationId, workspaceId);
-  await supabaseServiceRest(`/rest/v1/provider_integrations?${params.toString()}`, {
-    method: "PATCH",
-    headers: {
-      Prefer: "return=minimal"
-    },
-    body: JSON.stringify({ status: "disabled" })
-  });
+  disableProviderIntegration(provider, integrationId, workspaceId);
 }
 
 export function enableProviderIntegration(provider: IssueProvider, integrationId: string, workspaceId?: string): void {
-  if (getDataStoreMode() === "supabase" && isUuid(integrationId) && isSupabaseServiceConfigured()) {
-    throw new Error("Use enableProviderIntegrationAsync when DATA_STORE=supabase");
-  }
-
   const store = readStore();
 
   store.disabledIntegrations = store.disabledIntegrations.filter((integration) =>
@@ -104,19 +76,60 @@ export function enableProviderIntegration(provider: IssueProvider, integrationId
 }
 
 export async function enableProviderIntegrationAsync(provider: IssueProvider, integrationId: string, workspaceId?: string): Promise<void> {
-  if (getDataStoreMode() !== "supabase" || !isUuid(integrationId) || !isSupabaseServiceConfigured()) {
-    enableProviderIntegration(provider, integrationId, workspaceId);
+  if (usesInternalProviderIntegrationState()) {
+    await setInternalIntegrationStatus(provider, integrationId, "connected");
     return;
   }
 
-  const params = providerIntegrationPatchParams(provider, integrationId, workspaceId);
-  await supabaseServiceRest(`/rest/v1/provider_integrations?${params.toString()}`, {
+  enableProviderIntegration(provider, integrationId, workspaceId);
+}
+
+function usesInternalProviderIntegrationState(): boolean {
+  return getDataStoreMode() === "internal";
+}
+
+async function setInternalIntegrationStatus(provider: IssueProvider, integrationId: string, status: "connected" | "disabled"): Promise<void> {
+  await internalIntegrationRequest(`/integrations/${provider}/status`, {
     method: "PATCH",
-    headers: {
-      Prefer: "return=minimal"
-    },
-    body: JSON.stringify({ status: "connected" })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ integration_id: integrationId, status })
   });
+}
+
+async function internalIntegrationRequest<T>(path: string, init: RequestInit & { allow404?: boolean } = {}): Promise<T> {
+  const { allow404 = false, ...requestInit } = init;
+  const cookieHeader = await getInternalSessionCookieHeader();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(requestInit.headers as Record<string, string> | undefined)
+  };
+
+  if (cookieHeader) {
+    headers.Cookie = cookieHeader;
+  }
+
+  const response = await fetch(`${getInternalApiUrl()}${path}`, { ...requestInit, headers, cache: "no-store" });
+
+  if (allow404 && response.status === 404) {
+    return undefined as T;
+  }
+
+  if (!response.ok) {
+    let message = `Provider integration request failed with status ${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown; error?: unknown };
+      if (typeof body.detail === "string") {
+        message = body.detail;
+      } else if (typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // Keep the generic message when the API does not return JSON.
+    }
+    throw new Error(message);
+  }
+
+  return (await response.json()) as T;
 }
 
 function readStore(): ProviderIntegrationStateStore {
@@ -164,21 +177,4 @@ function isIssueProvider(value: unknown): value is IssueProvider {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function providerIntegrationPatchParams(provider: IssueProvider, integrationId: string, workspaceId?: string): URLSearchParams {
-  const params = new URLSearchParams({
-    id: `eq.${integrationId}`,
-    provider: `eq.${provider}`
-  });
-
-  if (workspaceId && isUuid(workspaceId)) {
-    params.set("organization_id", `eq.${workspaceId}`);
-  }
-
-  return params;
-}
-
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

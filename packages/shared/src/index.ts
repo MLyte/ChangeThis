@@ -7,7 +7,9 @@ export type ProviderIntegrationStatus = "connected" | "needs_setup" | "needs_rec
 export type WidgetLocale = "fr" | "en";
 export type WidgetButtonPosition = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 export type WidgetButtonVariant = "default" | "subtle";
+export type WidgetDisplayMode = "standard" | "subtle" | "hidden" | "disabled";
 export type WidgetReporterFields = "hidden" | "optional" | "required";
+export type WidgetMode = "comment" | "pin" | "screenshot";
 export type IssueCreationMode = "manual" | "automatic";
 
 export type Workspace = {
@@ -37,7 +39,10 @@ export type Site = {
   widgetLocale: WidgetLocale;
   widgetButtonPosition: WidgetButtonPosition;
   widgetButtonVariant: WidgetButtonVariant;
+  widgetDisplayMode: WidgetDisplayMode;
   widgetReporterFields: WidgetReporterFields;
+  widgetTitle: string;
+  widgetModes: WidgetMode[];
   issueCreationMode: IssueCreationMode;
   createdAt: string;
   updatedAt: string;
@@ -63,6 +68,20 @@ export type PinTarget = {
   elementOffsetY?: number;
   selector?: string;
   text?: string;
+};
+
+export type PinReplayPayload = {
+  v: 1;
+  n: number;
+  x: number;
+  y: number;
+  ox?: number;
+  oy?: number;
+  s?: string;
+  vw: number;
+  vh: number;
+  sx?: number;
+  sy?: number;
 };
 
 export type CaptureArea = {
@@ -122,8 +141,23 @@ export type FeedbackMetadata = {
   timezone?: string;
   online?: boolean;
   app?: FeedbackAppEnvironment;
+  capture?: FeedbackCaptureMetadata;
   createdAt: string;
 };
+
+export type FeedbackCaptureMetadata = {
+  source: "client";
+  risk: boolean;
+  cssColorConversionCount?: number;
+  cssFallbackCount?: number;
+  removedBackgroundImageCount?: number;
+  unloadedVisibleImageCount?: number;
+  crossOriginIframeCount?: number;
+  fontReadyTimedOut?: boolean;
+  preparationTimedOut?: boolean;
+};
+
+export type FeedbackScreenshotSource = "client_capture" | "user_upload" | "browser_capture";
 
 export type FeedbackReporter = {
   name?: string;
@@ -141,6 +175,7 @@ export type FeedbackPayload = {
   captureArea?: CaptureArea;
   screenshotDataUrl?: string;
   screenshotThumbnailDataUrl?: string;
+  screenshotSource?: FeedbackScreenshotSource;
 };
 
 export type IssueTarget = {
@@ -210,6 +245,7 @@ const defaultMaxScreenshotBytes = 2_000_000;
 const defaultMaxScreenshotThumbnailBytes = 250_000;
 const maxPins = 20;
 const allowedScreenshotMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+export const pinReplayQueryParam = "changethis_pin";
 
 const labelByType: Record<FeedbackType, string> = {
   comment: "mode:comment",
@@ -293,6 +329,14 @@ export function validateFeedbackPayload(
     }
   }
 
+  const screenshotSource = value.screenshotSource;
+  if (screenshotSource !== undefined
+    && screenshotSource !== "client_capture"
+    && screenshotSource !== "user_upload"
+    && screenshotSource !== "browser_capture") {
+    return invalid("screenshotSource must be client_capture, user_upload, or browser_capture");
+  }
+
   return {
     ok: true,
     value: {
@@ -305,7 +349,8 @@ export function validateFeedbackPayload(
       pins: normalizedPins,
       captureArea: captureArea.value,
       screenshotDataUrl: normalizedScreenshotDataUrl,
-      screenshotThumbnailDataUrl: normalizedScreenshotThumbnailDataUrl
+      screenshotThumbnailDataUrl: normalizedScreenshotThumbnailDataUrl,
+      screenshotSource
     }
   };
 }
@@ -410,7 +455,7 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     ...(appEnvironmentLines.length ? [""] : []),
     "## Localisation",
     "",
-    ...formatPinsForIssue(pins),
+    ...formatPinsForIssue(pins, feedback.metadata),
     "",
     "## Donnees techniques",
     "",
@@ -434,12 +479,8 @@ function buildIssueDescription(feedback: FeedbackPayload): string {
     "## Capture",
     "",
     feedback.screenshotDataUrl
-      ? "Capture disponible dans ChangeThis. Elle n'est pas jointe a l'issue Git pour l'instant."
-      : "Aucune capture jointe.",
-    "",
-    "## Analyse IA",
-    "",
-    "A completer automatiquement."
+      ? "Capture disponible dans ChangeThis. Elle sera jointe a l'issue Git si la destination le supporte."
+      : "Aucune capture jointe."
   ].filter((line): line is string => typeof line === "string");
 
   return lines.join("\n");
@@ -472,7 +513,27 @@ function formatReporterForIssue(reporter: FeedbackReporter | undefined): string[
   ].filter((line): line is string => typeof line === "string");
 }
 
-function formatPinsForIssue(pins: PinTarget[]): string[] {
+export function buildPinReplayUrl(metadata: FeedbackMetadata, pin: PinTarget, pinNumber: number): string {
+  const url = new URL(metadata.url);
+  const payload: PinReplayPayload = {
+    v: 1,
+    n: pinNumber,
+    x: Math.round(pin.x),
+    y: Math.round(pin.y),
+    ox: typeof pin.elementOffsetX === "number" ? Math.round(pin.elementOffsetX) : undefined,
+    oy: typeof pin.elementOffsetY === "number" ? Math.round(pin.elementOffsetY) : undefined,
+    s: pin.selector,
+    vw: metadata.viewport.width,
+    vh: metadata.viewport.height,
+    sx: metadata.scroll ? Math.round(metadata.scroll.x) : undefined,
+    sy: metadata.scroll ? Math.round(metadata.scroll.y) : undefined
+  };
+
+  url.searchParams.set(pinReplayQueryParam, JSON.stringify(payload));
+  return url.toString();
+}
+
+function formatPinsForIssue(pins: PinTarget[], metadata: FeedbackMetadata): string[] {
   if (pins.length === 0) {
     return [
       "- Position: Non applicable",
@@ -483,6 +544,7 @@ function formatPinsForIssue(pins: PinTarget[]): string[] {
 
   return pins.flatMap((pin, index) => [
     `- Pin #${index + 1}: x=${pin.x}, y=${pin.y}`,
+    `  - Revoir sur la page: ${buildPinReplayUrl(metadata, pin, index + 1)}`,
     pin.selector ? `  - Element probable: \`${pin.selector}\`` : "  - Element probable: Non disponible",
     pin.text ? `  - Texte visible: ${pin.text}` : "  - Texte visible: Non disponible"
   ]);
@@ -671,10 +733,66 @@ function validateMetadata(value: unknown): MetadataValidationResult {
     metadata.app = app.value;
   }
 
+  if (value.capture !== undefined) {
+    const capture = validateCaptureMetadata(value.capture);
+    if (!capture.ok) {
+      return capture;
+    }
+
+    metadata.capture = capture.value;
+  }
+
   return {
     ok: true,
     value: metadata
   };
+}
+
+function validateCaptureMetadata(value: unknown): { ok: true; value: FeedbackCaptureMetadata } | { ok: false; error: string } {
+  if (!isRecord(value)) {
+    return invalid("metadata.capture must be an object");
+  }
+
+  if (value.source !== "client") {
+    return invalid("metadata.capture.source must be client");
+  }
+
+  if (typeof value.risk !== "boolean") {
+    return invalid("metadata.capture.risk must be a boolean");
+  }
+
+  const capture: FeedbackCaptureMetadata = {
+    source: "client",
+    risk: value.risk
+  };
+
+  for (const key of ["cssColorConversionCount", "cssFallbackCount", "removedBackgroundImageCount", "unloadedVisibleImageCount", "crossOriginIframeCount"] as const) {
+    const item = value[key];
+    if (item === undefined) {
+      continue;
+    }
+
+    if (!isNonNegativeNumber(item, 100_000)) {
+      return invalid(`metadata.capture.${key} must be a non-negative number`);
+    }
+
+    capture[key] = Math.round(item);
+  }
+
+  for (const key of ["fontReadyTimedOut", "preparationTimedOut"] as const) {
+    const item = value[key];
+    if (item === undefined) {
+      continue;
+    }
+
+    if (typeof item !== "boolean") {
+      return invalid(`metadata.capture.${key} must be a boolean`);
+    }
+
+    capture[key] = item;
+  }
+
+  return { ok: true, value: capture };
 }
 
 function validateAppEnvironment(value: unknown): { ok: true; value: FeedbackAppEnvironment } | { ok: false; error: string } {

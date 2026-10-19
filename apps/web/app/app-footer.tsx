@@ -9,9 +9,9 @@ type AppFooterProps = {
 };
 
 export async function AppFooter({ suppressSession = false }: AppFooterProps) {
-  const authMode = process.env.AUTH_MODE === "supabase" ? "supabase" : "local";
-  const dataStore = process.env.DATA_STORE === "supabase" ? "supabase" : "local";
-  const isProductionReadyRuntime = authMode === "supabase" && dataStore === "supabase";
+  const authMode = process.env.AUTH_MODE === "internal" ? "internal" : "local";
+  const dataStore = process.env.DATA_STORE === "internal" ? "internal" : "local";
+  const isProductionReadyRuntime = authMode === "internal" && dataStore === "internal";
   const footerSession = suppressSession ? undefined : await loadFooterSession();
 
   return (

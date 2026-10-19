@@ -9,10 +9,13 @@ type WidgetConfigResponse = {
   projectKey: string;
   name: string;
   modes: Array<"comment" | "pin" | "screenshot">;
+  title: ChangeThisProject["widgetTitle"];
   locale: ChangeThisProject["widgetLocale"];
   buttonPosition: ChangeThisProject["widgetButtonPosition"];
   buttonVariant: ChangeThisProject["widgetButtonVariant"];
+  displayMode: ChangeThisProject["widgetDisplayMode"];
   reporterFields: ChangeThisProject["widgetReporterFields"];
+  visible: boolean;
   endpoint: "/api/public/feedback";
 };
 
@@ -61,11 +64,14 @@ function widgetConfigResponse(project: ChangeThisProject): WidgetConfigResponse 
   return {
     projectKey: project.publicKey,
     name: project.name,
-    modes: ["comment", "pin", "screenshot"],
+    modes: project.widgetModes,
+    title: project.widgetTitle,
     locale: project.widgetLocale,
     buttonPosition: project.widgetButtonPosition,
     buttonVariant: project.widgetButtonVariant,
+    displayMode: project.widgetDisplayMode,
     reporterFields: project.widgetReporterFields,
+    visible: project.widgetDisplayMode !== "disabled",
     endpoint: "/api/public/feedback"
   };
 }

@@ -173,7 +173,7 @@ export function detectWidgetScript(html: string, projectKey: string): { ok: bool
   const scriptTags = html.match(/<script\b[^>]*>/gi) ?? [];
   const widgetScripts = scriptTags.filter((scriptTag) => {
     const src = getHtmlAttribute(scriptTag, "src") ?? "";
-    return src.includes("/widget.js") || src.endsWith("widget.js");
+    return isWidgetScriptUrl(src);
   });
 
   if (widgetScripts.length === 0) {
@@ -203,6 +203,13 @@ export function detectWidgetScript(html: string, projectKey: string): { ok: bool
     status: "script_detected",
     message: "Script widget détecté sur l'URL du site. Les retours peuvent être envoyés."
   };
+}
+
+function isWidgetScriptUrl(src: string): boolean {
+  return src.includes("/widget.js")
+    || src.endsWith("widget.js")
+    || src.includes("/widget-loader.js")
+    || src.endsWith("widget-loader.js");
 }
 
 export function detectWidgetCsp(contentSecurityPolicy: string | undefined, widgetOrigin: string): { ok: true } | { ok: false; status: string; message: string; directives: string[] } {

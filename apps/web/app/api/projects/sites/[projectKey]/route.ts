@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { IssueCreationMode } from "@changethis/shared";
+import type { IssueCreationMode, WidgetDisplayMode, WidgetMode } from "@changethis/shared";
 import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
 import { requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { logError, requestIdFrom } from "../../../../../lib/logger";
@@ -49,9 +49,14 @@ export async function PATCH(
     || !isWidgetLocale(body.widgetLocale)
     || !isWidgetButtonPosition(body.widgetButtonPosition)
     || !isWidgetButtonVariant(body.widgetButtonVariant)
+    || !isWidgetDisplayMode(body.widgetDisplayMode)
     || !isWidgetReporterFields(body.widgetReporterFields)
-    || !isIssueCreationMode(body.issueCreationMode)) {
-    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant, widgetReporterFields and issueCreationMode are required" }, { status: 422 });
+    || !isWidgetTitle(body.widgetTitle)
+    || !isWidgetModes(body.widgetModes)
+    || !isIssueCreationMode(body.issueCreationMode)
+    || (body.name !== undefined && (typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 120))
+    || (body.allowedOrigin !== undefined && typeof body.allowedOrigin !== "string")) {
+    return NextResponse.json({ error: "widgetLocale, widgetButtonPosition, widgetButtonVariant, widgetDisplayMode, widgetReporterFields, widgetTitle, widgetModes and issueCreationMode are required" }, { status: 422 });
   }
 
   const { projectKey } = await context.params;
@@ -59,11 +64,16 @@ export async function PATCH(
   try {
     const site = await updateProjectWidgetSettings({
       projectKey,
+      name: body.name,
       widgetLocale: body.widgetLocale,
       widgetButtonPosition: body.widgetButtonPosition,
       widgetButtonVariant: body.widgetButtonVariant,
+      widgetDisplayMode: body.widgetDisplayMode,
       widgetReporterFields: body.widgetReporterFields,
-      issueCreationMode: body.issueCreationMode
+      widgetTitle: body.widgetTitle,
+      widgetModes: body.widgetModes,
+      issueCreationMode: body.issueCreationMode,
+      allowedOrigin: body.allowedOrigin
     }, session.workspace.id);
 
     return NextResponse.json({
@@ -135,8 +145,22 @@ function isWidgetButtonVariant(value: unknown): value is "default" | "subtle" {
   return value === "default" || value === "subtle";
 }
 
+function isWidgetDisplayMode(value: unknown): value is WidgetDisplayMode {
+  return value === "standard" || value === "subtle" || value === "hidden" || value === "disabled";
+}
+
 function isWidgetReporterFields(value: unknown): value is "hidden" | "optional" | "required" {
   return value === "hidden" || value === "optional" || value === "required";
+}
+
+function isWidgetTitle(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value.trim().length <= 240;
+}
+
+function isWidgetModes(value: unknown): value is WidgetMode[] {
+  return Array.isArray(value)
+    && value.length > 0
+    && value.every((mode) => mode === "comment" || mode === "pin" || mode === "screenshot");
 }
 
 function isIssueCreationMode(value: unknown): value is IssueCreationMode {

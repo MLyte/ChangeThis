@@ -1,15 +1,16 @@
-import html2canvas from "html2canvas";
-import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackReporter, FeedbackType, PinTarget, WidgetReporterFields } from "@changethis/shared";
+import { pinReplayQueryParam } from "@changethis/shared";
+import type { CaptureArea, FeedbackAppEnvironment, FeedbackPayload, FeedbackReporter, FeedbackType, PinReplayPayload, PinTarget, WidgetMode, WidgetReporterFields } from "@changethis/shared";
 import { inferEndpoint, inferLocale } from "./inference.js";
-
-const capturePage = html2canvas as unknown as typeof import("html2canvas").default;
 
 type WidgetOptions = {
   projectKey: string;
   endpoint?: string;
   buttonLabel?: string;
+  title?: string;
+  modes?: WidgetMode[];
   buttonStateLabel?: string;
   buttonVariant?: "default" | "dev" | "prod" | "review" | "subtle";
+  displayMode?: "standard" | "subtle" | "hidden" | "disabled";
   buttonPosition?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
   reporterFields?: WidgetReporterFields;
   locale?: "fr" | "en";
@@ -28,9 +29,17 @@ type WidgetOptions = {
 type WidgetConfigResponse = {
   locale?: "fr" | "en";
   buttonPosition?: WidgetOptions["buttonPosition"];
+  button_position?: WidgetOptions["buttonPosition"];
   buttonVariant?: WidgetOptions["buttonVariant"];
+  button_variant?: WidgetOptions["buttonVariant"];
   reporterFields?: WidgetReporterFields;
+  reporter_fields?: WidgetReporterFields;
+  title?: string;
+  modes?: WidgetMode[];
   endpoint?: string;
+  displayMode?: WidgetOptions["displayMode"];
+  display_mode?: WidgetOptions["displayMode"];
+  visible?: boolean;
 };
 
 type DraftPin = {
@@ -68,38 +77,63 @@ const rootId = "changethis-widget-root";
 const sentPinsStorageKeyPrefix = "changethis:sentPins:";
 const sentFeedbacksStorageKeyPrefix = "changethis:sentFeedbacks:";
 const reporterStorageKeyPrefix = "changethis:reporter:";
-const productWebsiteUrl = "https://app.changethis.dev";
-const maxScreenshotDimension = 1600;
-const pageFeedbackScreenshotMaxDimension = 960;
+const pinReplayRootId = "changethis-pin-replay";
+const contactWebsiteUrl = "https://mathieuluyten.be";
+const maxManualCaptureDimension = 1200;
 const maxThumbnailDimension = 400;
+const maxClientScreenshotDataUrlLength = 1_700_000;
+const maxManualCaptureUploadBytes = 2_000_000;
+const maxManualCaptureSourceBytes = 18_000_000;
+const manualCaptureUploadTypes = ["image/png", "image/jpeg", "image/webp"];
+const manualCaptureSourceTypes = [...manualCaptureUploadTypes, "image/heic", "image/heif"];
 const screenshotQuality = 0.8;
-const pageFeedbackScreenshotQuality = 0.62;
+const manualCaptureCompressionAttempts = [
+  { maxDimension: maxManualCaptureDimension, quality: screenshotQuality },
+  { maxDimension: 960, quality: 0.68 },
+  { maxDimension: 720, quality: 0.58 }
+];
 const thumbnailQuality = 0.74;
+// Pin placement is temporarily disabled until its positioning is reliable again.
+const defaultWidgetModes: WidgetMode[] = ["comment", "screenshot"];
+const maxWidgetTitleLength = 240;
+const widgetConfigStartupTimeoutMs = 700;
+const changethisHandLogoSvg = '<svg class="brand-logo-icon" aria-hidden="true" viewBox="14 1 17 23" role="img"><g transform="rotate(180 22.5 12)"><path d="M19 1h2v1h1v4h2v1h3v1h2v1h1v1h1v7h-1v3h-1v3H19v-3h-1v-2h-1v-2h-1v-2h-1v-1h-1v-3h3v1h1V2h1"/><path fill="#fff" d="M21 2v9h1V7h2v4h1V8h2v4h1V9h1v1h1v7h-1v3h-1v2h-8v-2h-1v-2h-1v-2h-1v-2h-1v-1h-1v-2h2v1h1v1h1V2"/></g></svg>';
 const lucideIcons = {
   bug: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6 13H2"/><path d="M22 13h-4"/><path d="M6 17H3"/><path d="M21 17h-3"/></svg>',
   camera: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>',
+  check: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
+  "clipboard-paste": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M11 14h10"/><path d="m17 10 4 4-4 4"/><path d="M16 4h2a2 2 0 0 1 2 2v1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><rect width="8" height="4" x="8" y="2" rx="1"/></svg>',
   mail: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>',
   "map-pin": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
   "message-square": '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   pencil: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   plus: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
   question: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>',
+  scan: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg>',
   send: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
   trash: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
   undo: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 1 1 0 11H11"/></svg>',
+  upload: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>',
   x: '<svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
 };
 const widgetCopy = {
   fr: {
-    button: "Feedback",
-    brandLabel: "Découvrir",
+    button: "Commenter",
+    brandLabel: "Aide",
+    helpTitle: "Comment utiliser ce widget",
+    helpIntro: "Ce widget sert à signaler simplement ce qui doit être amélioré sur cette page.",
+    helpStepComment: "Utilise Commentaire pour laisser un retour général.",
+    helpStepPin: "Utilise Pin pour pointer précisément un élément à corriger.",
+    helpStepCapture: "Utilise Capture pour encadrer une zone visible de l'écran.",
+    helpCustomTitle: "Consigne du site",
+    contactLabel: "Contact",
     title: "Que faut-il changer ?",
-    note: "Retour page",
+    note: "Commentaire",
     pin: "Pin",
     screenshot: "Capture",
     placeholder: "Décris le retour global sur cette page",
     capturePlaceholder: "Décris ce qu'il faut corriger dans cette capture",
-    metaDefault: "URL, navigateur et viewport seront ajoutés automatiquement.",
+    metaDefault: "",
     shortcutHint: "Ctrl + Entrée pour envoyer l'action en cours",
     shortcutHintAll: "Ctrl + Entrée pour envoyer l'action en cours",
     close: "Fermer",
@@ -110,9 +144,20 @@ const widgetCopy = {
     sendPendingCount: "Envoyer {count} retours en attente",
     selectArea: "Trace la zone à capturer",
     defineCapture: "Définir la zone",
+    captureVisibleViewport: "Capturer l’écran visible",
+    uploadCapture: "Joindre une image",
+    pasteCapture: "Depuis le presse-papier",
+    captureShortcutWindows: "Windows: Win + Maj + S, puis Ctrl + V",
+    captureShortcutMac: "macOS: Ctrl + Cmd + Maj + 4, puis Cmd + V",
+    captureShortcutUbuntu: "Ubuntu: Ctrl + Maj + Impr. écran, puis Ctrl + V",
+    captureShortcutFallback: "Capture une zone avec l'outil de ton système, puis colle l'image ici.",
+    removeUploadCapture: "Retirer l'image",
+    uploadCaptureInvalid: "Image invalide ou trop lourde.",
     addPin: "Ajouter une pin",
     selectPin: "Touchez la zone à commenter",
     pins: "Pins",
+    showPins: "Afficher toutes les pins",
+    hidePins: "Masquer toutes les pins",
     pinPlaceholder: "Décris cette correction",
     removePin: "Supprimer la pin",
     sentPin: "Envoyée",
@@ -135,24 +180,32 @@ const widgetCopy = {
     canceled: "Feedback annulé.",
     sent: "Feedback envoyé. Merci.",
     alertError: "Impossible d'envoyer le feedback. Réessaie dans un instant.",
-    reporterTitle: "Vos coordonnées",
+    reporterTitle: "Mes infos",
     reporterOptional: "Optionnel, mais utile pour vous recontacter.",
     reporterRequired: "Requis pour envoyer ce feedback.",
-    reporterToggle: "Contact",
+    reporterToggle: "Mes infos",
     reporterName: "Nom",
     reporterEmail: "E-mail",
-    reporterEmailInvalid: "E-mail invalide."
+    reporterEmailInvalid: "E-mail invalide.",
+    reporterSave: "Sauvegarder"
   },
   en: {
     button: "Feedback",
-    brandLabel: "Discover",
+    brandLabel: "Help",
+    helpTitle: "How to use this widget",
+    helpIntro: "This widget helps you report what should be improved on this page.",
+    helpStepComment: "Use Page review to leave a general comment.",
+    helpStepPin: "Use Pin to point at a specific element to fix.",
+    helpStepCapture: "Use Screenshot to frame a visible area of the screen.",
+    helpCustomTitle: "Site guidance",
+    contactLabel: "Contact",
     title: "What should change?",
     note: "Page review",
     pin: "Pin",
     screenshot: "Screenshot",
     placeholder: "Describe the page-level feedback here",
     capturePlaceholder: "Describe what should change in this capture",
-    metaDefault: "URL, browser and viewport will be added automatically.",
+    metaDefault: "",
     shortcutHint: "Ctrl + Enter to send the current action",
     shortcutHintAll: "Ctrl + Enter to send the current action",
     close: "Close",
@@ -163,9 +216,20 @@ const widgetCopy = {
     sendPendingCount: "Send {count} pending feedbacks",
     selectArea: "Drag the area to capture",
     defineCapture: "Define area",
+    captureVisibleViewport: "Capture visible screen",
+    uploadCapture: "Attach image",
+    pasteCapture: "From clipboard",
+    captureShortcutWindows: "Windows: Win + Shift + S, then Ctrl + V",
+    captureShortcutMac: "macOS: Control + Command + Shift + 4, then Command + V",
+    captureShortcutUbuntu: "Ubuntu: Ctrl + Shift + Print Screen, then Ctrl + V",
+    captureShortcutFallback: "Capture an area with your system tool, then paste the image here.",
+    removeUploadCapture: "Remove image",
+    uploadCaptureInvalid: "Invalid or oversized image.",
     addPin: "Add pin",
     selectPin: "Tap the area to comment on",
     pins: "Pins",
+    showPins: "Show all pins",
+    hidePins: "Hide all pins",
     pinPlaceholder: "Describe this correction",
     removePin: "Remove pin",
     sentPin: "Sent",
@@ -194,23 +258,35 @@ const widgetCopy = {
     reporterToggle: "Contact",
     reporterName: "Name",
     reporterEmail: "Email",
-    reporterEmailInvalid: "Invalid email."
+    reporterEmailInvalid: "Invalid email.",
+    reporterSave: "Save"
   }
 };
 
 export function initChangeThis(options: WidgetOptions): void {
-  if (!options.projectKey || options.visible === false || document.getElementById(rootId)) {
+  if (!options.projectKey || options.visible === false || options.displayMode === "disabled" || document.getElementById(rootId)) {
     return;
   }
 
   const endpoint = options.endpoint ?? inferEndpoint();
-  const copy = widgetCopy[options.locale ?? inferLocale()];
+  const baseCopy = widgetCopy[options.locale ?? inferLocale()];
+  const copy = {
+    ...baseCopy,
+    title: normalizeWidgetTitle(options.title, baseCopy.title) ?? baseCopy.title
+  };
   const buttonLabel = options.buttonLabel ?? copy.button;
   const buttonStateLabel = options.buttonStateLabel;
-  const buttonVariant = options.buttonVariant ?? "default";
+  const displayMode = options.displayMode ?? displayModeFromButtonVariant(options.buttonVariant);
+  const buttonVariant = displayMode === "subtle" ? "subtle" : options.buttonVariant ?? "default";
   const buttonPosition = options.buttonPosition ?? "bottom-right";
   const isSubtleButton = buttonVariant === "subtle";
-  const advancedModesEnabled = supportsAdvancedFeedbackModes();
+  const isHiddenDisplayMode = displayMode === "hidden";
+  const configuredModes = normalizeWidgetModes(options.modes);
+  const advancedModesEnabled = true;
+  const enabledModes = configuredModes.filter((mode) => mode === "comment" || advancedModesEnabled);
+  const activeModes: WidgetMode[] = enabledModes.length > 0 ? enabledModes : ["comment"];
+  const pinsEnabled = activeModes.includes("pin");
+  const firstMode: WidgetMode = activeModes[0] ?? "comment";
   const reporterFields = options.reporterFields ?? "optional";
   const appEnvironment = buildAppEnvironment(options);
   const sentPinsStorageKey = `${sentPinsStorageKeyPrefix}${options.projectKey}`;
@@ -230,7 +306,7 @@ export function initChangeThis(options: WidgetOptions): void {
 
   const state = {
     open: false,
-    type: "comment" as FeedbackType,
+    type: firstMode as FeedbackType,
     viewKey: currentViewKey(),
     pins: currentPins,
     sentFeedbacks: currentSentFeedbacks,
@@ -240,12 +316,16 @@ export function initChangeThis(options: WidgetOptions): void {
     sending: false,
     noteMessage: "",
     captureMessage: "",
+    captureUploadDataUrl: undefined as string | undefined,
+    captureUploadName: undefined as string | undefined,
     reporterName: storedReporter.name ?? "",
     reporterEmail: storedReporter.email ?? "",
     reporterOpen: reporterFields === "required" && (!storedReporter.name || !storedReporter.email),
+    helpOpen: false,
     managerOpen: false,
     notice: "",
-    focusPinIndex: undefined as number | undefined
+    focusPinIndex: undefined as number | undefined,
+    pinsVisible: true
   };
 
   const clearViewBoundDraft = () => {
@@ -254,9 +334,11 @@ export function initChangeThis(options: WidgetOptions): void {
     state.nextPinNumber = nextAvailablePinNumber(state.pins);
     state.captureArea = undefined;
     state.captureMessage = "";
+    state.captureUploadDataUrl = undefined;
+    state.captureUploadName = undefined;
     state.draftViewKey = undefined;
-    if (state.type === "pin" || state.type === "screenshot") {
-      state.type = "comment";
+    if (!isModeEnabled(state.type, activeModes)) {
+      state.type = firstMode as FeedbackType;
     }
   };
 
@@ -315,8 +397,8 @@ export function initChangeThis(options: WidgetOptions): void {
   };
 
   const requestPin = () => {
-    if (!advancedModesEnabled) {
-      state.type = "comment";
+    if (!isModeEnabled("pin", activeModes) || !advancedModesEnabled) {
+      state.type = firstMode as FeedbackType;
       render();
       return;
     }
@@ -349,53 +431,28 @@ export function initChangeThis(options: WidgetOptions): void {
     });
   };
 
-  const requestCaptureArea = () => {
-    if (!advancedModesEnabled) {
-      state.type = "comment";
-      render();
-      return;
-    }
-
-    syncDraftView();
-    const viewKey = currentViewKey();
-    state.type = "screenshot";
-    state.draftViewKey = viewKey;
-    state.open = false;
-    render();
-    startCaptureSelection(copy.selectArea, copy.close, (area) => {
-      if (currentViewKey() !== viewKey) {
-        clearViewBoundDraft();
-        render();
-        return;
-      }
-
-      state.captureArea = area;
-      state.open = true;
-      render();
-    }, () => {
-      state.type = "screenshot";
-      state.open = true;
-      render();
-    });
-  };
-
   const render = () => {
     const shadow = root.shadowRoot;
     if (!shadow) return;
 
     updateFloatingOffset();
     syncDraftView();
-    const pinMarkers = state.pins.map((pin, index) => {
+    if (!isModeEnabled(state.type, activeModes)) {
+      state.type = firstMode as FeedbackType;
+    }
+    const pinMarkers = pinsEnabled && state.pinsVisible ? state.pins.map((pin, index) => {
       const position = pinViewportPosition(pin.target);
       return `<div class="pin" data-pin-index="${index}" data-status="${pin.status}" style="left:${position.x}px;top:${position.y}px">${pin.number}</div>`;
-    }).join("");
+    }).join("") : "";
     const isPinTab = state.type === "pin";
     const isCaptureTab = state.type === "screenshot";
     const hasPins = isPinTab && state.pins.length > 0;
-    const sentPins = state.pins.filter((pin) => pin.status === "sent");
-    const draftPins = state.pins
+    const captureShortcut = captureSystemShortcut(copy);
+    const canPasteCapture = canReadClipboardImages();
+    const sentPins = pinsEnabled ? state.pins.filter((pin) => pin.status === "sent") : [];
+    const draftPins = pinsEnabled ? state.pins
       .map((pin, index) => ({ pin, index }))
-      .filter((entry) => entry.pin.status === "draft");
+      .filter((entry) => entry.pin.status === "draft") : [];
     const draftNotes = state.noteMessage.trim() ? [{
       id: "note-draft",
       title: copy.note,
@@ -403,10 +460,10 @@ export function initChangeThis(options: WidgetOptions): void {
       status: "draft" as const
     }] : [];
     const sentNotes = state.sentFeedbacks.filter((feedback) => feedback.type === "comment");
-    const draftCaptures = state.captureMessage.trim() || state.captureArea ? [{
+    const draftCaptures = state.captureMessage.trim() || state.captureArea || state.captureUploadDataUrl ? [{
       id: "capture-draft",
       title: copy.screenshot,
-      message: state.captureMessage || feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault),
+      message: state.captureMessage || state.captureUploadName || feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault),
       status: "draft" as const
     }] : [];
     const sentCaptures = state.sentFeedbacks.filter((feedback) => feedback.type === "screenshot");
@@ -415,7 +472,7 @@ export function initChangeThis(options: WidgetOptions): void {
     const totalFeedbacks = totalDraftFeedbacks + totalSentFeedbacks;
     const getReadyDraftFeedbackCount = () => (state.noteMessage.trim() ? 1 : 0)
       + state.pins.filter((pin) => pin.status === "draft" && pin.message.trim()).length
-      + (state.captureArea && state.captureMessage.trim() ? 1 : 0);
+      + ((state.captureArea || state.captureUploadDataUrl) && state.captureMessage.trim() ? 1 : 0);
     const readyDraftFeedbackCount = getReadyDraftFeedbackCount();
     const reporter = currentReporter(state.reporterName, state.reporterEmail);
     const reporterEmailInvalid = Boolean(state.reporterEmail.trim()) && !isValidEmail(state.reporterEmail.trim());
@@ -456,15 +513,36 @@ export function initChangeThis(options: WidgetOptions): void {
           font-size: 14px;
           font-weight: 700;
           padding: 12px 16px;
-          box-shadow: 0 12px 30px rgba(17, 24, 39, 0.22);
+          box-shadow: 0 12px 30px #11182738;
         }
         .button[data-position="bottom-right"] { right: 20px; bottom: calc(20px + var(--ct-footer-offset, 0px)); }
         .button[data-position="bottom-left"] { left: 20px; bottom: calc(20px + var(--ct-footer-offset, 0px)); }
         .button[data-position="top-right"] { right: 20px; top: 20px; }
         .button[data-position="top-left"] { left: 20px; top: 20px; }
+        .button[data-variant="default"][aria-expanded="false"] {
+          animation: changethis-standard-button-pulse 3.8s ease-out infinite;
+        }
         .button[data-variant="dev"] { background: #1d4ed8; }
         .button[data-variant="prod"] { background: #0f766e; }
         .button[data-variant="review"] { background: #7c2d12; }
+        @keyframes changethis-standard-button-pulse {
+          0%, 70%, 100% {
+            box-shadow:
+              0 12px 30px #11182738,
+              0 0 0 0 #3f51b538;
+          }
+          24% {
+            box-shadow:
+              0 12px 30px #11182738,
+              0 0 0 12px #3f51b500;
+          }
+        }
+        .button .brand-logo-icon {
+          display: block;
+          flex: 0 0 auto;
+          height: 1.25em;
+          width: 1.25em;
+        }
         .button[data-variant="subtle"] {
           background: rgba(17, 24, 39, 0.72);
           border: 1px solid rgba(255, 255, 255, 0.44);
@@ -478,6 +556,10 @@ export function initChangeThis(options: WidgetOptions): void {
         .button[data-variant="subtle"] .lucide-icon {
           height: 18px;
           width: 18px;
+        }
+        .button[data-variant="subtle"] .brand-logo-icon {
+          height: 28px;
+          width: 28px;
         }
         .button[data-variant="subtle"]:hover,
         .button[data-variant="subtle"]:focus-visible,
@@ -532,12 +614,24 @@ export function initChangeThis(options: WidgetOptions): void {
           gap: 6px;
           min-width: 0;
         }
+        .panel-brand .brand-logo-icon {
+          color: #111827;
+          display: block;
+          flex: 0 0 auto;
+          height: 18px;
+          width: 18px;
+        }
         .panel-brand strong {
-          color: #3f51b5;
           font-size: 12px;
           font-weight: 900;
           letter-spacing: 0;
           line-height: 1;
+        }
+        .panel-brand .brand-change {
+          color: #111827;
+        }
+        .panel-brand .brand-this {
+          color: #3f51b5;
         }
         .panel-header-actions {
           align-items: center;
@@ -546,7 +640,8 @@ export function initChangeThis(options: WidgetOptions): void {
           gap: 8px;
         }
         .header-icon-button,
-        .brand-discovery-link {
+        .help-trigger,
+        .panel-link {
           align-items: center;
           border: 1px solid #d1d5db;
           border-radius: 6px;
@@ -566,17 +661,145 @@ export function initChangeThis(options: WidgetOptions): void {
           font-size: 12px;
           font-weight: 900;
         }
-        .header-icon-button[data-active="true"] {
-          background: #e8eaf6;
-          border-color: #c5cae9;
-          color: #3f51b5;
+        .panel-link {
+          font-size: 12px;
+          font-weight: 900;
         }
-        .brand-discovery-link:hover {
+        .help-trigger:hover,
+        .help-trigger:focus-visible,
+        .header-icon-button:hover,
+        .header-icon-button:focus-visible,
+        .panel-link:hover,
+        .panel-link:focus-visible {
           background: #f9fafb;
           border-color: #c5cae9;
           color: #3f51b5;
         }
         .title { font-size: 14px; font-weight: 800; margin: 0; }
+        .title strong { font-weight: 900; }
+        .title em { font-style: italic; }
+        .help-backdrop {
+          background: rgba(17, 24, 39, 0.34);
+          border: 0;
+          inset: 0;
+          padding: 0;
+          position: fixed;
+          z-index: 2147483647;
+        }
+        .help-modal {
+          background: #fff;
+          border: 1px solid #c5cae9;
+          border-radius: 8px;
+          box-shadow: 0 24px 70px rgba(17, 24, 39, 0.25);
+          color: #111827;
+          display: grid;
+          gap: 14px;
+          left: 50%;
+          max-height: min(560px, calc(100dvh - 48px));
+          overflow: auto;
+          padding: 18px;
+          position: fixed;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(360px, calc(100vw - 28px));
+          z-index: 2147483647;
+        }
+        .help-header {
+          align-items: start;
+          display: flex;
+          gap: 12px;
+          justify-content: space-between;
+        }
+        .help-header h2 {
+          color: #111827;
+          font-size: 16px;
+          line-height: 1.25;
+          margin: 0;
+        }
+        .help-header p {
+          color: #4b5563;
+          font-size: 13px;
+          line-height: 1.45;
+          margin: 5px 0 0;
+        }
+        .help-list {
+          display: grid;
+          gap: 8px;
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+        .help-list li {
+          align-items: start;
+          color: #374151;
+          display: grid;
+          font-size: 13px;
+          gap: 8px;
+          grid-template-columns: 22px 1fr;
+          line-height: 1.4;
+        }
+        .help-list svg {
+          color: #3f51b5;
+          height: 16px;
+          margin-top: 1px;
+          width: 16px;
+        }
+        .help-guidance {
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          display: grid;
+          gap: 7px;
+          padding: 12px;
+        }
+        .help-guidance strong {
+          color: #111827;
+          font-size: 12px;
+          font-weight: 900;
+          line-height: 1.2;
+        }
+        .help-markdown {
+          color: #374151;
+          display: grid;
+          gap: 7px;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+        .help-markdown p,
+        .help-markdown ul {
+          margin: 0;
+        }
+        .help-markdown ul {
+          display: grid;
+          gap: 4px;
+          padding-left: 18px;
+        }
+        .help-markdown code {
+          background: #eef2ff;
+          border-radius: 4px;
+          color: #3730a3;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+          font-size: 0.92em;
+          padding: 1px 4px;
+        }
+        .help-contact {
+          align-items: center;
+          border: 1px solid #e5e7eb;
+          border-radius: 999px;
+          color: #4b5563;
+          display: inline-flex;
+          font-size: 12px;
+          font-weight: 900;
+          justify-self: start;
+          min-height: 30px;
+          padding: 6px 11px;
+          text-decoration: none;
+        }
+        .help-contact:hover,
+        .help-contact:focus-visible {
+          border-color: #c5cae9;
+          color: #3f51b5;
+        }
         .modes {
           border-bottom: 1px solid #e5e7eb;
           display: grid;
@@ -653,15 +876,8 @@ export function initChangeThis(options: WidgetOptions): void {
           gap: 8px;
           padding: 8px;
         }
-        .reporter-trigger {
-          align-items: center;
-          border: 1px solid #c5cae9;
-          border-radius: 6px;
-          background: #e8eaf6;
-          color: #3f51b5;
-        }
         .reporter-trigger strong {
-          color: #111827;
+          color: inherit;
           font-size: 12px;
           font-weight: 900;
         }
@@ -723,18 +939,52 @@ export function initChangeThis(options: WidgetOptions): void {
           margin-top: 8px;
           padding: 8px 10px;
         }
+        .capture-summary {
+          border: 0;
+          display: grid;
+          gap: 4px;
+          margin-top: 0;
+          padding: 0;
+        }
         .selection-header {
+          display: grid;
+          gap: 8px;
+          margin-bottom: 6px;
+        }
+        .pin-meta-row {
           align-items: center;
           display: flex;
-          flex-wrap: wrap;
           gap: 8px;
           justify-content: space-between;
-          margin-bottom: 6px;
+          min-width: 0;
         }
         .selection-header span {
           color: #374151;
           font-size: 12px;
           font-weight: 700;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .capture-actions {
+          display: grid;
+          gap: 8px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .capture-main {
+          grid-column: 1 / -1;
+        }
+        .capture-actions .add-pin {
+          width: 100%;
+        }
+        .capture-upload-row {
+          align-items: center;
+          display: grid;
+          gap: 6px;
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .capture-upload-row .shortcut-hint {
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -827,6 +1077,23 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 5px 8px;
           white-space: normal;
         }
+        .add-pin:disabled {
+          color: #9ca3af;
+          cursor: not-allowed;
+          opacity: .72;
+        }
+        .pin-visibility-toggle {
+          border: 0;
+          background: transparent;
+          color: #6b7280;
+          cursor: pointer;
+          font-size: 11px;
+          font-weight: 750;
+          padding: 4px 0;
+          text-align: right;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+        }
         .manager-button {
           align-items: center;
           border-radius: 6px;
@@ -845,6 +1112,11 @@ export function initChangeThis(options: WidgetOptions): void {
           background: #fff;
           color: #374151;
         }
+        .manager-button.primary {
+          border: 1px solid #3f51b5;
+          background: #3f51b5;
+          color: #fff;
+        }
         .manager-button.danger {
           border: 1px solid #fecaca;
           background: #fff1f2;
@@ -854,20 +1126,12 @@ export function initChangeThis(options: WidgetOptions): void {
           padding: 0;
           width: 32px;
         }
+        .reporter-actions {
+          justify-content: flex-end;
+        }
         .manager-button:disabled {
           cursor: wait;
           opacity: .65;
-        }
-        .panel-link {
-          border: 0;
-          background: transparent;
-          color: #4b5563;
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 800;
-          padding: 0;
-          text-decoration: underline;
-          text-underline-offset: 3px;
         }
         .manager-backdrop {
           position: fixed;
@@ -892,6 +1156,14 @@ export function initChangeThis(options: WidgetOptions): void {
           overflow: auto;
           padding: 18px;
           transform: translate(-50%, -50%);
+        }
+        .reporter-modal {
+          width: min(440px, calc(100vw - 32px));
+        }
+        .reporter-modal .reporter-fields {
+          background: transparent;
+          border: 0;
+          padding: 0;
         }
         .manager-header {
           align-items: start;
@@ -1122,7 +1394,7 @@ export function initChangeThis(options: WidgetOptions): void {
             justify-content: flex-end;
           }
           .header-icon-button,
-          .brand-discovery-link {
+          .help-trigger {
             height: 30px;
             min-width: 30px;
             padding-inline: 7px;
@@ -1191,18 +1463,25 @@ export function initChangeThis(options: WidgetOptions): void {
             justify-content: flex-start;
           }
         }
+        @media (prefers-reduced-motion: reduce) {
+          .button[data-variant="default"][aria-expanded="false"] {
+            animation: none;
+          }
+        }
       </style>
       ${pinMarkers}
       ${state.notice ? `<div class="notice" data-position="${buttonPosition}" role="status">${escapeHtml(state.notice)}</div>` : ""}
-      <button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}" aria-label="${escapeHtml(buttonLabel)}" title="${escapeHtml(buttonLabel)}">
-        ${isSubtleButton ? lucideIcons.bug : `<span>${escapeHtml(buttonLabel)}</span>`}
+      ${isHiddenDisplayMode ? "" : `<button class="button" data-action="toggle" data-position="${buttonPosition}" data-variant="${buttonVariant}" aria-expanded="${state.open}" aria-label="${escapeHtml(buttonLabel)}" title="${escapeHtml(buttonLabel)}">
+        ${changethisHandLogoSvg}
+        ${isSubtleButton ? "" : `<span>${escapeHtml(buttonLabel)}</span>`}
         ${buttonStateLabel && !isSubtleButton ? `<span class="button-state">${escapeHtml(buttonStateLabel)}</span>` : ""}
-      </button>
+      </button>`}
       ${state.open ? `
         <section class="panel" data-position="${buttonPosition}" aria-label="Envoyer un feedback">
           <div class="panel-header">
             <div class="panel-brand" aria-label="ChangeThis">
-              <strong>ChangeThis</strong>
+              ${changethisHandLogoSvg}
+              <strong><span class="brand-change">Change</span><span class="brand-this">This</span></strong>
             </div>
             <div class="panel-header-actions">
               ${reporterFields !== "hidden" ? `
@@ -1210,47 +1489,30 @@ export function initChangeThis(options: WidgetOptions): void {
                   <strong>${escapeHtml(copy.reporterToggle)}</strong>
                 </button>
               ` : ""}
-              <a class="brand-discovery-link" href="${productWebsiteUrl}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(copy.brandLabel)}" title="${escapeHtml(copy.brandLabel)}">${lucideIcons.question}</a>
               ${totalFeedbacks ? `<button class="panel-link" data-action="open-manager">${escapeHtml(copy.manageFeedbacks)}</button>` : ""}
+              <button class="help-trigger" data-action="open-help" aria-label="${escapeHtml(copy.brandLabel)}" title="${escapeHtml(copy.brandLabel)}">${lucideIcons.question}</button>
             </div>
           </div>
-          <p class="title">${escapeHtml(copy.title)}</p>
+          <p class="title">${renderInlineMarkdown(copy.title)}</p>
           <div class="modes" data-advanced="${advancedModesEnabled}">
-            <button class="mode" data-mode="comment" data-active="${state.type === "comment"}">${lucideIcons["message-square"]}${escapeHtml(copy.note)}</button>
-            ${advancedModesEnabled ? `
-              <button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>
-              <button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>
-            ` : ""}
+            ${activeModes.includes("comment") ? `<button class="mode" data-mode="comment" data-active="${state.type === "comment"}">${lucideIcons["message-square"]}${escapeHtml(copy.note)}</button>` : ""}
+            ${activeModes.includes("pin") ? `<button class="mode" data-mode="pin" data-active="${state.type === "pin"}">${lucideIcons["map-pin"]}${escapeHtml(copy.pin)}</button>` : ""}
+            ${activeModes.includes("screenshot") ? `<button class="mode" data-mode="screenshot" data-active="${state.type === "screenshot"}">${lucideIcons.camera}${escapeHtml(copy.screenshot)}</button>` : ""}
           </div>
-          ${reporterFields !== "hidden" ? `
-            ${state.reporterOpen ? `
-              <div class="reporter-fields">
-                <div class="reporter-body">
-                  <div class="reporter-grid">
-                    <label class="reporter-field">
-                      <span>${escapeHtml(copy.reporterName)}</span>
-                      <input data-reporter-name autocomplete="name" value="${escapeHtml(state.reporterName)}" ${reporterFields === "required" ? "required" : ""}>
-                    </label>
-                    <label class="reporter-field">
-                      <span>${escapeHtml(copy.reporterEmail)}</span>
-                      <input data-reporter-email autocomplete="email" inputmode="email" type="email" value="${escapeHtml(state.reporterEmail)}" ${reporterFields === "required" ? "required" : ""}>
-                    </label>
-                  </div>
-                  ${reporterEmailInvalid ? `<span class="field-error">${escapeHtml(copy.reporterEmailInvalid)}</span>` : ""}
-                </div>
-              </div>
-            ` : ""}
-          ` : ""}
           ${state.type === "comment" ? `
             <textarea data-note-message placeholder="${escapeHtml(copy.placeholder)}">${escapeHtml(state.noteMessage)}</textarea>
             <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
-            <p class="meta">${escapeHtml(copy.metaDefault)}</p>
           ` : ""}
           ${isPinTab ? `
             <div class="selection-summary">
               <div class="selection-header">
-                <span>${escapeHtml(copy.pins)} (${state.pins.length})</span>
                 <button class="add-pin" data-action="add-pin">${lucideIcons.plus}${escapeHtml(copy.addPin)}</button>
+                <div class="pin-meta-row">
+                  <span>${escapeHtml(copy.pins)} (${state.pins.length})</span>
+                  ${state.pins.length
+                    ? `<button class="pin-visibility-toggle" data-action="toggle-pins" aria-pressed="${!state.pinsVisible}" type="button">${escapeHtml(state.pinsVisible ? copy.hidePins : copy.showPins)}</button>`
+                    : ""}
+                </div>
               </div>
               ${state.pins.length ? `<ul class="pin-list">
                 ${state.pins.map((pin, index) => `
@@ -1271,22 +1533,88 @@ export function initChangeThis(options: WidgetOptions): void {
                     `}
                   </li>
                 `).join("")}
-              </ul>` : `<p class="meta">${escapeHtml(copy.metaDefault)}</p>`}
+              </ul>` : ""}
             </div>
           ` : ""}
           ${isCaptureTab ? `
+            <div class="selection-summary capture-summary">
+              <div class="capture-actions">
+                <label class="add-pin">
+                  ${lucideIcons.upload}
+                  ${escapeHtml(copy.uploadCapture)}
+                  <input accept="image/png,image/jpeg,image/webp,image/heic,image/heif" data-capture-upload style="display:none" type="file">
+                </label>
+                <button class="add-pin" data-action="paste-capture" ${canPasteCapture ? "" : "disabled"}>${lucideIcons["clipboard-paste"]}${escapeHtml(copy.pasteCapture)}</button>
+              </div>
+              <p class="shortcut-hint capture-shortcut">${escapeHtml(captureShortcut)}</p>
+              ${state.captureArea ? `<p class="shortcut-hint">${escapeHtml(feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault))}</p>` : ""}
+              ${state.captureUploadName ? `
+                <div class="capture-upload-row">
+                  <p class="shortcut-hint">${escapeHtml(state.captureUploadName)}</p>
+                  ${state.captureUploadDataUrl ? `<button class="clear-selection" data-action="remove-capture-upload" aria-label="${escapeHtml(copy.removeUploadCapture)}" title="${escapeHtml(copy.removeUploadCapture)}">${lucideIcons.trash}</button>` : ""}
+                </div>
+              ` : ""}
+            </div>
             <textarea data-capture-message placeholder="${escapeHtml(copy.capturePlaceholder)}">${escapeHtml(state.captureMessage)}</textarea>
             <p class="shortcut-hint">${escapeHtml(copy.shortcutHintAll)}</p>
-            <div class="selection-summary">
-              <div class="selection-header">
-                <span>${feedbackMeta({ captureArea: state.captureArea }, copy.metaDefault)}</span>
-                <button class="add-pin" data-action="define-capture">${escapeHtml(copy.defineCapture)}</button>
-              </div>
-            </div>
           ` : ""}
           <div class="actions">
             <button class="cancel" data-action="close">${escapeHtml(copy.close)}</button>
             <button class="send" data-action="send" aria-label="${escapeHtml(copy.sendAllPending)}" title="${escapeHtml(copy.sendAllPending)}" ${canSend ? "" : "disabled"}>${lucideIcons.send}${escapeHtml(sendLabel)}</button>
+          </div>
+        </section>
+      ` : ""}
+      ${state.helpOpen ? `
+        <button class="help-backdrop" data-action="close-help" aria-label="${escapeHtml(copy.close)}"></button>
+        <section class="help-modal" aria-labelledby="changethis-help-title" role="dialog" aria-modal="true">
+          <div class="help-header">
+            <div>
+              <h2 id="changethis-help-title">${escapeHtml(copy.helpTitle)}</h2>
+              <p>${escapeHtml(copy.helpIntro)}</p>
+            </div>
+            <button class="header-icon-button" data-action="close-help" aria-label="${escapeHtml(copy.close)}">${lucideIcons.x}</button>
+          </div>
+          <ul class="help-list">
+            ${activeModes.includes("comment") ? `<li>${lucideIcons["message-square"]}<span>${escapeHtml(copy.helpStepComment)}</span></li>` : ""}
+            ${activeModes.includes("pin") ? `<li>${lucideIcons["map-pin"]}<span>${escapeHtml(copy.helpStepPin)}</span></li>` : ""}
+            ${activeModes.includes("screenshot") ? `<li>${lucideIcons.camera}<span>${escapeHtml(copy.helpStepCapture)}</span></li>` : ""}
+          </ul>
+          <div class="help-guidance">
+            <strong>${escapeHtml(copy.helpCustomTitle)}</strong>
+            <div class="help-markdown">${renderWidgetMarkdown(copy.title)}</div>
+          </div>
+          <a class="help-contact" href="${contactWebsiteUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.contactLabel)}</a>
+        </section>
+      ` : ""}
+      ${state.open && reporterFields !== "hidden" && state.reporterOpen ? `
+        <button class="manager-backdrop" data-action="close-reporter" aria-label="${escapeHtml(copy.close)}"></button>
+        <section class="manager-modal reporter-modal" aria-labelledby="changethis-reporter-title" role="dialog" aria-modal="true">
+          <div class="manager-header">
+            <div>
+              <h2 id="changethis-reporter-title">${escapeHtml(copy.reporterTitle)}</h2>
+              <p>${escapeHtml(reporterFields === "required" ? copy.reporterRequired : copy.reporterOptional)}</p>
+            </div>
+            <div class="manager-actions">
+              <button class="manager-button secondary icon-only" data-action="close-reporter" aria-label="${escapeHtml(copy.close)}" title="${escapeHtml(copy.close)}">${lucideIcons.x}</button>
+            </div>
+          </div>
+          <div class="reporter-fields">
+            <div class="reporter-body">
+              <div class="reporter-grid">
+                <label class="reporter-field">
+                  <span>${escapeHtml(copy.reporterName)}</span>
+                  <input data-reporter-name autocomplete="name" value="${escapeHtml(state.reporterName)}" ${reporterFields === "required" ? "required" : ""}>
+                </label>
+                <label class="reporter-field">
+                  <span>${escapeHtml(copy.reporterEmail)}</span>
+                  <input data-reporter-email autocomplete="email" inputmode="email" type="email" value="${escapeHtml(state.reporterEmail)}" ${reporterFields === "required" ? "required" : ""}>
+                </label>
+              </div>
+              ${reporterEmailInvalid ? `<span class="field-error">${escapeHtml(copy.reporterEmailInvalid)}</span>` : ""}
+            </div>
+          </div>
+          <div class="manager-actions reporter-actions">
+            <button class="manager-button primary" data-action="save-reporter" ${reporterEmailInvalid ? "disabled" : ""}>${lucideIcons.check}${escapeHtml(copy.reporterSave)}</button>
           </div>
         </section>
       ` : ""}
@@ -1448,17 +1776,37 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLButtonElement>("[data-action='toggle']")?.addEventListener("click", () => {
       state.open = !state.open;
+      if (!state.open) {
+        state.reporterOpen = false;
+      }
       render();
     });
 
     shadow.querySelector<HTMLButtonElement>("[data-action='close']")?.addEventListener("click", () => {
       state.open = false;
+      state.reporterOpen = false;
       render();
     });
 
     shadow.querySelector<HTMLButtonElement>("[data-action='open-manager']")?.addEventListener("click", () => {
       state.managerOpen = true;
+      state.helpOpen = false;
+      state.reporterOpen = false;
       render();
+    });
+
+    shadow.querySelector<HTMLButtonElement>("[data-action='open-help']")?.addEventListener("click", () => {
+      state.helpOpen = true;
+      state.managerOpen = false;
+      state.reporterOpen = false;
+      render();
+    });
+
+    shadow.querySelectorAll<HTMLButtonElement>("[data-action='close-help']").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.helpOpen = false;
+        render();
+      });
     });
 
     shadow.querySelectorAll<HTMLButtonElement>("[data-action='close-manager']").forEach((button) => {
@@ -1466,6 +1814,23 @@ export function initChangeThis(options: WidgetOptions): void {
         state.managerOpen = false;
         render();
       });
+    });
+
+    shadow.querySelectorAll<HTMLButtonElement>("[data-action='close-reporter']").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.reporterOpen = false;
+        render();
+      });
+    });
+
+    shadow.querySelector<HTMLButtonElement>("[data-action='save-reporter']")?.addEventListener("click", () => {
+      if (state.reporterEmail.trim() && !isValidEmail(state.reporterEmail.trim())) {
+        return;
+      }
+
+      persistReporter(reporterStorageKey, currentReporter(state.reporterName, state.reporterEmail));
+      state.reporterOpen = false;
+      render();
     });
 
     shadow.querySelector<HTMLButtonElement>("[data-action='update-sent-reporters']")?.addEventListener("click", async () => {
@@ -1570,18 +1935,64 @@ export function initChangeThis(options: WidgetOptions): void {
     shadow.querySelector<HTMLButtonElement>("[data-action='delete-capture-feedback']")?.addEventListener("click", () => {
       state.captureMessage = "";
       state.captureArea = undefined;
+      state.captureUploadDataUrl = undefined;
+      state.captureUploadName = undefined;
       render();
     });
 
-    shadow.querySelector<HTMLButtonElement>("[data-action='add-pin']")?.addEventListener("click", requestPin);
-    shadow.querySelector<HTMLButtonElement>("[data-action='define-capture']")?.addEventListener("click", requestCaptureArea);
+    shadow.querySelector<HTMLButtonElement>("[data-action='add-pin']")?.addEventListener("click", () => {
+      state.pinsVisible = true;
+      requestPin();
+    });
+    shadow.querySelector<HTMLButtonElement>("[data-action='toggle-pins']")?.addEventListener("click", () => {
+      state.pinsVisible = !state.pinsVisible;
+      render();
+    });
+    shadow.querySelector<HTMLButtonElement>("[data-action='paste-capture']")?.addEventListener("click", async () => {
+      try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const type = item.types.find((candidate) => manualCaptureSourceTypes.includes(candidate));
+          if (type) {
+            state.captureUploadDataUrl = await readCaptureUpload(await item.getType(type));
+            state.captureUploadName = "clipboard-image";
+            render();
+            return;
+          }
+        }
+      } catch {
+      }
+      window.alert(copy.uploadCaptureInvalid);
+      render();
+    });
+    shadow.querySelector<HTMLInputElement>("[data-capture-upload]")?.addEventListener("change", async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) {
+        return;
+      }
+
+      try {
+        state.captureUploadDataUrl = await readCaptureUpload(file);
+        state.captureUploadName = file.name;
+      } catch {
+        window.alert(copy.uploadCaptureInvalid);
+        state.captureUploadDataUrl = undefined;
+        state.captureUploadName = undefined;
+      }
+      render();
+    });
+    shadow.querySelector<HTMLButtonElement>("[data-action='remove-capture-upload']")?.addEventListener("click", () => {
+      state.captureUploadDataUrl = undefined;
+      state.captureUploadName = undefined;
+      render();
+    });
 
     shadow.querySelectorAll<HTMLButtonElement>("[data-action='remove-pin']").forEach((button) => {
       button.addEventListener("click", () => {
         const index = Number(button.dataset.pinIndex);
         state.pins = state.pins.filter((_, pinIndex) => pinIndex !== index);
         if (state.pins.length === 0 && state.type === "pin") {
-          state.type = "comment";
+          state.type = firstMode as FeedbackType;
           state.draftViewKey = undefined;
           state.nextPinNumber = 1;
         }
@@ -1623,7 +2034,7 @@ export function initChangeThis(options: WidgetOptions): void {
     shadow.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         const nextType = button.dataset.mode as FeedbackType;
-        state.type = advancedModesEnabled || nextType === "comment" ? nextType : "comment";
+        state.type = isModeEnabled(nextType, activeModes) ? nextType : firstMode as FeedbackType;
         state.notice = "";
         render();
       });
@@ -1631,6 +2042,10 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLButtonElement>("[data-action='toggle-reporter']")?.addEventListener("click", () => {
       state.reporterOpen = !state.reporterOpen;
+      if (state.reporterOpen) {
+        state.helpOpen = false;
+        state.managerOpen = false;
+      }
       render();
     });
 
@@ -1654,13 +2069,11 @@ export function initChangeThis(options: WidgetOptions): void {
 
     shadow.querySelector<HTMLInputElement>("[data-reporter-name]")?.addEventListener("input", (event) => {
       state.reporterName = (event.target as HTMLInputElement).value;
-      persistReporter(reporterStorageKey, currentReporter(state.reporterName, state.reporterEmail));
       refreshDraftSendControls();
     });
 
     shadow.querySelector<HTMLInputElement>("[data-reporter-email]")?.addEventListener("input", (event) => {
       state.reporterEmail = (event.target as HTMLInputElement).value;
-      persistReporter(reporterStorageKey, currentReporter(state.reporterName, state.reporterEmail));
       refreshDraftSendControls();
     });
 
@@ -1675,18 +2088,20 @@ export function initChangeThis(options: WidgetOptions): void {
         state.sending = true;
         render();
         try {
+          const target = resolvePinTargetForSubmission(draft.target);
           const submitted = await submitFeedback({
             endpoint,
             projectKey: options.projectKey,
             type: "pin",
             message: draft.message,
-            pins: [draft.target],
+            pins: [target],
             reporter,
             appEnvironment
           });
           const sentAt = new Date().toISOString();
           state.pins[index] = {
             ...draft,
+            target,
             status: "sent",
             feedbackId: submitted.id,
             reporter,
@@ -1746,8 +2161,8 @@ export function initChangeThis(options: WidgetOptions): void {
       const pendingPins = state.pins
         .map((pin, index) => ({ pin, index }))
         .filter((entry) => entry.pin.status === "draft" && entry.pin.message.trim());
-      const pendingCapture = state.captureArea && state.captureMessage.trim()
-        ? { message: state.captureMessage, captureArea: state.captureArea }
+      const pendingCapture = (state.captureArea || state.captureUploadDataUrl) && state.captureMessage.trim()
+        ? { message: state.captureMessage, captureArea: state.captureArea, uploadedScreenshotDataUrl: state.captureUploadDataUrl }
         : undefined;
       const reporter = currentReporter(state.reporterName, state.reporterEmail);
 
@@ -1786,18 +2201,20 @@ export function initChangeThis(options: WidgetOptions): void {
         }
 
         for (const { pin, index } of pendingPins) {
+          const target = resolvePinTargetForSubmission(pin.target);
           const submitted = await submitFeedback({
             endpoint,
             projectKey: options.projectKey,
             type: "pin",
             message: pin.message,
-            pins: [pin.target],
+            pins: [target],
             reporter,
             appEnvironment
           });
           const sentAt = new Date().toISOString();
           state.pins[index] = {
             ...pin,
+            target,
             status: "sent",
             feedbackId: submitted.id,
             reporter,
@@ -1813,6 +2230,7 @@ export function initChangeThis(options: WidgetOptions): void {
             type: "screenshot",
             message: pendingCapture.message,
             captureArea: pendingCapture.captureArea,
+            uploadedScreenshotDataUrl: pendingCapture.uploadedScreenshotDataUrl,
             reporter,
             appEnvironment
           });
@@ -1834,6 +2252,8 @@ export function initChangeThis(options: WidgetOptions): void {
 
           state.captureMessage = "";
           state.captureArea = undefined;
+          state.captureUploadDataUrl = undefined;
+          state.captureUploadName = undefined;
           state.draftViewKey = undefined;
         }
 
@@ -1857,17 +2277,32 @@ export function initChangeThis(options: WidgetOptions): void {
   const handleScrollOrResize = () => {
     updatePinnedMarkers();
     updateFloatingOffset();
+    updatePinReplayOverlayPosition();
   };
 
   window.addEventListener("scroll", handleScrollOrResize, { capture: true, passive: true });
   document.addEventListener("scroll", handleScrollOrResize, { capture: true, passive: true });
   window.addEventListener("resize", handleScrollOrResize);
+  window.visualViewport?.addEventListener("resize", handleScrollOrResize);
+  window.visualViewport?.addEventListener("scroll", handleScrollOrResize);
+  document.addEventListener("keydown", (event) => {
+    if (!isHiddenDisplayMode || !isWidgetShortcut(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    state.open = !state.open;
+    state.notice = "";
+    render();
+  }, true);
   installNavigationListener(() => {
+    renderPinReplayOverlayFromLocation();
     if (syncDraftView()) {
       render();
     }
   });
 
+  renderPinReplayOverlayFromLocation();
   render();
 }
 
@@ -1879,15 +2314,14 @@ async function submitFeedback(params: {
   reporter?: FeedbackReporter;
   pins?: PinTarget[];
   captureArea?: CaptureArea;
+  uploadedScreenshotDataUrl?: string;
   appEnvironment?: FeedbackAppEnvironment;
 }): Promise<{ id?: string; screenshotDataUrl?: string }> {
-  const screenshotDataUrl = params.type === "screenshot" && params.captureArea
-    ? await captureViewport(params.captureArea)
-    : params.type === "pin"
-      ? await captureViewport()
-      : params.type === "comment"
-        ? await capturePageFeedbackPreview()
-        : undefined;
+  let screenshotDataUrl = params.uploadedScreenshotDataUrl;
+  if (screenshotDataUrl && screenshotDataUrl.length > maxClientScreenshotDataUrlLength) {
+    console.warn("[ChangeThis] Feedback screenshot skipped because it is too large for the public API");
+    screenshotDataUrl = undefined;
+  }
   const screenshotThumbnailDataUrl = screenshotDataUrl
     ? await createImageThumbnail(screenshotDataUrl)
     : undefined;
@@ -1902,6 +2336,7 @@ async function submitFeedback(params: {
     captureArea: params.captureArea,
     screenshotDataUrl,
     screenshotThumbnailDataUrl,
+    screenshotSource: params.uploadedScreenshotDataUrl ? "user_upload" : screenshotDataUrl ? "client_capture" : undefined,
     metadata: {
       url: window.location.href,
       origin: httpOrigin(window.location.origin),
@@ -1944,7 +2379,7 @@ async function submitFeedback(params: {
   });
 
   if (!response.ok) {
-    throw new Error(`Feedback API returned ${response.status}`);
+    throw new Error(`Feedback API returned ${response.status}${await feedbackApiErrorDetail(response)}`);
   }
 
   const body = await response.json().catch(() => undefined) as unknown;
@@ -1996,158 +2431,6 @@ function publicFeedbackActionUrl(endpoint: string, actionPath: string): string {
   const basePath = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
   url.pathname = `${basePath}${actionPath}`;
   return url.toString();
-}
-
-function startCaptureSelection(label: string, cancelLabel: string, onSelect: (area: CaptureArea) => void, onCancel?: () => void): void {
-  const layer = document.createElement("div");
-  layer.innerHTML = `
-    <style>
-      .changethis-selection-layer {
-        position: fixed;
-        inset: 0;
-        z-index: 2147483647;
-        cursor: crosshair;
-        background: rgba(17, 24, 39, 0.18);
-        touch-action: none;
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      .changethis-selection-help {
-        align-items: center;
-        display: flex;
-        gap: 10px;
-        position: fixed;
-        left: 50%;
-        top: 18px;
-        transform: translateX(-50%);
-        border-radius: 999px;
-        background: #111827;
-        color: #fff;
-        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-        font-size: 13px;
-        font-weight: 800;
-        padding: 10px 14px;
-      }
-      .changethis-selection-help button {
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.12);
-        color: #fff;
-        cursor: pointer;
-        font: inherit;
-        padding: 4px 8px;
-      }
-      .changethis-selection-box {
-        position: fixed;
-        border: 2px solid #fff;
-        background: rgba(15, 118, 110, 0.22);
-        box-shadow: 0 0 0 9999px rgba(17, 24, 39, 0.36);
-      }
-    </style>
-    <div class="changethis-selection-layer">
-      <div class="changethis-selection-help">${escapeHtml(label)} <button type="button" data-changethis-selection-cancel>${escapeHtml(cancelLabel)}</button></div>
-      <div class="changethis-selection-box" hidden></div>
-    </div>
-  `;
-  document.documentElement.appendChild(layer);
-
-  const surface = layer.querySelector<HTMLElement>(".changethis-selection-layer");
-  const box = layer.querySelector<HTMLElement>(".changethis-selection-box");
-  let startX = 0;
-  let startY = 0;
-  let latestX = 0;
-  let latestY = 0;
-  let dragging = false;
-  let isFinished = false;
-
-  const finish = (callback?: () => void) => {
-    if (isFinished) {
-      return;
-    }
-
-    isFinished = true;
-    document.removeEventListener("keydown", handleKeydown, true);
-    layer.remove();
-    callback?.();
-  };
-
-  const updateBox = () => {
-    if (!box) return;
-    const left = Math.min(startX, latestX);
-    const top = Math.min(startY, latestY);
-    const width = Math.abs(latestX - startX);
-    const height = Math.abs(latestY - startY);
-    box.hidden = width < 4 || height < 4;
-    box.style.left = `${left}px`;
-    box.style.top = `${top}px`;
-    box.style.width = `${width}px`;
-    box.style.height = `${height}px`;
-  };
-
-  layer.querySelector<HTMLElement>("[data-changethis-selection-cancel]")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    finish(onCancel);
-  });
-
-  surface?.addEventListener("pointerdown", (event) => {
-    if ((event.target as Element | null)?.closest("[data-changethis-selection-cancel]")) {
-      return;
-    }
-
-    event.preventDefault();
-    dragging = true;
-    startX = event.clientX;
-    startY = event.clientY;
-    latestX = event.clientX;
-    latestY = event.clientY;
-    surface.setPointerCapture(event.pointerId);
-    updateBox();
-  });
-
-  surface?.addEventListener("pointermove", (event) => {
-    if (!dragging) return;
-    event.preventDefault();
-    latestX = event.clientX;
-    latestY = event.clientY;
-    updateBox();
-  });
-
-  surface?.addEventListener("pointerup", (event) => {
-    if (!dragging) return;
-    event.preventDefault();
-    dragging = false;
-    latestX = event.clientX;
-    latestY = event.clientY;
-    const x = Math.min(startX, latestX);
-    const y = Math.min(startY, latestY);
-    const width = Math.abs(latestX - startX);
-    const height = Math.abs(latestY - startY);
-
-    if (width < 8 || height < 8) {
-      finish(onCancel);
-      return;
-    }
-
-    finish(() => onSelect({
-      x: Math.round(x),
-      y: Math.round(y),
-      width: Math.round(width),
-      height: Math.round(height)
-    }));
-  });
-
-  const handleKeydown = (event: KeyboardEvent) => {
-    if (event.key !== "Escape") {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    finish(onCancel);
-  };
-
-  document.addEventListener("keydown", handleKeydown, true);
 }
 
 function startPinMode(label: string, cancelLabel: string, onSelect: (pin: PinTarget) => void, onCancel?: () => void): void {
@@ -2260,42 +2543,11 @@ function startPinMode(label: string, cancelLabel: string, onSelect: (pin: PinTar
   document.addEventListener("keydown", handleKeydown, true);
 }
 
-async function capturePageFeedbackPreview(): Promise<string | undefined> {
-  try {
-    return await captureViewport(undefined, {
-      maxDimension: pageFeedbackScreenshotMaxDimension,
-      quality: pageFeedbackScreenshotQuality
-    });
-  } catch (error) {
-    console.warn("[ChangeThis] Failed to capture page preview", error);
-    return undefined;
-  }
-}
-
-async function captureViewport(
-  area?: CaptureArea,
-  options: { maxDimension?: number; quality?: number } = {}
-): Promise<string | undefined> {
-  try {
-    maskSensitiveFields(true);
-    const canvas = await capturePage(document.body, {
-      height: window.innerHeight,
-      width: window.innerWidth,
-      windowHeight: window.innerHeight,
-      windowWidth: window.innerWidth,
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
-      useCORS: true
-    });
-    const output = area ? cropCanvas(canvas, area) : canvas;
-    const resized = resizeCanvasToMax(output, options.maxDimension ?? maxScreenshotDimension);
-    return encodeCanvas(resized, options.quality ?? screenshotQuality);
-  } finally {
-    maskSensitiveFields(false);
-  }
-}
-
 async function createImageThumbnail(dataUrl: string): Promise<string | undefined> {
+  return resizeImageDataUrl(dataUrl, maxThumbnailDimension, thumbnailQuality);
+}
+
+async function resizeImageDataUrl(dataUrl: string, maxDimension: number, quality: number): Promise<string | undefined> {
   const image = new Image();
   image.decoding = "async";
 
@@ -2310,7 +2562,7 @@ async function createImageThumbnail(dataUrl: string): Promise<string | undefined
   }
 
   const canvas = document.createElement("canvas");
-  const ratio = Math.min(1, maxThumbnailDimension / Math.max(image.naturalWidth, image.naturalHeight, 1));
+  const ratio = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight, 1));
   canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
   canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
   const context = canvas.getContext("2d");
@@ -2321,6 +2573,83 @@ async function createImageThumbnail(dataUrl: string): Promise<string | undefined
 
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   return encodeCanvas(canvas, thumbnailQuality);
+}
+
+export async function readCaptureUpload(file: Blob): Promise<string> {
+  if (!manualCaptureSourceTypes.includes(file.type) || file.size > maxManualCaptureSourceBytes) {
+    throw new Error("Invalid capture upload");
+  }
+
+  if (file.size > maxManualCaptureUploadBytes) {
+    return compressCaptureUpload(file);
+  }
+
+  const dataUrl = await readBlobAsDataUrl(file);
+  if (!isUploadImageDataUrl(dataUrl)) {
+    throw new Error("Invalid capture upload data URL");
+  }
+
+  if (dataUrl.length <= maxClientScreenshotDataUrlLength) {
+    return dataUrl;
+  }
+
+  return compressCaptureUpload(file);
+}
+
+function readBlobAsDataUrl(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error("Unable to read capture upload"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function isUploadImageDataUrl(value: string): boolean {
+  return /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=\s]+$/i.test(value);
+}
+
+async function compressCaptureUpload(file: Blob): Promise<string> {
+  for (const attempt of manualCaptureCompressionAttempts) {
+    const compressed = await resizeImageBlob(file, attempt.maxDimension, attempt.quality);
+    if (compressed && compressed.length <= maxClientScreenshotDataUrlLength) {
+      return compressed;
+    }
+  }
+
+  throw new Error("Capture upload is too large");
+}
+
+async function resizeImageBlob(file: Blob, maxDimension: number, quality: number): Promise<string | undefined> {
+  const objectUrl = typeof URL !== "undefined" && typeof URL.createObjectURL === "function"
+    ? URL.createObjectURL(file)
+    : undefined;
+
+  try {
+    if (objectUrl) {
+      return resizeImageDataUrl(objectUrl, maxDimension, quality);
+    }
+
+    const dataUrl = await readBlobAsDataUrl(file);
+    return resizeImageDataUrl(dataUrl, maxDimension, quality);
+  } finally {
+    if (objectUrl && typeof URL.revokeObjectURL === "function") {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+}
+
+function canReadClipboardImages(): boolean {
+  const clipboard = navigator.clipboard as { read?: unknown } | undefined;
+  return typeof clipboard?.read === "function" && !isIosBrowser();
+}
+
+function isIosBrowser(): boolean {
+  const platform = navigator.platform ?? "";
+  const userAgent = navigator.userAgent ?? "";
+  return /iPad|iPhone|iPod/.test(platform)
+    || /iPad|iPhone|iPod/.test(userAgent)
+    || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
 function resizeCanvasToMax(source: HTMLCanvasElement, maxDimension: number): HTMLCanvasElement {
@@ -2349,41 +2678,15 @@ function encodeCanvas(canvas: HTMLCanvasElement, quality: number): string {
     : canvas.toDataURL("image/jpeg", quality);
 }
 
-function cropCanvas(source: HTMLCanvasElement, area: CaptureArea): HTMLCanvasElement {
-  const ratio = window.devicePixelRatio || 1;
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(area.width * ratio));
-  canvas.height = Math.max(1, Math.round(area.height * ratio));
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    return source;
+async function feedbackApiErrorDetail(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    const detail = JSON.parse(text || "{}") as { error?: unknown };
+    const message = typeof detail.error === "string" ? detail.error : text;
+    return message.trim() ? `: ${message.trim().slice(0, 240)}` : "";
+  } catch {
+    return "";
   }
-
-  context.drawImage(
-    source,
-    Math.round(area.x * ratio),
-    Math.round(area.y * ratio),
-    canvas.width,
-    canvas.height,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-  return canvas;
-}
-
-function maskSensitiveFields(enabled: boolean): void {
-  document.querySelectorAll<HTMLElement>("input, textarea, select, [contenteditable='true'], [data-changethis-mask], [data-changethis-exclude]").forEach((element) => {
-    if (enabled) {
-      element.dataset.changethisPreviousVisibility = element.style.visibility;
-      element.style.visibility = "hidden";
-    } else {
-      element.style.visibility = element.dataset.changethisPreviousVisibility ?? "";
-      delete element.dataset.changethisPreviousVisibility;
-    }
-  });
 }
 
 function pinViewportPosition(pin: PinTarget): { x: number; y: number } {
@@ -2402,6 +2705,204 @@ function pinViewportPosition(pin: PinTarget): { x: number; y: number } {
   };
 }
 
+function renderPinReplayOverlayFromLocation(): void {
+  document.getElementById(pinReplayRootId)?.remove();
+  const target = parsePinReplayTargetFromUrl(window.location.href);
+  if (!target) {
+    return;
+  }
+
+  const root = document.createElement("div");
+  root.id = pinReplayRootId;
+  root.innerHTML = `
+    <style>
+      #${pinReplayRootId} {
+        pointer-events: none;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483646;
+      }
+      #${pinReplayRootId} .changethis-replay-pin {
+        align-items: center;
+        background: #dc2626;
+        border: 3px solid #fff;
+        border-radius: 999px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.28);
+        color: #fff;
+        display: flex;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: 14px;
+        font-weight: 900;
+        height: 34px;
+        justify-content: center;
+        left: 0;
+        line-height: 1;
+        position: fixed;
+        top: 0;
+        transform: translate(-50%, -100%);
+        width: 34px;
+      }
+      #${pinReplayRootId} .changethis-replay-pin::after {
+        border: 8px solid transparent;
+        border-top-color: #dc2626;
+        content: "";
+        left: 50%;
+        position: absolute;
+        top: 100%;
+        transform: translateX(-50%);
+      }
+      #${pinReplayRootId} .changethis-replay-close {
+        background: #111827;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        color: #fff;
+        cursor: pointer;
+        font: 800 13px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+        pointer-events: auto;
+        position: fixed;
+        right: 18px;
+        top: 18px;
+        padding: 9px 12px;
+      }
+    </style>
+    <div class="changethis-replay-pin" data-changethis-pin-replay-marker>${target.number}</div>
+    <button class="changethis-replay-close" type="button" data-changethis-pin-replay-close>Fermer</button>
+  `;
+  document.documentElement.appendChild(root);
+  root.dataset.pinReplayTarget = JSON.stringify(target.pin);
+
+  root.querySelector<HTMLElement>("[data-changethis-pin-replay-close]")?.addEventListener("click", () => root.remove());
+  scrollToPinReplayTarget(target.pin);
+  updatePinReplayOverlayPosition();
+}
+
+function updatePinReplayOverlayPosition(): void {
+  const root = document.getElementById(pinReplayRootId);
+  const marker = root?.querySelector<HTMLElement>("[data-changethis-pin-replay-marker]");
+  if (!root || !marker) {
+    return;
+  }
+
+  const target = parseStoredPinTarget(root.dataset.pinReplayTarget);
+  if (!target) {
+    root.remove();
+    return;
+  }
+
+  const position = pinViewportPosition(target);
+  marker.style.left = `${position.x}px`;
+  marker.style.top = `${position.y}px`;
+}
+
+function scrollToPinReplayTarget(pin: PinTarget): void {
+  window.setTimeout(() => {
+    const element = pin.selector ? safeQuerySelector(pin.selector) : null;
+    if (element) {
+      element.scrollIntoView({ block: "center", inline: "center" });
+      updatePinReplayOverlayPosition();
+      return;
+    }
+
+    window.scrollTo({
+      left: Math.max(0, pin.x - window.innerWidth / 2),
+      top: Math.max(0, pin.y - window.innerHeight / 2),
+      behavior: "smooth"
+    });
+    updatePinReplayOverlayPosition();
+  }, 0);
+}
+
+export function parsePinReplayTargetFromUrl(urlValue: string): { number: number; pin: PinTarget } | undefined {
+  let url: URL;
+  try {
+    url = new URL(urlValue);
+  } catch {
+    return undefined;
+  }
+
+  const rawPayload = url.searchParams.get(pinReplayQueryParam);
+  if (!rawPayload) {
+    return undefined;
+  }
+
+  let payload: PinReplayPayload;
+  try {
+    payload = JSON.parse(rawPayload) as PinReplayPayload;
+  } catch {
+    return undefined;
+  }
+
+  if (
+    payload.v !== 1
+    || !isReplayNumber(payload.n, 1, 99)
+    || !isReplayNumber(payload.x, 0, 100_000)
+    || !isReplayNumber(payload.y, 0, 100_000)
+    || !isReplayNumber(payload.vw, 1, 10_000)
+    || !isReplayNumber(payload.vh, 1, 10_000)
+  ) {
+    return undefined;
+  }
+
+  if (payload.s !== undefined && (typeof payload.s !== "string" || payload.s.length > 512)) {
+    return undefined;
+  }
+
+  if (payload.ox !== undefined && !isReplayNumber(payload.ox, 0, 100_000)) {
+    return undefined;
+  }
+
+  if (payload.oy !== undefined && !isReplayNumber(payload.oy, 0, 100_000)) {
+    return undefined;
+  }
+
+  return {
+    number: Math.round(payload.n),
+    pin: {
+      x: Math.round(payload.x),
+      y: Math.round(payload.y),
+      elementOffsetX: typeof payload.ox === "number" ? Math.round(payload.ox) : undefined,
+      elementOffsetY: typeof payload.oy === "number" ? Math.round(payload.oy) : undefined,
+      selector: payload.s
+    }
+  };
+}
+
+function parseStoredPinTarget(value: string | undefined): PinTarget | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as PinTarget;
+    if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+      return parsed;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+function isReplayNumber(value: unknown, min: number, max: number): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
+}
+
+function resolvePinTargetForSubmission(pin: PinTarget): PinTarget {
+  const element = pin.selector ? safeQuerySelector(pin.selector) : null;
+  if (!element || typeof pin.elementOffsetX !== "number" || typeof pin.elementOffsetY !== "number") {
+    return pin;
+  }
+
+  const rect = element.getBoundingClientRect();
+
+  return {
+    ...pin,
+    x: Math.round(rect.left + pin.elementOffsetX + window.scrollX),
+    y: Math.round(rect.top + pin.elementOffsetY + window.scrollY)
+  };
+}
+
 function safeQuerySelector(selector: string): Element | null {
   try {
     return document.querySelector(selector);
@@ -2411,7 +2912,32 @@ function safeQuerySelector(selector: string): Element | null {
 }
 
 function currentViewKey(): string {
-  return `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const url = new URL(window.location.href);
+  url.searchParams.delete(pinReplayQueryParam);
+  return `${url.origin}${url.pathname}${url.search}${url.hash}`;
+}
+
+function captureSystemShortcut(copy: {
+  captureShortcutFallback: string;
+  captureShortcutMac: string;
+  captureShortcutUbuntu: string;
+  captureShortcutWindows: string;
+}): string {
+  const fingerprint = `${navigator.platform} ${navigator.userAgent}`;
+
+  if (/Mac|iPhone|iPad|iPod/i.test(fingerprint)) {
+    return copy.captureShortcutMac;
+  }
+
+  if (/Win/i.test(fingerprint)) {
+    return copy.captureShortcutWindows;
+  }
+
+  if (/Linux|Ubuntu/i.test(fingerprint)) {
+    return copy.captureShortcutUbuntu;
+  }
+
+  return copy.captureShortcutFallback;
 }
 
 function currentReporter(name: string, email: string): FeedbackReporter | undefined {
@@ -2868,22 +3394,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function supportsAdvancedFeedbackModes(): boolean {
-  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches === true;
-  const smallViewport = window.matchMedia?.("(max-width: 640px)").matches === true || window.innerWidth <= 640;
-  return !coarsePointer && !smallViewport;
-}
-
 const currentScript = document.currentScript as HTMLScriptElement | null;
 const projectKey = currentScript?.dataset.project;
 
 if (projectKey) {
   const scriptOptions = widgetOptionsFromScript(currentScript, projectKey);
 
-  void resolveWidgetOptions(currentScript, scriptOptions)
-    .then(initChangeThis)
+  startWidgetWithConfig(currentScript, scriptOptions);
+}
+
+function startWidgetWithConfig(script: HTMLScriptElement | null, fallback: WidgetOptions): void {
+  let initializedWithFallback = false;
+  const configPromise = resolveWidgetOptions(script, fallback);
+  const fallbackTimer = window.setTimeout(() => {
+    initializedWithFallback = true;
+    initChangeThis(fallback);
+  }, widgetConfigStartupTimeoutMs);
+
+  void configPromise
+    .then((resolvedOptions) => {
+      window.clearTimeout(fallbackTimer);
+      if (initializedWithFallback) {
+        removeWidgetRoot();
+      }
+      initChangeThis(resolvedOptions);
+    })
     .catch(() => {
-      initChangeThis(scriptOptions);
+      window.clearTimeout(fallbackTimer);
+      if (!initializedWithFallback) {
+        initChangeThis(fallback);
+      }
     });
 }
 
@@ -2896,8 +3436,11 @@ function widgetOptionsFromScript(script: HTMLScriptElement | null, projectKey: s
     projectKey,
     endpoint: script?.dataset.endpoint ?? scriptEndpoint(script),
     buttonLabel: script?.dataset.buttonLabel,
+    title: normalizeWidgetTitle(script?.dataset.widgetTitle, undefined),
+    modes: parseWidgetModes(script?.dataset.modes),
     buttonStateLabel: script?.dataset.buttonState,
     buttonVariant: variant === "dev" || variant === "prod" || variant === "review" || variant === "subtle" ? variant : undefined,
+    displayMode: parseWidgetDisplayMode(script?.dataset.displayMode),
     buttonPosition: position === "bottom-right" || position === "bottom-left" || position === "top-right" || position === "top-left" ? position : undefined,
     reporterFields: reporterFields === "hidden" || reporterFields === "optional" || reporterFields === "required" ? reporterFields : undefined,
     locale: script?.dataset.locale === "fr" || script?.dataset.locale === "en" ? script.dataset.locale : undefined,
@@ -2939,9 +3482,13 @@ async function resolveWidgetOptions(script: HTMLScriptElement | null, fallback: 
     ...fallback,
     endpoint: config.endpoint ? new URL(config.endpoint, configUrl).toString() : fallback.endpoint,
     locale: config.locale ?? fallback.locale,
-    buttonPosition: config.buttonPosition ?? fallback.buttonPosition,
-    buttonVariant: config.buttonVariant ?? fallback.buttonVariant,
-    reporterFields: config.reporterFields ?? fallback.reporterFields
+    buttonPosition: config.buttonPosition ?? config.button_position ?? fallback.buttonPosition,
+    buttonVariant: config.buttonVariant ?? config.button_variant ?? fallback.buttonVariant,
+    displayMode: config.displayMode ?? config.display_mode ?? fallback.displayMode,
+    reporterFields: config.reporterFields ?? config.reporter_fields ?? fallback.reporterFields,
+    title: normalizeWidgetTitle(config.title, fallback.title),
+    modes: normalizeWidgetModes(Array.isArray(config.modes) ? config.modes : fallback.modes),
+    visible: typeof config.visible === "boolean" ? config.visible : fallback.visible
   };
 }
 
@@ -2965,4 +3512,92 @@ function isWidgetConfigResponse(value: unknown): value is WidgetConfigResponse {
   }
 
   return true;
+}
+
+function parseWidgetDisplayMode(value: string | undefined): WidgetOptions["displayMode"] {
+  if (value === "standard" || value === "subtle" || value === "hidden" || value === "disabled") {
+    return value;
+  }
+
+  return undefined;
+}
+
+function displayModeFromButtonVariant(value: WidgetOptions["buttonVariant"]): WidgetOptions["displayMode"] {
+  return value === "subtle" ? "subtle" : "standard";
+}
+
+function removeWidgetRoot(): void {
+  document.getElementById(rootId)?.remove();
+}
+
+function isWidgetShortcut(event: KeyboardEvent): boolean {
+  return event.altKey && event.shiftKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "f";
+}
+
+function normalizeWidgetTitle(value: string | undefined, fallback: string | undefined): string | undefined {
+  const title = value?.trim();
+  if (!title) {
+    return fallback;
+  }
+
+  return title.slice(0, maxWidgetTitleLength);
+}
+
+function renderWidgetMarkdown(value: string): string {
+  const lines = value.split(/\r?\n/);
+  const blocks: string[] = [];
+  let listItems: string[] = [];
+
+  const flushList = () => {
+    if (listItems.length === 0) {
+      return;
+    }
+
+    blocks.push(`<ul>${listItems.join("")}</ul>`);
+    listItems = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList();
+      continue;
+    }
+
+    if (trimmed.startsWith("- ")) {
+      listItems.push(`<li>${renderInlineMarkdown(trimmed.slice(2))}</li>`);
+      continue;
+    }
+
+    flushList();
+    blocks.push(`<p>${renderInlineMarkdown(trimmed)}</p>`);
+  }
+
+  flushList();
+  return blocks.join("") || `<p>${renderInlineMarkdown(value)}</p>`;
+}
+
+function renderInlineMarkdown(value: string): string {
+  return escapeHtml(value)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+}
+
+function normalizeWidgetModes(value: WidgetMode[] | undefined): WidgetMode[] {
+  const modes = value?.filter((mode): mode is WidgetMode => mode === "comment" || mode === "screenshot") ?? defaultWidgetModes;
+  const uniqueModes = defaultWidgetModes.filter((mode) => modes.includes(mode));
+  return uniqueModes.length > 0 ? uniqueModes : defaultWidgetModes;
+}
+
+function parseWidgetModes(value: string | undefined): WidgetMode[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return normalizeWidgetModes(value.split(",").map((mode) => mode.trim()) as WidgetMode[]);
+}
+
+function isModeEnabled(mode: FeedbackType, modes: readonly WidgetMode[]): boolean {
+  return modes.includes(mode as WidgetMode);
 }

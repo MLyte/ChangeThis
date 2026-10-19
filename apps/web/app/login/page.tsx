@@ -1,8 +1,6 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, getCurrentSession, isPublicSignupEnabled } from "../../lib/auth";
-import { setSupabaseSessionCookies } from "../../lib/auth-session-cookies";
-import { signInWithPassword } from "../../lib/supabase-server";
+import { setInternalSessionCookie, signInWithInternalPassword } from "../../lib/internal-api";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
@@ -31,7 +29,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   const hasError = Boolean(params?.error);
-  const isLocalMode = getAuthMode() === "local";
+  const authMode = getAuthMode();
+  const isLocalMode = authMode === "local";
+  const isInternalMode = authMode === "internal";
   const publicSignupEnabled = isPublicSignupEnabled();
 
   async function loginAction(formData: FormData) {
@@ -46,20 +46,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       redirect(targetPath);
     }
 
-    const signInResult = await signInWithPassword({ email, password });
+    const signInResult = await signInWithInternalPassword({ email, password });
 
     if (!signInResult.ok) {
       const error = signInResult.error;
       redirect(`/login?error=${encodeURIComponent(error)}&next=${encodeURIComponent(targetPath)}`);
     }
 
-    const cookieStore = await cookies();
-    setSupabaseSessionCookies({
-      cookieStore,
-      accessToken: signInResult.accessToken,
-      refreshToken: signInResult.refreshToken,
-      expiresIn: signInResult.expiresIn
-    });
+    await setInternalSessionCookie(signInResult.accessToken);
     redirect(targetPath);
   }
 
@@ -94,7 +88,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </div>
           ) : null}
 
-          <form action={loginAction} className="auth-form">
+          <form action={isInternalMode ? "/api/auth/login" : loginAction} className="auth-form" method={isInternalMode ? "post" : undefined}>
             <input name="next" type="hidden" value={nextPath} />
             <label>
               <T k="login.email" />

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import type { FeedbackStatus } from "@changethis/shared";
-import { authFailureResponse, isAuthFailure, requireWorkspaceRole, requireWorkspaceSession } from "../../../../../lib/auth";
+import { authFailureResponse, isAuthFailure, requireWorkspaceSession } from "../../../../../lib/auth";
 import { methodNotAllowed, requireJsonRequest, requirePrivateMutationOrigin } from "../../../../../lib/api-security";
 import { resolveFeedbackForAction } from "../../../../../lib/demo-feedback-actions";
 import { getFeedbackRepository } from "../../../../../lib/feedback-repository";
 import { createIssueForFeedback } from "../../../../../lib/issue-workflow";
 import { requestIdFrom } from "../../../../../lib/logger";
+import { getIssueAccessScope, getIssueAccessWorkspaceIds, hasFeedbackIssueAccess } from "../../../../../lib/project-issue-access";
 
 const actionableStatuses: FeedbackStatus[] = ["raw", "retrying", "failed"];
 const unsupportedMethod = methodNotAllowed(["POST"]);
@@ -17,7 +18,7 @@ export const DELETE = unsupportedMethod;
 export const OPTIONS = unsupportedMethod;
 
 export async function POST(request: Request) {
-  const session = requireWorkspaceRole(await requireWorkspaceSession(request), "member");
+  const session = await requireWorkspaceSession(request);
 
   if (isAuthFailure(session)) {
     return authFailureResponse(session);
@@ -62,14 +63,16 @@ export async function POST(request: Request) {
 
   const repository = getFeedbackRepository();
   const requestId = requestIdFrom(request);
+  const issueAccessScope = await getIssueAccessScope(session);
+  const actionWorkspaceIds = await getIssueAccessWorkspaceIds(session);
   let created = 0;
   let failed = 0;
   let skipped = 0;
 
   for (const id of feedbackIds) {
-    const actionScope = await resolveFeedbackForAction(repository, id, workspaceId);
+    const actionScope = await resolveFeedbackForAction(repository, id, actionWorkspaceIds);
 
-    if (!actionScope || !actionableStatuses.includes(actionScope.feedback.status)) {
+    if (!actionScope || !actionableStatuses.includes(actionScope.feedback.status) || !hasFeedbackIssueAccess(issueAccessScope, actionScope.feedback)) {
       skipped += 1;
       continue;
     }

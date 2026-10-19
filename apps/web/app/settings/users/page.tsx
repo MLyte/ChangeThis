@@ -1,7 +1,7 @@
-import { SettingsView } from "../settings-view";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default function UsersPage() {
-  return <SettingsView section="users" />;
+  redirect("/settings/connected-sites");
 }

@@ -1,8 +1,5 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuthMode, getCurrentSession, isPublicSignupEnabled } from "../../lib/auth";
-import { setSupabaseSessionCookies } from "../../lib/auth-session-cookies";
-import { isSupabaseServiceConfigured, requestSignUpCode, verifySupabaseEmailCode } from "../../lib/supabase-server";
 import { AppFooter } from "../app-footer";
 import { AppHeader } from "../app-header";
 import { T } from "../i18n";
@@ -13,7 +10,6 @@ type SignUpPageProps = {
   searchParams?: Promise<{
     email?: string;
     error?: string;
-    sent?: string;
   }>;
 };
 
@@ -58,17 +54,17 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   }
 
   const params = await searchParams;
-  const hasError = Boolean(params?.error);
-  const isSent = params?.sent === "1";
-  const sentEmail = params?.email ?? "";
-  const isLocalMode = getAuthMode() === "local";
+  const errorKey = signupErrorKey(params?.error);
+  const hasError = Boolean(errorKey);
+  const authMode = getAuthMode();
+  const isInternalMode = authMode === "internal";
+  const isLocalMode = authMode === "local";
 
-  async function signUpAction(formData: FormData) {
+  async function signUpAction() {
     "use server";
 
     const authMode = getAuthMode();
     const currentSession = await getCurrentSession();
-    const email = formData.get("email")?.toString().trim() ?? "";
 
     if (currentSession?.workspace) {
       redirect("/projects");
@@ -82,54 +78,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       redirect("/settings/connected-sites");
     }
 
-    if (!isSupabaseServiceConfigured()) {
-      redirect("/signup?error=workspace");
-    }
-
-    const signUpResult = await requestSignUpCode({ email });
-
-    if (!signUpResult.ok) {
-      redirect(`/signup?error=${encodeURIComponent(signUpResult.error)}`);
-    }
-
-    redirect(`/signup?sent=1&email=${encodeURIComponent(email)}`);
-  }
-
-  async function verifyCodeAction(formData: FormData) {
-    "use server";
-
-    const authMode = getAuthMode();
-    const currentSession = await getCurrentSession();
-    const email = formData.get("email")?.toString().trim() ?? "";
-    const token = formData.get("token")?.toString().replace(/\s+/g, "") ?? "";
-
-    if (currentSession?.workspace) {
-      redirect("/projects");
-    }
-
-    if (currentSession) {
-      redirect("/signup/set-password");
-    }
-
-    if (authMode === "local") {
-      redirect("/settings/connected-sites");
-    }
-
-    const verifyResult = await verifySupabaseEmailCode({ email, token });
-
-    if (!verifyResult.ok) {
-      redirect(`/signup?sent=1&email=${encodeURIComponent(email)}&error=${encodeURIComponent(verifyResult.error)}`);
-    }
-
-    const cookieStore = await cookies();
-    setSupabaseSessionCookies({
-      cookieStore,
-      accessToken: verifyResult.accessToken,
-      refreshToken: verifyResult.refreshToken,
-      expiresIn: verifyResult.expiresIn
-    });
-
-    redirect("/signup/set-password");
+    redirect("/signup?error=unavailable");
   }
 
   return (
@@ -151,55 +100,41 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
         <div className="auth-panel">
           {hasError ? (
             <div className="error-callout" role="alert">
-              <strong><T k="signup.error" /></strong>
+              <strong><T k={errorKey} /></strong>
             </div>
           ) : null}
 
-          {isSent ? (
-            <div className="local-mode-callout" role="status">
-              <strong><T k="signup.sent.title" /></strong>
-              <span><T k="signup.sent.copy" /></span>
-            </div>
-          ) : null}
-
-          {!isSent && isLocalMode ? (
+          {isLocalMode ? (
             <div className="local-mode-callout">
               <strong><T k="login.localMode.title" /></strong>
               <span><T k="signup.localMode.copy" /></span>
             </div>
           ) : null}
 
-          {isSent ? (
-            <form action={verifyCodeAction} className="auth-form">
-              <input name="email" type="hidden" value={sentEmail} />
-              <label>
-                <T k="signup.code" />
-                <input
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                  name="token"
-                  pattern="[0-9 ]+"
-                  required
-                  type="text"
-                />
-              </label>
-              <p className="microcopy"><T k="signup.codeHint" /></p>
-              <button className="button" type="submit">
-                <T k="signup.verifyCode" />
-              </button>
-            </form>
-          ) : (
-            <form action={signUpAction} className="auth-form">
-              <label>
-                <T k="login.email" />
-                <input autoComplete="email" name="email" required type="email" />
-              </label>
-              <p className="microcopy"><T k="signup.redirectHint" /></p>
-              <button className="button" type="submit">
-                <T k={isLocalMode ? "signup.localSubmit" : "signup.submit"} />
-              </button>
-            </form>
-          )}
+          <form action={isInternalMode ? "/api/auth/signup" : signUpAction} className="auth-form" method={isInternalMode ? "post" : undefined}>
+            <label>
+              <T k="login.email" />
+              <input autoComplete="email" name="email" required type="email" />
+            </label>
+            {isInternalMode ? (
+              <>
+                <label>
+                  <T k="signup.password" />
+                  <input autoComplete="new-password" minLength={8} name="password" required type="password" />
+                </label>
+                <label>
+                  <T k="signup.passwordConfirm" />
+                  <input autoComplete="new-password" minLength={8} name="passwordConfirmation" required type="password" />
+                </label>
+              </>
+            ) : null}
+            <p className="microcopy">
+              <T k={isInternalMode ? "signup.internalHint" : "signup.redirectHint"} />
+            </p>
+            <button className="button" type="submit">
+              <T k={isLocalMode ? "signup.localSubmit" : "signup.internalSubmit"} />
+            </button>
+          </form>
 
           <p className="microcopy">
             <T k="signup.loginHint" /> <a className="inline-link" href="/login"><T k="nav.login" /></a>
@@ -209,4 +144,8 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       <AppFooter />
     </main>
   );
+}
+
+function signupErrorKey(error?: string): string {
+  return error === "password_mismatch" ? "signup.passwordMismatch" : error ? "signup.error" : "";
 }

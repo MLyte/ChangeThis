@@ -1,148 +1,172 @@
 # ChangeThis
 
-ChangeThis is a client feedback widget and product inbox for websites in development. Visitors can send feedback without creating an account; the product team signs in to triage those returns and turn them into GitHub or GitLab issues.
+[English](#english-version)
 
-Clients click a fixed feedback button, add a note, pin one or more page elements, or send a screenshot. ChangeThis stores the context, keeps a durable inbox, and creates a provider-neutral issue draft with URL, viewport, browser details, pins, screenshot metadata, and labels ready for triage.
+## Memo deploiement serveur
 
-## Product Direction
+Depuis `/opt/changethis/repo` sur `front-tool-prod`:
 
-- **Audience:** freelancers, small web agencies, studios, and product/design teams shipping client websites.
-- **Model:** open source under the European Union Public Licence 1.2, with hosted operations and support offered by ChangeThis.
-- **Promise:** clients point at what needs changing; teams receive actionable feedback, decide whether to create an issue, and keep a traceable history.
-- **Current beta posture:** controlled open beta, Railway app hosting, Supabase Auth/DB for the real path, OVH DNS for `app.changethis.dev`.
-
-See [docs/current-state.fr.md](docs/current-state.fr.md) for the synchronized current-state snapshot used by the documentation.
-
-## Current Product Loop
-
-1. A workspace owner signs in or creates an account when public signup is enabled for the environment.
-2. The team connects GitHub and/or GitLab with a server-side token, OAuth flow, or GitHub App setup.
-3. The owner adds a connected site in `/settings/connected-sites`, chooses a provider, selects a real accessible repository, and copies the generated widget script.
-4. A visitor submits feedback from the widget. No visitor account is required.
-5. `POST /api/public/feedback` validates the public project key, allowed origin, payload, and screenshot size, then stores the feedback under the site workspace.
-6. The team reviews feedback in `/projects`, filters it, creates an issue, keeps it without an issue, archives it, retries provider failures, or checks whether the external issue has been closed.
-
-## Implemented Features
-
-- Public embeddable widget served from `/widget.js` and `/widget.global.js`.
-- Feedback modes: note, pin, multiple pins, capture/screenshot.
-- Per-pin feedback text and sent/unsent feedback management in the widget panel.
-- Public feedback API with origin validation and local rate limiting. The local limiter is a known beta hardening item for multi-instance deployments.
-- Supabase-backed repositories for the real beta path: feedbacks, status events, connected sites, public keys, provider integrations, encrypted provider credentials, attempts, and external issues.
-- File-backed stores kept for local development with `DATA_STORE=file`.
-- Dashboard inbox with filters by text, status, site, feedback type, and provider.
-- Feedback actions: create issue, retry, keep without issue, archive, cancel submitted public feedback, and sync external issue state.
-- Feedback statuses: `raw`, `issue_creation_pending`, `retrying`, `sent_to_provider`, `failed`, `kept`, `resolved`, `ignored`.
-- Real connected-site flow: choose GitHub/GitLab, list repositories from the configured token, generate a site public key, copy the install snippet, test script installation, and delete the site.
-- GitHub/GitLab provider badges and repository listing.
-- GitHub/GitLab issue creation with idempotency keys and retry state.
-- GitHub/GitLab issue lookup to move feedback to `resolved` when the external issue is closed.
-- Git connection disable/reactivate flow.
-- Supabase/local authentication modes, `/login`, `/signup`, `/logout`, auth callback cookies, protected dashboard routes, workspace roles, and a `/settings/users` members view. Production beta must use `AUTH_MODE=supabase`.
-- Sonner toasts for user feedback.
-- Production readiness endpoints: `/api/health` and `/api/ready`.
-
-## Install A Widget
-
-A connected site exposes a snippet like:
-
-```html
-<script src="https://app.changethis.dev/widget.js" data-project="project_public_key"></script>
+```bash
+sudo API_URL=http://127.0.0.1:8000 scripts/internal/deploy-backend.sh
+sudo APP_URL=https://changethis.cra.wallonie.be scripts/internal/deploy-frontend.sh
 ```
 
-In local development, the app serves the same widget route from the web server:
+Ces scripts font le `git pull --ff-only`, les installations/builds utiles, puis redemarrent `changethis-api` et `changethis-web`.
+
+## Note de release en attente - 2 juin 2026
+
+Changements realises localement et en attente de livraison:
+
+- Le bouton du widget est renomme `Commenter` en francais, avec affichage du logo en version standard.
+- Le widget permet de personnaliser le texte de demande de feedback, dans une limite de caracteres, et de choisir les modes actives: retour page, pin et capture.
+- Le bouton d'aide `?` du widget ouvre une modal d'instructions avec le texte editable et un lien discret de contact.
+- Les chargements de connexion Git affichent un spinner coherent avec le reste de l'interface.
+- Le select `Depot connecte` est prepare pour une recherche plus rapide et un classement alphabetique des depots.
+- Les libelles dashboard sont ajustes: `Issues` devient `Feedbacks` en anglais et `Commentaires` en francais.
+- La cible technique active est recentree sur l'installation interne CRA: Next.js, FastAPI et PostgreSQL interne.
+
+ChangeThis est un outil interne CRA pour collecter, trier et transformer des retours visuels en issues GitHub ou GitLab. Un visiteur d'un site en conception, developpement ou recette peut laisser un commentaire, poser un repere sur la page ou envoyer une capture. L'equipe retrouve ensuite le feedback dans l'admin ChangeThis, le qualifie et decide de creer une issue dans le depot cible.
+
+La cible documentee par `main` est l'installation interne:
+
+- URL admin et widget: `https://changethis.cra.wallonie.be`.
+- Frontend: Next.js dans `apps/web`, expose par le domaine applicatif.
+- Backend interne: FastAPI dans `apps/api`, sur le meme serveur applicatif que le front.
+- Base: PostgreSQL interne, seule charge attendue sur `back-tool-prod`.
+- Deploiement: services natifs Ubuntu 24 via `systemd`.
+
+Les anciens guides lies a une experimentation SaaS ne decrivent plus la cible active de cette branche.
+
+## Architecture globale
+
+```mermaid
+flowchart TB
+  Visitor["Visiteur site client/interne"] --> Widget["Widget ChangeThis<br/>packages/widget"]
+  Team["Equipe UX / produit / dev"] --> Dashboard["Admin ChangeThis<br/>apps/web"]
+
+  Widget --> NextPublic["Next.js API publique<br/>/api/public/feedback"]
+  Dashboard --> NextPrivate["Next.js API admin<br/>/api/projects/*"]
+
+  NextPublic --> FastAPI["FastAPI interne<br/>apps/api"]
+  NextPrivate --> FastAPI
+
+  FastAPI --> Postgres["PostgreSQL interne"]
+  FastAPI --> Providers["Git provider layer"]
+  Providers --> GitHub["GitHub Issues"]
+  Providers --> GitLab["GitLab Issues<br/>dont GitRural si configure"]
+```
+
+## User Flow
+
+```mermaid
+flowchart LR
+  Owner["Owner workspace"] --> Git["Connecte GitHub ou GitLab"]
+  Git --> Site["Cree un site connecte"]
+  Site --> Snippet["Installe le script widget"]
+  Snippet --> VisitorAction["Le visiteur envoie un feedback"]
+  VisitorAction --> Inbox["Feedback visible dans /projects"]
+  Inbox --> Triage{"Decision equipe"}
+  Triage --> Issue["Creer une issue"]
+  Triage --> Keep["Garder sans issue"]
+  Triage --> Ignore["Archiver / ignorer"]
+  Issue --> Provider["Issue GitHub/GitLab"]
+```
+
+## Data Flow
+
+```mermaid
+flowchart LR
+  Site["Site avec widget"] --> Widget["packages/widget"]
+  Widget --> PublicApi["https://changethis.cra.wallonie.be/api/public/feedback"]
+  PublicApi --> FastAPI["FastAPI apps/api"]
+  Dashboard["Admin /projects"] --> PrivateApi["Next.js API admin meme domaine"]
+  PrivateApi --> FastAPI
+  FastAPI --> Postgres["PostgreSQL interne"]
+  FastAPI --> Providers["GitHub/GitLab APIs"]
+```
+
+Le navigateur parle toujours au meme domaine applicatif. Next.js sert l'admin, le widget et les routes browser-facing; les appels internes partent ensuite vers FastAPI via `INTERNAL_API_URL`.
+
+## Monorepo
+
+- `apps/web`: application Next.js, admin, routes API navigateur, authentification, parametres et hebergement du widget.
+- `apps/api`: backend FastAPI interne, SQLAlchemy, Alembic et acces PostgreSQL.
+- `packages/widget`: widget JavaScript embarque sur les sites.
+- `packages/shared`: types partages, validation des payloads et formatage des brouillons d'issues.
+- `scripts/internal`: installation et deploiement natifs Ubuntu 24.
+- `docs`: runbooks, architecture et guides utilisateur.
+
+## Boucle produit
+
+1. Un owner se connecte a ChangeThis.
+2. L'equipe connecte GitHub ou GitLab.
+3. L'owner cree un site dans `/settings/connected-sites`, choisit le depot cible et copie le script widget.
+4. Un visiteur envoie un feedback depuis le site autorise.
+5. `POST /api/public/feedback` valide la cle publique, l'origine, le payload et la taille des captures.
+6. L'equipe traite le retour dans `/projects`, puis cree une issue, garde le feedback sans issue, l'archive ou relance une action provider.
+
+## Installer un widget
+
+Un site connecte expose un snippet de ce type:
+
+```html
+<script src="https://changethis.cra.wallonie.be/widget.js" data-project="project_public_key"></script>
+```
+
+En local, le meme widget est servi par le serveur web:
 
 ```html
 <script src="http://localhost:3000/widget.js" data-project="project_public_key"></script>
 ```
 
-Create the site from `/settings/connected-sites` so the public key, allowed site URL, and Git issue destination are stored together. The public feedback API only accepts requests whose `Origin` matches the connected site URL.
+Creer le site depuis `/settings/connected-sites` pour stocker ensemble la cle publique, l'origine autorisee et la destination Git. L'API publique refuse les requetes dont l'`Origin` ne correspond pas au site connecte.
 
-For a quick local smoke test, use `/demo`; it loads the real widget bundle and sends feedback to the current app API. A production/beta validation should use a real connected site and the script test in `/settings/connected-sites`.
-
-## License
-
-ChangeThis is licensed under the European Union Public Licence, version 1.2 (`EUPL-1.2`).
-
-See `LICENSE.md`, `NOTICE.md`, and the package-level license files for details. Third-party dependencies remain under their own licenses.
-
-## Development
+## Developpement
 
 ```bash
 npm install
 npm run dev
 ```
 
-The local web app runs on `http://localhost:3000` by default. If the port is occupied, Next.js may choose another port; use the URL printed by the dev server.
+L'application locale tourne sur `http://localhost:3000` par defaut. Si le port est occupe, utiliser l'URL affichee par Next.js.
 
-Useful local routes:
+Routes utiles:
 
-- `/` landing page with product CTAs.
-- `/signup` account/workspace creation entry point, gated by `ENABLE_PUBLIC_SIGNUP`.
-- `/api/cron/storage-cleanup` protected weekly cleanup for screenshot lifecycle (`Authorization: Bearer $CHANGETHIS_CRON_SECRET`).
-- `/login` authenticated console entry point.
-- `/demo` widget sandbox page that loads the real widget bundle against the current API.
-- `/projects` designer/product inbox.
-- `/settings/git-connections` GitHub/GitLab connection state.
-- `/settings/connected-sites` real connected-site setup and widget script management.
-- `/settings/users` workspace members view.
-- `/api/widget/config?project=project_public_key` public widget configuration, including per-site reporter fields.
-- `/api/public/feedback` public feedback ingestion.
-- `/api/public/feedback/:id/cancel` public cancellation endpoint used by the widget.
-- `/api/projects/sites` connected-site API.
-- `/api/projects/sites/:projectKey/script-test` script installation check.
-- `/api/projects/feedbacks/:id/issue` manual issue creation endpoint.
-- `/api/projects/feedbacks/:id/keep` keep feedback without creating an issue.
-- `/api/projects/feedbacks/:id/sync` sync external issue state.
-- `/api/projects/retries` retry processor endpoint.
+- `/login`: entree de l'admin.
+- `/signup`: creation de compte/workspace si le signup est ouvert.
+- `/demo`: bac a sable widget local.
+- `/projects`: inbox produit.
+- `/settings/git-connections`: connexions GitHub/GitLab.
+- `/settings/connected-sites`: configuration des sites et snippets widget.
+- `/settings/users`: membres du workspace.
+- `/api/health`: healthcheck simple.
+- `/api/ready`: readiness de l'application exposee.
 
-To test the widget end-to-end locally:
-
-```bash
-npm run widget:build
-npm run dev
-```
-
-Then open `http://localhost:3000/demo` and use the floating Feedback button. For beta/prod validation, create a connected site and test the generated snippet on the target origin.
-
-## Local Configuration
-
-Minimum useful `.env.local` for local development:
+Configuration locale minimale:
 
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 AUTH_MODE=local
 DATA_STORE=file
 CHANGETHIS_DATA_DIR=.changethis-data
+ENABLE_CHANGETHIS_WIDGET=false
 ```
 
-To list repositories and create external issues from `/projects`, add provider tokens:
+`ENABLE_CHANGETHIS_WIDGET=false` empêche l'injection du widget dans l'application web et évite donc ses appels réseau en local. La variable est activée par défaut lorsqu'elle est absente; redémarrer Next.js après toute modification du fichier `.env`.
+
+Configuration cible interne frontend:
 
 ```env
-GITHUB_TOKEN=github_pat_or_classic_token
-# or
-CHANGETHIS_GITHUB_TOKEN=github_pat_or_classic_token
-
-GITLAB_TOKEN=gitlab_personal_access_token
-# or
-CHANGETHIS_GITLAB_TOKEN=gitlab_personal_access_token
-GITLAB_BASE_URL=https://gitlab.com
-```
-
-For GitLab, prefer a Personal Access Token with the `api` scope so ChangeThis can list every project the GitLab user can access and create issues in the selected project. For a self-hosted GitLab, set `GITLAB_BASE_URL` to the instance base URL, for example `https://gitrural.cra.wallonie.be`. A project-scoped token still works as a fallback when you paste the exact project URL in the connected-site form.
-
-For the real beta path, use Supabase:
-
-```env
-AUTH_MODE=supabase
-DATA_STORE=supabase
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
+AUTH_MODE=internal
+DATA_STORE=internal
+INTERNAL_API_URL=http://127.0.0.1:8000
 CHANGETHIS_SECRET_KEY=...
+ENABLE_CHANGETHIS_WIDGET=true
 ```
 
-`AUTH_MODE=local` and `DATA_STORE=file` are disabled/no-go for production beta. Railway PostgreSQL native `DATABASE_URL` is not consumed by the current code path.
+Le backend FastAPI utilise son propre fichier d'environnement avec `DATABASE_URL`, `SESSION_SECRET`, `CHANGETHIS_SECRET_KEY` et `ALLOWED_PUBLIC_ORIGINS`. Voir [docs/internal-ubuntu24-install.fr.md](docs/internal-ubuntu24-install.fr.md).
 
 ## Validation
 
@@ -152,45 +176,97 @@ npm run build --workspace @changethis/widget
 npm run typecheck --workspace @changethis/web
 npm run lint --workspace @changethis/web
 npm run test --workspace @changethis/web
-npm run migrations:check
-npm run prod:check
 npm run build --workspace @changethis/web
 ```
 
-Root-level equivalents are available:
+Checks racine utiles:
 
 ```bash
 npm run typecheck
 npm run lint
-npm run test
-npm run migrations:check
-npm run prod:check
-npm run build:prod
+npm test
+npm run env:check
 npm run build
 ```
 
-## Frontend Dependency Policy
+## Etat et docs
 
-To keep the workspace stable, maintain compatibility between Next.js and React before upgrading packages.
+- [docs/current-state.fr.md](docs/current-state.fr.md): source courte de l'etat courant.
+- [docs/architecture.md](docs/architecture.md): architecture interne cible.
+- [docs/internal-ubuntu24-install.fr.md](docs/internal-ubuntu24-install.fr.md): runbook Ubuntu 24.
+- [docs/README.md](docs/README.md): index des documents actifs et archives.
 
-- Do not use `npm audit fix --force` in this repository because it can introduce breaking major changes.
-- Prefer targeted upgrades, for example `npm install -w apps/web next@latest`, and validate with a web build before committing.
-- Keep the baseline workflow: small iterations, one problem at a time, and `npm run build --workspace @changethis/web` as the final gate for frontend dependency changes.
+## Licence
 
-## Repository Structure
+ChangeThis est distribue sous European Union Public Licence 1.2 (`EUPL-1.2`).
 
-```txt
-apps/web             Next.js dashboard, landing page, auth, settings, and API routes
-packages/widget     Embeddable browser widget
-packages/shared     Shared feedback types and provider-neutral issue formatting
-supabase/migrations Database schema and status migrations
-docs                 Product and technical specs
+Voir `LICENSE.md`, `NOTICE.md` et les fichiers de licence des packages pour les details. Les dependances tierces conservent leurs propres licences.
+
+## English Version
+
+ChangeThis is an internal CRA feedback tool for collecting visual website feedback and turning it into GitHub or GitLab issues. Visitors can leave a note, pin something on the page, or send a screenshot. The team reviews the feedback in the ChangeThis admin, triages it, and decides whether to create an issue.
+
+The active target documented by `main` is the internal installation:
+
+- Admin and widget URL: `https://changethis.cra.wallonie.be`.
+- Frontend: Next.js in `apps/web`.
+- Internal backend: FastAPI in `apps/api`, on the same application server as the frontend.
+- Database: internal PostgreSQL, the only expected workload on `back-tool-prod`.
+- Deployment: native Ubuntu 24 `systemd` services.
+
+Older SaaS experiment documents are no longer part of the active target for this branch.
+
+### Global Architecture
+
+```mermaid
+flowchart TB
+  Visitor["Website visitor"] --> Widget["ChangeThis widget<br/>packages/widget"]
+  Team["UX / product / dev team"] --> Dashboard["ChangeThis admin<br/>apps/web"]
+  Widget --> NextPublic["Public Next.js API<br/>/api/public/feedback"]
+  Dashboard --> NextPrivate["Admin Next.js API<br/>/api/projects/*"]
+  NextPublic --> FastAPI["Internal FastAPI<br/>apps/api"]
+  NextPrivate --> FastAPI
+  FastAPI --> Postgres["Internal PostgreSQL"]
+  FastAPI --> Providers["Git provider layer"]
+  Providers --> GitHub["GitHub Issues"]
+  Providers --> GitLab["GitLab Issues"]
 ```
 
-## Known Follow-ups
+### Data Flow
 
-- Migrate Next.js `middleware.ts` to the newer `proxy.ts` convention.
-- Move local rate limiting to a shared store for serverless production.
-- Sign OAuth state with a server secret before relying on provider OAuth in production.
-- Store screenshots in object storage with short-lived signed URLs instead of JSON data URLs.
-- Strengthen provider idempotence/locking and durable retry processing.
+```mermaid
+flowchart LR
+  Site["Website with widget"] --> Widget["packages/widget"]
+  Widget --> PublicApi["https://changethis.cra.wallonie.be/api/public/feedback"]
+  PublicApi --> FastAPI["FastAPI apps/api"]
+  Dashboard["Admin /projects"] --> PrivateApi["Same-domain Next.js admin API"]
+  PrivateApi --> FastAPI
+  FastAPI --> Postgres["Internal PostgreSQL"]
+  FastAPI --> Providers["GitHub/GitLab APIs"]
+```
+
+The browser always talks to the same public domain. Next.js serves the admin, widget, and browser-facing API routes; server-side calls then reach FastAPI through `INTERNAL_API_URL`.
+
+### Repository Structure
+
+```txt
+apps/web             Next.js admin, auth, settings, widget host, browser-facing API routes
+apps/api             FastAPI backend for the internal Ubuntu/PostgreSQL target
+packages/widget     Embeddable browser widget
+packages/shared     Shared feedback types and issue formatting
+scripts/internal    Native Ubuntu 24 install and deploy scripts
+docs                 Product and technical documentation
+```
+
+### Internal Production Environment
+
+```env
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://changethis.cra.wallonie.be
+AUTH_MODE=internal
+DATA_STORE=internal
+INTERNAL_API_URL=http://127.0.0.1:8000
+CHANGETHIS_SECRET_KEY=...
+```
+
+See [docs/internal-ubuntu24-install.fr.md](docs/internal-ubuntu24-install.fr.md) for the full runbook.
